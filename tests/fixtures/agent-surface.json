@@ -488,7 +488,7 @@
           },
           "body": {
             "type": "object",
-            "description": "The request body. Properties (`?` marks optional):\n\npublications?: object[] | null — References to all the catalogs the dataset metadata is published too\npublicationSites?: string[] | null — References to all sites the dataset is exposed in.\nreadApiKey?: object | null\nmasterData?: object | null — Données de référence\npartOf?: object | null — Declares this dataset as a fragment of another resource (a virtual dataset or an…"
+            "description": "The request body. Properties (`?` marks optional):\n\npublications?: object[] | null — References to all the catalogs the dataset metadata is published too\npublicationSites?: string[] | null — References to all sites the dataset is exposed in.\nreadApiKey?: object | null\nmasterData?: object | null — Données de référence\npartOf?: object | null — Declares this dataset as a fragment of another resource (a virtual dataset, a me…"
           }
         },
         "additionalProperties": false,
@@ -2226,7 +2226,7 @@
     {
       "name": "datafair-workflow",
       "description": "How to explore the data published on a portal: find datasets, read their schema, then search rows, aggregate or compute metrics. Read it before querying data.",
-      "digest": "sha256:3b6d2a9873db79ade3a79863949f88b2516c647166b7de7c3414495578a3ad9f"
+      "digest": "sha256:6f055f91878e04dc91d54ca38a055944dbf8225c521871605ec2a6c1dbffa548"
     }
   ],
   "guides": []

@@ -56,11 +56,11 @@ const expandOperations = (permission: Permission, resourceType: ResourceType): S
 /**
  * Derive the ACL of a fragment from its parent's ACL (spec §3.1).
  * - management (write / admin) is inherited class-wise when fully held, operation-wise otherwise, and implies list / read / readAdvanced
- * - read (list / read) is inherited only application -> application
+ * - read (list / read) is inherited application -> application, and class-wise only from a meta-only dataset
  * - a virtual dataset grants no read on its fragments
  * The who (type, id, email, department, roles, names) is preserved. Deterministic and idempotent.
  */
-export const deriveFragmentPermissions = (parentPermissions: Permission[] | undefined, parentType: ResourceType, fragmentType: ResourceType): Permission[] => {
+export const deriveFragmentPermissions = (parentPermissions: Permission[] | undefined, parentType: ResourceType, fragmentType: ResourceType, parentIsMetaOnly = false): Permission[] => {
   const derived: Permission[] = []
   for (const permission of parentPermissions ?? []) {
     const ops = expandOperations(permission, parentType)
@@ -88,6 +88,12 @@ export const deriveFragmentPermissions = (parentPermissions: Permission[] | unde
         else for (const op of classOps) if (ops.has(op)) operations.add(op)
       }
     }
+    if (parentIsMetaOnly) {
+      // whole classes only: a meta-only's editor hides the data operations, a detailed entry never covers them
+      for (const cls of READ_CLASSES) {
+        if (operationsClasses.datasets[cls].every(op => ops.has(op))) classes.add(cls)
+      }
+    }
     if (!classes.size && !operations.size) continue
     const { classes: _classes, operations: _operations, ...who } = permission
     const result: Permission = { ...who }
@@ -100,7 +106,7 @@ export const deriveFragmentPermissions = (parentPermissions: Permission[] | unde
 
 type OwnerLike = { type: string, id: string, department?: string }
 export type FragmentLike = { id?: string, owner: OwnerLike, publicationSites?: string[], requestedPublicationSites?: string[], publications?: any[], masterData?: any }
-export type ParentLike = { id: string, owner: OwnerLike, isVirtual?: boolean, partOf?: PartOf }
+export type ParentLike = { id: string, owner: OwnerLike, isVirtual?: boolean, isMetaOnly?: boolean, partOf?: PartOf }
 
 const sameOwner = (a: OwnerLike, b: OwnerLike) => a.type === b.type && a.id === b.id && (a.department ?? undefined) === (b.department ?? undefined)
 
@@ -110,7 +116,7 @@ export const validatePartOf = ({ fragmentType, fragment, partOf, parent, nbFragm
   if (parent.partOf) return 'Le parent est lui-même un fragment, un fragment ne peut pas avoir de fragments'
   if (!sameOwner(parent.owner, fragment.owner)) return 'Un fragment doit avoir le même propriétaire que son parent'
   if (fragmentType === 'applications' && partOf.type !== 'application') return 'Une application ne peut être un fragment que d\'une application'
-  if (fragmentType === 'datasets' && partOf.type === 'dataset' && !parent.isVirtual) return 'Un jeu de données ne peut être un fragment que d\'un jeu de données virtuel ou d\'une application'
+  if (fragmentType === 'datasets' && partOf.type === 'dataset' && !parent.isVirtual && !parent.isMetaOnly) return 'Un jeu de données ne peut être un fragment que d\'un jeu de données virtuel, d\'un jeu de métadonnées seules ou d\'une application'
   if (nbFragments > 0) return 'Une ressource qui a des fragments ne peut pas devenir un fragment'
   if (fragment.publicationSites?.length || fragment.requestedPublicationSites?.length) return 'La ressource est publiée sur un portail, retirez la publication avant de la rattacher'
   if (fragment.publications?.length) return 'La ressource est publiée sur un catalogue, retirez la publication avant de la rattacher'

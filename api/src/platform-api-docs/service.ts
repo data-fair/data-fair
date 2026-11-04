@@ -14,7 +14,7 @@ const initialWait = 5_000
 const fetchTimeout = 10_000
 
 /** the services of the platform document, url undefined for data-fair itself (in-process) */
-export function platformServices (cfg: { publicUrl: string, directoryUrl: string, privateDirectoryUrl?: string | null, privateMetricsUrl?: string | null, privateEventsUrl?: string | null }): { service: PlatformService, url?: string }[] {
+export function platformServices (cfg: { publicUrl: string, directoryUrl: string, privateDirectoryUrl?: string | null, privateMetricsUrl?: string | null, privateEventsUrl?: string | null, privateRegistryUrl?: string | null }): { service: PlatformService, url?: string }[] {
   const datafairMount = new URL(cfg.publicUrl).pathname.replace(/\/$/, '') + '/api/v1'
   const services: { service: PlatformService, url?: string }[] = [
     { service: { id: 'datafair', title: 'Data Fair', mountPath: datafairMount, docPath: datafairMount + '/api-docs.json' } },
@@ -33,6 +33,12 @@ export function platformServices (cfg: { publicUrl: string, directoryUrl: string
     services.push({
       service: { id: 'events', title: 'Events', mountPath: '/events/api', docPath: '/events/api/api-docs.json' },
       url: cfg.privateEventsUrl + '/api/api-docs.json'
+    })
+  }
+  if (cfg.privateRegistryUrl) {
+    services.push({
+      service: { id: 'registry', title: 'Registry', mountPath: '/registry/api/v1', docPath: '/registry/api/v1/api-docs.json' },
+      url: cfg.privateRegistryUrl + '/api/v1/api-docs.json'
     })
   }
   return services

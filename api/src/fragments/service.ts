@@ -69,7 +69,7 @@ export const preparePartOf = async (resourceType: FragmentResourceType, fragment
   const nbFragments = fragment.id ? await countFragments(resourceTypeToPartOfType(resourceType), fragment.id) : 0
   const error = validatePartOf({ fragmentType: resourceType, fragment, partOf, parent: parent as any, nbFragments })
   if (error) throw httpError(400, error)
-  return { parent, permissions: deriveFragmentPermissions(parent.permissions as Permission[] | undefined, parentType, resourceType) }
+  return { parent, permissions: deriveFragmentPermissions(parent.permissions as Permission[] | undefined, parentType, resourceType, 'isMetaOnly' in parent && !!parent.isMetaOnly) }
 }
 
 /** the shape applyPartOfChange needs of the resource it re-parents — a dataset or an application */
@@ -143,11 +143,11 @@ export const applyPartOfChange = async <T extends FragmentResource> (resourceTyp
 }
 
 /** Recompute the derived ACL of every fragment of `parent` (spec §3.7). At most three updateMany. */
-export const syncFragmentPermissions = async (parentType: FragmentResourceType, parent: { id: string, owner: OwnerLike, permissions?: Permission[] }) => {
+export const syncFragmentPermissions = async (parentType: FragmentResourceType, parent: { id: string, owner: OwnerLike, permissions?: Permission[], isMetaOnly?: boolean }) => {
   const type = resourceTypeToPartOfType(parentType)
   const filter = ownedFragmentsFilter(type, parent.id, parent.owner)
   const updatedAt = new Date().toISOString()
-  const $set = { permissions: deriveFragmentPermissions(parent.permissions, parentType, 'datasets'), updatedAt }
+  const $set = { permissions: deriveFragmentPermissions(parent.permissions, parentType, 'datasets', parent.isMetaOnly), updatedAt }
   // `permissions` is integrity-covered metadata: an unstamped writer makes the fragment's next
   // integrity check report a metadata tamper breach for a legitimate system write. Split in two so
   // the stamp stays single-document atomic with the write it accounts for (the same posture as the
@@ -190,10 +190,10 @@ export const prepareFragmentsOwnerChange = async (parentType: PartOf['type'], pa
  * (ownedFragmentsFilter) and completes. The caller recomputes the storage totals.
  * Dynamic imports: datasets/service and applications/service both import this module.
  */
-export const changeFragmentsOwner = async (ctx: { sessionState: SessionStateAuthenticated }, parentType: FragmentResourceType, fragments: Awaited<ReturnType<typeof findFragments>>, newOwner: OwnerLike, parentPermissions: Permission[]) => {
+export const changeFragmentsOwner = async (ctx: { sessionState: SessionStateAuthenticated }, parentType: FragmentResourceType, fragments: Awaited<ReturnType<typeof findFragments>>, newOwner: OwnerLike, parentPermissions: Permission[], parentIsMetaOnly = false) => {
   if (fragments.datasets.length) {
     const { changeDatasetOwner } = await import('../datasets/service.ts')
-    const derived = deriveFragmentPermissions(parentPermissions, parentType, 'datasets')
+    const derived = deriveFragmentPermissions(parentPermissions, parentType, 'datasets', parentIsMetaOnly)
     for (const dataset of fragments.datasets) await changeDatasetOwner(ctx, dataset, dataset, newOwner, derived)
   }
   if (fragments.applications.length) {

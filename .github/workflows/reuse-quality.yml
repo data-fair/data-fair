@@ -188,11 +188,12 @@ jobs:
     # being created, so the tests could start without them.
     # mcp reads the platform document from the dev API, which only starts in a later step: it
     # exits at once and fails the wait. No test calls it.
+    # --progress quiet: no per-layer pull lines, a failing container is still reported
     - name: Start services
-      run: docker compose --profile '*' up -d --wait --scale s3-init=0 --scale mcp=0
+      run: docker compose --progress quiet --profile '*' up -d --wait --scale s3-init=0 --scale mcp=0
 
     - name: Create S3 buckets
-      run: docker compose --profile '*' run --rm s3-init
+      run: docker compose --progress quiet --profile '*' run --rm s3-init
 
     - name: Start mock server
       run: mkdir -p dev/logs && node --experimental-strip-types --disable-warning=ExperimentalWarning dev/mock-server.ts > dev/logs/mock.log 2>&1 &
@@ -236,4 +237,4 @@ jobs:
 
     - name: Stop services
       if: always()
-      run: docker compose --profile '*' down
+      run: docker compose --progress quiet --profile '*' down
