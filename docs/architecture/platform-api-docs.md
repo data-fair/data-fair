@@ -1,6 +1,6 @@
 # Platform OpenAPI document
 
-`GET /data-fair/api/v1/platform/api-docs.json` serves one OpenAPI 3.1 document describing every service of the site: data-fair, simple-directory and, when configured, metrics and events. It is public, identical for every caller of a site (no session is read) and marked `allowAnyScope`, so a scoped token reads it too. Design: `docs/superpowers/specs/2026-10-19-platform-api-docs-design.md`.
+`GET /data-fair/api/v1/platform/api-docs.json` serves one OpenAPI 3.1 document describing every service of the site: data-fair, simple-directory and, when configured, metrics, events, the registry and the portals manager. It is public, identical for every caller of a site (no session is read) and marked `allowAnyScope`, so a scoped token reads it too. Design: `docs/superpowers/specs/2026-10-19-platform-api-docs-design.md`.
 
 Code: `api/contract/platform-api-docs.ts` (pure: check, rewrite and merge), `api/src/platform-api-docs/service.ts` (fetching, caching, per-site memoization), the route in `api/src/misc/routers/root.ts`, `api/contract/scopes-security.ts` and `api/contract/x-agent.ts` (what data-fair contributes).
 
@@ -18,6 +18,8 @@ It replaces the deployment index (`/api/v1/agents/index.json`) and the agent pro
 | `sd` | `(privateDirectoryUrl \|\| directoryUrl) + '/api/api-docs.json'` | `/simple-directory` | always |
 | `metrics` | `privateMetricsUrl + '/api/api-docs.json'` | `/metrics/api` | `privateMetricsUrl` is set |
 | `events` | `privateEventsUrl + '/api/api-docs.json'` | `/events/api` | `privateEventsUrl` is set |
+| `registry` | `privateRegistryUrl + '/api/v1/api-docs.json'` | `/registry/api/v1` | `privateRegistryUrl` is set |
+| `portals` | `privatePortalsManagerUrl + '/api/api-docs.json'` | `/portals-manager/api` | `privatePortalsManagerUrl` is set |
 
 Fragments are fetched over private URLs, once per service, not per site: after the rewrite nothing in a fragment depends on the site. The merged document has one server, the origin of the request's public base URL; every path carries its service's mount path. Processings is not aggregated: its listed document is superadmin-only.
 
