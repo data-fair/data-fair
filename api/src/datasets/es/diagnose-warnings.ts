@@ -89,8 +89,8 @@ const sortByPriority = (warnings: Warning[]): Warning[] => {
   )
 }
 
-const getRecommendedNbShards = (dataset: any, maxShardSize: number): number => {
-  return Math.max(1, Math.ceil((dataset.storage?.indexed?.size || 0) / maxShardSize))
+export const nbShardsForSize = (size: number, maxShardSize: number): number => {
+  return Math.max(1, Math.ceil(size / maxShardSize))
 }
 
 const finalizeChecks = (dataset: any, esInfos: any, config: DiagnoseConfig): Warning[] => {
@@ -124,8 +124,10 @@ const finalizeChecks = (dataset: any, esInfos: any, config: DiagnoseConfig): War
   }
 
   const currentNbShards = Number(indexSettings.number_of_shards)
-  const recommendedNbShards = getRecommendedNbShards(dataset, config.maxShardSize)
-  if (currentNbShards !== recommendedNbShards) {
+  // physical size: storage.indexed is a CSV equivalent, ~2x lighter than the index on geo datasets
+  const priStoreSize = Number(esInfos.index['pri.store.size'])
+  const recommendedNbShards = nbShardsForSize(priStoreSize, config.maxShardSize)
+  if (!Number.isNaN(priStoreSize) && currentNbShards !== recommendedNbShards) {
     warnings.push({
       code: 'ShardingRecommended',
       severity: 'warning',
@@ -190,7 +192,7 @@ const realtimeChecks = (dataset: any, esInfos: any, config: DiagnoseConfig): War
   if (!indexSettings?.number_of_shards) return warnings
   const nbShards = Number(indexSettings.number_of_shards)
 
-  const segments = Number(esInfos.index['segments.count'])
+  const segments = Number(esInfos.index['pri.segments.count'])
   if (!Number.isNaN(segments) && nbShards > 0) {
     const segmentsPerShard = segments / nbShards
     if (segmentsPerShard > config.diagnose.segmentsPerShardWarn) {

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict'
 import {
   computeFinalizeWarnings,
   computeRealtimeWarnings,
+  nbShardsForSize,
   pickPrimaryCode,
   WARNING_PRIORITY
 } from '../../../api/src/datasets/es/diagnose-warnings.ts'
@@ -80,25 +81,43 @@ test.describe('existing finalize-time codes', () => {
     assert.ok(w.find(x => x.code === 'MissingIndexSettings' && x.severity === 'error'))
   })
 
-  test('ShardingRecommended fires when current shard count != recommended', () => {
-    // recommended = ceil(50go / maxShardSize=10go) = 5 ; current = 1 -> mismatch
-    const esInfos = {
-      indices: [],
-      index: {
-        health: 'green',
-        definition: {
-          settings: { index: { number_of_shards: '1', number_of_replicas: '1' } },
-          mappings: { properties: {} }
-        }
+  const shardedIndex = (nbShards: string, priStoreSize: string) => ({
+    indices: [],
+    index: {
+      health: 'green',
+      'pri.store.size': priStoreSize,
+      definition: {
+        settings: { index: { number_of_shards: nbShards, number_of_replicas: '1' } },
+        mappings: { properties: {} }
       }
     }
-    const dataset = wideDataset({ storage: { indexed: { size: 50_000_000_000 } } })
-    const w = computeFinalizeWarnings(dataset, esInfos, baseEsConfig)
+  })
+
+  test('ShardingRecommended compares the shard count with the physical index size', () => {
+    // recommended = ceil(50go / maxShardSize=10go) = 5 ; current = 1 -> mismatch
+    const w = computeFinalizeWarnings(wideDataset(), shardedIndex('1', '50000000000'), baseEsConfig)
     const sr = w.find(x => x.code === 'ShardingRecommended')
     assert.ok(sr)
     assert.equal(sr!.severity, 'warning')
     assert.equal(sr!.details!.currentNbShards, 1)
     assert.equal(sr!.details!.recommendedNbShards, 5)
+  })
+
+  test('ShardingRecommended ignores the CSV-equivalent indexed size of a heavier geo index', () => {
+    const dataset = wideDataset({ storage: { indexed: { size: 7_841_523_468, parts: ['lines'] } } })
+    const w = computeFinalizeWarnings(dataset, shardedIndex('2', '18745488673'), baseEsConfig)
+    assert.equal(w.find(x => x.code === 'ShardingRecommended'), undefined)
+  })
+
+  test('ShardingRecommended is skipped when the index size is unknown', () => {
+    const w = computeFinalizeWarnings(wideDataset(), shardedIndex('2', undefined as any), baseEsConfig)
+    assert.equal(w.find(x => x.code === 'ShardingRecommended'), undefined)
+  })
+
+  test('nbShardsForSize keeps at least one shard and rounds up', () => {
+    assert.equal(nbShardsForSize(0, 10), 1)
+    assert.equal(nbShardsForSize(10, 10), 1)
+    assert.equal(nbShardsForSize(11, 10), 2)
   })
 })
 
@@ -225,7 +244,7 @@ test.describe('HighSegmentCount', () => {
   })
 
   test('fires when segments per shard exceeds threshold', () => {
-    const esInfos = goodIndex({ 'segments.count': '100' }) // 100 / 2 = 50 > 30
+    const esInfos = goodIndex({ 'pri.segments.count': '100', 'segments.count': '200' }) // 100 / 2 = 50 > 30, replicas ignored
     const w = computeRealtimeWarnings(baseDataset, esInfos, baseEsConfig)
     const item = w.find(x => x.code === 'HighSegmentCount')
     assert.ok(item)
@@ -234,13 +253,13 @@ test.describe('HighSegmentCount', () => {
   })
 
   test('does not fire in finalize-time evaluator', () => {
-    const esInfos = goodIndex({ 'segments.count': '100' })
+    const esInfos = goodIndex({ 'pri.segments.count': '100', 'segments.count': '200' })
     const w = computeFinalizeWarnings(baseDataset, esInfos, baseEsConfig)
     assert.equal(w.find(x => x.code === 'HighSegmentCount'), undefined)
   })
 
   test('does not fire when segments per shard is below threshold', () => {
-    const esInfos = goodIndex({ 'segments.count': '10' }) // 10 / 2 = 5 < 30
+    const esInfos = goodIndex({ 'pri.segments.count': '10', 'segments.count': '70' }) // 10 / 2 = 5 < 30
     const w = computeRealtimeWarnings(baseDataset, esInfos, baseEsConfig)
     assert.equal(w.find(x => x.code === 'HighSegmentCount'), undefined)
   })

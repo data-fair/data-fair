@@ -197,6 +197,17 @@ The attachments contribution (`storage.indexed.size += attachments.size`, `parts
 CSV-equivalent, a dataset with an indexed `DigitalDocument` column always adds its attachments'
 physical size on top.
 
+## Not a sizing input for shards
+
+`indexed_bytes` is a billing metric, not the weight of the index: on geo datasets the physical
+index (`_geoshape`, `_vt_prepared`, ...) can weigh much more than its CSV equivalent (2.4x on the
+RPG). Shard counts
+therefore read the physical `pri.store.size`: `initDatasetIndex` takes the larger of
+`storage.indexed.size` (the only figure on a first indexing) and the size of the index being
+replaced, and the `ShardingRecommended` diagnostic compares the live shard count with
+`pri.store.size` alone. The same care applies to `_cat/indices` segment counts: `segments.count`
+includes replicas, `pri.segments.count` does not.
+
 ## Consequences
 
 - **Indexed values shrink** for REST datasets (CSV-equivalent line size vs. raw MongoDB/BSON
