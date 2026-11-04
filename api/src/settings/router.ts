@@ -6,7 +6,7 @@ import config from '#config'
 import { reqSessionAuthenticated, allowAnyScope } from '@data-fair/lib-express'
 import { buildPublicationSiteSubscriptions } from './operations.ts'
 import * as service from './service.ts'
-import { settingsParamsMiddleware, isOwnerAdmin, isOwnerMember, reqSettingsParams, reqWriteContext } from './middlewares.ts'
+import { settingsParamsMiddleware, isOwnerAdmin, isOwnerMember, portalsSecretOrOwnerAdmin, reqPortalsSecret, reqSettingsParams, reqWriteContext } from './middlewares.ts'
 
 const router = express.Router()
 
@@ -14,7 +14,8 @@ router.use('/:type/:id', settingsParamsMiddleware)
 
 // allowAnyScope marks the read routes the UIs call on load (licenses, and the isOwnerMember
 // reads): a scoped session reaches them whatever its scopes. Settings writes and the full
-// settings read (isOwnerAdmin) stay unmarked: scoped sessions are refused there (403).
+// settings read (isOwnerAdmin) stay unmarked: scoped sessions are refused there (403). The
+// publication-site writes are marked only when the portals secret key matched (portalsSecretOrOwnerAdmin).
 
 // read settings as owner
 router.get('/:type/:id', isOwnerAdmin, cacheHeaders.noCache, async (req, res) => {
@@ -55,9 +56,16 @@ router.get('/:type/:id/publication-sites', allowAnyScope, isOwnerMember, async (
   res.status(200).send(await service.getPublicationSites(reqSettingsParams(req)))
 })
 // create/update publication sites as owner (used by data-fair-portals to sync portals)
-router.post('/:type/:id/publication-sites', isOwnerAdmin, async (req, res) => {
+// with the portals secret key there is no session to subscribe: the subscriptions are returned
+// for portals to post itself
+router.post('/:type/:id/publication-sites', portalsSecretOrOwnerAdmin, async (req, res) => {
   const ctx = reqWriteContext(req)
   const { created } = await service.upsertPublicationSite(ctx, req.body)
+  if (reqPortalsSecret(req)) {
+    const subscriptions = created ? buildPublicationSiteSubscriptions(ctx.owner, req.body, config.publicUrl) : []
+    res.status(200).send({ site: req.body, created, subscriptions })
+    return
+  }
   if (created) {
     for (const subscription of buildPublicationSiteSubscriptions(ctx.owner, req.body, config.publicUrl)) {
       notifications.subscribe(req, subscription)
@@ -66,7 +74,7 @@ router.post('/:type/:id/publication-sites', isOwnerAdmin, async (req, res) => {
   res.status(200).send(req.body)
 })
 // delete publication sites as owner (used by data-fair-portals to sync portals)
-router.delete('/:type/:id/publication-sites/:siteType/:siteId', isOwnerAdmin, async (req, res) => {
+router.delete('/:type/:id/publication-sites/:siteType/:siteId', portalsSecretOrOwnerAdmin, async (req, res) => {
   const { siteType, siteId } = req.params
   if (typeof siteType !== 'string' || typeof siteId !== 'string') throw httpError(400, 'invalid path parameters')
   await service.deletePublicationSite(reqWriteContext(req), siteType, siteId)

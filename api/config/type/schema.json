@@ -345,7 +345,8 @@
         "events": { "type": ["string", "null"] },
         "sendMails": { "type": ["string", "null"] },
         "ignoreRateLimiting": { "type": ["string", "null"] },
-        "registry": { "type": ["string", "null"] }
+        "registry": { "type": ["string", "null"] },
+        "portals": { "type": ["string", "null"] }
       }
     },
     "locks": {

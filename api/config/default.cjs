@@ -242,7 +242,8 @@ module.exports = {
     events: null,
     sendMails: null,
     ignoreRateLimiting: null,
-    registry: null // shared with the registry service; reserved for future server-to-server calls
+    registry: null, // shared with the registry service; reserved for future server-to-server calls
+    portals: null // shared with the portals service: publication-site writes on behalf of an agent session
   },
   locks: {
     // in seconds

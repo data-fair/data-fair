@@ -1,7 +1,7 @@
 import slug from 'slugify'
 import { type OptionsDesMetadonneesDeJeuxDeDonnees, type AIAssistantAudience, type Settings, assertValid as assertValidSettings } from '#types/settings/index.js'
 import { type DepartmentSettings, assertValid as validateDepartmentSettings } from '#types/department-settings/index.js'
-import { type AccountKeys, type User } from '@data-fair/lib-express'
+import { type AccountKeys, type User, type SessionStateAuthenticated } from '@data-fair/lib-express'
 import trimFields from '../misc/utils/trim-fields.ts'
 import nanoid from '../misc/utils/nanoid.ts'
 
@@ -60,7 +60,7 @@ export const fillSettings = (owner: AccountKeys, user: User, settings: any): Set
   Object.assign(settings, owner)
   if (owner.type === 'user') {
     settings.name = user.name
-    settings.email = user.email
+    if (user.email) settings.email = user.email
   } else {
     const org = user.organizations.find(o => o.id === owner.id)
     if (!org) throw new Error('base org ref in user')
@@ -146,6 +146,21 @@ export const matchAgentChatAudience = (audience: AIAssistantAudience | undefined
     if (rule.department === '-' ? !!member.department : (rule.department !== '*' && rule.department !== member.department)) return false
     return !rule.roles?.length || (!!member.role && rule.roles.includes(member.role))
   })
+}
+
+/**
+ * The session-less state of a publication-site write made with the portals secret key: a synthetic
+ * admin of the owner read from the path. The owner name is not known here, the owner id stands for
+ * it when the settings document has to be created.
+ */
+export const secretSessionState = (owner: AccountKeys): SessionStateAuthenticated => {
+  const department = owner.department ? { department: owner.department } : {}
+  const user: User = { id: owner.type === 'user' ? owner.id : 'portals', name: owner.id, email: '', organizations: [] }
+  if (owner.type === 'organization') {
+    user.organizations.push({ id: owner.id, name: owner.id, role: 'admin', ...department })
+    return { user, account: { type: 'organization', id: owner.id, name: owner.id, ...department }, accountRole: 'admin', lang: 'fr' }
+  }
+  return { user, account: { type: 'user', id: owner.id, name: owner.id }, accountRole: 'admin', lang: 'fr' }
 }
 
 export type SettingsParams = { owner: AccountKeys, department?: string, ownerFilter: Record<string, any> }

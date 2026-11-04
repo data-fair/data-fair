@@ -66,7 +66,7 @@ export const clean = async () => {
 export const config = {
   publicUrl: baseURL,
   directoryUrl,
-  secretKeys: { identities: 'secret-identities', limits: 'secret-limits' },
+  secretKeys: { identities: 'secret-identities', limits: 'secret-limits', portals: 'secret-portals' },
   cache: { publicMaxAge: 1, timestampedPublicMaxAge: 604800 },
   defaultRemoteKey: { in: 'header', name: 'x-apiKey', value: 'test_default_key' },
 }
