@@ -156,39 +156,59 @@
           />
           {{ [item.adminMode && t('superadminShort'), item.asAccount && t('asAccountShort')].filter(Boolean).join(' · ') }}
         </div>
+        <div class="d-flex flex-wrap ga-1 mt-1">
+          <v-chip
+            v-for="scope of item.scopes"
+            :key="scope"
+            size="small"
+          >
+            {{ te('scopeShort.' + scope) ? t('scopeShort.' + scope) : scope }}
+          </v-chip>
+          <span
+            v-if="!item.scopes?.length"
+            class="text-body-small text-medium-emphasis"
+          >
+            {{ t('noScope') }}
+          </span>
+        </div>
       </div>
     </template>
 
-    <template #item.scopes="{ item }">
-      <div class="d-flex flex-wrap ga-1 py-2">
-        <v-chip
-          v-for="scope of item.scopes"
-          :key="scope"
-          size="x-small"
-        >
-          {{ te('scopeShort.' + scope) ? t('scopeShort.' + scope) : scope }}
-        </v-chip>
-        <span
-          v-if="!item.scopes?.length"
-          class="text-body-small text-medium-emphasis"
-        >
-          {{ t('noScope') }}
-        </span>
+    <template #item.email="{ item }">
+      <div
+        v-if="item.email"
+        class="d-flex align-center ga-1 py-2"
+      >
+        <code class="api-key-email text-break text-body-small">{{ item.email }}</code>
+        <v-btn
+          :icon="copied === item.email ? mdiCheck : mdiContentCopy"
+          :title="t('copyEmail', { email: item.email })"
+          variant="text"
+          density="comfortable"
+          size="small"
+          @click="copy(item.email, t('copyEmailFailed', { email: item.email }))"
+        />
       </div>
+      <span
+        v-else
+        class="text-medium-emphasis"
+      >—</span>
     </template>
 
     <template #item.expireAt="{ item }">
-      <template v-if="item.expireAt">
+      <div
+        v-if="item.expireAt"
+        class="d-flex flex-column align-start ga-1 py-2"
+      >
         {{ dayjs(item.expireAt).format('L') }}
         <v-chip
           v-if="expiration(item.expireAt)"
           :color="expiration(item.expireAt)!.color"
-          size="x-small"
-          class="ml-1"
+          size="small"
         >
           {{ expiration(item.expireAt)!.label }}
         </v-chip>
-      </template>
+      </div>
       <span
         v-else
         class="text-medium-emphasis"
@@ -196,24 +216,14 @@
     </template>
 
     <template #item.actions="{ item }">
-      <div class="d-flex justify-end">
-        <v-btn
-          v-if="item.email"
-          :icon="copied === item.email ? mdiCheck : mdiAt"
-          :title="t('copyEmail', { email: item.email })"
-          variant="text"
-          density="comfortable"
-          @click="copy(item.email, t('copyEmailFailed', { email: item.email }))"
-        />
-        <confirm-menu
-          variant="menu"
-          yes-color="warning"
-          :btn-props="{ color: 'warning', icon: true, variant: 'text', density: 'comfortable', disabled: saving }"
-          :tooltip="t('deleteKey')"
-          :text="t('deleteKeyDetails')"
-          @confirm="removeApiKey(item)"
-        />
-      </div>
+      <confirm-menu
+        variant="menu"
+        yes-color="warning"
+        :btn-props="{ color: 'warning', icon: true, variant: 'text', density: 'comfortable', disabled: saving }"
+        :tooltip="t('deleteKey')"
+        :text="t('deleteKeyDetails')"
+        @confirm="removeApiKey(item)"
+      />
     </template>
   </v-data-table>
 </template>
@@ -239,6 +249,8 @@ fr:
   copyFailed: "Impossible d'accéder au presse-papiers, copiez la valeur manuellement."
   copyEmailFailed: "Impossible d'accéder au presse-papiers. Email de la clé : {email}"
   scope: Portée
+  email: Email
+  key: Clé
   noScope: Permissions explicites uniquement
   scopeMsg: En attribuant des portées à cette clé d'API, celle-ci pourra effectuer les opérations sélectionnées sur l'ensemble des ressources accessibles aux administrateurs du compte. Sans portée définie, la clé ne bénéficiera que des permissions explicitement associées à son identifiant (pseudo adresse mail).
   emailMsg: Le pseudo email d'une clé, à copier depuis sa ligne, peut être utilisé pour lui affecter des permissions fines.
@@ -284,6 +296,8 @@ en:
   copyFailed: Cannot access the clipboard, copy the value manually.
   copyEmailFailed: "Cannot access the clipboard. Key email: {email}"
   scope: Scope
+  email: Email
+  key: Key
   noScope: Explicit permissions only
   scopeMsg: The scope of this API key defines the operations it can perform on all resources accessible to account administrators. Without a defined scope, the key will only have permissions explicitly associated with its identifier (pseudo email address).
   emailMsg: The pseudo email of a key, copied from its row, can be used to assign it fine-grained permissions.
@@ -314,7 +328,7 @@ en:
 <script setup lang="ts">
 import type { Settings } from '#api/types'
 import type { SubEdit } from '~/composables/df-local/edit-fetch-local'
-import { mdiAlert, mdiAt, mdiCheck, mdiContentCopy, mdiPlus } from '@mdi/js'
+import { mdiAlert, mdiCheck, mdiContentCopy, mdiPlus } from '@mdi/js'
 import { VDialog } from 'vuetify/components'
 
 type ApiKey = NonNullable<Settings['apiKeys']>[number]
@@ -347,8 +361,8 @@ const { sendUiNotif } = useUiNotif()
 const maxDate = dayjs().add($uiConfig.apiKeysMaxDuration, 'day').format('YYYY-MM-DD')
 
 const headers = computed(() => [
-  { title: t('title'), key: 'title', sortable: false },
-  { title: t('scope'), key: 'scopes', sortable: false },
+  { title: t('key'), key: 'title', sortable: false },
+  { title: t('email'), key: 'email', sortable: false, width: '45%' },
   { title: t('expiration'), key: 'expireAt', sortable: false, nowrap: true },
   { title: '', key: 'actions', sortable: false, align: 'end' as const }
 ])
@@ -442,3 +456,11 @@ watch(() => newApiKey.value.scopes, () => {
 })
 
 </script>
+
+<style scoped>
+/* any click selects the whole value: a double click would stop at the - and @ */
+.api-key-email {
+  user-select: all;
+  min-width: 13rem;
+}
+</style>
