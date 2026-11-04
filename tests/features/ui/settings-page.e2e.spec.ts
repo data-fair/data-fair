@@ -11,6 +11,17 @@ async function goToSettings (page: any, goToWithAuth: any, user = 'test_user1') 
   await expect(page.locator('#info')).toBeVisible({ timeout: 15000 })
 }
 
+// the server handles the PATCH at once, its response is held back: a save stays in flight
+async function slowSaves (page: any, ms: number, onlyKey?: string) {
+  await page.route('**/api/v1/settings/**', async (route: any) => {
+    if (route.request().method() !== 'PATCH') return route.fallback()
+    if (onlyKey && !(onlyKey in route.request().postDataJSON())) return route.fallback()
+    const response = await route.fetch()
+    await new Promise(resolve => setTimeout(resolve, ms))
+    await route.fulfill({ response })
+  })
+}
+
 async function goToSettingsOrg (page: any, goToWithAuth: any, user = 'test_user1', orgLabel = 'Test Org 1') {
   await goToWithAuth('/data-fair/', user)
   await page.getByRole('button', { name: /Ouvrez le menu personnel/ }).click()
@@ -305,10 +316,16 @@ test.describe('settings integrations', () => {
       ? route.fulfill({ status: 500, body: 'refused' })
       : route.fallback())
     await addKey('Refused key')
-    await expect(section.getByRole('row').filter({ hasText: 'Refused key' })).not.toBeVisible({ timeout: 5000 })
+    await expect(page.getByText('refused')).toBeVisible({ timeout: 5000 })
+    await expect(section.getByRole('row').filter({ hasText: 'Refused key' })).not.toBeVisible()
+    // the form stays open with what was typed, to retry without typing it again
+    const dialog = page.getByRole('dialog')
+    await expect(dialog.getByLabel('Titre', { exact: true })).toHaveValue('Refused key')
 
     await page.unroute('**/api/v1/settings/**')
-    await addKey('Accepted key')
+    await dialog.getByLabel('Titre', { exact: true }).fill('Accepted key')
+    await dialog.getByRole('button', { name: 'Ajouter', exact: true }).click()
+    await expect(dialog).not.toBeVisible({ timeout: 5000 })
     await expect.poll(async () => (await ax.get('/api/v1/settings/user/test_user1')).data.apiKeys?.map((k: any) => k.title), { timeout: 10000 })
       .toContain('Accepted key')
     expect((await ax.get('/api/v1/settings/user/test_user1')).data.apiKeys?.map((k: any) => k.title)).not.toContain('Refused key')
@@ -434,5 +451,178 @@ test.describe('settings AI assistant audience', () => {
     await expect.poll(async () => (await ax.get('/api/v1/settings/organization/test_org1')).data.agentChatAudience, { timeout: 10000 })
       .toEqual([{ department: '-', roles: ['admin'] }])
     await expect(section.getByText(/Seuls les membres correspondant/)).toBeVisible()
+  })
+})
+
+test.describe('settings saves in flight', () => {
+  let ax: AxiosInstance
+
+  test.beforeEach(async () => {
+    await clean()
+    ax = await axiosAuth('test_user1@test.com')
+  })
+
+  const settings = async () => (await ax.get('/api/v1/settings/user/test_user1')).data
+
+  test('a section cannot be canceled while it saves', async ({ page, goToWithAuth }) => {
+    await goToSettings(page, goToWithAuth)
+    const section = page.locator('#info')
+    const nameInput = section.getByLabel('Nom', { exact: true })
+    await nameInput.fill('Saved name')
+    await nameInput.blur()
+
+    await slowSaves(page, 1500)
+    await section.getByRole('button', { name: 'Enregistrer' }).click()
+    await section.getByRole('button', { name: 'Annuler' }).click({ force: true })
+    await page.getByRole('button', { name: 'Confirmer' }).click({ timeout: 500 }).catch(() => {})
+
+    await expect(section.getByRole('button', { name: 'Enregistrer' })).not.toBeVisible({ timeout: 5000 })
+    await expect(nameInput).toHaveValue('Saved name')
+    expect((await settings()).info.contact.name).toBe('Saved name')
+  })
+
+  test('a topic edited during its first save keeps its id', async ({ page, goToWithAuth }) => {
+    await goToSettings(page, goToWithAuth)
+    const section = page.locator('#catalog')
+    await section.getByRole('button', { name: 'Ajouter une thématique' }).click()
+    const titleInput = section.getByLabel('Titre', { exact: true })
+    await titleInput.fill('First title')
+    await titleInput.blur()
+
+    await slowSaves(page, 1500)
+    await section.getByRole('button', { name: 'Enregistrer' }).click()
+    await titleInput.focus()
+    await page.keyboard.type(' typed during the save')
+    await page.keyboard.press('Tab')
+    await expect.poll(async () => (await settings()).topics?.length ?? 0).toBe(1)
+    const { id } = (await settings()).topics[0]
+    await page.waitForTimeout(2000)
+
+    await page.unroute('**/api/v1/settings/**')
+    const saveButton = section.getByRole('button', { name: 'Enregistrer' })
+    if (await saveButton.isVisible()) {
+      await saveButton.click()
+      await expect(saveButton).not.toBeVisible({ timeout: 5000 })
+    }
+    expect((await settings()).topics.map((t: any) => t.id)).toEqual([id])
+  })
+
+  test('the late response of a save does not undo the save of another section', async ({ page, goToWithAuth }) => {
+    await ax.patch('/api/v1/settings/user/test_user1', { info: { contact: { name: 'Old name' } } })
+    await goToSettings(page, goToWithAuth)
+    const catalog = page.locator('#catalog')
+    await catalog.getByRole('button', { name: 'Ajouter une thématique' }).click()
+    const titleInput = catalog.getByLabel('Titre', { exact: true })
+    await titleInput.fill('Slow topic')
+    await titleInput.blur()
+    const contact = page.locator('#info')
+    const nameInput = contact.getByLabel('Nom', { exact: true })
+    await nameInput.fill('Quick name')
+    await nameInput.blur()
+
+    await slowSaves(page, 2500, 'topics')
+    await catalog.getByRole('button', { name: 'Enregistrer' }).click()
+    await expect.poll(async () => (await settings()).topics?.length ?? 0).toBe(1)
+    await contact.getByRole('button', { name: 'Enregistrer' }).click()
+    await expect(contact.getByRole('button', { name: 'Enregistrer' })).not.toBeVisible({ timeout: 5000 })
+
+    await expect(catalog.getByRole('button', { name: 'Enregistrer' })).not.toBeVisible({ timeout: 5000 })
+    await expect(contact.getByRole('button', { name: 'Enregistrer' })).not.toBeVisible()
+  })
+
+  test('saving a section does not make partial metadata look modified', async ({ page, goToWithAuth }) => {
+    await ax.patch('/api/v1/settings/user/test_user1', { datasetsMetadata: {} })
+    await goToSettings(page, goToWithAuth)
+    const contact = page.locator('#info')
+    const nameInput = contact.getByLabel('Nom', { exact: true })
+    await nameInput.fill('Some name')
+    await nameInput.blur()
+    await contact.getByRole('button', { name: 'Enregistrer' }).click()
+    await expect(contact.getByRole('button', { name: 'Enregistrer' })).not.toBeVisible({ timeout: 5000 })
+
+    const catalog = page.locator('#catalog')
+    await catalog.getByRole('tab', { name: /Métadonnées/ }).click()
+    await expect(catalog.getByText('Métadonnées personnalisées')).toBeVisible({ timeout: 5000 })
+    await page.waitForTimeout(500)
+    await expect(catalog.getByRole('button', { name: 'Enregistrer' })).not.toBeVisible()
+  })
+
+  test('saving the metadata does not make them look modified again', async ({ page, goToWithAuth }) => {
+    await goToSettings(page, goToWithAuth)
+    const catalog = page.locator('#catalog')
+    await catalog.getByRole('tab', { name: /Métadonnées/ }).click()
+    await catalog.getByRole('checkbox', { name: 'Producteur' }).check()
+    const saveButton = catalog.getByRole('button', { name: 'Enregistrer' })
+    await saveButton.click()
+    await expect(saveButton).not.toBeVisible({ timeout: 5000 })
+    await page.waitForTimeout(500)
+    await expect(saveButton).not.toBeVisible()
+  })
+
+  test('the secret of a new key is back after switching department', async ({ page, goToWithAuth }) => {
+    await goToSettingsOrg(page, goToWithAuth)
+    const section = page.locator('#integrations')
+    await section.getByRole('button', { name: /Ajouter une clé d'API/i }).click()
+    const dialog = page.getByRole('dialog')
+    await dialog.getByLabel('Titre', { exact: true }).fill('Secret key')
+    await dialog.getByRole('button', { name: 'Ajouter', exact: true }).click()
+    const secret = section.getByText('Clé « Secret key » créée')
+    await expect(secret).toBeVisible({ timeout: 5000 })
+
+    const departmentSelect = page.locator('.v-select').filter({ hasText: 'Département' })
+    await departmentSelect.click()
+    await page.getByRole('option', { name: 'department 1' }).click()
+    await expect(secret).not.toBeVisible({ timeout: 5000 })
+    await departmentSelect.click()
+    await page.getByRole('option', { name: "Racine de l'organisation" }).click()
+    await expect(secret).toBeVisible({ timeout: 5000 })
+  })
+
+  test('an invalid tab left behind a department switch does not block the save', async ({ page, goToWithAuth }) => {
+    await goToSettingsOrg(page, goToWithAuth)
+    page.on('dialog', dialog => dialog.accept())
+    const catalog = page.locator('#catalog')
+    await catalog.getByRole('tab', { name: /Licences/ }).click()
+    await catalog.getByRole('button', { name: 'Ajouter une licence' }).click()
+    await catalog.getByRole('tab', { name: /Thématiques/ }).click()
+
+    const departmentSelect = page.locator('.v-select').filter({ hasText: 'Département' })
+    await departmentSelect.click()
+    await page.getByRole('option', { name: 'department 1' }).click()
+    await expect(catalog).not.toBeVisible({ timeout: 5000 })
+    await departmentSelect.click()
+    await page.getByRole('option', { name: "Racine de l'organisation" }).click()
+    await expect(catalog).toBeVisible({ timeout: 5000 })
+
+    await catalog.getByRole('button', { name: 'Ajouter une thématique' }).click()
+    const titleInput = catalog.getByLabel('Titre', { exact: true })
+    await titleInput.fill('After the switch')
+    await titleInput.blur()
+    await expect(catalog.getByRole('button', { name: 'Enregistrer' })).toBeEnabled({ timeout: 5000 })
+  })
+})
+
+test.describe('settings api keys table', () => {
+  test.beforeEach(async () => {
+    await clean()
+  })
+
+  test('an unknown scope shows as is and a key email is not called a pseudo email', async ({ page, goToWithAuth }) => {
+    const ax = await axiosAuth('test_user1@test.com')
+    await ax.patch('/api/v1/settings/user/test_user1', {
+      apiKeys: [{ title: 'Old scope', scopes: ['legacy-scope'], expireAt: new Date(Date.now() + 864e5).toISOString().slice(0, 10) }]
+    })
+    await goToSettings(page, goToWithAuth)
+    const section = page.locator('#integrations')
+    await expect(section.getByText('legacy-scope', { exact: true })).toBeVisible()
+    await expect(section.getByRole('button', { name: /Copier l'email/ })).toBeVisible()
+  })
+
+  test('a webhook says what is missing before it can be saved', async ({ page, goToWithAuth }) => {
+    await goToSettings(page, goToWithAuth)
+    const section = page.locator('#integrations')
+    await section.getByRole('tab', { name: /Webhooks/ }).click()
+    await section.getByRole('button', { name: /Ajouter un webhook/i }).click()
+    await expect(section.locator('.v-select.v-input--error').filter({ hasText: 'Événements déclencheurs' })).toBeVisible({ timeout: 5000 })
   })
 })

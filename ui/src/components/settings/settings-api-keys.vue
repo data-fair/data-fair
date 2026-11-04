@@ -1,5 +1,6 @@
 <template>
   <v-btn
+    v-if="!inlineForm || !createToggle"
     :prepend-icon="mdiPlus"
     class="mb-2"
     color="primary"
@@ -12,11 +13,15 @@
   </v-btn>
 
   <!-- New API Key Form -->
-  <v-dialog
-    v-model="createToggle"
-    max-width="600"
+  <component
+    :is="inlineForm ? 'div' : VDialog"
+    v-bind="inlineForm ? {} : { modelValue: createToggle, maxWidth: 600, persistent: saving, 'onUpdate:modelValue': (v: boolean) => createToggle = v }"
   >
-    <v-card :title="t('addNewApiKey')">
+    <v-card
+      v-if="createToggle"
+      :title="t('addNewApiKey')"
+      :class="{ 'mb-2': inlineForm }"
+    >
       <v-card-text>
         <v-form v-model="newApiKeyValid">
           <v-text-field
@@ -76,11 +81,15 @@
       </v-card-text>
       <v-card-actions>
         <v-spacer />
-        <v-btn @click="createToggle = false">
+        <v-btn
+          :disabled="saving"
+          @click="createToggle = false"
+        >
           {{ t('cancel') }}
         </v-btn>
         <v-btn
           :disabled="!newApiKeyValid"
+          :loading="saving"
           color="primary"
           variant="flat"
           @click="addApiKey"
@@ -89,7 +98,7 @@
         </v-btn>
       </v-card-actions>
     </v-card>
-  </v-dialog>
+  </component>
 
   <!-- the secret of a key is readable only in the response of the save that created it, kept for the page lifetime -->
   <v-alert
@@ -129,7 +138,6 @@
     :headers="headers"
     :items="apiKeys"
     :items-per-page="-1"
-    :sort-by="[]"
     :mobile-breakpoint="'sm'"
     density="comfortable"
     hide-default-footer
@@ -158,7 +166,7 @@
           :key="scope"
           size="x-small"
         >
-          {{ t('scopeShort.' + scope) }}
+          {{ te('scopeShort.' + scope) ? t('scopeShort.' + scope) : scope }}
         </v-chip>
         <span
           v-if="!item.scopes?.length"
@@ -227,9 +235,9 @@ fr:
   newKeyAlert: Cette clé secrète apparaît en clair car vous venez de la créer. Copiez-la car elle ne sera plus lisible par la suite.
   copySecret: Copier la clé
   copied: Copié
-  copyEmail: "Copier le pseudo email : {email}"
+  copyEmail: "Copier l'email de la clé : {email}"
   copyFailed: "Impossible d'accéder au presse-papiers, copiez la valeur manuellement."
-  copyEmailFailed: "Impossible d'accéder au presse-papiers. Pseudo email : {email}"
+  copyEmailFailed: "Impossible d'accéder au presse-papiers. Email de la clé : {email}"
   scope: Portée
   noScope: Permissions explicites uniquement
   scopeMsg: En attribuant des portées à cette clé d'API, celle-ci pourra effectuer les opérations sélectionnées sur l'ensemble des ressources accessibles aux administrateurs du compte. Sans portée définie, la clé ne bénéficiera que des permissions explicitement associées à son identifiant (pseudo adresse mail).
@@ -272,9 +280,9 @@ en:
   newKeyAlert: You can view this key because you just created it. Copy it, it won't be readable again on this platform.
   copySecret: Copy the key
   copied: Copied
-  copyEmail: "Copy the pseudo email: {email}"
+  copyEmail: "Copy the key email: {email}"
   copyFailed: Cannot access the clipboard, copy the value manually.
-  copyEmailFailed: "Cannot access the clipboard. Pseudo email: {email}"
+  copyEmailFailed: "Cannot access the clipboard. Key email: {email}"
   scope: Scope
   noScope: Explicit permissions only
   scopeMsg: The scope of this API key defines the operations it can perform on all resources accessible to account administrators. Without a defined scope, the key will only have permissions explicitly associated with its identifier (pseudo email address).
@@ -305,19 +313,33 @@ en:
 
 <script setup lang="ts">
 import type { Settings } from '#api/types'
+import type { SubEdit } from '~/composables/df-local/edit-fetch-local'
 import { mdiAlert, mdiAt, mdiCheck, mdiContentCopy, mdiPlus } from '@mdi/js'
+import { VDialog } from 'vuetify/components'
 
 type ApiKey = NonNullable<Settings['apiKeys']>[number]
 
-const { restrictedScopes, saving = false } = defineProps<{
+const { restrictedScopes, edit, inlineForm = false } = defineProps<{
   restrictedScopes?: string[]
-  /** a list changed during a save would be overwritten by its response */
-  saving?: boolean
+  edit: SubEdit<Settings>
+  /** an overlay adds no height to an iframe sized on its content, it would be cut */
+  inlineForm?: boolean
 }>()
 
 const apiKeys = defineModel<Settings['apiKeys']>()
 
-const { t } = useI18n()
+const saving = computed(() => edit.save.loading.value)
+
+// each change is saved at once, a refused one is rolled back: the table only shows the server state
+const saveApiKeys = async (keys: Settings['apiKeys']) => {
+  apiKeys.value = keys
+  await edit.save.execute()
+  if (!edit.save.error.value) return true
+  edit.cancel()
+  return false
+}
+
+const { t, te } = useI18n()
 const session = useSessionAuthenticated()
 const { dayjs } = useLocaleDayjs()
 const { sendUiNotif } = useUiNotif()
@@ -332,9 +354,10 @@ const headers = computed(() => [
 ])
 
 // by key id: the response of any later save drops the clearKey from the list
-const clearKeys = ref<Record<string, string>>({})
+const clearKeys = defineModel<Record<string, string>>('clearKeys', { default: () => ({}) })
 watch(apiKeys, (keys) => {
-  for (const key of keys ?? []) if (key.id && key.clearKey) clearKeys.value[key.id] = key.clearKey
+  const created = (keys ?? []).filter(k => k.id && k.clearKey && !clearKeys.value[k.id])
+  if (created.length) clearKeys.value = { ...clearKeys.value, ...Object.fromEntries(created.map(k => [k.id, k.clearKey])) }
 }, { immediate: true })
 const newKeys = computed(() => (apiKeys.value ?? []).filter(k => k.id && clearKeys.value[k.id]))
 
@@ -395,15 +418,13 @@ const resetNewApiKey = () => {
 }
 onMounted(resetNewApiKey)
 
-const addApiKey = () => {
-  apiKeys.value = [...(apiKeys.value ?? []), newApiKey.value]
+const addApiKey = async () => {
+  if (!await saveApiKeys([...(apiKeys.value ?? []), newApiKey.value])) return
   createToggle.value = false
   resetNewApiKey()
 }
 
-const removeApiKey = (apiKey: ApiKey) => {
-  apiKeys.value = (apiKeys.value ?? []).filter(k => k !== apiKey)
-}
+const removeApiKey = (apiKey: ApiKey) => saveApiKeys((apiKeys.value ?? []).filter(k => k !== apiKey))
 
 const scopes = [
   'datasets',

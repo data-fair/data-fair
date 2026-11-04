@@ -38,6 +38,7 @@
       <df-section-tabs
         v-if="sections.info"
         id="info"
+        :inert="infoEdit.save.loading.value"
         :svg="infoSvg"
         :title="sections.info.title"
         :subtitle="t('sections.info.subtitle')"
@@ -79,6 +80,7 @@
         v-if="sections.catalog"
         id="catalog"
         v-model="catalogTab"
+        :inert="catalogEdit.save.loading.value || saveConfirm?.loading"
         :svg="qualitySvg"
         :title="sections.catalog.title"
         :subtitle="$uiConfig.disableApplications ? t('sections.catalog.subtitleNoApps') : t('sections.catalog.subtitle')"
@@ -154,6 +156,7 @@
         v-if="sections.integrations"
         id="integrations"
         v-model="integrationsTab"
+        :inert="webhooksEdit.save.loading.value"
         :svg="securitySvg"
         svg-no-margin
         :title="sections.integrations.title"
@@ -186,7 +189,8 @@
           <v-tabs-window-item value="apiKeys">
             <settings-api-keys
               v-model="settings.apiKeys"
-              :saving="apiKeysEdit.save.loading.value"
+              v-model:clear-keys="apiKeysSecrets"
+              :edit="apiKeysEdit"
             />
           </v-tabs-window-item>
 
@@ -205,6 +209,7 @@
       <df-section-tabs
         v-if="sections.publicationSites"
         id="publicationSites"
+        :inert="portalsEdit.save.loading.value"
         :svg="uiSvg"
         svg-no-margin
         :title="sections.publicationSites.title"
@@ -247,6 +252,7 @@
       <df-section-tabs
         v-if="sections.features"
         id="features"
+        :inert="featuresEdit.save.loading.value"
         :svg="compatSvg"
         svg-no-margin
         :title="sections.features.title"
@@ -511,13 +517,9 @@ const featuresEdit = settingsEditFetch.createSubEdit(['agentChat', 'agentChatAud
 
 const webhooksEdit = settingsEditFetch.createSubEdit(['webhooks'], { success: t('saved') })
 
-// API keys save on each change, a refused save is rolled back: the table only shows the server state
 const apiKeysEdit = settingsEditFetch.createSubEdit(['apiKeys'], { success: t('saved') })
-watch(() => settings.value?.apiKeys, async () => {
-  if (!apiKeysEdit.hasDiff.value) return
-  await apiKeysEdit.save.execute()
-  if (apiKeysEdit.save.error.value) apiKeysEdit.cancel()
-})
+// here and not in the component: the secrets of new keys survive a department switch
+const apiKeysSecrets = ref<Record<string, string>>({})
 
 const edits = [infoEdit, catalogEdit, webhooksEdit, portalsEdit, featuresEdit]
 const anyDirty = computed(() => edits.some(edit => edit.hasDiff.value))
@@ -535,13 +537,14 @@ const licensesValid = ref(true)
 const datasetsMetadataValid = ref(true)
 const privateVocabularyValid = ref(true)
 const portalsValid = ref(true)
-const catalogValid = computed(() => topicsValid.value && licensesValid.value && datasetsMetadataValid.value && privateVocabularyValid.value)
+// only a modified tab counts: an unmounted form keeps reporting its last state
+const catalogTabs = { topics: topicsValid, datasetsMetadata: datasetsMetadataValid, licenses: licensesValid, privateVocabulary: privateVocabularyValid }
+const catalogValid = computed(() => Object.entries(catalogTabs).every(([key, valid]) => valid.value || !catalogEdit.keyHasDiff(key as keyof Settings).value))
 
-// Tab color helper: red if invalid, accent if valid with diff, undefined otherwise
+// Tab color helper: for a modified tab, red if invalid and accent otherwise
 function tabColor (hasDiff: boolean, valid: boolean): string | undefined {
-  if (!valid) return 'error'
-  if (hasDiff) return 'accent'
-  return undefined
+  if (!hasDiff) return undefined
+  return valid ? 'accent' : 'error'
 }
 
 // agentChat and compatODS are activated at the organization level only, departments inherit them
@@ -566,7 +569,7 @@ const sections = computed(() => {
     title: t('sections.integrations.title'),
     tabs: [
       { key: 'apiKeys', title: t('sections.integrations.tabs.apiKeys'), icon: mdiKey },
-      { key: 'webhooks', title: t('sections.integrations.tabs.webhooks'), icon: mdiWebhook, color: tabColor(webhooksEdit.hasDiff.value, webhooksValid.value || !webhooksEdit.hasDiff.value) }
+      { key: 'webhooks', title: t('sections.integrations.tabs.webhooks'), icon: mdiWebhook, color: tabColor(webhooksEdit.hasDiff.value, webhooksValid.value) }
     ]
   }
   if (!$uiConfig.disablePublicationSites) {

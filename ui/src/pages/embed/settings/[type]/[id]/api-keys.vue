@@ -4,7 +4,8 @@
       v-if="settings"
       v-model="settings.apiKeys"
       :restricted-scopes="scopes"
-      @update:model-value="settingsEditFetch.save.execute()"
+      :edit="apiKeysEdit"
+      inline-form
     />
   </v-container>
 </template>
@@ -17,16 +18,17 @@ en:
 </i18n>
 
 <script setup lang="ts">
-import { useEditFetch } from '@data-fair/lib-vue/edit-fetch.js'
+import { useEditFetch } from '~/composables/df-local/edit-fetch-local'
 import type { Settings } from '#api/types'
 
 const { t } = useI18n()
 const route = useRoute<'/embed/settings/[type]/[id]/api-keys'>()
 const settingsEditFetch = useEditFetch<Settings>(
   () => `${$apiPath}/settings/${route.params.type}/${route.params.id}`,
-  { patch: true, saveOptions: { success: t('saved') } }
+  { patch: true }
 )
 const settings = settingsEditFetch.data
+const apiKeysEdit = settingsEditFetch.createSubEdit(['apiKeys'], { success: t('saved') })
 
 const scopes = computed(() => {
   return (route.query.scopes && typeof route.query.scopes === 'string' && route.query.scopes.split(',')) || undefined
