@@ -46,8 +46,8 @@ Publication sites themselves are exposed under the settings router (`api/src/set
 | Route | Auth | Purpose |
 |---|---|---|
 | `GET /api/v1/settings/{type}/{id}/publication-sites` | owner member | Merged list for the owner (org + department). |
-| `POST /api/v1/settings/{type}/{id}/publication-sites` | owner admin | Upsert — **used by the portals service to sync itself**. Also subscribes the owner to the publication-request notifications for this site (dataset + application). |
-| `DELETE /api/v1/settings/{type}/{id}/publication-sites/{siteType}/{siteId}` | owner admin | Remove the site and cascade `$pull` on every dataset and application that references it (`settings/router.ts:438-439`). |
+| `POST /api/v1/settings/{type}/{id}/publication-sites` | owner admin, or the portals secret key | Upsert — **used by the portals service to sync itself**. Also subscribes the owner to the publication-request notifications for this site (dataset + application). |
+| `DELETE /api/v1/settings/{type}/{id}/publication-sites/{siteType}/{siteId}` | owner admin, or the portals secret key | Remove the site and cascade `$pull` on every dataset and application that references it (`settings/router.ts:438-439`). |
 
 Publication of a resource onto a site is not a dedicated endpoint: it is done by patching the resource itself.
 
@@ -119,6 +119,8 @@ The mirroring happens in `portals/api/src/portals/service.ts`:
 - `deletePortal` calls `syncPortalDelete` which issues the matching `DELETE`, triggering the cascade described in §2.
 
 Because the sync reuses the end-user cookie, it is subject to the normal `isOwnerAdmin` check on the Data Fair side — a user who is not admin of the owner cannot register a portal against that owner.
+
+A scope-restricted (agent) session is refused on these writes, so for those portals calls Data Fair's private URL with the shared secret `config.secretKeys.portals` (`SECRET_PORTALS`, unset by default: the path is then closed) instead of the cookie: header `x-secret-key`, and header `x-acting-user` holding the URL-encoded JSON `{"id","name"}` of the user portals acts for (400 when absent or invalid; for a `user` owner it must be that user). The owner comes from the path. Portals has checked the acting user's right on the portal; Data Fair trusts it. There is no session to subscribe, so the `POST` answers `{ site, created, subscriptions }` — `subscriptions` being the two publication-request subscriptions when the site is created, `[]` otherwise — for portals to post to the events service itself. Without a matching key the routes behave as above (`isOwnerAdmin`, 401/403). When the settings document of an organization has to be created on this path its `name` is the organization id, since the organization name is not known there.
 
 ### Reverse direction
 

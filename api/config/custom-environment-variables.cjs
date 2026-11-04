@@ -187,7 +187,8 @@ module.exports = {
     events: 'SECRET_EVENTS',
     sendMails: 'SECRET_SENDMAILS',
     ignoreRateLimiting: 'SECRET_IGNORE_RATE_LIMITING',
-    registry: 'SECRET_REGISTRY'
+    registry: 'SECRET_REGISTRY',
+    portals: 'SECRET_PORTALS'
   },
   brand: {
     logo: 'BRAND_LOGO',
