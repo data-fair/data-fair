@@ -65,7 +65,6 @@
         md="4"
         class="d-flex flex-column ga-6"
       >
-        <dashboard-assistant v-if="side.assistant" />
         <dashboard-activity v-if="side.activity" />
         <dashboard-portals
           v-if="side.portals"
@@ -90,7 +89,6 @@ en:
 <script setup lang="ts">
 import { usePermissions } from '~/composables/use-permissions'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
-import { useShowAgentChat } from '~/composables/agent/use-show-chat'
 import type { PublicationSite } from '~/components/dashboard/dashboard-portals.vue'
 
 const { t } = useI18n()
@@ -101,7 +99,6 @@ breadcrumbs.receive({ breadcrumbs: [{ text: t('dashboard') }] })
 
 // usePermissions uses useSession() internally, so it can be called unconditionally
 const { canContrib, canContribDep, canAdmin, missingSubscription } = usePermissions()
-const showAgentChat = useShowAgentChat()
 
 // shared by the key figures and the "to do" card
 const statsFetch = useFetch<{ limits: Record<string, { consumption: number, limit: number }> }>(() => canContrib.value ? `${$apiPath}/stats` : null)
@@ -113,7 +110,6 @@ const publicationSites = computed(() => publicationSitesFetch.data.value ?? unde
 
 const side = computed(() => {
   const blocks = {
-    assistant: showAgentChat.value,
     activity: canAdmin.value && $uiConfig.eventsIntegration,
     portals: !!publicationSites.value?.some(site => site.url)
   }

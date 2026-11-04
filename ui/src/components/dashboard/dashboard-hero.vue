@@ -38,11 +38,12 @@
           </v-chip>
         </div>
         <div
-          v-if="canContribDep"
+          v-if="canContribDep || showAgentChat"
           class="d-flex flex-wrap align-center ga-2 mt-5"
         >
           <!-- the creation buttons of the datasets and applications lists -->
           <v-btn
+            v-if="canContribDep"
             to="/new-dataset"
             :prepend-icon="mdiPlusCircle"
             color="accent"
@@ -52,7 +53,7 @@
             {{ t('createDataset') }}
           </v-btn>
           <v-btn
-            v-if="!$uiConfig.disableApplications"
+            v-if="canContribDep && !$uiConfig.disableApplications"
             to="/new-application"
             :prepend-icon="mdiPlusCircle"
             color="accent"
@@ -60,6 +61,27 @@
             height="40"
           >
             {{ t('createApplication') }}
+          </v-btn>
+          <v-btn
+            v-if="organization && canAdminDep"
+            :to="organization.department ? '/department' : '/organization'"
+            :prepend-icon="mdiPlus"
+            color="accent"
+            variant="outlined"
+            height="40"
+          >
+            {{ t('inviteMember') }}
+          </v-btn>
+          <!-- only opens the panel, like its button in the top bar -->
+          <v-btn
+            v-if="showAgentChat"
+            :prepend-icon="mdiCreation"
+            color="secondary"
+            variant="flat"
+            height="40"
+            @click="useAgentChatDrawer().drawerOpen.value = true"
+          >
+            {{ t('askAssistant') }}
           </v-btn>
         </div>
       </v-card-text>
@@ -104,6 +126,8 @@ fr:
     user: Utilisateur
   createDataset: Créer un jeu de données
   createApplication: Créer une application
+  inviteMember: Inviter un membre
+  askAssistant: Demander à l'assistant
   collaborativeMessage: Pour travailler en {collaborativeMode} vous devez ouvrir le menu personnel (en haut à droite) et changer de compte actif. Pour créer une nouvelle organisation rendez vous sur {yourAccountLink}.
   collaborativeMessageNoOrg: Pour travailler en {collaborativeMode} vous devez créer une organisation. Pour cela rendez vous sur {yourAccountLink}.
   collaborativeMode: mode collaboratif
@@ -120,6 +144,8 @@ en:
     user: User
   createDataset: Create a dataset
   createApplication: Create an application
+  inviteMember: Invite a member
+  askAssistant: Ask the assistant
   collaborativeMessage: To work in {collaborativeMode} you must open the personal menu (top right) and change the active account. To create a new organization please visit {yourAccountLink}.
   collaborativeMessageNoOrg: To work in {collaborativeMode} you must create an organization. To do so please visit {yourAccountLink}.
   collaborativeMode: collaborative mode
@@ -129,12 +155,15 @@ en:
 </i18n>
 
 <script setup lang="ts">
-import { mdiPlusCircle, mdiInformation, mdiEyeOutline } from '@mdi/js'
+import { mdiPlusCircle, mdiPlus, mdiCreation, mdiInformation, mdiEyeOutline } from '@mdi/js'
+import { useAgentChatDrawer } from '@data-fair/lib-vuetify-agents/useAgentChatDrawer.js'
 import { usePermissions } from '~/composables/use-permissions'
+import { useShowAgentChat } from '~/composables/agent/use-show-chat'
 import heroSvg from '~/assets/svg/data-arranging-two-color.svg?raw'
 
 const { t } = useI18n()
 const { user, organization } = useSessionAuthenticated()
-const { canContribDep } = usePermissions()
+const { canContribDep, canAdminDep } = usePermissions()
+const showAgentChat = useShowAgentChat()
 </script>
 

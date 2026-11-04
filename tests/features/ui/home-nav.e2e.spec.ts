@@ -20,6 +20,16 @@ test.describe('home dashboard', () => {
     await page.waitForURL(/new-dataset/, { timeout: 10000 })
   })
 
+  test('invite button is reserved to the admins of an organization', async ({ page, goToWithAuth }) => {
+    await goToWithAuth('/data-fair/', 'test_user1', { org: 'test_org1' })
+    await page.getByRole('link', { name: 'Inviter un membre' }).click()
+    await page.waitForURL(/\/organization/, { timeout: 10000 })
+
+    await goToWithAuth('/data-fair/', 'test_user1')
+    await expect(page.getByRole('heading', { name: 'Bonjour Test User1' })).toBeVisible({ timeout: 10000 })
+    await expect(page.getByRole('link', { name: 'Inviter un membre' })).not.toBeVisible()
+  })
+
   test('key figure opens the datasets list', async ({ page, goToWithAuth }) => {
     await goToWithAuth('/data-fair/', 'test_user1')
     await page.getByTitle('Voir tous les jeux de données').click()
