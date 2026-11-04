@@ -329,7 +329,8 @@ export const writeExtendedStreams = async (dataset: Dataset, extensions: any[]):
         if (!geometry) return callback()
         const properties: Record<string, any> = {}
         for (const field of relevantSchema) {
-          if (field.key in chunk) {
+          // already written as the feature geometry
+          if (field.key !== 'geometry' && field.key in chunk) {
             properties[field['x-originalName'] || field.key] = chunk[field.key]
           }
         }

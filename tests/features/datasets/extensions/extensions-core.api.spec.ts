@@ -678,5 +678,8 @@ other,unknown address
     assert.equal(res.data.features.length, 1)
     assert.equal(res.data.features[0].properties.Label, 'koumoul')
     assert.equal(res.data.features[0].properties._etablissements.NOMEN_LONG, 'KOUMOUL')
+    // the geometry is only written as the feature geometry, not copied in the properties
+    assert.ok(res.data.features[0].geometry)
+    assert.equal(res.data.features[0].properties.geometry, undefined)
   })
 })

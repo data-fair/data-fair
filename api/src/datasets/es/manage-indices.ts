@@ -4,7 +4,7 @@ import es from '#es'
 import * as datasetUtils from '../utils/index.ts'
 import { aliasName } from './commons.ts'
 import { buildIndexMappings, currentIndexShape, NEW_INDEX_SHAPE, textAnalyzers, type IndexShape } from './operations.ts'
-import { computeFinalizeWarnings, pickPrimaryCode, computeIgnoredKeywordFields, type WarningCode } from './diagnose-warnings.ts'
+import { computeFinalizeWarnings, pickPrimaryCode, computeIgnoredKeywordFields, recommendedNbShards, type WarningCode } from './diagnose-warnings.ts'
 import log from '@data-fair/lib-node/log.js'
 import debugModule from 'debug'
 
@@ -28,11 +28,23 @@ export function indexPrefix (dataset: any) {
   return `${config.indicesPrefix}-${dataset.id}-${crypto.createHash('sha1').update(dataset.id).digest('hex').slice(0, 12)}`
 }
 
+const primaryStoreSize = async (dataset: any): Promise<number> => {
+  try {
+    const indices = await es.client.cat.indices({ index: aliasName({ ...dataset, draftReason: null }), format: 'json', bytes: 'b', h: 'pri.store.size' })
+    return Number(indices[0]?.['pri.store.size']) || 0
+  } catch (err: any) {
+    if (err.statusCode !== 404) throw err
+    return 0
+  }
+}
+
 // a fresh index always carries the new shape; the caller MUST persist `_indexShape:
 // NEW_INDEX_SHAPE` once the index is in use (switchAlias) or the stamp and the mapping disagree
 export const initDatasetIndex = async (dataset: any) => {
   const tempId = `${indexPrefix(dataset)}-${Date.now()}`
   const body = await indexDefinition(dataset, NEW_INDEX_SHAPE)
+  // a rebuild also weighs the production index, often heavier than the CSV-equivalent indexed size
+  body.settings.index.number_of_shards = recommendedNbShards(dataset, await primaryStoreSize(dataset), config.elasticsearch.maxShardSize)
   const res = await es.client.indices.create({
     index: tempId,
     body,
@@ -213,17 +225,12 @@ export const validateDraftAlias = async (dataset: any) => {
   await switchAlias({ ...dataset, draftReason: null }, Object.keys(aliases.draftAlias)[0])
 }
 
-const getNbShards = (dataset: any) => {
-  return Math.max(1, Math.ceil((dataset.storage?.indexed?.size || 0) / config.elasticsearch.maxShardSize))
-}
-
 // exported so raw-ES test fixtures (e.g. the mixed-shape fleet harness) can derive real index
 // settings without hand-copying the analyzer/filter definitions.
 export const indexBase = (dataset: any) => {
-  const nbShards = getNbShards(dataset)
   const indexSettings: any = {
     'mapping.total_fields.limit': 3000,
-    number_of_shards: nbShards,
+    number_of_shards: recommendedNbShards(dataset, 0, config.elasticsearch.maxShardSize),
     number_of_replicas: config.elasticsearch.nbReplicas
   }
   // used for testing
@@ -306,7 +313,7 @@ export const datasetInfos = async (dataset: any) => {
     index: `${indexPrefix(dataset)}-*`,
     format: 'json',
     bytes: 'b',
-    h: 'health,status,index,uuid,pri,rep,docs.count,docs.deleted,store.size,pri.store.size,segments.count'
+    h: 'health,status,index,uuid,pri,rep,docs.count,docs.deleted,store.size,pri.store.size,pri.segments.count'
   })
   for (const index of indices) {
     index.definition = (await es.client.indices.get({ index: index.index }))[index.index]
