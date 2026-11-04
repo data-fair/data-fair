@@ -89,8 +89,9 @@ const sortByPriority = (warnings: Warning[]): Warning[] => {
   )
 }
 
-export const nbShardsForSize = (size: number, maxShardSize: number): number => {
-  return Math.max(1, Math.ceil(size / maxShardSize))
+// the only sizing formula: a diagnostic differing from initDatasetIndex would never clear on reindex
+export const recommendedNbShards = (dataset: any, priStoreSize: number, maxShardSize: number): number => {
+  return Math.max(1, Math.ceil(Math.max(dataset.storage?.indexed?.size || 0, priStoreSize) / maxShardSize))
 }
 
 const finalizeChecks = (dataset: any, esInfos: any, config: DiagnoseConfig): Warning[] => {
@@ -124,16 +125,18 @@ const finalizeChecks = (dataset: any, esInfos: any, config: DiagnoseConfig): War
   }
 
   const currentNbShards = Number(indexSettings.number_of_shards)
-  // physical size: storage.indexed is a CSV equivalent, ~2x lighter than the index on geo datasets
-  const priStoreSize = Number(esInfos.index['pri.store.size'])
-  const recommendedNbShards = nbShardsForSize(priStoreSize, config.maxShardSize)
-  if (!Number.isNaN(priStoreSize) && currentNbShards !== recommendedNbShards) {
-    warnings.push({
-      code: 'ShardingRecommended',
-      severity: 'warning',
-      message: `current shard count ${currentNbShards} differs from recommended ${recommendedNbShards}`,
-      details: { currentNbShards, recommendedNbShards }
-    })
+  // `_cat/indices` answers null when primaries are unavailable, and Number(null) would read as empty
+  const priStoreSize = esInfos.index['pri.store.size']
+  if (priStoreSize !== undefined && priStoreSize !== null) {
+    const recommended = recommendedNbShards(dataset, Number(priStoreSize), config.maxShardSize)
+    if (currentNbShards !== recommended) {
+      warnings.push({
+        code: 'ShardingRecommended',
+        severity: 'warning',
+        message: `current shard count ${currentNbShards} differs from recommended ${recommended}`,
+        details: { currentNbShards, recommendedNbShards: recommended }
+      })
+    }
   }
 
   const properties = esInfos.index.definition?.mappings?.properties ?? {}

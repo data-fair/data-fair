@@ -3,8 +3,8 @@ import assert from 'node:assert/strict'
 import {
   computeFinalizeWarnings,
   computeRealtimeWarnings,
-  nbShardsForSize,
   pickPrimaryCode,
+  recommendedNbShards,
   WARNING_PRIORITY
 } from '../../../api/src/datasets/es/diagnose-warnings.ts'
 
@@ -109,15 +109,38 @@ test.describe('existing finalize-time codes', () => {
     assert.equal(w.find(x => x.code === 'ShardingRecommended'), undefined)
   })
 
+  // storage.indexed counts attachments at their file size, far above what the index keeps of them
+  test('ShardingRecommended stays quiet once reindexed when the index is lighter than indexed size', () => {
+    const dataset = wideDataset({ storage: { indexed: { size: 15_000_000_000, parts: ['lines', 'attachments'] } } })
+    const w = computeFinalizeWarnings(dataset, shardedIndex('2', '8000000000'), baseEsConfig)
+    assert.equal(w.find(x => x.code === 'ShardingRecommended'), undefined)
+  })
+
+  test('ShardingRecommended is skipped when ES reports a null index size', () => {
+    const w = computeFinalizeWarnings(wideDataset(), shardedIndex('2', null as any), baseEsConfig)
+    assert.equal(w.find(x => x.code === 'ShardingRecommended'), undefined)
+  })
+
   test('ShardingRecommended is skipped when the index size is unknown', () => {
     const w = computeFinalizeWarnings(wideDataset(), shardedIndex('2', undefined as any), baseEsConfig)
     assert.equal(w.find(x => x.code === 'ShardingRecommended'), undefined)
   })
 
-  test('nbShardsForSize keeps at least one shard and rounds up', () => {
-    assert.equal(nbShardsForSize(0, 10), 1)
-    assert.equal(nbShardsForSize(10, 10), 1)
-    assert.equal(nbShardsForSize(11, 10), 2)
+  test('recommendedNbShards keeps at least one shard, rounds up and takes the larger size', () => {
+    assert.equal(recommendedNbShards({}, 0, 10), 1)
+    assert.equal(recommendedNbShards({}, 10, 10), 1)
+    assert.equal(recommendedNbShards({}, 11, 10), 2)
+    assert.equal(recommendedNbShards({ storage: { indexed: { size: 11 } } }, 5, 10), 2)
+    assert.equal(recommendedNbShards({ storage: { indexed: { size: 5 } } }, 11, 10), 2)
+  })
+
+  // the case the sizing costs: a replaced file keeps the old count until the warned reindex clears it
+  test('ShardingRecommended clears after the reindex of a dataset that shrank', () => {
+    const dataset = wideDataset({ storage: { indexed: { size: 1_000_000_000, parts: ['lines'] } } })
+    const before = computeFinalizeWarnings(dataset, shardedIndex('4', '1000000000'), baseEsConfig)
+    assert.equal(before.find(x => x.code === 'ShardingRecommended')!.details!.recommendedNbShards, 1)
+    const after = computeFinalizeWarnings(dataset, shardedIndex('1', '1000000000'), baseEsConfig)
+    assert.equal(after.find(x => x.code === 'ShardingRecommended'), undefined)
   })
 })
 

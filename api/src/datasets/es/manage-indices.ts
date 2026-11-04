@@ -4,7 +4,7 @@ import es from '#es'
 import * as datasetUtils from '../utils/index.ts'
 import { aliasName } from './commons.ts'
 import { buildIndexMappings, currentIndexShape, NEW_INDEX_SHAPE, textAnalyzers, type IndexShape } from './operations.ts'
-import { computeFinalizeWarnings, pickPrimaryCode, computeIgnoredKeywordFields, nbShardsForSize, type WarningCode } from './diagnose-warnings.ts'
+import { computeFinalizeWarnings, pickPrimaryCode, computeIgnoredKeywordFields, recommendedNbShards, type WarningCode } from './diagnose-warnings.ts'
 import log from '@data-fair/lib-node/log.js'
 import debugModule from 'debug'
 
@@ -43,9 +43,8 @@ const primaryStoreSize = async (dataset: any): Promise<number> => {
 export const initDatasetIndex = async (dataset: any) => {
   const tempId = `${indexPrefix(dataset)}-${Date.now()}`
   const body = await indexDefinition(dataset, NEW_INDEX_SHAPE)
-  // a rebuild is sized on the index it replaces, heavier than the CSV-equivalent indexed size
-  const size = Math.max(dataset.storage?.indexed?.size || 0, await primaryStoreSize(dataset))
-  body.settings.index.number_of_shards = nbShardsForSize(size, config.elasticsearch.maxShardSize)
+  // a rebuild also weighs the production index, often heavier than the CSV-equivalent indexed size
+  body.settings.index.number_of_shards = recommendedNbShards(dataset, await primaryStoreSize(dataset), config.elasticsearch.maxShardSize)
   const res = await es.client.indices.create({
     index: tempId,
     body,
@@ -231,7 +230,7 @@ export const validateDraftAlias = async (dataset: any) => {
 export const indexBase = (dataset: any) => {
   const indexSettings: any = {
     'mapping.total_fields.limit': 3000,
-    number_of_shards: nbShardsForSize(dataset.storage?.indexed?.size || 0, config.elasticsearch.maxShardSize),
+    number_of_shards: recommendedNbShards(dataset, 0, config.elasticsearch.maxShardSize),
     number_of_replicas: config.elasticsearch.nbReplicas
   }
   // used for testing
