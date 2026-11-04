@@ -43,11 +43,12 @@ Routes marked as allowed for any scope (`allowAnyScope` / `markScopeChecked`), b
 - limits `GET /api/v1/limits/:type/:id` (account members);
 - base-applications `GET /api/v1/base-applications`, `/:id/icon` and `/:id/thumbnail`;
 - remote-services `GET /api/v1/remote-services` (the list), `GET /api/v1/remote-services-actions`, and the proxy `/api/v1/remote-services/:id/proxy/*` (`GET` only: other methods answer 405). `GET /api/v1/remote-services/:id` is not marked;
+- the publication-site writes with the portals secret key: `POST /api/v1/settings/:type/:id/publication-sites` and `DELETE .../publication-sites/:siteType/:siteId` are marked only once `x-secret-key` matched `secretKeys.portals` (see [publication sites](publication-sites.md#6-relationship-to-the-portals-service)); without the key they stay refused to a scoped session;
 - `/app-sw.js`, `/streamsaver/mitm.html` and `/streamsaver/sw.js`, `/embed` on `GET`/`HEAD` (the shell; other methods are not served), and the SPA shell on `GET`/`HEAD`.
 
 ## What stays refused
 
-Everything not listed above. In particular settings writes (API keys, and publication sites: their configuration writes, `POST`/`DELETE /api/v1/settings/:type/:id/publication-sites...`, are refused; the member read above is allowed), the full settings read, admin, stats, activity, identities, test-env, `POST /api/v1/_check-api`, and routes of other services' families until they opt in (processings, metrics, catalogs and events are phase 1d).
+Everything not listed above. In particular settings writes (API keys, and publication sites: their configuration writes, `POST`/`DELETE /api/v1/settings/:type/:id/publication-sites...`, are refused to a scoped session, only the portals secret key above opens them; the member read above is allowed), the full settings read, admin, stats, activity, identities, test-env, `POST /api/v1/_check-api`, and routes of other services' families until they opt in (processings, metrics, catalogs and events are phase 1d).
 
 ## Tiers of some dataset operations
 

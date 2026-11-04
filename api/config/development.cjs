@@ -119,7 +119,8 @@ module.exports = {
     events: 'secret-events',
     catalogs: 'secret-catalogs',
     sendMails: 'secret-sendmails',
-    registry: 'secret-registry-internal'
+    registry: 'secret-registry-internal',
+    portals: 'secret-portals'
   },
   applications: [{
     title: 'App test1',

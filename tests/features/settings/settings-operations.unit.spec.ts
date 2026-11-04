@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { parseOwnerParams, rootSettingsFilter, cleanSettings, fillSettings, buildPublicationSiteSubscriptions, removeWebhookEvents, matchAgentChatAudience } from '../../../api/src/settings/operations.ts'
+import { parseOwnerParams, rootSettingsFilter, cleanSettings, fillSettings, buildPublicationSiteSubscriptions, removeWebhookEvents, matchAgentChatAudience, secretSessionState } from '../../../api/src/settings/operations.ts'
 
 test.describe('rootSettingsFilter', () => {
   test('always targets the root document, ignoring the department the caller is in', () => {
@@ -252,5 +252,20 @@ test.describe('matchAgentChatAudience', () => {
     assert.ok(matchAgentChatAudience(rules, rootAdmin))
     assert.ok(matchAgentChatAudience(rules, dep2Contrib))
     assert.ok(!matchAgentChatAudience(rules, dep1Admin))
+  })
+})
+
+test.describe('secretSessionState', () => {
+  test('makes a synthetic admin of the organization owner, department included', () => {
+    const state = secretSessionState({ type: 'organization', id: 'org1', department: 'dep1' })
+    assert.deepEqual(state.user.organizations, [{ id: 'org1', name: 'org1', role: 'admin', department: 'dep1' }])
+    assert.deepEqual(state.account, { type: 'organization', id: 'org1', name: 'org1', department: 'dep1' })
+    assert.equal(fillSettings({ type: 'organization', id: 'org1', department: 'dep1' }, state.user, {}).name, 'org1 - dep1')
+  })
+  test('a user owner is named after its id, without email', () => {
+    const state = secretSessionState({ type: 'user', id: 'u1' })
+    const settings = fillSettings({ type: 'user', id: 'u1' }, state.user, {})
+    assert.equal(settings.name, 'u1')
+    assert.equal('email' in settings, false)
   })
 })
