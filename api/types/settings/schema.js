@@ -26,7 +26,14 @@ const metadataGroup = (defaultGroup, toggleable = false, cols = 4) => ({
   }
 })
 
-// a metadata always shown on a dataset: only its tab can be chosen
+// replaces the help shown next to the field in the dataset form
+const metadataHelp = (toggleable = false) => ({
+  type: 'string',
+  title: 'Infobulle',
+  layout: { comp: 'textarea', ...(toggleable && { if: 'parent.data.active' }), cols: 12, props: { rows: 1, autoGrow: true, density: 'compact' } }
+})
+
+// a metadata always shown on a dataset: only its tab and help can be chosen
 /**
  * @param {string} title
  * @param {{ key: string, title: string }} defaultGroup
@@ -35,10 +42,11 @@ const metadataGroup = (defaultGroup, toggleable = false, cols = 4) => ({
 const fixedMetadata = (title, defaultGroup, description) => ({
   type: 'object',
   // an empty middle column, where the other rows have their custom label, keeps the help next to the switch
-  layout: { children: ['active', { text: '\u00a0', cols: 4 }, 'group'] },
+  layout: { children: ['active', { text: '\u00a0', cols: 4 }, 'group', 'description'] },
   properties: {
     active: { title, description, type: 'boolean', readOnly: true, default: true, layout: { comp: 'switch', cols: 4 } },
-    group: metadataGroup(defaultGroup)
+    group: metadataGroup(defaultGroup),
+    description: metadataHelp()
   }
 })
 
@@ -454,7 +462,8 @@ export default {
                 props: { variant: 'outlined', placeholder: 'Producteur' }
               }
             },
-            group: metadataGroup(informationsGroup, true)
+            group: metadataGroup(informationsGroup, true),
+            description: metadataHelp(true)
           }
         },
         // https://www.w3.org/TR/vocab-dcat-2/#Property:dataset_spatial
@@ -477,7 +486,8 @@ export default {
                 props: { variant: 'outlined', placeholder: 'Couverture géographique' }
               }
             },
-            group: metadataGroup(coverageGroup, true)
+            group: metadataGroup(coverageGroup, true),
+            description: metadataHelp(true)
           }
         },
         // https://www.w3.org/TR/vocab-dcat-2/#Property:dataset_temporal
@@ -500,7 +510,8 @@ export default {
                 props: { variant: 'outlined', placeholder: 'Couverture temporelle' }
               }
             },
-            group: metadataGroup(coverageGroup, true)
+            group: metadataGroup(coverageGroup, true),
+            description: metadataHelp(true)
           }
         },
         // https://www.w3.org/TR/vocab-dcat-2/#Property:dataset_frequency and https://www.dublincore.org/specifications/dublin-core/collection-description/frequency/
@@ -523,7 +534,8 @@ export default {
                 props: { variant: 'outlined', placeholder: 'Fréquence de mise à jour' }
               }
             },
-            group: metadataGroup(coverageGroup, true)
+            group: metadataGroup(coverageGroup, true),
+            description: metadataHelp(true)
           }
         },
         modified: {
@@ -545,7 +557,8 @@ export default {
                 props: { variant: 'outlined', placeholder: 'Date de modification de la source' }
               }
             },
-            group: metadataGroup(coverageGroup, true)
+            group: metadataGroup(coverageGroup, true),
+            description: metadataHelp(true)
           }
         },
         keywords: {
@@ -567,7 +580,8 @@ export default {
                 props: { variant: 'outlined', placeholder: 'Mots-clés' }
               }
             },
-            group: metadataGroup(coverageGroup, true)
+            group: metadataGroup(coverageGroup, true),
+            description: metadataHelp(true)
           }
         },
         searchTerms: {
@@ -589,7 +603,8 @@ export default {
                 props: { variant: 'outlined', placeholder: 'Termes de recherche associés' }
               }
             },
-            group: metadataGroup(coverageGroup, true)
+            group: metadataGroup(coverageGroup, true),
+            description: metadataHelp(true)
           }
         },
         conformsTo: {

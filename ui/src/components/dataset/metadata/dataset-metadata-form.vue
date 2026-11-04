@@ -157,10 +157,14 @@ const fixedProperties = () => {
     const prop = properties[key] = structuredClone((datasetSchema as any).properties[key])
     // the main fields' descriptions only document the API, their labels say enough in the form
     if (mainFields.includes(key)) delete prop.description
-    // the owner settings can rename a field
+    // the owner settings can rename a field and replace its help
     if (dm?.[key]?.title) {
       prop.title = dm[key].title
       delete prop['x-i18n-title']
+    }
+    if (dm?.[key]?.description) {
+      prop.description = dm[key].description
+      delete prop['x-i18n-description']
     }
     if (key === 'temporal') {
       // no section heading: each date names the coverage it bounds, as its accessible label must
@@ -171,6 +175,8 @@ const fixedProperties = () => {
         delete date['x-i18n-title']
         Object.assign(date.layout, accent(`.temporal?.${bound}`))
       }
+      // the heading is hidden, its help goes with the first date
+      prop.properties.start.description = prop.description
     }
     prop.layout = { ...prop.layout, ...layout, ...(!['temporal', 'description'].includes(key) && accent('.' + key)) }
   }
