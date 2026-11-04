@@ -1,6 +1,6 @@
 import { type Request, type RequestHandler } from 'express'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import { reqSessionAuthenticated, secretKeyMatches, markScopeChecked, type SessionStateAuthenticated } from '@data-fair/lib-express'
+import { reqSessionAuthenticated, secretKeyMatches, assertReqInternal, markScopeChecked, type SessionStateAuthenticated } from '@data-fair/lib-express'
 import config from '#config'
 import { reqHost } from '@data-fair/lib-express/req-origin.js'
 import log from '@data-fair/lib-node/log.js'
@@ -52,7 +52,7 @@ export const reqPortalsSecret = (req: Request) => !!portalsSecretSession.getOpti
 
 /**
  * Publication-site writes: portals syncs the sites of its agent (scoped) sessions with its shared
- * secret key (x-secret-key), without a session. Without a
+ * secret key (x-secret-key), without a session, on the private url only (421 on the public one). Without a
  * matching key this is isOwnerAdmin, whatever the headers: the session path is unchanged.
  */
 export const portalsSecretOrOwnerAdmin: RequestHandler = (req, res, next) => {
@@ -60,6 +60,7 @@ export const portalsSecretOrOwnerAdmin: RequestHandler = (req, res, next) => {
     isOwnerAdmin(req, res, next)
     return
   }
+  assertReqInternal(req)
   const { owner } = reqSettingsParams(req)
   portalsSecretSession.set(req, secretSessionState(owner))
   // a session-less call: the key, not a scope, is what allows it

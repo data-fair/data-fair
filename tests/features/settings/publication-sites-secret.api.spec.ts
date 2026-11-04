@@ -69,6 +69,15 @@ test.describe('publication sites with the portals secret key', () => {
     assert.ok(!sites.some((s: any) => s.id === portal.id))
   })
 
+  test('the secret key is refused on the public url', async () => {
+    const url = `${settingsUrl}/organization/test_org1/publication-sites`
+    const headers = { 'x-secret-key': config.secretKeys.portals, 'x-forwarded-host': new URL(config.publicUrl).host }
+    await assert.rejects(anonymousAx.post(url, portal, { headers }), (err: any) => err.status === 421)
+    await assert.rejects(anonymousAx.delete(`${url}/${portal.type}/${portal.id}`, { headers }), (err: any) => err.status === 421)
+    const sites = (await testUser1Org.get('/api/v1/settings/organization/test_org1/publication-sites')).data
+    assert.ok(!sites.some((s: any) => s.id === portal.id))
+  })
+
   test('a user owner is created without any header but the key', async () => {
     const res = await anonymousAx.post(`${settingsUrl}/user/test_user1/publication-sites`, portal, secretHeaders(config.secretKeys.portals))
     assert.equal(res.data.created, true)
