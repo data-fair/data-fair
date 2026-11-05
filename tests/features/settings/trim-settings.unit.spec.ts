@@ -23,7 +23,9 @@ test.describe('trimSettings', () => {
   test('trims datasets metadata options and contact info', () => {
     const settings: any = {
       datasetsMetadata: {
-        spatial: { active: true, title: ' Zone ' },
+        spatial: { active: true, title: ' Zone ', description: ' Aide ' },
+        origin: { active: true, description: '   ' },
+        searchTerms: { active: true, title: ' Mots ' },
         custom: [{ key: ' ref ', title: ' Référence ', description: ' Référence interne du jeu. ', enum: [' Voirie ', 'Voirie', ' '] }],
         groups: [{ key: 'g', title: ' Gouvernance ' }],
         informationsTitle: ' Général '
@@ -31,7 +33,9 @@ test.describe('trimSettings', () => {
       info: { contact: { name: ' Koumoul ', url: ' https://koumoul.com ', email: ' contact@koumoul.com ' } }
     }
     trimSettings(settings)
-    assert.equal(settings.datasetsMetadata.spatial.title, 'Zone')
+    assert.deepEqual(settings.datasetsMetadata.spatial, { active: true, title: 'Zone', description: 'Aide' })
+    assert.deepEqual(settings.datasetsMetadata.origin, { active: true })
+    assert.equal(settings.datasetsMetadata.searchTerms.title, 'Mots')
     assert.deepEqual(settings.datasetsMetadata.custom[0], { key: 'ref', title: 'Référence', description: 'Référence interne du jeu.', enum: ['Voirie'] })
     assert.deepEqual(settings.datasetsMetadata.groups[0], { key: 'g', title: 'Gouvernance' })
     assert.equal(settings.datasetsMetadata.informationsTitle, 'Général')

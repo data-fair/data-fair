@@ -189,9 +189,15 @@ export const trimSettings = (settings: Partial<Settings>) => {
     if (webhook.target?.params) trimFields(webhook.target.params, 'url')
   }
   if (settings.datasetsMetadata) {
-    const { spatial, temporal, frequency, creator, modified, keywords, conformsTo } = settings.datasetsMetadata
-    for (const option of [spatial, temporal, frequency, creator, modified, keywords, conformsTo]) {
+    const { license, origin, image, topics, relatedDatasets, spatial, temporal, frequency, creator, modified, keywords, searchTerms, conformsTo } = settings.datasetsMetadata
+    for (const option of [spatial, temporal, frequency, creator, modified, keywords, searchTerms, conformsTo]) {
       if (option) trimFields(option, 'title')
+    }
+    for (const option of [license, origin, image, topics, relatedDatasets, spatial, temporal, frequency, creator, modified, keywords, searchTerms]) {
+      if (!option) continue
+      trimFields(option, 'description')
+      // a blank help falls back to the native one, vjsf would drop an empty string and show a false diff
+      if (!option.description) delete option.description
     }
     for (const custom of settings.datasetsMetadata.custom ?? []) {
       trimFields(custom, 'key', 'title', 'description')
