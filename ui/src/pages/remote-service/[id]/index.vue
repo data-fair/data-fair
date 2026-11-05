@@ -143,9 +143,9 @@ en:
 import type { RemoteService } from '#api/types'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import { mdiAlert, mdiInformation, mdiMerge, mdiPencil, mdiPictureInPictureBottomRightOutline, mdiSecurity } from '@mdi/js'
-import checklistSvg from '~/assets/svg/Checklist_Two Color.svg?raw'
-import settingsSvg from '~/assets/svg/Settings_Two Color.svg?raw'
-import shareSvg from '~/assets/svg/Share_Two Color.svg?raw'
+import checklistSvg from '~/assets/svg/checklist-two-color.svg?raw'
+import settingsSvg from '~/assets/svg/settings-two-color.svg?raw'
+import shareSvg from '~/assets/svg/share-two-color.svg?raw'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 import equal from 'fast-deep-equal'
 

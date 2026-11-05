@@ -345,7 +345,7 @@
       :min-height="550"
       :title="sections.activity.title"
       :tabs="sections.activity.tabs"
-      :svg="settingsSvg"
+      :svg="activitySvg"
     >
       <template #content="{ tab }">
         <v-tabs-window
@@ -830,14 +830,14 @@ en:
 </i18n>
 
 <script setup lang="ts">
-import informationsSvg from '~/assets/svg/Quality Check_Monochromatic.svg?raw'
-import buildingSvg from '~/assets/svg/Team building _Two Color.svg?raw'
-import dataSvg from '~/assets/svg/Data storage_Two Color.svg?raw'
-import metadataSvg from '~/assets/svg/Checklist_Two Color.svg?raw'
-import shareSvg from '~/assets/svg/Share_Two Color.svg?raw'
-import settingsSvg from '~/assets/svg/Settings_Monochromatic.svg?raw'
-import securitySvg from '~/assets/svg/Security_Two Color.svg?raw'
-import dataMaintenanceSvg from '~/assets/svg/Data maintenance_Two Color.svg?raw'
+import informationsSvg from '~/assets/svg/data-process-two-color.svg?raw'
+import buildingSvg from '~/assets/svg/team-building-two-color.svg?raw'
+import dataSvg from '~/assets/svg/data-storage-two-color.svg?raw'
+import metadataSvg from '~/assets/svg/checklist-two-color.svg?raw'
+import shareSvg from '~/assets/svg/share-two-color.svg?raw'
+import activitySvg from '~/assets/svg/progress-two-color.svg?raw'
+import securitySvg from '~/assets/svg/security-two-color.svg?raw'
+import dataMaintenanceSvg from '~/assets/svg/data-maintenance-two-color.svg?raw'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import ConfirmMenu from '~/components/confirm-menu.vue'
 import DatasetRestConfig from '~/components/dataset/rest/dataset-rest-config.vue'

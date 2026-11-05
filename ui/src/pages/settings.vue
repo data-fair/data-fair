@@ -443,11 +443,11 @@ import { mdiBookOpenVariant, mdiCancel, mdiCertificate, mdiFileDocumentEdit, mdi
 import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import ConfirmMenu from '~/components/confirm-menu.vue'
-import qualitySvg from '~/assets/svg/Quality Check_Monochromatic.svg?raw'
-import securitySvg from '~/assets/svg/Security_Two Color.svg?raw'
-import uiSvg from '~/assets/svg/User Interface _Two Color.svg?raw'
-import infoSvg from '~/assets/svg/Sending emails_Monochromatic.svg?raw'
-import compatSvg from '~/assets/svg/Team building _Two Color.svg?raw'
+import qualitySvg from '~/assets/svg/data-arranging-two-color.svg?raw'
+import securitySvg from '~/assets/svg/security-two-color.svg?raw'
+import uiSvg from '~/assets/svg/user-interface-two-color.svg?raw'
+import infoSvg from '~/assets/svg/creative-process-two-color.svg?raw'
+import compatSvg from '~/assets/svg/settings-two-color.svg?raw'
 
 const { t, locale } = useI18n()
 const session = useSessionAuthenticated()

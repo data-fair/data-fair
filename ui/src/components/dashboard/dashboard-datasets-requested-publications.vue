@@ -15,7 +15,7 @@ en:
 </i18n>
 
 <script setup lang="ts">
-import checklistSvg from '~/assets/svg/Checklist_Two Color.svg?raw'
+import checklistSvg from '~/assets/svg/checklist-two-color.svg?raw'
 
 const { t } = useI18n()
 const { account } = useSessionAuthenticated()

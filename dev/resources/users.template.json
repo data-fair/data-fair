@@ -221,6 +221,8 @@
   },
   {
     "id": "test_org1_agent_nhi",
+    "firstName": "Agent",
+    "lastName": "MCP",
     "email": "test_org1_agent_nhi@test.com",
     "nhi": {
       "provider": {
@@ -232,6 +234,8 @@
   },
   {
     "id": "test_org1_lines_nhi",
+    "firstName": "Agent",
+    "lastName": "Lines",
     "email": "test_org1_lines_nhi@test.com",
     "nhi": {
       "provider": {
@@ -243,6 +247,8 @@
   },
   {
     "id": "test_org1_scope_nhi",
+    "firstName": "Agent",
+    "lastName": "Scope",
     "email": "test_org1_scope_nhi@test.com",
     "nhi": {
       "provider": {

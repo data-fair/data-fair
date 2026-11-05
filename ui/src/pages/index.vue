@@ -205,9 +205,9 @@ en:
 import { mdiAlert } from '@mdi/js'
 import { usePermissions } from '~/composables/use-permissions'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
-import dataSvg from '~/assets/svg/Data Arranging_Two Color.svg?raw'
-import dataMaintenanceSvg from '~/assets/svg/Data maintenance_Two Color.svg?raw'
-import shareSvg from '~/assets/svg/Share_Two Color.svg?raw'
+import dataSvg from '~/assets/svg/data-arranging-two-color.svg?raw'
+import dataMaintenanceSvg from '~/assets/svg/data-maintenance-two-color.svg?raw'
+import shareSvg from '~/assets/svg/share-two-color.svg?raw'
 
 const { t } = useI18n()
 const session = useSession()
