@@ -15,8 +15,9 @@ test.describe('dataset activable metadata fields', () => {
   const settings = (staleType = 'integer') => ({
     datasetsMetadata: {
       groups: [{ key: 'gouvernance', title: 'Gouvernance' }],
+      origin: { description: 'Page du producteur à renseigner.' },
       spatial: { active: true },
-      temporal: { active: true },
+      temporal: { active: true, description: 'Période des relevés.' },
       frequency: { active: true, group: 'gouvernance' },
       modified: { active: true },
       custom: [
@@ -94,6 +95,22 @@ test.describe('dataset activable metadata fields', () => {
     // the help button vjsf renders from the schema description, next to the field
     await metadata.locator('.vjsf-node:not(:has(.vjsf-node))').filter({ hasText: 'Service référent' }).getByRole('button', { name: "Afficher un message d'aide" }).click()
     await expect(page.locator('.v-overlay .v-alert')).toContainText('Service de la Ville qui répond aux questions sur ce jeu.')
+  })
+
+  test('the help set in the settings replaces the native help of a standard metadata', async ({ page, goToWithAuth }) => {
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    const metadata = page.locator('#metadata')
+    await expect(metadata).toBeVisible({ timeout: 15000 })
+    const helpButton = "Afficher un message d'aide"
+
+    await metadata.locator('.vjsf-node:not(:has(.vjsf-node))').filter({ hasText: 'Provenance' }).getByRole('button', { name: helpButton }).click()
+    await expect(page.locator('.v-overlay .v-alert')).toContainText('Page du producteur à renseigner.')
+    await page.keyboard.press('Escape')
+
+    // the temporal heading is hidden: its help goes with the first date, once
+    await metadata.getByRole('tab', { name: 'Informations complémentaires' }).click()
+    const temporal = metadata.locator('.vjsf-node:has(.vjsf-node)').filter({ hasText: 'Couverture temporelle - début' }).last()
+    await expect(temporal.getByRole('button', { name: helpButton })).toHaveCount(1)
   })
 
   test('a category from the owner settings gets its own tab', async ({ page, goToWithAuth }) => {

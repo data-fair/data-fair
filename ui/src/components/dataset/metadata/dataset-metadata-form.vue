@@ -177,6 +177,7 @@ const fixedProperties = () => {
       }
       // the heading is hidden, its help goes with the first date
       prop.properties.start.description = prop.description
+      delete prop.description
     }
     prop.layout = { ...prop.layout, ...layout, ...(!['temporal', 'description'].includes(key) && accent('.' + key)) }
   }
