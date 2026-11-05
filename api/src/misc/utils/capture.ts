@@ -18,6 +18,9 @@ import { downloadFileFromStorage } from '../../files-storage/utils.ts'
 
 const captureUrl = config.privateCaptureUrl || config.captureUrl
 
+// the capture service requires its secret key from internal callers when it has one
+const secretHeaders = (): Record<string, string> => config.secretKeys.capture ? { 'x-secret-key': config.secretKeys.capture } : {}
+
 const capturesDir = path.resolve(config.dataDir, 'captures')
 
 // path of the capture artifact for an application, used to clean it up when the application is deleted
@@ -48,7 +51,7 @@ const screenshotRequestOpts = (req: RequestWithResource, isDefaultThumbnail = fa
   if (typeof req.query.height === 'string') qs.height = req.query.height
   if (req.query.type === 'gif') qs.type = 'gif' // will return a gif if the application supports an animation mode, png otherwise
   if (req.query.timer === 'true') qs.timer = 'true'
-  const headers: Record<string, string> = {}
+  const headers: Record<string, string> = secretHeaders()
   if (permissionsUtils.isPublic('applications', resource)) {
     qs.cookies = 'false'
   } else {
@@ -79,7 +82,7 @@ const printRequestOpts = (req: RequestWithResource): AxiosRequestConfig => {
     filename: req.query.filename ? req.query.filename : ((resource.slug || resource.id) + '.pdf')
   }
   if (req.query.landscape) qs.landscape = req.query.landscape
-  const headers: Record<string, string> = {}
+  const headers: Record<string, string> = secretHeaders()
   if (permissionsUtils.isPublic('applications', resource)) {
     qs.cookies = 'false'
   } else {
@@ -177,4 +180,17 @@ export const print = async (req: RequestWithResource, res: Response) => {
     return res.status(429).type('text/plain').send(req.__('errors.exceedRateLimiting'))
   }
   await stream2req(reqOpts, res)
+}
+
+/**
+ * Renders a page as the owner of the cookie, internal only: returns a screenshot and a report of what was rendered.
+ * The capture service is configured to only render pages of our own host.
+ */
+export const inspect = async (target: string, cookie: string, opts: { mobile: boolean, fullPage: boolean }): Promise<{ image: { data: string, mediaType: string }, text: string, report: Record<string, unknown> }> => {
+  const res = await axios.get(captureUrl + '/api/v1/inspect', {
+    params: { target, mobile: String(opts.mobile), fullPage: String(opts.fullPage) },
+    headers: { ...secretHeaders(), Cookie: cookie },
+    timeout: 60000
+  })
+  return res.data
 }

@@ -120,7 +120,9 @@ module.exports = {
     catalogs: 'secret-catalogs',
     sendMails: 'secret-sendmails',
     registry: 'secret-registry-internal',
-    portals: 'secret-portals'
+    portals: 'secret-portals',
+    capture: 'secret-capture',
+    pseudoSession: 'secret-pseudo-session'
   },
   applications: [{
     title: 'App test1',
