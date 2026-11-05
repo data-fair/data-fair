@@ -616,6 +616,88 @@
       ]
     },
     {
+      "name": "datafair_preview_application",
+      "description": "Render the application as a visitor would and return a screenshot with a report of what happened: errors, failed API calls, timeout. Call it after datafair_update_application to check the result. The text gives the page URL and title, console errors, failed requests and the accessibility snapshot of the page in Playwright's YAML format. Read it first: an error there explains an empty or broken picture. Use this tool, not fetch_url, for this platform's applications: fetch_url runs no JavaScript and has no session. The render reads the datasets the application uses with your account's permissions, so their content in the result is expected. Do not use this tool to read data your scopes do not otherwise grant.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "applicationId": {
+            "type": "string",
+            "description": "The exact application ID from the \"id\" field in datafair_list_account_applications results."
+          },
+          "draft": {
+            "type": "boolean",
+            "description": "Ouvrir la version brouillon de la configuration de l'application (`false` par défaut)."
+          },
+          "viewport": {
+            "type": "string",
+            "enum": [
+              "desktop",
+              "mobile"
+            ],
+            "default": "desktop",
+            "description": "Taille de l'écran simulé."
+          },
+          "fullPage": {
+            "type": "boolean",
+            "description": "Capturer toute la hauteur de la page plutôt que le seul écran visible (`false` par défaut)."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "applicationId"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": true
+      },
+      "security": [
+        {
+          "apiKey": []
+        },
+        {
+          "sdCookie": []
+        },
+        {
+          "oauth2": [
+            "applications:read"
+          ]
+        },
+        {
+          "oauth2": [
+            "applications:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "applications:admin"
+          ]
+        },
+        {
+          "oauth2": [
+            "applications"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:read"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:admin"
+          ]
+        }
+      ]
+    },
+    {
       "name": "datafair_describe_application",
       "description": "Get the metadata and configuration of an application: title, description, base application, the datasets its configuration uses, publication status.",
       "inputSchema": {

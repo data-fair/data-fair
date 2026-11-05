@@ -12,6 +12,8 @@ import { clean as cleanBaseApp } from '../base-applications/operations.ts'
 import * as permissions from '../misc/utils/permissions.ts'
 import * as usersUtils from '../misc/utils/users.ts'
 import * as capture from '../misc/utils/capture.ts'
+import * as rateLimiting from '../misc/utils/rate-limiting.ts'
+import { pseudoSessionCookie } from '../misc/utils/pseudo-session.ts'
 import { clean, refreshConfigDatasetsRefs, updateStorage, attachmentPath, attachmentsDir } from './utils.ts'
 import * as service from './service.ts'
 import * as fragmentsService from '../fragments/service.ts'
@@ -280,6 +282,20 @@ router.post('/:applicationId/error', readApplication, permissionMiddleware('writ
 
 router.get('/:applicationId/capture', readApplication, permissionMiddleware('readCapture', 'read'), cacheHeaders.resourceBased(), async (req, res) => {
   await capture.screenshot(req as RequestWithResource, res)
+})
+router.get('/:applicationId/preview', readApplication, permissionMiddleware('readCapture', 'read'), cacheHeaders.noCache, async (req, res) => {
+  if (!rateLimiting.consume(req, 'appPreviews')) {
+    return res.status(429).type('text/plain').send(req.__('errors.exceedRateLimiting'))
+  }
+  const query = req.query as Record<string, unknown>
+  const target = new URL(`${config.publicUrl}/app/${reqApplication(req).id}`)
+  if (query.draft === 'true') target.searchParams.set('draft', 'true')
+  // forward query params to open the application in a specific state
+  for (const key of Object.keys(query)) {
+    if (key.startsWith('app_') && typeof query[key] === 'string') target.searchParams.set(key.replace('app_', ''), query[key])
+  }
+  const cookie = await pseudoSessionCookie(reqSessionAuthenticated(req))
+  res.json(await capture.inspect(target.href, cookie, { mobile: query.viewport === 'mobile', fullPage: query.fullPage === 'true' }))
 })
 router.get('/:applicationId/print', readApplication, permissionMiddleware('readPrint', 'read'), cacheHeaders.resourceBased(), async (req, res) => {
   await capture.print(req as RequestWithResource, res)

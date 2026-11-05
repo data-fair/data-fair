@@ -60,7 +60,7 @@ const FILES = { urlPrefixes: ['https://files.example.test/agent-files/'] }
 const datasetsRead = [...datasetReads, ...datasetFileReads, ...prefixed('list_datasets', 'list_account_datasets')]
 const datasetsWrite = [...datasetsRead, ...datasetFileWrites, ...prefixed('update_dataset')]
 const datasetsAdmin = [...datasetsWrite, ...prefixed('publish_dataset', 'delete_dataset', 'get_dataset_permissions', 'set_dataset_permissions')]
-const applicationsRead = prefixed('list_account_applications', 'describe_application')
+const applicationsRead = prefixed('list_account_applications', 'describe_application', 'preview_application')
 const applicationsWrite = [...applicationsRead, ...prefixed('update_application')]
 const applicationsAdmin = [...applicationsWrite, ...prefixed('publish_application', 'delete_application')]
 
