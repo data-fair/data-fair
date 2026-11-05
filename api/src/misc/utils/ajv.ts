@@ -8,6 +8,8 @@ let openApiSchemaStr = fs.readFileSync(path.resolve(import.meta.dirname, '../../
 openApiSchemaStr = openApiSchemaStr.replace(/"\$dynamicRef": "#meta"/g, '"$ref": "#/$defs/schema"')
 const openApiSchema = JSON.parse(openApiSchemaStr)
 
+// not in ajv-formats, declared to silence the startup warnings (values stay unvalidated)
+ajv.addFormat('media-range', true)
 ajv.addSchema(openApiSchema, 'openapi-3.1')
 
 export type CustomAjvValidate = ((data: any, locale?: 'fr' | 'en', errorsCallback?: (err: any) => void) => boolean) & { errors?: string }
