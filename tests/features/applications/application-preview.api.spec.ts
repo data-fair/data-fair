@@ -13,12 +13,13 @@ process.env.NODE_CONFIG_DIR ??= path.resolve(import.meta.dirname, '../../../api/
 // simple-directory only answers to /api/auth/pseudo when it has a pseudo session secret
 const pseudoSecret = 'secret-pseudo-session'
 const pseudoAvailable = await fetch(`http://localhost:${process.env.SD_PORT}/api/auth/pseudo`, { method: 'POST', headers: { 'x-secret-key': pseudoSecret, 'content-type': 'application/json' }, body: '{}' })
-  .then(res => res.status === 400, () => false)
+  .then(async res => res.status === 400 && !/disabled/i.test(await res.text()), () => false)
 
 // the preview renders the application through the capture service
 const captureAvailable = await fetch(`http://localhost:${process.env.NGINX_PORT}/capture/api/v1/api-docs.json`).then(res => res.status === 200, () => false)
 
 const { pseudoSessionCookie } = await import('../../../api/src/misc/utils/pseudo-session.ts')
+const config = (await import('../../../api/src/config.ts')).default
 
 const withCookie = (cookie: string) => axios({ baseURL, headers: { cookie, 'x-cache-bypass': '1' } })
 
@@ -151,28 +152,62 @@ test.describe('GET /applications/:id/preview', () => {
     const res = await ax.get(`/api/v1/applications/${id}/preview`)
     assert.equal(res.status, 200)
     assert.notEqual(res.data.report.verdict, 'unauthenticated', JSON.stringify(res.data.report))
-    // an anonymous visitor is not allowed to preview it
+  })
+
+  test('renders a private application with the applications scope only', async () => {
+    skipUnlessAvailable()
+    const ax = await axiosAuth('test_user1@test.com', 'test_org1')
+    const id = await createApp(ax, 'preview-scoped-render', false)
+    // the render reads the private dataset with the permissions of the account
+    const applicationsOnly = await nhiSession('applications:read')
+    const res = await applicationsOnly.bearerAx.get(`/api/v1/applications/${id}/preview`)
+    assert.equal(res.status, 200)
+    assert.notEqual(res.data.report.verdict, 'unauthenticated', JSON.stringify(res.data.report))
+  })
+
+  // the refusals below come before the capture service is needed: they run without it
+
+  test('refuses an anonymous visitor on a private application', async () => {
+    const ax = await axiosAuth('test_user1@test.com', 'test_org1')
+    const id = await createApp(ax, 'preview-private-anon', false)
     await assert.rejects(anonymousAx.get(`/api/v1/applications/${id}/preview`), { status: 403 })
   })
 
   test('needs an authenticated session even on a public application', async () => {
-    skipUnlessAvailable()
     const ax = await axiosAuth('test_user1@test.com', 'test_org1')
     const id = await createApp(ax, 'preview-anonymous', true)
     await assert.rejects(anonymousAx.get(`/api/v1/applications/${id}/preview`), { status: 401 })
   })
 
   test('is limited by the scopes of the session', async () => {
-    skipUnlessAvailable()
     const ax = await axiosAuth('test_user1@test.com', 'test_org1')
     const id = await createApp(ax, 'preview-scoped', false)
     const datasetsOnly = await nhiSession('datasets:read')
     await assert.rejects(datasetsOnly.bearerAx.get(`/api/v1/applications/${id}/preview`), { status: 403 })
-    // the render reads the private dataset with the permissions of the account
-    const applicationsOnly = await nhiSession('applications:read')
-    const res = await applicationsOnly.bearerAx.get(`/api/v1/applications/${id}/preview`)
-    assert.equal(res.status, 200)
-    assert.notEqual(res.data.report.verdict, 'unauthenticated', JSON.stringify(res.data.report))
+  })
+
+  test('refuses bad query values', async () => {
+    const ax = await axiosAuth('test_user1@test.com', 'test_org1')
+    const id = await createApp(ax, 'preview-query', true)
+    for (const params of [{ viewport: 'tablet' }, { draft: 'yes' }, { fullPage: '1' }]) {
+      await assert.rejects(ax.get(`/api/v1/applications/${id}/preview`, { params }), { status: 400 })
+    }
+  })
+
+  test('answers 501 when the preview is not configured, before the rate limit', async () => {
+    const ax = await axiosAuth('test_user1@test.com', 'test_org1')
+    const id = await createApp(ax, 'preview-unconfigured', true)
+    const previous = config.secretKeys.pseudoSession
+    await setConfig('secretKeys.pseudoSession', null)
+    await setConfig('defaultLimits.apiRate.appPreviews.nb', 0)
+    try {
+      await clearRateLimiting()
+      await assert.rejects(ax.get(`/api/v1/applications/${id}/preview`), { status: 501 })
+    } finally {
+      await setConfig('secretKeys.pseudoSession', previous)
+      await setConfig('defaultLimits.apiRate.appPreviews.nb', config.defaultLimits.apiRate.appPreviews!.nb)
+      await clearRateLimiting()
+    }
   })
 
   test('refuses calls over the rate limit', async () => {
@@ -185,9 +220,13 @@ test.describe('GET /applications/:id/preview', () => {
       await clearRateLimiting()
       assert.equal((await ax.get(`/api/v1/applications/${id}/preview`)).status, 200)
       assert.equal((await ax.get(`/api/v1/applications/${id}/preview`)).status, 200)
-      await assert.rejects(ax.get(`/api/v1/applications/${id}/preview`), { status: 429 })
+      await assert.rejects(ax.get(`/api/v1/applications/${id}/preview`), (err: any) => {
+        assert.equal(err.status, 429)
+        assert.ok(Number(err.headers['retry-after']) >= 1, String(err.headers['retry-after']))
+        return true
+      })
     } finally {
-      await setConfig('defaultLimits.apiRate.appPreviews.nb', 30)
+      await setConfig('defaultLimits.apiRate.appPreviews.nb', config.defaultLimits.apiRate.appPreviews!.nb)
       await clearRateLimiting()
     }
   })
@@ -207,5 +246,10 @@ test.describe('GET /applications/:id/preview', () => {
     assert.ok(!names(['datasets:read']).includes('datafair_preview_application'))
     const tool = toolSet.tools.find(t => t.name === 'datafair_preview_application')!
     assert.ok(tool)
+    assert.equal(tool.annotations.readOnlyHint, true)
+    assert.equal(tool.annotations.openWorldHint, true)
+    // image and text are returned as content blocks, the structured output keeps what remains (the report)
+    const outputProperties = Object.keys((tool.outputSchema as any)?.properties ?? {})
+    assert.ok(!outputProperties.includes('image') && !outputProperties.includes('text'), outputProperties.join())
   })
 })

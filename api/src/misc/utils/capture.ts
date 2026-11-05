@@ -7,6 +7,7 @@ import * as rateLimiting from './rate-limiting.ts'
 import debug from 'debug'
 import * as permissionsUtils from './permissions.ts'
 import { reqResource } from './req-context.ts'
+import { upstreamError } from './pseudo-session.ts'
 import { reqPublicBaseUrl } from './public-base-url.ts'
 import resolvePath from 'resolve-path'
 import log from '@data-fair/lib-node/log.js'
@@ -26,6 +27,15 @@ const capturesDir = path.resolve(config.dataDir, 'captures')
 // path of the capture artifact for an application, used to clean it up when the application is deleted
 export const captureFilePath = (application: { id: string }) => resolvePath(capturesDir, application.id + '.png')
 
+/** The url of the application to render: its /app page, with the app_* query params forwarded as params of the application (to open it in a specific state) */
+export const appTargetUrl = (id: string, query: Record<string, unknown>): URL => {
+  const targetUrl = new URL(`${config.publicUrl}/app/${id}`)
+  for (const key of Object.keys(query)) {
+    if (key.startsWith('app_') && typeof query[key] === 'string') targetUrl.searchParams.set(key.replace('app_', ''), query[key])
+  }
+  return targetUrl
+}
+
 const screenshotRequestOpts = (req: RequestWithResource, isDefaultThumbnail = false): AxiosRequestConfig => {
   const resource = reqResource(req)
   const screenshotUrl = (captureUrl + '/api/v1/screenshot')
@@ -33,11 +43,7 @@ const screenshotRequestOpts = (req: RequestWithResource, isDefaultThumbnail = fa
   if (isDefaultThumbnail) targetUrl.searchParams.set('thumbnail', 'true')
   const cookieText = Object.keys(req.cookies).map(c => `${c}=${req.cookies[c]}`).join('; ')
   // forward query params to open application in specific state
-  for (const key of Object.keys(req.query)) {
-    if (key.startsWith('app_') && typeof req.query[key] === 'string') {
-      targetUrl.searchParams.set(key.replace('app_', ''), req.query[key])
-    }
-  }
+  for (const [key, value] of appTargetUrl(resource.id, req.query).searchParams) targetUrl.searchParams.set(key, value)
   debug(`Screenshot ${screenshotUrl}?target=${encodeURIComponent(targetUrl.href)} - ${cookieText}`)
 
   const qs: Record<string, string> = {
@@ -69,12 +75,8 @@ const screenshotRequestOpts = (req: RequestWithResource, isDefaultThumbnail = fa
 const printRequestOpts = (req: RequestWithResource): AxiosRequestConfig => {
   const resource = reqResource(req)
   const printUrl = (captureUrl + '/api/v1/print')
-  const targetUrl = new URL(`${config.publicUrl}/app/${resource.id}`)
+  const targetUrl = appTargetUrl(resource.id, req.query)
   const cookieText = Object.keys(req.cookies).map(c => `${c}=${req.cookies[c]}`).join('; ')
-  // forward query params to open application in specific state
-  for (const key of Object.keys(req.query)) {
-    if (key.startsWith('app_')) targetUrl.searchParams.set(key.replace('app_', ''), req.query[key])
-  }
   debug(`Print ${printUrl}?target=${encodeURIComponent(targetUrl.href)} - ${cookieText}`)
 
   const qs: Record<string, string> = {
@@ -187,10 +189,14 @@ export const print = async (req: RequestWithResource, res: Response) => {
  * The capture service is configured to only render pages of our own host.
  */
 export const inspect = async (target: string, cookie: string, opts: { mobile: boolean, fullPage: boolean }): Promise<{ image: { data: string, mediaType: string }, text: string, report: Record<string, unknown> }> => {
-  const res = await axios.get(captureUrl + '/api/v1/inspect', {
-    params: { target, mobile: String(opts.mobile), fullPage: String(opts.fullPage) },
-    headers: { ...secretHeaders(), Cookie: cookie },
-    timeout: 60000
-  })
-  return res.data
+  try {
+    const res = await axios.get(captureUrl + '/api/v1/inspect', {
+      params: { target, mobile: String(opts.mobile), fullPage: String(opts.fullPage) },
+      headers: { ...secretHeaders(), Cookie: cookie },
+      timeout: 60000
+    })
+    return res.data
+  } catch (err: any) {
+    throw upstreamError('the capture service', err)
+  }
 }

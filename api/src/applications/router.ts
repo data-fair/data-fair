@@ -13,7 +13,7 @@ import * as permissions from '../misc/utils/permissions.ts'
 import * as usersUtils from '../misc/utils/users.ts'
 import * as capture from '../misc/utils/capture.ts'
 import * as rateLimiting from '../misc/utils/rate-limiting.ts'
-import { pseudoSessionCookie } from '../misc/utils/pseudo-session.ts'
+import { pseudoSessionCookie, assertPreviewConfigured } from '../misc/utils/pseudo-session.ts'
 import { clean, refreshConfigDatasetsRefs, updateStorage, attachmentPath, attachmentsDir } from './utils.ts'
 import * as service from './service.ts'
 import * as fragmentsService from '../fragments/service.ts'
@@ -283,19 +283,29 @@ router.post('/:applicationId/error', readApplication, permissionMiddleware('writ
 router.get('/:applicationId/capture', readApplication, permissionMiddleware('readCapture', 'read'), cacheHeaders.resourceBased(), async (req, res) => {
   await capture.screenshot(req as RequestWithResource, res)
 })
+const booleanQuery = (value: unknown, name: string): boolean => {
+  if (value === undefined || value === 'false') return false
+  if (value === 'true') return true
+  throw httpError(400, `query parameter "${name}" must be true or false`)
+}
+
+// renders the application as the caller and returns a screenshot with a report of the render (the preview_application agent tool)
 router.get('/:applicationId/preview', readApplication, permissionMiddleware('readCapture', 'read'), cacheHeaders.noCache, async (req, res) => {
+  // the cheap refusals come before the budget: session, query, configuration
+  const session = reqSessionAuthenticated(req)
+  const query = req.query as Record<string, unknown>
+  const draft = booleanQuery(query.draft, 'draft')
+  const fullPage = booleanQuery(query.fullPage, 'fullPage')
+  if (query.viewport !== undefined && query.viewport !== 'desktop' && query.viewport !== 'mobile') throw httpError(400, 'query parameter "viewport" must be desktop or mobile')
+  assertPreviewConfigured()
   if (!rateLimiting.consume(req, 'appPreviews')) {
+    rateLimiting.setRetryAfter(res, rateLimiting.retryAfterMs(req, 'appPreviews'))
     return res.status(429).type('text/plain').send(req.__('errors.exceedRateLimiting'))
   }
-  const query = req.query as Record<string, unknown>
-  const target = new URL(`${config.publicUrl}/app/${reqApplication(req).id}`)
-  if (query.draft === 'true') target.searchParams.set('draft', 'true')
-  // forward query params to open the application in a specific state
-  for (const key of Object.keys(query)) {
-    if (key.startsWith('app_') && typeof query[key] === 'string') target.searchParams.set(key.replace('app_', ''), query[key])
-  }
-  const cookie = await pseudoSessionCookie(reqSessionAuthenticated(req))
-  res.json(await capture.inspect(target.href, cookie, { mobile: query.viewport === 'mobile', fullPage: query.fullPage === 'true' }))
+  const target = capture.appTargetUrl(reqApplication(req).id, query)
+  if (draft) target.searchParams.set('draft', 'true')
+  const cookie = await pseudoSessionCookie(session)
+  res.json(await capture.inspect(target.href, cookie, { mobile: query.viewport === 'mobile', fullPage }))
 })
 router.get('/:applicationId/print', readApplication, permissionMiddleware('readPrint', 'read'), cacheHeaders.resourceBased(), async (req, res) => {
   await capture.print(req as RequestWithResource, res)
