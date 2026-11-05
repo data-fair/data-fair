@@ -129,6 +129,7 @@ const sum = (counts?: Record<string, number>) => counts && Object.values(counts)
 
 const datasetsErrorFetch = useFetch<{ count: number }>(() => canContribDep.value ? `${$apiPath}/datasets?size=0&shared=false&status=error` : null)
 // the facet stays per status whatever the filters, "count" only follows them through a shallow copy in the processings router
+// reads of other services: docs/architecture/dashboard.md
 const processingsErrorFetch = useFetch<{ facets: { statuses: Record<string, number> } }>(() => canAdminDep.value && $uiConfig.processingsIntegration ? `${$sitePath}/processings/api/v1/processings?size=0` : null, { notifError: false })
 const datasetsPublicationsFetch = useFetch<FacetsRes>(() => canAdminDep.value && sitesFilter.value ? `${$apiPath}/datasets?size=0&shared=false&requestedPublicationSites=${sitesFilter.value}&facets=requestedPublicationSites` : null)
 const applicationsPublicationsFetch = useFetch<FacetsRes>(() => canAdminDep.value && sitesFilter.value && !$uiConfig.disableApplications ? `${$apiPath}/applications?size=0&shared=false&requestedPublicationSites=${sitesFilter.value}&facets=requestedPublicationSites` : null)

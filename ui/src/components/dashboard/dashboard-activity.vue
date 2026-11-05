@@ -10,7 +10,10 @@
       </v-card-title>
     </v-card-item>
     <v-card-text class="py-0">
-      <df-recent-activity :events-url="`${$sitePath}/events`" />
+      <d-frame
+        :src="`${$sitePath}/events/embed/events-compact`"
+        @notif="(e: any) => sendUiNotif(frameNotifArg(e.detail))"
+      />
     </v-card-text>
     <v-card-actions>
       <v-btn
@@ -36,7 +39,8 @@ en:
 
 <script setup lang="ts">
 import { mdiHistory } from '@mdi/js'
-import { DfRecentActivity } from '@data-fair/lib-vuetify-events'
+import { frameNotifArg } from '~/utils/frame-notif'
 
 const { t } = useI18n()
+const { sendUiNotif } = useUiNotif()
 </script>
