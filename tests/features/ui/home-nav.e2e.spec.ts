@@ -65,10 +65,12 @@ test.describe('home dashboard', () => {
 
   test('a publication site with an invalid url does not break the page', async ({ page, goToWithAuth }) => {
     const ax = await axiosAuth('test_user1@test.com', 'test_org1')
-    await ax.post('/api/v1/settings/organization/test_org1/publication-sites', { type: 'data-fair-portals', id: 'broken-portal', url: 'portal-without-scheme.com', title: 'Broken Portal' })
+    await ax.post('/api/v1/settings/organization/test_org1/publication-sites', { type: 'data-fair-portals', id: 'valid-portal', url: 'http://valid-portal.com', title: 'Valid Portal' })
+    // parsed as a "portal.com:" scheme: a valid url, but not a site
+    await ax.post('/api/v1/settings/organization/test_org1/publication-sites', { type: 'data-fair-portals', id: 'broken-portal', url: 'portal.com:8080', title: 'Broken Portal' })
 
     await goToWithAuth('/data-fair/', 'test_user1', { org: 'test_org1' })
-    await expect(page.getByText('Org Portal')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Valid Portal')).toBeVisible({ timeout: 10000 })
     await expect(page.getByText('Broken Portal')).not.toBeVisible()
   })
 

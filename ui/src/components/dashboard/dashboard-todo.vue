@@ -120,7 +120,7 @@ const { limits, publicationSites, sharedFetches } = defineProps<{
 const { t, locale } = useI18n()
 const { canContrib, canAdmin, canContribDep, canAdminDep } = usePermissions()
 
-type Line = { key: string, title: string, icon: string, color: string, count?: number, to?: RouteLocationRaw, href?: string }
+type Line = { key: string, title?: string, icon: string, color: string, count?: number, to?: RouteLocationRaw, href?: string }
 type FacetsRes = { count: number, facets: Record<string, { value: string }[]> }
 type PortalsRes = { facets: { requestedPortals: Record<string, number> } }
 
@@ -158,37 +158,33 @@ const storagePercent = computed(() => {
 })
 
 // failures and quotas first, then publications to validate grouped by kind, then people waiting on you, drafts
-const lines = computed(() => {
-  const lines: (Line & { active: boolean })[] = [
-    { key: 'datasetsError', active: canContribDep.value, count: datasetsErrorFetch.data.value?.count, icon: mdiAlertCircle, color: 'error', to: { path: '/datasets', query: { status: 'error' } }, title: '' },
-    { key: 'processingsError', active: canAdminDep.value && !!$uiConfig.processingsIntegration, count: processingsErrorFetch.data.value?.facets.statuses.error, icon: mdiCogTransferOutline, color: 'error', to: { path: '/processings', query: { status: 'error' } }, title: '' },
-    { key: 'storage', active: canContrib.value, count: storagePercent.value, icon: mdiHarddisk, color: 'warning', to: '/storage', title: '' },
-    { key: 'datasetsPublications', active: canAdminDep.value && !!sitesFilter.value, count: datasetsPublicationsFetch.data.value?.count, icon: mdiShareVariant, color: 'warning', to: { path: '/datasets', query: requestedSitesQuery(datasetsPublicationsFetch.data.value) }, title: '' },
-    { key: 'applicationsPublications', active: canAdminDep.value && !!sitesFilter.value && !$uiConfig.disableApplications, count: applicationsPublicationsFetch.data.value?.count, icon: mdiImageMultiple, color: 'warning', to: { path: '/applications', query: requestedSitesQuery(applicationsPublicationsFetch.data.value) }, title: '' },
-    { key: 'reusesPublications', active: canAdminDep.value && !!$uiConfig.portalsIntegration, count: sum(reusesPublicationsFetch.data.value?.facets.requestedPortals), icon: mdiPageNext, color: 'warning', to: requestedPortalsLink('/reuses', reusesPublicationsFetch.data.value), title: '' },
-    { key: 'pagesPublications', active: canAdminDep.value && !!$uiConfig.portalsIntegration, count: sum(pagesPublicationsFetch.data.value?.facets.requestedPortals), icon: mdiViewDashboardEdit, color: 'warning', to: requestedPortalsLink('/pages', pagesPublicationsFetch.data.value), title: '' },
+const items = computed(() => {
+  const lines: Line[] = [
+    { key: 'datasetsError', count: datasetsErrorFetch.data.value?.count, icon: mdiAlertCircle, color: 'error', to: { path: '/datasets', query: { status: 'error' } } },
+    { key: 'processingsError', count: processingsErrorFetch.data.value?.facets.statuses.error, icon: mdiCogTransferOutline, color: 'error', to: { path: '/processings', query: { status: 'error' } } },
+    { key: 'storage', count: storagePercent.value, icon: mdiHarddisk, color: 'warning', to: '/storage' },
+    { key: 'datasetsPublications', count: datasetsPublicationsFetch.data.value?.count, icon: mdiShareVariant, color: 'warning', to: { path: '/datasets', query: requestedSitesQuery(datasetsPublicationsFetch.data.value) } },
+    { key: 'applicationsPublications', count: applicationsPublicationsFetch.data.value?.count, icon: mdiImageMultiple, color: 'warning', to: { path: '/applications', query: requestedSitesQuery(applicationsPublicationsFetch.data.value) } },
+    { key: 'reusesPublications', count: sum(reusesPublicationsFetch.data.value?.facets.requestedPortals), icon: mdiPageNext, color: 'warning', to: requestedPortalsLink('/reuses', reusesPublicationsFetch.data.value) },
+    { key: 'pagesPublications', count: sum(pagesPublicationsFetch.data.value?.facets.requestedPortals), icon: mdiViewDashboardEdit, color: 'warning', to: requestedPortalsLink('/pages', pagesPublicationsFetch.data.value) },
     ...extraItems.map(({ extra, fetch }) => ({
       key: extra.id,
-      active: !extra.can || !!can[extra.can]?.value,
       count: (extra.countPath ?? 'count').split('.').reduce((obj: any, k) => obj?.[k], fetch.data.value) as number | undefined,
       icon: extra.icon ?? mdiFaceAgent,
       color: 'accent',
       to: extra.to,
       href: extra.href,
-      title: extra.title ? resolveTitle(extra.title, locale.value) : ''
+      title: resolveTitle(extra.title, locale.value)
     })),
-    { key: 'datasetsDraft', active: canContribDep.value, count: datasetsDraftFetch.data.value?.count, icon: mdiFileDocumentEdit, color: 'warning', to: { path: '/datasets', query: { draftStatus: 'finalized' } }, title: '' }
+    { key: 'datasetsDraft', count: datasetsDraftFetch.data.value?.count, icon: mdiFileDocumentEdit, color: 'warning', to: { path: '/datasets', query: { draftStatus: 'finalized' } } }
   ]
-  return lines.filter(line => line.active)
-})
-
-const items = computed(() => lines.value
-  .filter(line => line.count)
-  .map(line => {
+  // a line without permission or integration has no fetch, so no count
+  return lines.filter(line => line.count).map(line => {
     const title = line.title || t(line.key, { n: line.count }, line.count!)
     // the storage line carries its percentage in its title
     return { ...line, title, label: line.key === 'storage' ? title : `${line.count} · ${title}` }
-  }))
+  })
+})
 
 // a failed fetch counts as loaded, so a missing service does not leave the card loading forever
 const fetches = [...sharedFetches, datasetsErrorFetch, processingsErrorFetch, datasetsPublicationsFetch, applicationsPublicationsFetch, reusesPublicationsFetch, pagesPublicationsFetch, datasetsDraftFetch, ...extraItems.map(e => e.fetch)]

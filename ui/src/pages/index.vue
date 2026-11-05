@@ -113,8 +113,14 @@ const publicationSites = computed(() => {
   const department = account.value?.department
   return department ? sites?.filter(site => site.department === department || site.canContributeAsDepartment) : sites
 })
-// the url is a free text field: a site without a valid one cannot be opened
-const portalSites = computed(() => publicationSites.value?.filter(site => site.url && URL.canParse(site.url)))
+// the url is a free text field: only a valid http(s) one can be opened
+const portalSites = computed(() => publicationSites.value?.filter(site => {
+  try {
+    return new URL(site.url!).protocol.startsWith('http')
+  } catch {
+    return false
+  }
+}))
 
 const side = computed(() => {
   const blocks = {
