@@ -8,7 +8,7 @@
       >
         <template #metadata-info="{ node }">
           <div class="text-body-small">
-            {{ standardMetadataByKey[node.data.key]?.info }}
+            {{ metadataByKey[node.data.key]?.info }}
           </div>
         </template>
       </vjsf>
@@ -23,12 +23,30 @@ fr:
   category: "Catégorie : {title}"
   informations: Informations générales
   coverage: Informations complémentaires
+  keyPrefix: "Clé : "
+  categoryPrefix: "Catégorie : "
+  typeString: Texte
+  typeInteger: Nombre entier
+  typeNumber: Nombre
+  typeDate: Date
+  typeLink: Lien
+  withEnum: ", liste de valeurs"
+  withMultiple: ", plusieurs valeurs"
 en:
   notOffered: Not offered
   customHelp: Custom help
   category: "Category: {title}"
   informations: General information
   coverage: Additional information
+  keyPrefix: "Key: "
+  categoryPrefix: "Category: "
+  typeString: Text
+  typeInteger: Integer
+  typeNumber: Number
+  typeDate: Date
+  typeLink: Link
+  withEnum: ", list of values"
+  withMultiple: ", multiple values"
 </i18n>
 
 <script setup lang="ts">
@@ -36,7 +54,7 @@ import { type Settings } from '#api/types'
 import equal from 'fast-deep-equal'
 import Vjsf, { type Options as VjsfOptions } from '@koumoul/vjsf'
 import { fieldGroup } from '~/utils/metadata-groups'
-import { fromMetadataForm, metadataFormSchema, standardMetadata, standardMetadataByKey, standardMetadataItems, toMetadataForm } from '~/utils/settings-metadata-form'
+import { fromMetadataForm, localizedMetadata, metadataFormSchema, standardMetadata, standardMetadataItems, toMetadataForm } from '~/utils/settings-metadata-form'
 
 const datasetsMetadata = defineModel<Settings['datasetsMetadata']>()
 const valid = defineModel<boolean>('valid', { default: true })
@@ -56,6 +74,16 @@ watchDeepDiff(editDatasetsMetadata, () => {
   datasetsMetadata.value = fromMetadataForm(editDatasetsMetadata.value!) as Settings['datasetsMetadata']
 }, {})
 const { t, locale } = useI18n()
+
+const metadataByKey = computed(() => localizedMetadata(locale.value))
+const labels = computed(() => ({
+  groups: { informations: t('informations'), coverage: t('coverage') },
+  key: t('keyPrefix'),
+  category: t('categoryPrefix'),
+  types: { string: t('typeString'), integer: t('typeInteger'), number: t('typeNumber'), date: t('typeDate'), link: t('typeLink') },
+  enum: t('withEnum'),
+  multiple: t('withMultiple')
+}))
 
 const metadataSubtitles = computed(() => {
   const metadata = (datasetsMetadata.value ?? {}) as Record<string, any>
@@ -80,7 +108,7 @@ const vjsfOptions = computed<VjsfOptions>(() => ({
   density: 'comfortable',
   xI18n: true,
   locale: locale.value,
-  context: { metadata: standardMetadataByKey, metadataItems: standardMetadataItems, metadataSubtitles: metadataSubtitles.value }
+  context: { metadata: metadataByKey.value, metadataItems: standardMetadataItems, metadataSubtitles: metadataSubtitles.value, labels: labels.value }
 }))
 
 // http://localhost:5600/data-fair/embed/settings/user/superadmin/datasetsMetadata

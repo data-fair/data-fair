@@ -1,4 +1,5 @@
 import { settingsSchema } from '#api/types'
+import datasetSchema from '~/../../api/types/dataset/schema.js'
 
 const schema = settingsSchema.properties.datasetsMetadata as any
 const properties: Record<string, any> = schema.properties
@@ -10,18 +11,28 @@ export const standardMetadata = Object.entries(properties)
     const { active, title, group, description } = prop.properties
     return {
       key,
-      title: active.title as string,
-      info: active.description as string,
+      active,
       defaultActive: !!active.default,
       alwaysActive: !!active.readOnly,
       renamable: !!title,
       hasGroup: !!group,
-      groupPlaceholder: group?.layout.props.placeholder,
-      hasHelp: !!description,
-      nativeHelp: description?.layout.props.placeholder
+      defaultGroup: group?.['x-default'],
+      hasHelp: !!description
     }
   })
-export const standardMetadataByKey = Object.fromEntries(standardMetadata.map(m => [m.key, m]))
+
+const localized = (prop: any, key: 'title' | 'description', locale: string): string => prop[`x-i18n-${key}`]?.[locale] ?? prop[key]
+
+// the texts of the form in a locale, the native help comes from the dataset schema
+export const localizedMetadata = (locale: string) => Object.fromEntries(standardMetadata.map(({ active, ...m }) => {
+  const native = (datasetSchema as any).properties[m.key]
+  return [m.key, {
+    ...m,
+    title: localized(active, 'title', locale),
+    info: localized(active, 'description', locale),
+    nativeHelp: native?.['x-i18n-description'] && localized(native, 'description', locale)
+  }]
+}))
 // the rows of the list: a metadata without settings yet starts from its default
 export const standardMetadataItems = standardMetadata.map(m => ({ key: m.key, active: m.defaultActive }))
 
@@ -68,7 +79,7 @@ const items = {
       'x-i18n-title': { fr: 'Libellé personnalisé' },
       layout: { if: `${shown} && ${meta}.renamable`, getProps: `({ placeholder: ${meta}.title, persistentPlaceholder: true })` }
     },
-    group: field(properties.license.properties.group, `${shown} && ${meta}.hasGroup`, `({ ...layout.props, placeholder: ${meta}.groupPlaceholder })`, 12),
+    group: field(properties.license.properties.group, `${shown} && ${meta}.hasGroup`, `({ ...layout.props, placeholder: context.labels.groups[${meta}.defaultGroup] })`, 12),
     description: field(properties.license.properties.description, `${shown} && ${meta}.hasHelp`, `({ ...layout.props, placeholder: ${meta}.nativeHelp, persistentPlaceholder: !!${meta}.nativeHelp })`)
   }
 }
