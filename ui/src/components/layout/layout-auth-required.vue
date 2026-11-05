@@ -44,7 +44,7 @@ en:
 </i18n>
 
 <script setup lang="ts">
-import dataProcessSvg from '~/assets/svg/Data Process_Two Color.svg?raw'
+import dataProcessSvg from '~/assets/svg/data-process-two-color.svg?raw'
 import { $uiConfig } from '~/context'
 
 const { t } = useI18n()

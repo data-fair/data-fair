@@ -282,7 +282,7 @@
       :min-height="550"
       :title="sections.activity.title"
       :tabs="sections.activity.tabs"
-      :svg="settingsSvg"
+      :svg="activitySvg"
     >
       <template #content="{ tab }">
         <v-tabs-window
@@ -612,12 +612,12 @@ import ConfirmMenu from '~/components/confirm-menu.vue'
 import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
 import { useTheme } from 'vuetify'
 import { mdiAccountSwitch, mdiBell, mdiCancel, mdiClipboardTextClock, mdiCloudKey, mdiCodeTags, mdiDatabase, mdiDelete, mdiImageMultiple, mdiInformation, mdiPaperclip, mdiPresentation, mdiPuzzle, mdiSecurity, mdiSquareEditOutline, mdiWebhook } from '@mdi/js'
-import informationsSvg from '~/assets/svg/Quality Check_Monochromatic.svg?raw'
-import checklistSvg from '~/assets/svg/Checklist_Two Color.svg?raw'
-import creativeSvg from '~/assets/svg/Creative Process_Two Color.svg?raw'
-import shareSvg from '~/assets/svg/Share_Two Color.svg?raw'
-import settingsSvg from '~/assets/svg/Settings_Monochromatic.svg?raw'
-import securitySvg from '~/assets/svg/Security_Two Color.svg?raw'
+import informationsSvg from '~/assets/svg/data-process-two-color.svg?raw'
+import checklistSvg from '~/assets/svg/checklist-two-color.svg?raw'
+import creativeSvg from '~/assets/svg/creative-process-two-color.svg?raw'
+import shareSvg from '~/assets/svg/share-two-color.svg?raw'
+import activitySvg from '~/assets/svg/progress-two-color.svg?raw'
+import securitySvg from '~/assets/svg/security-two-color.svg?raw'
 import { useApplicationVersions } from '~/composables/application/versions'
 import { useApplicationWatch } from '~/composables/application/watch'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
