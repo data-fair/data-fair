@@ -63,7 +63,7 @@ en:
 </i18n>
 
 <script lang="ts">
-export type PublicationSite = { type: string, id: string, title?: string, url?: string }
+export type PublicationSite = { type: string, id: string, title?: string, url?: string, department?: string, canContributeAsDepartment?: boolean }
 </script>
 
 <script setup lang="ts">
@@ -75,8 +75,7 @@ const { t } = useI18n()
 
 const brokenFavicons = reactive(new Set<string>())
 
-// sites without url cannot be opened
-const sites = computed(() => publicationSites.filter(site => site.url).map(site => {
+const sites = computed(() => publicationSites.map(site => {
   const host = new URL(site.url!).host
   return { key: `${site.type}:${site.id}`, title: site.title, url: site.url, host, favicon: new URL('/favicon.ico', site.url).href }
 }))

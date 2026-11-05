@@ -54,6 +54,7 @@
             <dashboard-todo
               :limits="limits"
               :publication-sites="publicationSites"
+              :shared-fetches="[statsFetch, publicationSitesFetch]"
             />
           </v-col>
         </v-row>
@@ -68,7 +69,7 @@
         <dashboard-activity v-if="side.activity" />
         <dashboard-portals
           v-if="side.portals"
-          :publication-sites="publicationSites!"
+          :publication-sites="portalSites!"
         />
       </v-col>
     </v-row>
@@ -105,13 +106,20 @@ const statsFetch = useFetch<{ limits: Record<string, { consumption: number, limi
 const limits = computed(() => statsFetch.data.value?.limits)
 
 // shared by the publication lines of the "to do" card and the portals card
-const publicationSitesFetch = useFetch<PublicationSite[]>(() => account.value ? `${$apiPath}/settings/${account.value.type}/${account.value.id}/publication-sites` : null)
-const publicationSites = computed(() => publicationSitesFetch.data.value ?? undefined)
+const publicationSitesFetch = useFetch<PublicationSite[]>(() => account.value ? `${$apiPath}/settings/${account.value.type}/${account.value.id}:${account.value.department ?? '*'}/publication-sites` : null)
+// the API merges the organization sites in: a department only handles its own and those it contributes to
+const publicationSites = computed(() => {
+  const sites = publicationSitesFetch.data.value ?? undefined
+  const department = account.value?.department
+  return department ? sites?.filter(site => site.department === department || site.canContributeAsDepartment) : sites
+})
+// the url is a free text field: a site without a valid one cannot be opened
+const portalSites = computed(() => publicationSites.value?.filter(site => site.url && URL.canParse(site.url)))
 
 const side = computed(() => {
   const blocks = {
     activity: canAdmin.value && $uiConfig.eventsIntegration,
-    portals: !!publicationSites.value?.some(site => site.url)
+    portals: !!portalSites.value?.length
   }
   return Object.values(blocks).some(Boolean) ? blocks : null
 })

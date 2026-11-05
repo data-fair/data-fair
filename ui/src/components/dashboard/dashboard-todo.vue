@@ -45,6 +45,14 @@
         </template>
       </v-list-item>
     </v-list>
+    <!-- never claim everything is fine when a check could not run -->
+    <v-card-text
+      v-else-if="loaded && failed"
+      class="d-flex align-center ga-2 text-medium-emphasis"
+    >
+      <v-icon :icon="mdiAlertCircleOutline" />
+      {{ t('checksFailed') }}
+    </v-card-text>
     <v-card-text
       v-else-if="loaded"
       class="d-flex align-center ga-2 text-success font-weight-bold"
@@ -66,6 +74,7 @@ fr:
   subtitle: Ce qui demande votre attention
   see: Voir
   upToDate: Rien à traiter, tout est à jour.
+  checksFailed: Certaines vérifications n'ont pas abouti.
   datasetsError: Jeu de données en erreur | Jeux de données en erreur
   processingsError: Traitement en erreur | Traitements en erreur
   storage: Espace de stockage rempli à {n} %
@@ -79,6 +88,7 @@ en:
   subtitle: What needs your attention
   see: See
   upToDate: Nothing to do, everything is up to date.
+  checksFailed: Some checks could not complete.
   datasetsError: Dataset in error | Datasets in error
   processingsError: Processing in error | Processings in error
   storage: Storage space {n} % full
@@ -91,17 +101,20 @@ en:
 
 <script setup lang="ts">
 import {
-  mdiClipboardCheckOutline, mdiChevronRight, mdiCheckCircle, mdiAlertCircle, mdiFileDocumentEdit, mdiShareVariant,
+  mdiClipboardCheckOutline, mdiChevronRight, mdiCheckCircle, mdiAlertCircle, mdiAlertCircleOutline, mdiFileDocumentEdit, mdiShareVariant,
   mdiImageMultiple, mdiCogTransferOutline, mdiFaceAgent, mdiHarddisk, mdiPageNext, mdiViewDashboardEdit
 } from '@mdi/js'
 import type { RouteLocationRaw } from 'vue-router'
+import type { Ref } from 'vue'
 import { usePermissions } from '~/composables/use-permissions'
-import statuses from '../../../../shared/statuses.json'
+import { resolveTitle } from '~/composables/layout/use-navigation-items'
 import type { PublicationSite } from './dashboard-portals.vue'
 
-const { limits, publicationSites } = defineProps<{
+const { limits, publicationSites, sharedFetches } = defineProps<{
   limits?: Record<string, { consumption: number, limit: number }>
   publicationSites?: PublicationSite[]
+  // the fetches of the parent this card depends on
+  sharedFetches: { loading: Readonly<Ref<boolean>>, error: Readonly<Ref<unknown>> }[]
 }>()
 
 const { t, locale } = useI18n()
@@ -112,18 +125,18 @@ type FacetsRes = { count: number, facets: Record<string, { value: string }[]> }
 type PortalsRes = { facets: { requestedPortals: Record<string, number> } }
 
 const sitesFilter = computed(() => publicationSites?.map(p => `${p.type}:${p.id}`).join(','))
-// a finalized draft is the one waiting for validation
-const draftStatuses = Object.keys(statuses.dataset).filter(s => s !== 'error').join(',')
 const sum = (counts?: Record<string, number>) => counts && Object.values(counts).reduce((a, b) => a + b, 0)
 
 const datasetsErrorFetch = useFetch<{ count: number }>(() => canContribDep.value ? `${$apiPath}/datasets?size=0&shared=false&status=error` : null)
-const processingsErrorFetch = useFetch<{ count: number }>(() => canAdminDep.value && $uiConfig.processingsIntegration ? `${$sitePath}/processings/api/v1/processings?size=0&statuses=error` : null, { notifError: false })
+// the facet stays per status whatever the filters, "count" only follows them through a shallow copy in the processings router
+const processingsErrorFetch = useFetch<{ facets: { statuses: Record<string, number> } }>(() => canAdminDep.value && $uiConfig.processingsIntegration ? `${$sitePath}/processings/api/v1/processings?size=0` : null, { notifError: false })
 const datasetsPublicationsFetch = useFetch<FacetsRes>(() => canAdminDep.value && sitesFilter.value ? `${$apiPath}/datasets?size=0&shared=false&requestedPublicationSites=${sitesFilter.value}&facets=requestedPublicationSites` : null)
 const applicationsPublicationsFetch = useFetch<FacetsRes>(() => canAdminDep.value && sitesFilter.value && !$uiConfig.disableApplications ? `${$apiPath}/applications?size=0&shared=false&requestedPublicationSites=${sitesFilter.value}&facets=requestedPublicationSites` : null)
 // another service down must not raise a toast on the home page: its line just stays hidden
 const reusesPublicationsFetch = useFetch<PortalsRes>(() => canAdminDep.value && $uiConfig.portalsIntegration ? `${$sitePath}/portals-manager/api/reuses?size=0` : null, { notifError: false })
 const pagesPublicationsFetch = useFetch<PortalsRes>(() => canAdminDep.value && $uiConfig.portalsIntegration ? `${$sitePath}/portals-manager/api/pages?size=0` : null, { notifError: false })
-const datasetsDraftFetch = useFetch<{ count: number }>(() => canContribDep.value ? `${$apiPath}/datasets?size=0&shared=false&draftStatus=${draftStatuses}` : null)
+// a finalized draft is the one waiting for validation
+const datasetsDraftFetch = useFetch<{ count: number }>(() => canContribDep.value ? `${$apiPath}/datasets?size=0&shared=false&draftStatus=finalized` : null)
 
 // lines declared by another service (customers...), same "can" values as extraNavigationItems
 const can: Record<string, typeof canContrib> = { contrib: canContrib, admin: canAdmin, contribDep: canContribDep, adminDep: canAdminDep }
@@ -134,6 +147,8 @@ const extraItems = ($uiConfig.extraTodoItems ?? []).map(extra => ({
 
 // only the known sites: the facet also lists the other sites requested by the same resources
 const requestedSitesQuery = (res?: FacetsRes | null) => ({ requestedPublicationSites: res?.facets.requestedPublicationSites.map(f => f.value).filter(v => sitesFilter.value?.split(',').includes(v)).join(',') })
+
+const requestedPortalsLink = (path: string, res?: PortalsRes | null) => ({ path, query: { requestedPortal: Object.keys(res?.facets.requestedPortals ?? {}).join(',') } })
 
 // the fullest of the stored and indexed spaces, a line from 80 %
 const storagePercent = computed(() => {
@@ -146,12 +161,12 @@ const storagePercent = computed(() => {
 const lines = computed(() => {
   const lines: (Line & { active: boolean })[] = [
     { key: 'datasetsError', active: canContribDep.value, count: datasetsErrorFetch.data.value?.count, icon: mdiAlertCircle, color: 'error', to: { path: '/datasets', query: { status: 'error' } }, title: '' },
-    { key: 'processingsError', active: canAdminDep.value && !!$uiConfig.processingsIntegration, count: processingsErrorFetch.data.value?.count, icon: mdiCogTransferOutline, color: 'error', to: { path: '/processings', query: { status: 'error' } }, title: '' },
+    { key: 'processingsError', active: canAdminDep.value && !!$uiConfig.processingsIntegration, count: processingsErrorFetch.data.value?.facets.statuses.error, icon: mdiCogTransferOutline, color: 'error', to: { path: '/processings', query: { status: 'error' } }, title: '' },
     { key: 'storage', active: canContrib.value, count: storagePercent.value, icon: mdiHarddisk, color: 'warning', to: '/storage', title: '' },
     { key: 'datasetsPublications', active: canAdminDep.value && !!sitesFilter.value, count: datasetsPublicationsFetch.data.value?.count, icon: mdiShareVariant, color: 'warning', to: { path: '/datasets', query: requestedSitesQuery(datasetsPublicationsFetch.data.value) }, title: '' },
     { key: 'applicationsPublications', active: canAdminDep.value && !!sitesFilter.value && !$uiConfig.disableApplications, count: applicationsPublicationsFetch.data.value?.count, icon: mdiImageMultiple, color: 'warning', to: { path: '/applications', query: requestedSitesQuery(applicationsPublicationsFetch.data.value) }, title: '' },
-    { key: 'reusesPublications', active: canAdminDep.value && !!$uiConfig.portalsIntegration, count: sum(reusesPublicationsFetch.data.value?.facets.requestedPortals), icon: mdiPageNext, color: 'warning', to: '/reuses', title: '' },
-    { key: 'pagesPublications', active: canAdminDep.value && !!$uiConfig.portalsIntegration, count: sum(pagesPublicationsFetch.data.value?.facets.requestedPortals), icon: mdiViewDashboardEdit, color: 'warning', to: '/pages', title: '' },
+    { key: 'reusesPublications', active: canAdminDep.value && !!$uiConfig.portalsIntegration, count: sum(reusesPublicationsFetch.data.value?.facets.requestedPortals), icon: mdiPageNext, color: 'warning', to: requestedPortalsLink('/reuses', reusesPublicationsFetch.data.value), title: '' },
+    { key: 'pagesPublications', active: canAdminDep.value && !!$uiConfig.portalsIntegration, count: sum(pagesPublicationsFetch.data.value?.facets.requestedPortals), icon: mdiViewDashboardEdit, color: 'warning', to: requestedPortalsLink('/pages', pagesPublicationsFetch.data.value), title: '' },
     ...extraItems.map(({ extra, fetch }) => ({
       key: extra.id,
       active: !extra.can || !!can[extra.can]?.value,
@@ -160,9 +175,9 @@ const lines = computed(() => {
       color: 'accent',
       to: extra.to,
       href: extra.href,
-      title: typeof extra.title === 'string' ? extra.title : (extra.title[locale.value] ?? extra.title.fr)
+      title: extra.title ? resolveTitle(extra.title, locale.value) : ''
     })),
-    { key: 'datasetsDraft', active: canContribDep.value, count: datasetsDraftFetch.data.value?.count, icon: mdiFileDocumentEdit, color: 'warning', to: { path: '/datasets', query: { draftStatus: draftStatuses } }, title: '' }
+    { key: 'datasetsDraft', active: canContribDep.value, count: datasetsDraftFetch.data.value?.count, icon: mdiFileDocumentEdit, color: 'warning', to: { path: '/datasets', query: { draftStatus: 'finalized' } }, title: '' }
   ]
   return lines.filter(line => line.active)
 })
@@ -176,8 +191,9 @@ const items = computed(() => lines.value
   }))
 
 // a failed fetch counts as loaded, so a missing service does not leave the card loading forever
-const fetches = [datasetsErrorFetch, processingsErrorFetch, datasetsPublicationsFetch, applicationsPublicationsFetch, reusesPublicationsFetch, pagesPublicationsFetch, datasetsDraftFetch, ...extraItems.map(e => e.fetch)]
+const fetches = [...sharedFetches, datasetsErrorFetch, processingsErrorFetch, datasetsPublicationsFetch, applicationsPublicationsFetch, reusesPublicationsFetch, pagesPublicationsFetch, datasetsDraftFetch, ...extraItems.map(e => e.fetch)]
 const loaded = computed(() => fetches.every(f => !f.loading.value))
+const failed = computed(() => fetches.some(f => f.error.value))
 </script>
 
 <style>

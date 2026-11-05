@@ -49,6 +49,36 @@ test.describe('home dashboard', () => {
     await expect(page.getByText('Home Portal')).toBeVisible()
   })
 
+  test('a department only sees its own portals, its organization sees them all', async ({ page, goToWithAuth }) => {
+    const ax = await axiosAuth('test_user1@test.com', 'test_org1')
+    await ax.post('/api/v1/settings/organization/test_org1:dep1/publication-sites', { type: 'data-fair-portals', id: 'dep-portal', url: 'http://dep-portal.com', title: 'Dep Portal' })
+    await ax.post('/api/v1/settings/organization/test_org1/publication-sites', { type: 'data-fair-portals', id: 'org-portal', url: 'http://org-portal.com', title: 'Org Portal' })
+
+    await goToWithAuth('/data-fair/', 'test_user4', { org: 'test_org1', dep: 'dep1' })
+    await expect(page.getByText('Dep Portal')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Org Portal')).not.toBeVisible()
+
+    await goToWithAuth('/data-fair/', 'test_user1', { org: 'test_org1' })
+    await expect(page.getByText('Dep Portal')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Org Portal')).toBeVisible()
+  })
+
+  test('a publication site with an invalid url does not break the page', async ({ page, goToWithAuth }) => {
+    const ax = await axiosAuth('test_user1@test.com', 'test_org1')
+    await ax.post('/api/v1/settings/organization/test_org1/publication-sites', { type: 'data-fair-portals', id: 'broken-portal', url: 'portal-without-scheme.com', title: 'Broken Portal' })
+
+    await goToWithAuth('/data-fair/', 'test_user1', { org: 'test_org1' })
+    await expect(page.getByText('Org Portal')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Broken Portal')).not.toBeVisible()
+  })
+
+  test('to do card never says everything is fine after a failed check', async ({ page, goToWithAuth }) => {
+    await page.route('**/data-fair/api/v1/datasets?*status=error*', route => route.fulfill({ status: 500 }))
+    await goToWithAuth('/data-fair/', 'test_user1')
+    await expect(page.getByText('Certaines vérifications n\'ont pas abouti.')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Rien à traiter')).not.toBeVisible()
+  })
+
   test('read-only role gets a notice instead of the to do card', async ({ page, goToWithAuth }) => {
     await goToWithAuth('/data-fair/', 'test_user8', { org: 'test_org1' })
     await expect(page.getByText('Vous consultez les données de Test Org 1')).toBeVisible({ timeout: 10000 })
