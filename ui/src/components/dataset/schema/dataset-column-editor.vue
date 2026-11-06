@@ -55,37 +55,38 @@
     >
       <!-- Action buttons row -->
       <div
-        v-if="editable && dataset && columnEditable"
+        v-if="columnActionsEditable || showLabels"
         class="d-flex justify-end ga-1 mb-2"
       >
-        <confirm-menu
-          v-if="editable && dataset && dataset.isRest && !dataset.isVirtual && !column['x-extension'] && !column['x-calculated']"
-          :title="t('deleteColumnTitle')"
-          :text="t('deleteColumnText')"
-          :tooltip="t('deleteColumnTitle')"
-          :btn-props="{ color: 'warning', icon: true, variant: 'text', size: 'small' }"
-          yes-color="warning"
-          @confirm="onRemoveColumn"
-        />
-        <dataset-property-capabilities
-          v-if="!dataset.isVirtual"
-          :property="column"
-          :editable="editable && dataset && !dataset.isVirtual"
-        />
-        <dataset-property-transform
-          v-if="dataset && dataset.file && !column['x-calculated'] && !column['x-extension']"
-          :property="column"
-          :editable="editable"
-        />
-        <dataset-property-validation
-          v-if="!dataset.isVirtual && !column['x-calculated'] && !column['x-extension']"
-          :property="column"
-          :editable="editable && dataset && !dataset.isVirtual"
-        />
+        <template v-if="columnActionsEditable">
+          <confirm-menu
+            v-if="dataset?.isRest && !column['x-extension'] && !column['x-calculated']"
+            :title="t('deleteColumnTitle')"
+            :text="t('deleteColumnText')"
+            :tooltip="t('deleteColumnTitle')"
+            :btn-props="{ color: 'warning', icon: true, variant: 'text', size: 'small' }"
+            yes-color="warning"
+            @confirm="onRemoveColumn"
+          />
+          <dataset-property-capabilities
+            :property="column"
+            :editable="true"
+          />
+          <dataset-property-transform
+            v-if="dataset?.file && !column['x-calculated'] && !column['x-extension']"
+            :property="column"
+            :editable="true"
+          />
+          <dataset-property-validation
+            v-if="!column['x-calculated'] && !column['x-extension']"
+            :property="column"
+            :editable="true"
+          />
+        </template>
         <dataset-property-labels
-          v-if="column.type === 'string' && (!column.format || column.format === 'uri-reference') || column.type === 'boolean'"
+          v-if="showLabels"
           :property="column"
-          :editable="editable && dataset && !dataset.isVirtual"
+          :editable="columnActionsEditable"
           :is-rest="dataset && dataset.isRest"
         />
       </div>
@@ -312,6 +313,16 @@ const currentFileColumn = computed(() => {
 const columnEditable = computed(() => {
   const col = props.column as any
   return !!col && !(col['x-extension'] && col['x-extension'] !== col.key)
+})
+
+const columnActionsEditable = computed(() => !!props.editable && !!dataset.value && !dataset.value.isVirtual && columnEditable.value)
+
+// labels of virtual or enriched columns are derived: consultable, not editable
+const showLabels = computed(() => {
+  const col = props.column
+  if (!props.editable || !dataset.value || !col) return false
+  if (!columnActionsEditable.value) return !!Object.keys(col['x-labels'] ?? {}).length
+  return col.type === 'boolean' || (col.type === 'string' && (!col.format || col.format === 'uri-reference'))
 })
 
 type VocabSubheader = { type: 'subheader', title: string }
