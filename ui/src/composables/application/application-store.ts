@@ -57,20 +57,35 @@ const createApplicationStore = (id: string) => {
   const configDraftFetch = useFetch<AppConfig>($apiPath + `/applications/${id}/configuration-draft`, { immediate: false })
   const configDraft = ref<AppConfig | null>(null)
   watch(configDraftFetch.data, () => { configDraft.value = configDraftFetch.data.value })
+  // Saves run one at a time and only the latest state waits: each one is a full configuration, and
+  // parallel PUTs can land or answer out of order, which would bring the form back to an older state.
+  let pendingConfigDraft: AppConfig | null = null
+  let configDraftSave: Promise<void> | null = null
+  const flushConfigDraft = async () => {
+    while (pendingConfigDraft) {
+      const newConfigDraft = pendingConfigDraft
+      pendingConfigDraft = null
+      await $fetch<AppConfig>('/applications/' + id + '/configuration-draft', {
+        method: 'PUT',
+        body: newConfigDraft,
+        headers: {
+          'Content-Type': 'application/json'
+        }
+      })
+      if (pendingConfigDraft) continue
+      configDraft.value = newConfigDraft
+      if (application.value) {
+        delete application.value.errorMessageDraft
+        application.value.status = 'configured-draft'
+      }
+    }
+  }
+  const isSavingConfigDraft = () => !!configDraftSave
   const writeConfigDraft = async (newConfigDraft: AppConfig) => {
     debug('writeConfigDraft', newConfigDraft)
-    await $fetch<AppConfig>('/applications/' + id + '/configuration-draft', {
-      method: 'PUT',
-      body: newConfigDraft,
-      headers: {
-        'Content-Type': 'application/json'
-      }
-    })
-    configDraft.value = newConfigDraft
-    if (application.value) {
-      delete application.value.errorMessageDraft
-      application.value.status = 'configured-draft'
-    }
+    pendingConfigDraft = newConfigDraft
+    configDraftSave ??= flushConfigDraft().finally(() => { configDraftSave = null })
+    await configDraftSave
   }
   const cancelConfigDraft = async () => {
     await $fetch('/applications/' + id + '/configuration-draft', { method: 'DELETE' })
@@ -216,6 +231,7 @@ const createApplicationStore = (id: string) => {
     configDraftFetch,
     configDraft,
     writeConfigDraft,
+    isSavingConfigDraft,
     cancelConfigDraft,
     schemaFetch,
     baseAppFetch,
