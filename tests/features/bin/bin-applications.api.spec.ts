@@ -160,4 +160,17 @@ test.describe('shelve and restore', () => {
     assert.notEqual(res.data.id, 'my-app')
     assert.notEqual(res.data.slug, 'my-app')
   })
+
+  test('the bin marker cannot be written through the application API', async () => {
+    const marker = shelved()
+    await assert.rejects(testUser1Org.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'bin marker post', shelved: marker }), { status: 400 })
+    await assert.rejects(testUser1Org.put('/api/v1/applications/bin-marker-new', { url: mockAppUrl('monapp1'), title: 'bin marker new', shelved: marker }), { status: 400 })
+    await assert.rejects(getRawApplication('bin-marker-new'), { status: 404 })
+
+    await testUser1Org.put('/api/v1/applications/bin-marker', { url: mockAppUrl('monapp1'), title: 'bin marker' })
+    await assert.rejects(testUser1Org.put('/api/v1/applications/bin-marker', { url: mockAppUrl('monapp1'), title: 'bin marker', shelved: { ...marker, cascade: true } }), { status: 400 })
+    await assert.rejects(testUser1Org.patch('/api/v1/applications/bin-marker', { shelved: marker }), { status: 400 })
+    assert.equal((await getRawApplication('bin-marker')).shelved, undefined)
+    assert.equal((await testUser1Org.get('/api/v1/applications/bin-marker')).status, 200)
+  })
 })

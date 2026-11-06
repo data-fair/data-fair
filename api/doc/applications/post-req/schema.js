@@ -3,6 +3,8 @@ import applicationSchema from '#types/application/schema.js'
 
 const body = jsonSchema(applicationSchema)
   .removeFromRequired(['id', 'slug', 'title', 'owner'])
+  // the bin marker is managed by the server (DELETE / restore), a write must not hide an application
+  .removeProperties(['shelved'])
   .set({ 'x-exports': ['validate', 'types'] })
   .removeId()
   .schema

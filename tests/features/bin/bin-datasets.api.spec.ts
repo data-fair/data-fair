@@ -415,4 +415,13 @@ test.describe('shelve and restore', () => {
     assert.notEqual(res.data.slug, original.slug)
     assert.notEqual(res.data.id, 'my-ds')
   })
+
+  test('the bin marker cannot be written through the dataset API', async () => {
+    const dataset = await sendDataset('datasets/dataset1.csv', testUser1Org)
+    await assert.rejects(testUser1Org.patch(`/api/v1/datasets/${dataset.id}`, { shelved: shelved() }), { status: 400 })
+    await assert.rejects(testUser1Org.post('/api/v1/datasets', { isRest: true, title: 'bin marker', shelved: shelved() }), { status: 400 })
+    await assert.rejects(testUser1Org.put('/api/v1/datasets/bin-marker', { isRest: true, title: 'bin marker', shelved: shelved() }), { status: 400 })
+    assert.equal((await getRawDataset(dataset.id)).shelved, undefined)
+    assert.equal((await testUser1Org.get(`/api/v1/datasets/${dataset.id}`)).status, 200)
+  })
 })

@@ -172,6 +172,8 @@ export const syncDatasets = async (newApp: any, oldApp: any = {}) => {
 
 export const initNewApplication = async (body: any, owner: AccountKeys, user: { id: string }, id?: string) => {
   const application = { ...body }
+  // the bin marker is set by DELETE only (the body schema already refuses it, defense in depth)
+  delete application.shelved
   // a PUT create chooses the id: it is also the slug, as for datasets. Without a slug no _uniqueRefs is
   // set, and every such application of an owner collided on the (non-sparse) unique-refs index
   if (id) {
@@ -269,6 +271,8 @@ export const tryInsertApplication = async (ctx: ApplicationWriteContext, newAppl
 }
 
 export const replaceApplication = async (ctx: ApplicationWriteContext, existingApplication: Application, newApplication: any, isNew: boolean) => {
+  // the bin marker is set by DELETE only, never by a body (a shelved application 404s before here)
+  delete newApplication.shelved
   // preserve all readonly properties, the rest is overwritten
   for (const key of Object.keys(existingApplication)) {
     if (!(patchKeys as string[]).includes(key)) {
