@@ -43,7 +43,31 @@
         variant="text"
         :text="t('noResource')"
       />
-      <v-row class="d-flex align-stretch">
+      <v-list
+        v-if="viewMode === 'list' && catalog.displayedItems.value.length"
+        lines="two"
+      >
+        <template v-if="resourceType === 'datasets'">
+          <dataset-list-item
+            v-for="resource in catalog.displayedItems.value"
+            :key="resource.id"
+            :dataset="resource"
+            show-capability
+          />
+        </template>
+        <template v-else>
+          <application-list-item
+            v-for="resource in catalog.displayedItems.value"
+            :key="resource.id"
+            :application="resource"
+            show-capability
+          />
+        </template>
+      </v-list>
+      <v-row
+        v-else
+        class="d-flex align-stretch"
+      >
         <!--
           displayedItems is cleared (see the visitor/resourceType watcher below) as soon as the
           audited identity changes, so this loading state only ever covers an empty grid — never
@@ -119,11 +143,15 @@
         :account="account"
         class="mt-4 mx-4"
       />
+      <div class="d-flex justify-end mx-4 mt-4">
+        <view-mode-toggle v-model="viewMode" />
+      </div>
     </df-navigation-right>
   </v-container>
 </template>
 
 <script setup lang="ts">
+import type { ViewMode } from '~/composables/use-view-mode'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import dfSearchField from '@data-fair/lib-vuetify/search-field.vue'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
@@ -134,6 +162,8 @@ const account = session.account
 const breadcrumbs = useBreadcrumbs()
 
 breadcrumbs.receive({ breadcrumbs: [{ text: t('title') }] })
+
+const viewMode = ref<ViewMode>('grid')
 
 // org admins and department admins only (a department admin audits their department's resources)
 const authorized = computed(() => {

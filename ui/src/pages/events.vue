@@ -2,7 +2,7 @@
   <d-frame
     id="events"
     :adapter.prop="stateChangeAdapter"
-    src="/events/embed/events/"
+    src="/events/events/"
     sync-path="/data-fair/events/"
     class="fill-height"
     resize="no"
@@ -28,7 +28,7 @@ breadcrumbs.receive({ breadcrumbs: [{ text: t('events') }] })
 
 <i18n lang="yaml">
 fr:
-  events: Traçabilité (bêta)
+  events: Traçabilité
 en:
-  events: Traceability (beta)
+  events: Traceability
 </i18n>

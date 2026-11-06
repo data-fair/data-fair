@@ -171,18 +171,37 @@ test.describe('fragments UI', () => {
       await goToWithAuth(`/data-fair/application/${dashboard.id}`, 'test_user1', { org: 'test_org1' })
       await pastActiveAccountGate(page, fragmentsTab)
       await fragmentsTab.click()
-      await expect(render.getByRole('link', { name: 'Nouveau jeu de données fragment' })).toBeVisible({ timeout: 15000 })
-      await expect(render.getByRole('link', { name: 'Nouvelle application fragment' })).toBeVisible()
+      await expect(render.getByRole('link', { name: 'Nouvelle application fragment' })).toBeVisible({ timeout: 15000 })
+      await expect(render.getByRole('link', { name: 'Nouveau jeu de données fragment' })).toHaveCount(0)
 
-      // the tab stays, dataset fragments are relevant to any application
+      // the tab stays, it lists the fragments created through the API
       await goToWithAuth(`/data-fair/application/${plain.id}`, 'test_user1', { org: 'test_org1' })
       await pastActiveAccountGate(page, fragmentsTab)
       await fragmentsTab.click()
-      await expect(render.getByRole('link', { name: 'Nouveau jeu de données fragment' })).toBeVisible({ timeout: 15000 })
+      await expect(render.getByText('Aucun fragment.')).toBeVisible({ timeout: 15000 })
+      await expect(render.getByRole('link', { name: 'Nouveau jeu de données fragment' })).toHaveCount(0)
       await expect(render.getByRole('link', { name: 'Nouvelle application fragment' })).toHaveCount(0)
     } finally {
       await clearMockRoutes()
     }
+  })
+
+  test('the fragments of a virtual parent switch to a list that keeps their source status', async ({ page, goToWithAuth }) => {
+    await goToWithAuth(`/data-fair/dataset/${virtualId}`, 'test_user1', { org: 'test_org1' })
+    const structure = page.locator('#structure')
+    const fragmentsTab = structure.getByRole('tab', { name: 'Fragments' })
+    await pastActiveAccountGate(page, fragmentsTab)
+    await fragmentsTab.click()
+    await expect(structure.locator('.v-card', { hasText: 'dataset1' })).toBeVisible({ timeout: 15000 })
+
+    await structure.getByRole('button', { name: 'Vue en liste' }).click()
+    const item = structure.locator('.v-list-item', { hasText: 'dataset1' })
+    await expect(item).toBeVisible()
+    await expect(structure.locator('.v-card', { hasText: 'dataset1' })).toHaveCount(0)
+    // beside the item, not inside its link
+    const sourceStatus = structure.getByText(/Pas encore une source|Source du jeu de données/)
+    await expect(sourceStatus).toBeVisible()
+    await expect(item.getByText(/Pas encore une source|Source du jeu de données/)).toHaveCount(0)
   })
 
   test('parent page lists fragments and the delete dialog offers to detach them first', async ({ page, goToWithAuth }) => {

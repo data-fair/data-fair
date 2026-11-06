@@ -10,6 +10,7 @@
       <resource-visibility
         :visibility="dataset.visibility"
         :part-of="dataset.partOf"
+        :foreign="foreign"
         class="mr-2"
         size="small"
       />
@@ -65,6 +66,12 @@
       #append
     >
       <div class="d-flex align-center ga-2">
+        <capability-chip
+          v-if="showCapability"
+          resource-type="datasets"
+          :user-permissions="capabilityFields.userPermissions"
+          :access-sources="capabilityFields.accessSources"
+        />
         <topic-chips
           v-if="showTopics && dataset.topics?.length"
           :topics="dataset.topics"
@@ -91,6 +98,7 @@ import {
   mdiShieldAlert
 } from '@mdi/js'
 import ownerAvatar from '@data-fair/lib-vuetify/owner-avatar.vue'
+import { foreignReferences, type ReferencingResource } from '~/utils/fragments'
 
 const { t, locale } = useI18n()
 const showAll = useBooleanSearchParam('showAll')
@@ -100,10 +108,16 @@ const props = withDefaults(defineProps<{
   showTopics?: boolean
   showOwner?: boolean
   noLink?: boolean
+  showCapability?: boolean
+  // the resource whose page lists this item as one of its users: flags a fragment used outside of its parent
+  usedBy?: ReferencingResource
 }>(), {
   showTopics: true,
   showOwner: false,
 })
+
+const capabilityFields = computed(() => props.dataset as { userPermissions?: string[], accessSources?: AccessSources })
+const foreign = computed(() => !!props.dataset.partOf && !!props.usedBy && foreignReferences(props.dataset.partOf, [props.usedBy]).length > 0)
 
 const fileInfo = computed(() => {
   const file = props.dataset.originalFile || props.dataset.file ||
@@ -129,6 +143,7 @@ const subtitleParts = computed(() => {
 })
 
 const showAppend = computed(() =>
+  props.showCapability ||
   (props.showTopics && !!props.dataset.topics?.length) ||
   (props.showOwner && !!props.dataset.owner)
 )

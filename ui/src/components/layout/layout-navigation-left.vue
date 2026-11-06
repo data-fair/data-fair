@@ -135,7 +135,7 @@ fr:
   storage: Stockage
   metrics: Audience
   metricsSub: Téléchargements, API
-  events: Traçabilité (bêta)
+  events: Traçabilité
   agentsActivity: Agents
   subscription: Abonnement
   assistance: Assistance
@@ -173,7 +173,7 @@ en:
   storage: Storage
   metrics: Audience
   metricsSub: Downloads, API
-  events: Traceability (beta)
+  events: Traceability
   agentsActivity: Agents
   subscription: Subscription
   assistance: Support

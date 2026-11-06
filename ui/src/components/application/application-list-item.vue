@@ -10,6 +10,7 @@
       <resource-visibility
         :visibility="application.visibility"
         :part-of="application.partOf"
+        :foreign="foreign"
         class="mr-2"
         size="small"
       />
@@ -51,6 +52,12 @@
       #append
     >
       <div class="d-flex align-center ga-2">
+        <capability-chip
+          v-if="showCapability"
+          resource-type="applications"
+          :user-permissions="capabilityFields.userPermissions"
+          :access-sources="capabilityFields.accessSources"
+        />
         <topic-chips
           v-if="showTopics && application.topics?.length"
           :topics="application.topics"
@@ -69,6 +76,7 @@
 import type { Application } from '#api/types'
 import { mdiAlert } from '@mdi/js'
 import ownerAvatar from '@data-fair/lib-vuetify/owner-avatar.vue'
+import { foreignReferences, type ReferencingResource } from '~/utils/fragments'
 
 type ListedApplication = Partial<Application> & Pick<Application, 'id'> & {
   title?: string
@@ -83,10 +91,16 @@ const props = withDefaults(defineProps<{
   showTopics?: boolean
   showOwner?: boolean
   noLink?: boolean
+  showCapability?: boolean
+  // the resource whose page lists this item as one of its users: flags a fragment used outside of its parent
+  usedBy?: ReferencingResource
 }>(), {
   showTopics: true,
   showOwner: false,
 })
+
+const capabilityFields = computed(() => props.application as { userPermissions?: string[], accessSources?: AccessSources })
+const foreign = computed(() => !!props.application.partOf && !!props.usedBy && foreignReferences(props.application.partOf, [props.usedBy]).length > 0)
 
 const subtitleParts = computed(() => {
   const parts: { icon?: string, text: string }[] = []
@@ -98,6 +112,7 @@ const subtitleParts = computed(() => {
 })
 
 const showAppend = computed(() =>
+  props.showCapability ||
   (props.showTopics && !!props.application.topics?.length) ||
   (props.showOwner && !!props.application.owner)
 )

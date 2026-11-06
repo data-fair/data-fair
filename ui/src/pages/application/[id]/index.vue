@@ -107,7 +107,10 @@
           v-if="datasets.length"
           value="datasets"
         >
-          <v-row>
+          <div class="d-flex justify-end mb-4">
+            <view-mode-toggle v-model="datasetsViewMode" />
+          </div>
+          <v-row v-if="datasetsViewMode === 'grid'">
             <v-col
               v-for="dataset in datasets"
               :key="dataset.id"
@@ -121,13 +124,27 @@
               />
             </v-col>
           </v-row>
+          <v-list
+            v-else
+            lines="two"
+          >
+            <dataset-list-item
+              v-for="dataset in datasets"
+              :key="dataset.id"
+              :dataset="dataset"
+              :used-by="{ type: 'application', id: application.id, partOf: application.partOf }"
+            />
+          </v-list>
         </v-tabs-window-item>
 
         <v-tabs-window-item
           v-if="childrenApps.length"
           value="children-apps"
         >
-          <v-row>
+          <div class="d-flex justify-end mb-4">
+            <view-mode-toggle v-model="childrenAppsViewMode" />
+          </div>
+          <v-row v-if="childrenAppsViewMode === 'grid'">
             <v-col
               v-for="app in childrenApps"
               :key="app.id"
@@ -141,6 +158,17 @@
               />
             </v-col>
           </v-row>
+          <v-list
+            v-else
+            lines="two"
+          >
+            <application-list-item
+              v-for="app in childrenApps"
+              :key="app.id"
+              :application="app"
+              :used-by="{ type: 'application', id: application.id, partOf: application.partOf }"
+            />
+          </v-list>
         </v-tabs-window-item>
       </template>
     </df-section-tabs>
@@ -607,6 +635,7 @@ en:
 </i18n>
 
 <script setup lang="ts">
+import type { ViewMode } from '~/composables/use-view-mode'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import ConfirmMenu from '~/components/confirm-menu.vue'
 import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
@@ -637,6 +666,8 @@ const activityTab = ref('traceability')
 
 const store = useApplicationStore()
 const { application, applicationLink, can, patch, remove, configFetch, datasetsFetch, childrenAppsFetch, baseAppFetch, permissions, permissionsFetch, savePermissions, fragments, nbFragments, hasMoreFragments, loadMoreFragments, detach } = store
+const datasetsViewMode = ref<ViewMode>('grid')
+const childrenAppsViewMode = ref<ViewMode>('grid')
 
 const { sendUiNotif } = useUiNotif()
 
@@ -805,7 +836,7 @@ const sections = computedDeepDiff(() => {
   const renderTabs: any[] = [{ key: 'config', title: t('config'), icon: mdiSquareEditOutline, agentDesc: 'Live preview of the application with an "Edit configuration" button leading to the full-screen config editor (where the appConfig_ form tools and their app-config-form skill assist). Use get_application_config to read the current validated configuration.' }]
   // fragments are hidden from every listing, this tab is where they are found
   if (!application.value.partOf) {
-    renderTabs.push({ key: 'fragments', title: t('fragments'), icon: mdiPuzzle, agentDesc: 'Sub-applications and utility datasets that are fragments of this application (partOf): hidden from every other listing, listed only here, deleted with it. "New fragment" buttons create one.' })
+    renderTabs.push({ key: 'fragments', title: t('fragments'), icon: mdiPuzzle, agentDesc: 'Sub-applications and utility datasets that are fragments of this application (partOf): hidden from every other listing, listed only here, deleted with it. On a base app embedding applications, a "New application fragment" button creates a sub-application.' })
   }
   result.render = {
     title: t('render'),

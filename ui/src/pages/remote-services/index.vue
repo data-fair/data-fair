@@ -1,11 +1,24 @@
 <template>
   <v-container>
-    <p class="mb-4">
-      {{ t('description') }}
-    </p>
+    <div class="d-flex align-start ga-4 mb-4">
+      <p class="flex-grow-1">
+        {{ t('description') }}
+      </p>
+      <view-mode-toggle v-model="viewMode" />
+    </div>
 
+    <v-list
+      v-if="remoteServicesFetch.data.value && viewMode === 'list'"
+      lines="two"
+    >
+      <remote-service-list-item
+        v-for="remoteService in remoteServicesFetch.data.value.results"
+        :key="remoteService.id"
+        :remote-service="remoteService"
+      />
+    </v-list>
     <v-row
-      v-if="remoteServicesFetch.data.value"
+      v-else-if="remoteServicesFetch.data.value"
       class="d-flex align-stretch"
     >
       <v-col
@@ -31,11 +44,13 @@ en:
 </i18n>
 
 <script setup lang="ts">
+import type { ViewMode } from '~/composables/use-view-mode'
 import { RemoteService } from '#api/types'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 
 const { t } = useI18n()
 const breadcrumbs = useBreadcrumbs()
+const viewMode = ref<ViewMode>('grid')
 breadcrumbs.receive({ breadcrumbs: [{ text: t('remoteServices') }] })
 
 const params = computed(() => ({
