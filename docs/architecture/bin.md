@@ -10,9 +10,12 @@ Design spec: `docs/superpowers/specs/2026-11-06-dataset-bin-design.md`. Code: `a
 
 - The bin is configured on the **organization main settings**: `settings.bin = { active,
   retentionDays }` (default 30, no cap). Departments inherit it; a user account never has a bin. `getBinSettings` / `binActiveFor` (`service.ts`) read it.
-- A shelved resource carries `shelved: { at, by: { id, name }, cascade? }` (schema in
+- A shelved resource carries `shelved: { at, by: { id, name }, cascade?, purging? }` (schema in
   `api/types/dataset/schema.js` and `api/types/application/schema.js`). Absence of the field means
-  live. `cascade: true` marks a fragment shelved because its parent was (§4).
+  live. `cascade: true` marks a fragment shelved because its parent was (§4), `purging` is the
+  claim of a running purge (§6). The marker is server-managed: the application POST/PUT body schema
+  excludes it (400) and `initNewApplication` / `replaceApplication` drop it, the dataset bodies and
+  both PATCH schemas never had it.
 - Retention is evaluated lazily by `shouldPurge` (`operations.ts`): the bin is off, or
   `shelved.at + retentionDays` is past. Changing the setting applies to the items already shelved.
 
@@ -37,14 +40,23 @@ Deliberate exceptions, which must see shelved resources:
 **Workers.** `taskFilter` (`api/src/workers/index.ts`) adds `notShelved` to every task except
 `binAllowedTasks` (`datasets: ['historize', 'historizeLines']`): the integrity outbox must drain,
 or the checker would raise `integrity-check-stale` for a dataset that merely sits in the bin.
-Everything else (indexing, finalizing, extensions...) is frozen until restore. The integrity
-checker sweeps (`integrity/checker.ts`) skip shelved datasets for the same reason: a pending relay
-state of a frozen pipeline cannot drain and must not raise an alarm.
+Everything else (indexing, finalizing, extensions...) is frozen until restore. In
+`integrity/checker.ts`, the nightly check (`runOnce`) keeps running on shelved datasets: it also
+renews the object locks of the anchors and line revisions (`maybeRenew` / `maybeRenewLines`), which
+must not lapse while the dataset waits in the bin. Both `alertStaleChecks` cursors skip shelved
+datasets: a pending relay state of a frozen pipeline cannot drain and must not raise an alarm.
 
 **Virtual datasets.** A parent resolving its children (`datasets/utils/virtual.ts`) skips shelved
 children silently, as if absent, but does not detach them: they stay in `virtual.children` so
 that a restore brings them back. The parents are set to `status: 'indexed'` (re-finalized) at
-shelve and at restore so their schema drops or picks up the child.
+shelve and at restore so their schema drops or picks up the child. The schema re-sync of the parents
+on a child PATCH (`applyPatch`, `datasets/service.ts`) skips shelved parents, so no catalog update
+is pushed for a deleted dataset.
+
+**Remote services.** `syncDataset` (`remote-services/service.ts`) treats a shelved dataset as
+having no master data and removes its remote service, whatever the caller (shelving, a partner
+withdrawal in `identities/service.ts`, a PATCH racing the DELETE). `restore` passes the documents
+without the marker, so the remote service is registered again.
 
 **Caches.** `shelve` and `restore` clear the local memo caches (`memoizedGetDataset`, application
 keys). Other nodes may serve a stale copy for the TTL of their memo / freshness probe, about
@@ -55,7 +67,9 @@ keys). Other nodes may serve a stale copy for the TTL of their memo / freshness 
 - `DELETE /datasets/:id` and `/applications/:id` call `binActiveFor(owner)`; if true,
   `shelveDataset` / `shelveApplication` set the marker, shelve the fragments, run the side effects
   of a disappearance (remote service sync, virtual parents re-finalize, application dataset sync)
-  and send the usual `*-delete` notification. Otherwise the deletion is the regular one.
+  and send the usual `*-delete` notification. The marker write is conditioned on `notShelved`: if it
+  modifies nothing (a concurrent DELETE won), the side effects and the notification are skipped.
+  Otherwise the deletion is the regular one.
   Application keys stay stored but grant nothing while shelved.
 - `restore` unsets the marker on the item and on its `cascade` fragments, re-syncs the same
   things, and sends `data-fair:dataset-restore:<id>` / `data-fair:application-restore:<id>`.
@@ -83,7 +97,15 @@ restored.** This is the only thing a restore does not bring back.
 
 `purgeItem` reuses the existing delete path: `deleteDatasetAndFragments`, or `deleteFragments` +
 `deleteApplication`, with `notify: false` (the deletion was notified at shelving), then
-`updateTotalStorage`. It is a no-op if the item is gone or restored meanwhile.
+`updateTotalStorage`. It first **claims** the item atomically (`findOneAndUpdate` setting
+`shelved.purging` to the current date, on a shelved item with no claim or a stale one), and is a
+no-op if the item is gone, restored meanwhile or claimed by a running purge. `restore` unsets the
+marker only where no claim exists (and refuses any claim upfront): of a restore and a purge racing,
+exactly one wins, and a restore of a claimed item answers **409**. A claimed item is hidden from
+`GET /api/v1/bin` and the bin routes answer 409 on it. A failed purge keeps its claim (the item may
+be partly deleted, so it stays unrestorable); after `PURGE_CLAIM_STALE_MS` (1 hour,
+`operations.ts`) the claim is stale: the item is listed again, `DELETE /api/v1/bin/...` can claim
+it, and `purgeOwner` purges it at the next cron run whatever the retention.
 
 Triggers: `DELETE /api/v1/bin/:type/:id` (admin), the hourly cron `binPurgeCron`
 (`config.binPurgeCron`, `purge-worker.ts`, guarded by the `bin-purge-task` lock), and the
@@ -100,7 +122,9 @@ yet expired, and one failing item is logged (`bin-purge-item`) without blocking 
   or `applications`): admin of the item's owner or department. 204.
 - `GET /api/v1/settings/:type/:id/bin`: `{ active, retentionDays }`, readable by any member of the
   owner so the UI can adapt its delete wording.
-- No `allowAnyScope`: a scoped (NHI) session is refused on the bin routes, as on settings writes.
+- The `/api/v1/bin` routes have no `allowAnyScope`: a scoped (NHI) session is refused on them, as
+  on settings writes. `GET /api/v1/settings/:type/:id/bin` is `allowAnyScope` (member-readable, the
+  UIs call it on load).
 
 ## 8. UI
 
