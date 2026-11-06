@@ -200,6 +200,13 @@ const writeSettings = async (ctx: SettingsWriteContext, existingSettings: Settin
     await updateDatasetsMetadata(owner, oldSettings.datasetsMetadata || {}, settings.datasetsMetadata)
   }
 
+  // disabling the bin purges what it holds. Fire and forget: the hourly cron is the safety net
+  if (oldSettings && isMainSettings(oldSettings) && isMainSettings(settings) && oldSettings.bin?.active && !settings.bin?.active) {
+    import('../bin/service.ts')
+      .then(({ purgeOwner }) => purgeOwner({ type: owner.type, id: owner.id }))
+      .catch(err => log.error('bin purge on disabling failed', { code: 'bin-purge-disable', err }))
+  }
+
   return cleanSettings({ ...settings, apiKeys: returnedApiKeys })
 }
 

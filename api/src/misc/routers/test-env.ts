@@ -448,6 +448,16 @@ router.post('/integrity-purge/run', async (req, res, next) => {
   }
 })
 
+// Run the bin retention purge on demand (test-only)
+router.post('/bin-purge/run', async (req, res, next) => {
+  try {
+    const { runOnce } = await import('../../bin/purge-worker.ts')
+    res.json({ purged: await runOnce() })
+  } catch (err) {
+    next(err)
+  }
+})
+
 // Trigger the check-stale alert sweep on demand (test-only)
 router.post('/integrity-stale/run', async (req, res, next) => {
   try {

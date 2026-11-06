@@ -294,6 +294,7 @@ export const run = async () => {
     })
     const apiKeysExpirationWorker = await import('./settings/api-keys-expiration-worker.ts')
     apiKeysExpirationWorker.start()
+    ;(await import('./bin/purge-worker.ts')).start()
     if (config.integrity?.active) {
       const integrityChecker = await import('./integrity/checker.ts')
       integrityChecker.start()
@@ -381,6 +382,7 @@ export const stop = async () => {
   if (config.mode.includes('worker')) {
     await (await import('./workers/index.ts')).stop()
     await (await import('./settings/api-keys-expiration-worker.ts')).stop()
+    await (await import('./bin/purge-worker.ts')).stop()
     if (config.integrity?.active) {
       await (await import('./integrity/checker.ts')).stop()
     }

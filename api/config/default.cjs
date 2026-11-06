@@ -367,5 +367,6 @@ module.exports = {
   extensionsBatchSize: 250,
   compatODS: false,
   apiKeysMaxDuration: 2 * 365, // in days
+  binPurgeCron: '0 * * * *', // hourly, purge the bin items past their retention
   apiKeysExpirationCron: '0 3 * * *', // daily at 3 AM, scan apiKeys expireAt and notify J-3 / J
 }

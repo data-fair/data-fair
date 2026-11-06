@@ -4,7 +4,7 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import type { SessionStateAuthenticated } from '@data-fair/lib-express'
 import { rootSettingsFilter, isMainSettings } from '../settings/operations.ts'
 import escapeStringRegexp from 'escape-string-regexp'
-import { notShelved, onlyShelved, binAudienceFilter, type Shelved } from './operations.ts'
+import { notShelved, onlyShelved, binAudienceFilter, isShelvedExpired, type Shelved } from './operations.ts'
 import { resourceLogFields } from '../misc/utils/log-fields.ts'
 import * as notifications from '../misc/utils/notifications.ts'
 import catalogsPublicationQueue from '../misc/utils/catalogs-publication-queue.ts'
@@ -241,4 +241,28 @@ export const getBinItem = async (type: BinResourceType, id: string): Promise<any
   const doc = await collection(type).findOne({ id, ...onlyShelved }, { projection: { _id: 0, id: 1, owner: 1, shelved: 1 } })
   if (!doc || doc.shelved?.cascade) throw httpError(404, 'Ressource inconnue dans la corbeille')
   return doc
+}
+
+/**
+ * Purge the items of an owner's bin that are past retention, or all of them if the bin is off.
+ * Cascaded fragments go with their parent. The settings are re-read per item, so a bin re-enabled
+ * while this runs keeps the items it was not yet past retention for. Returns the count purged.
+ */
+export const purgeOwner = async (owner: { type: string, id: string }): Promise<number> => {
+  const filter = { 'owner.type': owner.type, 'owner.id': owner.id, ...onlyShelved, 'shelved.cascade': { $ne: true } }
+  const items: { type: BinResourceType, id: string, at: string }[] = []
+  for (const type of ['datasets', 'applications'] as const) {
+    const docs = await collection(type).find(filter).project({ _id: 0, id: 1, 'shelved.at': 1 }).toArray()
+    for (const doc of docs) items.push({ type, id: doc.id, at: doc.shelved.at })
+  }
+  items.sort((a, b) => a.at < b.at ? -1 : a.at > b.at ? 1 : 0)
+  let count = 0
+  for (const item of items) {
+    const settings = await getBinSettings(owner)
+    if (!settings.active || isShelvedExpired(item.at, settings.retentionDays, new Date())) {
+      await purgeItem(item.type, item.id)
+      count++
+    }
+  }
+  return count
 }

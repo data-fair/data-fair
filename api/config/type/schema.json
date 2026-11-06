@@ -53,7 +53,8 @@
     "extensionUpdateDelay",
     "extensionsBatchSize",
     "apiKeysMaxDuration",
-    "apiKeysExpirationCron"
+    "apiKeysExpirationCron",
+    "binPurgeCron"
   ],
   "properties": {
     "mode": {
@@ -528,6 +529,9 @@
       "type": "number"
     },
     "apiKeysExpirationCron": {
+      "type": "string"
+    },
+    "binPurgeCron": {
       "type": "string"
     }
   },
