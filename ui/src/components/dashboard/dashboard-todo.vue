@@ -1,7 +1,10 @@
 <template>
   <v-card class="h-100">
     <v-card-item>
-      <v-card-title class="d-flex align-center ga-2">
+      <v-card-title
+        tag="h2"
+        class="d-flex align-center ga-2"
+      >
         <v-icon
           :icon="mdiClipboardCheckOutline"
           color="primary"
@@ -38,6 +41,7 @@
             :color="item.color"
             :append-icon="mdiChevronRight"
             :title="item.title"
+            :aria-label="item.title"
             variant="text"
           >
             {{ t('see') }}
@@ -45,23 +49,23 @@
         </template>
       </v-list-item>
     </v-list>
-    <!-- never claim everything is fine when a check could not run -->
+    <!-- never claim everything is fine, or that a list is complete, when a check could not run -->
     <v-card-text
-      v-else-if="loaded && failed"
+      v-if="loaded && failed"
       class="d-flex align-center ga-2 text-medium-emphasis"
     >
       <v-icon :icon="mdiAlertCircleOutline" />
       {{ t('checksFailed') }}
     </v-card-text>
     <v-card-text
-      v-else-if="loaded"
+      v-if="loaded && !failed && !items.length"
       class="d-flex align-center ga-2 text-success font-weight-bold"
     >
       <v-icon :icon="mdiCheckCircle" />
       {{ t('upToDate') }}
     </v-card-text>
     <v-progress-linear
-      v-else
+      v-if="!loaded && !items.length"
       indeterminate
       color="primary"
     />
@@ -162,12 +166,12 @@ const storagePercent = computed(() => {
 const items = computed(() => {
   const lines: Line[] = [
     { key: 'datasetsError', count: datasetsErrorFetch.data.value?.count, icon: mdiAlertCircle, color: 'error', to: { path: '/datasets', query: { status: 'error' } } },
-    { key: 'processingsError', count: processingsErrorFetch.data.value?.facets.statuses.error, icon: mdiCogTransferOutline, color: 'error', to: { path: '/processings', query: { status: 'error' } } },
+    { key: 'processingsError', count: processingsErrorFetch.data.value?.facets?.statuses?.error, icon: mdiCogTransferOutline, color: 'error', to: { path: '/processings', query: { status: 'error' } } },
     { key: 'storage', count: storagePercent.value, icon: mdiHarddisk, color: 'warning', to: '/storage' },
     { key: 'datasetsPublications', count: datasetsPublicationsFetch.data.value?.count, icon: mdiShareVariant, color: 'warning', to: { path: '/datasets', query: requestedSitesQuery(datasetsPublicationsFetch.data.value) } },
     { key: 'applicationsPublications', count: applicationsPublicationsFetch.data.value?.count, icon: mdiImageMultiple, color: 'warning', to: { path: '/applications', query: requestedSitesQuery(applicationsPublicationsFetch.data.value) } },
-    { key: 'reusesPublications', count: sum(reusesPublicationsFetch.data.value?.facets.requestedPortals), icon: mdiPageNext, color: 'warning', to: requestedPortalsLink('/reuses', reusesPublicationsFetch.data.value) },
-    { key: 'pagesPublications', count: sum(pagesPublicationsFetch.data.value?.facets.requestedPortals), icon: mdiViewDashboardEdit, color: 'warning', to: requestedPortalsLink('/pages', pagesPublicationsFetch.data.value) },
+    { key: 'reusesPublications', count: sum(reusesPublicationsFetch.data.value?.facets?.requestedPortals), icon: mdiPageNext, color: 'warning', to: requestedPortalsLink('/reuses', reusesPublicationsFetch.data.value) },
+    { key: 'pagesPublications', count: sum(pagesPublicationsFetch.data.value?.facets?.requestedPortals), icon: mdiViewDashboardEdit, color: 'warning', to: requestedPortalsLink('/pages', pagesPublicationsFetch.data.value) },
     ...extraItems.map(({ extra, fetch }) => ({
       key: extra.id,
       count: (extra.countPath ?? 'count').split('.').reduce((obj: any, k) => obj?.[k], fetch.data.value) as number | undefined,

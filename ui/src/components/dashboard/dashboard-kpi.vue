@@ -18,11 +18,12 @@
         <span
           v-if="created"
           class="text-body-small font-weight-bold text-success"
-        >{{ t('created', { n: created }) }}</span>
+        >{{ created === '50+' ? t('createdMany') : t('created', { n: created }) }}</span>
       </div>
       <template v-if="limit">
         <v-progress-linear
           :model-value="percent"
+          :aria-label="t(kind + '.title')"
           :color="percent >= 80 ? 'warning' : 'primary'"
           height="8"
           rounded
@@ -45,6 +46,7 @@ fr:
     title: Applications
     seeAll: Voir toutes les applications
   created: +{n} ces 30 derniers jours
+  createdMany: Plus de 50 ces 30 derniers jours
   limit: '{consumption} sur les {limit} autorisés'
   limitSubscription: '{consumption} sur les {limit} autorisés par votre abonnement'
 en:
@@ -55,6 +57,7 @@ en:
     title: Applications
     seeAll: See all the applications
   created: +{n} over the last 30 days
+  createdMany: More than 50 over the last 30 days
   limit: '{consumption} of the {limit} allowed'
   limitSubscription: '{consumption} of the {limit} allowed by your subscription'
 </i18n>

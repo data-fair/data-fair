@@ -54,7 +54,7 @@
             <dashboard-todo
               :limits="limits"
               :publication-sites="publicationSites"
-              :shared-fetches="[statsFetch, publicationSitesFetch]"
+              :shared-fetches="[limitsFetch, publicationSitesFetch]"
             />
           </v-col>
         </v-row>
@@ -102,8 +102,9 @@ breadcrumbs.receive({ breadcrumbs: [{ text: t('dashboard') }] })
 const { canContrib, canContribDep, canAdmin, missingSubscription } = usePermissions()
 
 // shared by the key figures and the "to do" card
-const statsFetch = useFetch<{ limits: Record<string, { consumption: number, limit: number }> }>(() => canContrib.value ? `${$apiPath}/stats` : null)
-const limits = computed(() => statsFetch.data.value?.limits)
+// not /stats: a scoped session cannot read it, the limits route answers any scope
+const limitsFetch = useFetch<Record<string, { consumption: number, limit: number }>>(() => canContrib.value && account.value ? `${$apiPath}/limits/${account.value.type}/${account.value.id}` : null)
+const limits = computed(() => limitsFetch.data.value ?? undefined)
 
 // shared by the publication lines of the "to do" card and the portals card
 const publicationSitesFetch = useFetch<PublicationSite[]>(() => account.value ? `${$apiPath}/settings/${account.value.type}/${account.value.id}:${account.value.department ?? '*'}/publication-sites` : null)
@@ -116,7 +117,7 @@ const publicationSites = computed(() => {
 // the url is a free text field: only a valid http(s) one can be opened
 const portalSites = computed(() => publicationSites.value?.filter(site => {
   try {
-    return new URL(site.url!).protocol.startsWith('http')
+    return ['http:', 'https:'].includes(new URL(site.url!).protocol)
   } catch {
     return false
   }

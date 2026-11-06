@@ -456,10 +456,11 @@
       "items": {
         "type": "object",
         "required": ["id", "title", "url"],
+        "anyOf": [{ "required": ["to"] }, { "required": ["href"] }],
         "properties": {
           "id": { "type": "string" },
           "title": { "description": "A string or an object of translations by locale", "type": ["string", "object"] },
-          "url": { "type": "string", "description": "GET url of the count, same-origin" },
+          "url": { "type": "string", "pattern": "^/", "description": "GET url of the count, same-origin" },
           "countPath": { "type": "string", "description": "Dotted path of the count in the response, default is count" },
           "to": { "type": "string", "description": "Route in the back-office" },
           "href": { "type": "string", "description": "Link outside of the back-office" },

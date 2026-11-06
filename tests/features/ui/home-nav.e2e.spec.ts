@@ -74,11 +74,33 @@ test.describe('home dashboard', () => {
     await expect(page.getByText('Broken Portal')).not.toBeVisible()
   })
 
+  test('a publication site url starting with the letters http is not a site', async ({ page, goToWithAuth }) => {
+    const ax = await axiosAuth('test_user1@test.com', 'test_org1')
+    await ax.post('/api/v1/settings/organization/test_org1/publication-sites', { type: 'data-fair-portals', id: 'scheme-portal', title: 'Scheme Portal', url: 'httpbin.org:80' })
+    await goToWithAuth('/data-fair/', 'test_user1', { org: 'test_org1' })
+    await expect(page.getByText('Valid Portal')).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Scheme Portal')).not.toBeVisible()
+  })
+
   test('to do card never says everything is fine after a failed check', async ({ page, goToWithAuth }) => {
     await page.route('**/data-fair/api/v1/datasets?*status=error*', route => route.fulfill({ status: 500 }))
     await goToWithAuth('/data-fair/', 'test_user1')
     await expect(page.getByText('Certaines vérifications n\'ont pas abouti.')).toBeVisible({ timeout: 10000 })
     await expect(page.getByText('Rien à traiter')).not.toBeVisible()
+  })
+
+  test('to do card says a check failed even when it has lines to show', async ({ page, goToWithAuth }) => {
+    await page.route('**/data-fair/api/v1/datasets?*status=error*', route => route.fulfill({ status: 500 }))
+    await page.route('**/data-fair/api/v1/datasets?*draftStatus=finalized*', route => route.fulfill({ json: { count: 2, results: [] } }))
+    await goToWithAuth('/data-fair/', 'test_user1')
+    await expect(page.getByRole('link', { name: /brouillon/i })).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Certaines vérifications n\'ont pas abouti.')).toBeVisible()
+  })
+
+  test('to do card lists the datasets in error', async ({ page, goToWithAuth }) => {
+    await page.route('**/data-fair/api/v1/datasets?*status=error*', route => route.fulfill({ json: { count: 3, results: [] } }))
+    await goToWithAuth('/data-fair/', 'test_user1')
+    await expect(page.getByRole('link', { name: /en erreur/i })).toBeVisible({ timeout: 10000 })
   })
 
   test('read-only role gets a notice instead of the to do card', async ({ page, goToWithAuth }) => {

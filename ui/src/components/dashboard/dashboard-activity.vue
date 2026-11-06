@@ -1,7 +1,10 @@
 <template>
   <v-card>
     <v-card-item>
-      <v-card-title class="d-flex align-center ga-2">
+      <v-card-title
+        tag="h2"
+        class="d-flex align-center ga-2"
+      >
         <v-icon
           :icon="mdiHistory"
           color="primary"
@@ -12,6 +15,7 @@
     <v-card-text class="py-0">
       <d-frame
         :src="`${$sitePath}/events/embed/events-compact`"
+        :iframe-title="t('title')"
         resize="yes"
         @notif="(e: any) => sendUiNotif(frameNotifArg(e.detail))"
       />

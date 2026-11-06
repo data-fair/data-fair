@@ -1,7 +1,10 @@
 <template>
   <v-card>
     <v-card-item>
-      <v-card-title class="d-flex align-center ga-2">
+      <v-card-title
+        tag="h2"
+        class="d-flex align-center ga-2"
+      >
         <v-icon
           :icon="mdiWeb"
           color="primary"
