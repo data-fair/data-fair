@@ -18,7 +18,7 @@ type OwnerLike = { type: string, id: string, department?: string }
  * Whether the session can see the bin of the item's owner: org admin on the root account,
  * or department admin of the item's department. Pure: the admin role is a parameter.
  */
-export const canSeeBin = (sessionState: SessionState, owner: OwnerLike, adminRole = 'admin'): boolean => {
+export const canSeeBin = (sessionState: SessionState, owner: OwnerLike, adminRole: string): boolean => {
   const role = getAccountRole(sessionState, { type: owner.type as 'user' | 'organization', id: owner.id, department: owner.department })
   if (role === null) return false
   if (sessionState.user?.adminMode) return true

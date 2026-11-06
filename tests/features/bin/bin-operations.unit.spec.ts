@@ -28,13 +28,13 @@ test.describe('bin operations', () => {
     const d1 = { type: 'organization', id: 'o1', department: 'd1' }
     const d2 = { type: 'organization', id: 'o1', department: 'd2' }
     const root = { type: 'organization', id: 'o1' }
-    assert.equal(canSeeBin(session('admin'), d1), true)
-    assert.equal(canSeeBin(session('admin'), root), true)
-    assert.equal(canSeeBin(session('admin', 'd1'), d1), true)
-    assert.equal(canSeeBin(session('admin', 'd1'), d2), false)
-    assert.equal(canSeeBin(session('admin', 'd1'), root), false)
-    assert.equal(canSeeBin(session('contrib'), root), false)
-    assert.equal(canSeeBin(session('contrib', 'd1'), d1), false)
-    assert.equal(canSeeBin({} as any, root), false)
+    assert.equal(canSeeBin(session('admin'), d1, 'admin'), true)
+    assert.equal(canSeeBin(session('admin'), root, 'admin'), true)
+    assert.equal(canSeeBin(session('admin', 'd1'), d1, 'admin'), true)
+    assert.equal(canSeeBin(session('admin', 'd1'), d2, 'admin'), false)
+    assert.equal(canSeeBin(session('admin', 'd1'), root, 'admin'), false)
+    assert.equal(canSeeBin(session('contrib'), root, 'admin'), false)
+    assert.equal(canSeeBin(session('contrib', 'd1'), d1, 'admin'), false)
+    assert.equal(canSeeBin({} as any, root, 'admin'), false)
   })
 })
