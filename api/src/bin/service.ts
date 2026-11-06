@@ -3,12 +3,13 @@ import log from '@data-fair/lib-node/log.js'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import type { SessionStateAuthenticated } from '@data-fair/lib-express'
 import { rootSettingsFilter, isMainSettings } from '../settings/operations.ts'
-import { notShelved, onlyShelved, type Shelved } from './operations.ts'
+import escapeStringRegexp from 'escape-string-regexp'
+import { notShelved, onlyShelved, binAudienceFilter, type Shelved } from './operations.ts'
 import { resourceLogFields } from '../misc/utils/log-fields.ts'
 import * as notifications from '../misc/utils/notifications.ts'
 import catalogsPublicationQueue from '../misc/utils/catalogs-publication-queue.ts'
 import { clearApplicationKeysCaches } from '../misc/utils/application-key.ts'
-import { findFragments, deleteFragments } from '../fragments/service.ts'
+import { findFragments, deleteFragments, getParent } from '../fragments/service.ts'
 import { syncDataset as syncRemoteService } from '../remote-services/service.ts'
 import { memoizedGetDataset, mergeDraft, deleteDatasetAndFragments } from '../datasets/service.ts'
 import { updateTotalStorage } from '../datasets/utils/storage.ts'
@@ -136,6 +137,10 @@ export const shelveApplication = async (sessionState: SessionStateAuthenticated,
 export const restore = async (sessionState: SessionStateAuthenticated, type: BinResourceType, id: string): Promise<void> => {
   const doc: any = await collection(type).findOne({ id, ...onlyShelved })
   if (!doc) throw httpError(404, 'Ressource inconnue dans la corbeille')
+  // a fragment shelved on its own before its parent: the parent must come back first
+  if (doc.partOf && !doc.shelved.cascade && (await getParent(doc.partOf))?.shelved) {
+    throw httpError(409, 'Cette ressource est un fragment d\'une ressource qui est elle-même dans la corbeille, restaurez d\'abord la ressource parente')
+  }
   const parentType = type === 'datasets' ? 'dataset' : 'application'
   const fragments = await findFragments(parentType, id, doc.owner)
   const datasets = fragments.datasets.filter(d => d.shelved?.cascade)
@@ -178,4 +183,62 @@ export const purgeItem = async (type: BinResourceType, id: string): Promise<void
   log.info(`${type} purged from the bin ${doc.slug} (${doc.id})`, { code: `df.${type}.purge`, ...resourceLogFields(type, doc) })
   // the application path has no recompute of its own, and fragments may be draft-only
   await updateTotalStorage(doc.owner)
+}
+
+export type BinItem = {
+  type: BinResourceType
+  id: string
+  slug: string
+  title: string
+  owner: any
+  shelved: Shelved
+  storage?: { size: number }
+  fragments: number
+  purgeAt: string
+}
+
+/**
+ * The bin of an account: the whole organization for a root account, one department otherwise.
+ * Newest first. A fragment shelved with its parent (`cascade`) is counted in the parent's `fragments`.
+ * The bin is small, so no pagination and no text index: `q` is an escaped regex on title and slug.
+ */
+export const listBin = async (account: OwnerLike, q?: string): Promise<{ count: number, results: BinItem[] }> => {
+  const { retentionDays } = await getBinSettings(account)
+  const filter: Record<string, any> = { ...binAudienceFilter(account), ...onlyShelved }
+  const cascaded: Record<string, number> = {}
+  const results: BinItem[] = []
+  for (const type of ['datasets', 'applications'] as const) {
+    const docs: any[] = await collection(type).find(filter).project({ _id: 0, id: 1, slug: 1, title: 1, owner: 1, shelved: 1, partOf: 1, 'storage.size': 1 }).toArray()
+    const regexp = q ? new RegExp(escapeStringRegexp(q), 'i') : null
+    for (const doc of docs) {
+      if (doc.shelved.cascade) {
+        // counted whatever the filter, a search on the parent does not hide its fragments
+        if (doc.partOf) cascaded[`${doc.partOf.type}:${doc.partOf.id}`] = (cascaded[`${doc.partOf.type}:${doc.partOf.id}`] ?? 0) + 1
+        continue
+      }
+      if (regexp && !regexp.test(doc.title ?? '') && !regexp.test(doc.slug ?? '')) continue
+      const item: BinItem = {
+        type,
+        id: doc.id,
+        slug: doc.slug,
+        title: doc.title,
+        owner: doc.owner,
+        shelved: doc.shelved,
+        fragments: 0,
+        purgeAt: new Date(new Date(doc.shelved.at).getTime() + retentionDays * 86400000).toISOString()
+      }
+      if (type === 'datasets' && doc.storage?.size !== undefined) item.storage = { size: doc.storage.size }
+      results.push(item)
+    }
+  }
+  for (const item of results) item.fragments = cascaded[`${item.type === 'datasets' ? 'dataset' : 'application'}:${item.id}`] ?? 0
+  results.sort((a, b) => b.shelved.at.localeCompare(a.shelved.at))
+  return { count: results.length, results }
+}
+
+/** The shelved item a bin route targets, 404 if not shelved or a cascaded fragment (restored with its parent only). */
+export const getBinItem = async (type: BinResourceType, id: string): Promise<any> => {
+  const doc = await collection(type).findOne({ id, ...onlyShelved }, { projection: { _id: 0, id: 1, owner: 1, shelved: 1 } })
+  if (!doc || doc.shelved?.cascade) throw httpError(404, 'Ressource inconnue dans la corbeille')
+  return doc
 }

@@ -29,6 +29,11 @@ const applicationIdParam = {
   schema: { type: 'string', title: "Identifiant de l'application" }
 }
 
+const binItemParams = [
+  { in: 'path', name: 'type', required: true, schema: { type: 'string', enum: ['datasets', 'applications'] } },
+  { in: 'path', name: 'id', required: true, schema: { type: 'string' } }
+]
+
 /** Wraps a description into a text/plain OpenAPI response object. */
 const textPlainResponse = (description: string) => ({
   description,
@@ -544,6 +549,74 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
             204: {
               description: 'Application supprimée.'
             },
+            ...readErrorResponses
+          }
+        }
+      },
+      '/bin': {
+        get: {
+          summary: 'Lister la corbeille',
+          description: "Lister les jeux de données et applications placés dans la corbeille du compte actif (organisation ou département), du plus récent au plus ancien. Réservé aux administrateurs ; 404 si la corbeille n'est pas activée. Les fragments placés avec leur parent sont comptés dans `fragments`.",
+          operationId: 'listBin',
+          tags: ['Corbeille'],
+          parameters: [{ in: 'query', name: 'q', description: 'Filtre insensible à la casse sur le titre et l\'identifiant de publication.', schema: { type: 'string' } }],
+          responses: {
+            200: {
+              description: 'Le contenu de la corbeille.',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    properties: {
+                      count: { type: 'integer' },
+                      results: {
+                        type: 'array',
+                        items: {
+                          type: 'object',
+                          properties: {
+                            type: { type: 'string', enum: ['datasets', 'applications'] },
+                            id: { type: 'string' },
+                            slug: { type: 'string' },
+                            title: { type: 'string' },
+                            owner: { type: 'object' },
+                            shelved: { type: 'object', description: 'Date (`at`) et auteur (`by`) du placement dans la corbeille.' },
+                            storage: { type: 'object', properties: { size: { type: 'integer' } } },
+                            fragments: { type: 'integer', description: 'Nombre de fragments placés dans la corbeille avec cette ressource.' },
+                            purgeAt: { type: 'string', format: 'date-time', description: 'Date de suppression définitive.' }
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            },
+            ...readErrorResponses
+          }
+        }
+      },
+      '/bin/{type}/{id}/_restore': {
+        parameters: binItemParams,
+        post: {
+          summary: 'Restaurer depuis la corbeille',
+          description: 'Sortir une ressource de la corbeille, avec les fragments placés avec elle. 409 si la ressource est un fragment dont le parent est dans la corbeille.',
+          operationId: 'restoreFromBin',
+          tags: ['Corbeille'],
+          responses: {
+            204: { description: 'Ressource restaurée.' },
+            ...readErrorResponses
+          }
+        }
+      },
+      '/bin/{type}/{id}': {
+        parameters: binItemParams,
+        delete: {
+          summary: 'Supprimer définitivement depuis la corbeille',
+          description: 'Supprimer définitivement une ressource de la corbeille et ses fragments.',
+          operationId: 'purgeFromBin',
+          tags: ['Corbeille'],
+          responses: {
+            204: { description: 'Ressource supprimée définitivement.' },
             ...readErrorResponses
           }
         }

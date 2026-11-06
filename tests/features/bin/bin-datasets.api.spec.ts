@@ -297,9 +297,8 @@ test.describe('shelve and restore', () => {
   const enableBin = async () => {
     await testUser1Org.patch('/api/v1/settings/organization/test_org1', { bin: { active: true } })
   }
-  // temporary trigger, replaced by the bin router in a later task
   const restore = async (type: 'datasets' | 'applications', id: string) => {
-    await testUser1Org.post(`/api/v1/test-env/bin-restore/${type}/${id}`)
+    await testUser1Org.post(`/api/v1/bin/${type}/${id}/_restore`)
   }
   const withoutUpdatedAt = ({ updatedAt, ...rest }: any) => rest
 
