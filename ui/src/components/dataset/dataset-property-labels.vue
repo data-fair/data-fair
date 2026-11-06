@@ -31,7 +31,7 @@
         <df-tutorial-alert
           :id="readonly ? 'labels-readonly' : 'labels'"
           class="mb-2"
-          :text="t(readonly ? 'readonlyLabels' : 'tutorialLabels')"
+          :text="readonly ? t(derivedFrom === 'virtual' ? 'readonlyVirtual' : 'readonlyExtension') : t('tutorialLabels')"
           persistent
         />
 
@@ -72,13 +72,15 @@
 fr:
   labels: Libellés des valeurs
   tutorialLabels: Saisissez des libellés associés à des valeurs présentes dans la donnée pour améliorer la présentation dans les applications.
-  readonlyLabels: "Consultation seule : les libellés de ce champ ne sont pas modifiables ici."
+  readonlyVirtual: "Lecture seule : ces libellés viennent des jeux enfants, modifiez-les sur ces jeux. Si plusieurs enfants définissent la même valeur, le libellé du premier de la liste l'emporte."
+  readonlyExtension: "Lecture seule : ces libellés viennent de l'enrichissement."
   value: Valeur
   label: Libellé
 en:
   labels: Labels for values
   tutorialLabels: Enter some labels associated to values present in the data to improve the display in applications.
-  readonlyLabels: "Read-only view: the labels of this field cannot be modified here."
+  readonlyVirtual: "Read-only view: these labels come from the child datasets, edit them there. If several children define the same value, the label of the first one in the list prevails."
+  readonlyExtension: "Read-only view: these labels come from the extension."
   value: Value
   label: Label
 </i18n>
@@ -94,6 +96,7 @@ const { t } = useI18n()
 const props = defineProps<{
   property: SchemaProperty
   editable?: boolean
+  derivedFrom?: 'virtual' | 'extension'
 }>()
 
 const dialog = ref(false)

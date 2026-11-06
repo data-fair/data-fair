@@ -30,6 +30,14 @@
 
       <v-card-text>
         <df-tutorial-alert
+          v-if="!editable"
+          id="capabilities-readonly"
+          class="mb-2"
+          :text="t(derivedFrom === 'virtual' ? 'readonlyVirtual' : 'readonlyExtension')"
+          persistent
+        />
+        <df-tutorial-alert
+          v-else
           id="capabilities"
           class="mb-2"
           persistent
@@ -57,10 +65,14 @@ fr:
   technicalConfig: Configuration technique
   tutorialCapabilities: Par défaut la plupart des options sont cochées pour maximiser les utilisations possibles de vos jeux de données. Pour de petits volumes il n'y a pas d'inconvénient à conserver ce paramétrage. Mais pour des volumes importants désactiver les options inutiles permet de réduire les temps de traitement et de requête.
   tutorialEnergy: Qui dit temps de traitement dit énergie. En désactivant les options inutiles vous contribuez à rendre cette plateforme moins énergivore.
+  readonlyVirtual: "Lecture seule : cette configuration est déduite des jeux enfants. Une option n'est active que si tous les enfants l'autorisent."
+  readonlyExtension: "Lecture seule : cette configuration vient de l'enrichissement."
 en:
   technicalConfig: Technical configuration
   tutorialCapabilities: Most options are active by default to maximize usage possibilities of your datasets. For small volumes of data there is no need to change this. But for larger datasets disabling some options will reduce processing and request times.
   tutorialEnergy: Processing time is synonymous to energy consumption. By disabling some options you contribute making this platform more energy efficient.
+  readonlyVirtual: "Read-only view: this configuration is derived from the child datasets. An option is only active if every child allows it."
+  readonlyExtension: "Read-only view: this configuration comes from the extension."
 </i18n>
 
 <script setup lang="ts">
@@ -75,6 +87,7 @@ const { t } = useI18n()
 const props = defineProps<{
   property: SchemaProperty
   editable?: boolean
+  derivedFrom?: 'virtual' | 'extension'
 }>()
 
 const capabilitiesProperties = capabilitiesSchema.properties as Record<string, { type: string, default: boolean, layout: string, title: string, description: string }>
@@ -110,7 +123,7 @@ const schema = computed(() => {
 })
 
 const vjsfOptions = computed<VjsfOptions>(() => ({
-  disableAll: !props.editable,
+  readOnly: !props.editable,
   density: 'compact'
 }))
 
@@ -123,7 +136,7 @@ watch(dialog, (show) => {
 })
 
 function apply () {
-  if (!editCapabilities.value) return
+  if (!editCapabilities.value || !props.editable) return
   const capabilities = { ...editCapabilities.value }
   // we only keep the values that were toggled away from defaults
   for (const key in capabilities) {

@@ -55,7 +55,7 @@
     >
       <!-- Action buttons row -->
       <div
-        v-if="columnActionsEditable || showLabels"
+        v-if="editable && dataset"
         class="d-flex justify-end ga-1 mb-2"
       >
         <template v-if="columnActionsEditable">
@@ -68,10 +68,13 @@
             yes-color="warning"
             @confirm="onRemoveColumn"
           />
-          <dataset-property-capabilities
-            :property="column"
-            :editable="true"
-          />
+        </template>
+        <dataset-property-capabilities
+          :property="column"
+          :editable="columnActionsEditable"
+          :derived-from="derivedFrom"
+        />
+        <template v-if="columnActionsEditable">
           <dataset-property-transform
             v-if="dataset?.file && !column['x-calculated'] && !column['x-extension']"
             :property="column"
@@ -87,6 +90,7 @@
           v-if="showLabels"
           :property="column"
           :editable="columnActionsEditable"
+          :derived-from="derivedFrom"
           :is-rest="dataset && dataset.isRest"
         />
       </div>
@@ -316,6 +320,8 @@ const columnEditable = computed(() => {
 })
 
 const columnActionsEditable = computed(() => !!props.editable && !!dataset.value && !dataset.value.isVirtual && columnEditable.value)
+
+const derivedFrom = computed(() => dataset.value?.isVirtual ? 'virtual' : 'extension')
 
 // labels of virtual or enriched columns are derived: consultable, not editable
 const showLabels = computed(() => {
