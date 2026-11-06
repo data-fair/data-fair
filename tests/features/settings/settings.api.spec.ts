@@ -232,4 +232,25 @@ test.describe('settings API', () => {
     const resave = await testUser1.put('/api/v1/settings/user/test_user1', { apiKeys: reread.apiKeys })
     assert.equal(resave.status, 200)
   })
+  test.describe('bin setting', () => {
+    test('is set at the organization level and readable by members', async () => {
+      const testUser6Dep1 = await axiosAuth('test_user6@test.com', 'test_org1')
+      testUser6Dep1.setOrg('test_org1', 'dep1')
+      assert.deepEqual((await testUser6Dep1.get('/api/v1/settings/organization/test_org1/bin')).data, { active: false, retentionDays: 30 })
+      await testUser1Org.patch('/api/v1/settings/organization/test_org1', { bin: { active: true, retentionDays: 10 } })
+      assert.deepEqual((await testUser6Dep1.get('/api/v1/settings/organization/test_org1/bin')).data, { active: true, retentionDays: 10 })
+    })
+
+    test('is refused in department settings', async () => {
+      await testUser1Org.put('/api/v1/settings/organization/test_org1:dep1', { apiKeys: [] })
+      await assert.rejects(
+        testUser1Org.patch('/api/v1/settings/organization/test_org1:dep1', { bin: { active: true } }),
+        (err: any) => err.status === 400
+      )
+    })
+
+    test('is always off for a user owner', async () => {
+      assert.deepEqual((await testUser1.get('/api/v1/settings/user/test_user1/bin')).data, { active: false, retentionDays: 30 })
+    })
+  })
 })

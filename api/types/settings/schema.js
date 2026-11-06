@@ -719,6 +719,16 @@ export default {
           }
         }
       }
+    },
+    bin: {
+      type: 'object',
+      title: 'Bin',
+      description: 'Corbeille des jeux de données et applications, activée au niveau de l\'organisation uniquement.',
+      additionalProperties: false,
+      properties: {
+        active: { type: 'boolean', default: false, description: 'Les suppressions sont d\'abord placées dans la corbeille.' },
+        retentionDays: { type: 'integer', minimum: 1, maximum: 365, default: 30, description: 'Nombre de jours avant suppression définitive.' }
+      }
     }
   }
 }

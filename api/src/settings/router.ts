@@ -6,6 +6,7 @@ import config from '#config'
 import { reqSessionAuthenticated, allowAnyScope } from '@data-fair/lib-express'
 import { buildPublicationSiteSubscriptions } from './operations.ts'
 import * as service from './service.ts'
+import { getBinSettings } from '../bin/service.ts'
 import { settingsParamsMiddleware, isOwnerAdmin, isOwnerMember, portalsSecretOrOwnerAdmin, reqPortalsSecret, reqSettingsParams, reqWriteContext } from './middlewares.ts'
 
 const router = express.Router()
@@ -48,6 +49,11 @@ router.get('/:type/:id/datasets-metadata', allowAnyScope, isOwnerMember, async (
 // Get agent chat setting as member
 router.get('/:type/:id/agent-chat', allowAnyScope, isOwnerMember, cacheHeaders.noCache, async (req, res) => {
   res.status(200).send(await service.getAgentChat(reqSettingsParams(req), reqSessionAuthenticated(req)))
+})
+
+// Get bin setting as member
+router.get('/:type/:id/bin', allowAnyScope, isOwnerMember, cacheHeaders.noCache, async (req, res) => {
+  res.status(200).send(await getBinSettings(reqSettingsParams(req).owner))
 })
 
 // Get publication sites as owner

@@ -133,6 +133,23 @@ export default {
         $ref: 'https://github.com/data-fair/data-fair/topic'
       }
     },
+    shelved: {
+      type: 'object',
+      readOnly: true,
+      description: 'Present when the application is in the bin (corbeille). Managed by the server, not patchable.',
+      required: ['at', 'by'],
+      additionalProperties: false,
+      properties: {
+        at: { type: 'string', format: 'date-time' },
+        by: {
+          type: 'object',
+          required: ['id', 'name'],
+          additionalProperties: false,
+          properties: { id: { type: 'string' }, name: { type: 'string' } }
+        },
+        cascade: { type: 'boolean', const: true, description: 'This fragment was shelved because of its parent.' }
+      }
+    },
     partOf: {
       type: 'object',
       description: 'Declares this application as a fragment of another application. A fragment inherits a derived ACL from its parent, is hidden from listings by default and is deleted with its parent. Only its parent and the parent\'s other fragments should use it: the readers of any other application get no access to it and lose it when the parent is deleted. To reuse it elsewhere, detach it first (partOf: null).',
