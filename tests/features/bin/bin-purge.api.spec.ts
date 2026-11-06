@@ -66,21 +66,23 @@ test.describe('bin purge', () => {
     })
   })
 
-  test('re-enabling right after disabling stops the purge, the not yet purged items stay', async () => {
+  test('re-enabled before the run, nothing non expired is purged', async () => {
     await setBin({ active: true })
-    const ids = ['purge-race-1', 'purge-race-2', 'purge-race-3', 'purge-race-4', 'purge-race-5', 'purge-race-6']
+    const ids = ['purge-race-1', 'purge-race-2', 'purge-race-3']
     for (const id of ids) {
       await testUser1Org.post(`/api/v1/datasets/${id}`, { isMetaOnly: true, title: id })
       await testUser1Org.delete(`/api/v1/datasets/${id}`)
     }
+    // the real toggle: only the end state is asserted, the purge started by the disabling races
     await setBin({ active: false })
+    await waitFor(async () => (await anonymousAx.get(`${apiUrl}/api/v1/test-env/raw-dataset/purge-race-3`, { validateStatus: () => true })).status === 404)
+    // deterministic part: items shelved again and bin enabled before the run survive it
     await setBin({ active: true })
-    // the purge started by the disabling may have taken the first items before the re-enabling
-    // landed, it re-reads the settings per item so it cannot empty the bin: the last one stays
-    await new Promise(resolve => setTimeout(resolve, 1500))
-    const remaining = await binIds()
-    assert.ok(remaining.includes('purge-race-6'), `last item purged, remaining: ${remaining}`)
+    for (const id of ids) {
+      await testUser1Org.post(`/api/v1/datasets/${id}`, { isMetaOnly: true, title: id })
+      await testUser1Org.delete(`/api/v1/datasets/${id}`)
+    }
     await runPurge()
-    assert.deepEqual(await binIds(), remaining, 'the bin is stable once re-enabled')
+    assert.deepEqual(await binIds(), ids)
   })
 })

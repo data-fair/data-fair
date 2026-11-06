@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { isShelvedExpired, binAudienceFilter, canSeeBin, notShelved, onlyShelved } from '../../../api/src/bin/operations.ts'
+import { isShelvedExpired, shouldPurge, binAudienceFilter, canSeeBin, notShelved, onlyShelved } from '../../../api/src/bin/operations.ts'
 
 const session = (role: string, department?: string, adminMode = false): any => ({
   user: { id: 'u', name: 'U', email: 'u@test.com', organizations: [{ id: 'o1', name: 'O1', role, department }], adminMode },
@@ -12,6 +12,14 @@ test.describe('bin operations', () => {
   test('isShelvedExpired', () => {
     assert.equal(isShelvedExpired('2026-01-01T00:00:00Z', 30, new Date('2026-01-30T23:59:59Z')), false)
     assert.equal(isShelvedExpired('2026-01-01T00:00:00Z', 30, new Date('2026-01-31T00:00:00Z')), true)
+  })
+
+  test('shouldPurge re-reads the current settings', () => {
+    const at = '2026-01-01T00:00:00Z'
+    const now = new Date('2026-01-05T00:00:00Z')
+    assert.equal(shouldPurge({ active: false, retentionDays: 30 }, at, now), true, 'bin off purges everything')
+    assert.equal(shouldPurge({ active: true, retentionDays: 30 }, at, now), false, 're-enabled keeps non expired')
+    assert.equal(shouldPurge({ active: true, retentionDays: 3 }, at, now), true, 'past retention')
   })
 
   test('filters', () => {

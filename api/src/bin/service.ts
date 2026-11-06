@@ -4,7 +4,7 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import type { SessionStateAuthenticated } from '@data-fair/lib-express'
 import { rootSettingsFilter, isMainSettings } from '../settings/operations.ts'
 import escapeStringRegexp from 'escape-string-regexp'
-import { notShelved, onlyShelved, binAudienceFilter, isShelvedExpired, type Shelved } from './operations.ts'
+import { notShelved, onlyShelved, binAudienceFilter, shouldPurge, type Shelved } from './operations.ts'
 import { resourceLogFields } from '../misc/utils/log-fields.ts'
 import * as notifications from '../misc/utils/notifications.ts'
 import catalogsPublicationQueue from '../misc/utils/catalogs-publication-queue.ts'
@@ -259,9 +259,13 @@ export const purgeOwner = async (owner: { type: string, id: string }): Promise<n
   let count = 0
   for (const item of items) {
     const settings = await getBinSettings(owner)
-    if (!settings.active || isShelvedExpired(item.at, settings.retentionDays, new Date())) {
+    if (!shouldPurge(settings, item.at, new Date())) continue
+    // one failing item must not block the others, the next run retries it
+    try {
       await purgeItem(item.type, item.id)
       count++
+    } catch (err) {
+      log.error('bin purge failed for an item', { code: 'bin-purge-item', type: item.type, id: item.id, err })
     }
   }
   return count

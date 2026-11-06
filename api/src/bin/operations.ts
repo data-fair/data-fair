@@ -19,6 +19,10 @@ export const binAllowedTasks: Record<'datasets' | 'applications', string[]> = { 
 export const isShelvedExpired = (shelvedAt: string, retentionDays: number, now: Date): boolean =>
   new Date(shelvedAt).getTime() + retentionDays * 86400000 <= now.getTime()
 
+/** Whether a shelved item is purged under the owner's current bin settings: the bin is off, or the item is past retention. */
+export const shouldPurge = (settings: { active: boolean, retentionDays: number }, shelvedAt: string, now: Date): boolean =>
+  !settings.active || isShelvedExpired(shelvedAt, settings.retentionDays, now)
+
 type OwnerLike = { type: string, id: string, department?: string }
 
 /**
