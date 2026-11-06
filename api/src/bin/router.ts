@@ -9,7 +9,12 @@ import { binActiveFor, listBin, getBinItem, restore, purgeItem } from './service
 // No allowAnyScope mark: a scoped session is refused (403) on every bin route, as on settings writes.
 const router = express.Router()
 
-const reqType = (type: string) => {
+const reqId = (id: string | undefined) => {
+  if (typeof id !== 'string') throw httpError(400, 'invalid path parameters')
+  return id
+}
+
+const reqType = (type: string | undefined) => {
   if (type !== 'datasets' && type !== 'applications') throw httpError(400, 'type must be datasets or applications')
   return type
 }
@@ -18,7 +23,7 @@ router.get('', cacheHeaders.noCache, async (req, res) => {
   const sessionState = reqSessionAuthenticated(req)
   const account = sessionState.account
   if (account.type !== 'organization' || !(await binActiveFor(account))) throw httpError(404, 'La corbeille n\'est pas activée pour ce compte')
-  if (!canSeeBin(sessionState, account, config.adminRole)) throw httpError(403, 'Seuls les administrateurs peuvent consulter la corbeille')
+  if (!canSeeBin(sessionState, account, config.adminRole as string)) throw httpError(403, 'Seuls les administrateurs peuvent consulter la corbeille')
   const q = typeof req.query.q === 'string' && req.query.q ? req.query.q : undefined
   res.status(200).send(await listBin(account, q))
 })
@@ -26,8 +31,8 @@ router.get('', cacheHeaders.noCache, async (req, res) => {
 router.post('/:type/:id/_restore', async (req, res) => {
   const sessionState = reqSessionAuthenticated(req)
   const type = reqType(req.params.type)
-  const item = await getBinItem(type, req.params.id)
-  if (!canSeeBin(sessionState, item.owner, config.adminRole)) throw httpError(403, 'Seuls les administrateurs peuvent restaurer depuis la corbeille')
+  const item = await getBinItem(type, reqId(req.params.id))
+  if (!canSeeBin(sessionState, item.owner, config.adminRole as string)) throw httpError(403, 'Seuls les administrateurs peuvent restaurer depuis la corbeille')
   await restore(sessionState, type, item.id)
   res.status(204).send()
 })
@@ -35,8 +40,8 @@ router.post('/:type/:id/_restore', async (req, res) => {
 router.delete('/:type/:id', async (req, res) => {
   const sessionState = reqSessionAuthenticated(req)
   const type = reqType(req.params.type)
-  const item = await getBinItem(type, req.params.id)
-  if (!canSeeBin(sessionState, item.owner, config.adminRole)) throw httpError(403, 'Seuls les administrateurs peuvent supprimer définitivement depuis la corbeille')
+  const item = await getBinItem(type, reqId(req.params.id))
+  if (!canSeeBin(sessionState, item.owner, config.adminRole as string)) throw httpError(403, 'Seuls les administrateurs peuvent supprimer définitivement depuis la corbeille')
   await purgeItem(type, item.id)
   res.status(204).send()
 })
