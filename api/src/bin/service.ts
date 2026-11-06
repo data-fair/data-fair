@@ -161,8 +161,10 @@ export const restore = async (sessionState: SessionStateAuthenticated, type: Bin
   if (datasets.length) await mongo.datasets.updateMany({ id: { $in: datasets.map(d => d.id) } }, { $unset: { shelved: '' } })
   if (applications.length) await mongo.applications.updateMany({ id: { $in: applications.map(a => a.id) } }, { $unset: { shelved: '' } })
 
-  const restoredDatasets = type === 'datasets' ? [doc, ...datasets] : datasets
-  const restoredApplications = type === 'applications' ? [doc, ...applications] : applications
+  // the documents as they now stand, without the marker (syncRemoteService ignores a shelved dataset)
+  const live = (d: any) => { const { shelved, ...rest } = d; return rest }
+  const restoredDatasets = (type === 'datasets' ? [doc, ...datasets] : datasets).map(live)
+  const restoredApplications = (type === 'applications' ? [doc, ...applications] : applications).map(live)
   for (const dataset of restoredDatasets) await syncRemoteService(dataset)
   await refinalizeVirtualParents(restoredDatasets.map(d => d.id))
   for (const application of restoredApplications) await syncDatasets(application)

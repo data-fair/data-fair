@@ -436,4 +436,23 @@ test.describe('shelve and restore', () => {
     await notifications.waitForCount(1)
     assert.equal((await notifications.getAll()).filter((n: any) => n.topic.key === `data-fair:dataset-delete:${dataset.id}`).length, 1)
   })
+
+  test('the master-data remote service is removed while shelved, even on a partner withdrawal, and back on restore', async () => {
+    await enableBin()
+    const id = 'bin-master-rs'
+    await testUser1Org.put('/api/v1/datasets/' + id, { isRest: true, title: id, schema: [{ key: 'code', type: 'string' }], masterData: { virtualDatasets: { active: true } } })
+    await testUser1Org.patch('/api/v1/datasets/' + id, { masterData: { virtualDatasets: { active: true }, shareOrgs: [{ id: 'test_org2', name: 'Test Org 2' }, { id: 'test_org3', name: 'Test Org 3' }] } })
+    const remoteService = () => testSuperadmin.get('/api/v1/remote-services/dataset:' + id, { params: { showAll: true } })
+    assert.deepEqual((await remoteService()).data.privateAccess.map((p: any) => p.id), ['test_org1', 'test_org2', 'test_org3'])
+
+    await testUser1Org.delete('/api/v1/datasets/' + id)
+    await assert.rejects(remoteService(), { status: 404 })
+    // test_org3 is no longer a partner: the withdrawal re-syncs the remote service of the shelved dataset
+    await anonymousAx.post(`${apiUrl}/api/v1/identities/organization/test_org1`, { name: 'Test Org 1', partners: [{ id: 'test_org2', name: 'Test Org 2' }] }, { headers: { 'x-secret-key': config.secretKeys.identities } })
+    assert.deepEqual((await getRawDataset(id)).masterData.shareOrgs.map((p: any) => p.id), ['test_org2'])
+    await assert.rejects(remoteService(), { status: 404 })
+
+    await restore('datasets', id)
+    assert.deepEqual((await remoteService()).data.privateAccess.map((p: any) => p.id), ['test_org1', 'test_org2'])
+  })
 })

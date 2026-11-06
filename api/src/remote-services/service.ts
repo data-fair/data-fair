@@ -51,7 +51,9 @@ export const syncDataset = async (dataset: Dataset) => {
   // console.log('SYNC ko', JSON.stringify(dataset, null, 2))
 
   const id = 'dataset:' + dataset.id
-  if (dataset.masterData && (
+  // a dataset in the bin exposes no master data (any caller, e.g. a partner withdrawal or a PATCH
+  // racing the DELETE, would otherwise re-register it); the restore syncs the unshelved document
+  if (!dataset.shelved && dataset.masterData && (
     (dataset.masterData.singleSearchs && dataset.masterData.singleSearchs.length) ||
     (dataset.masterData.bulkSearchs && dataset.masterData.bulkSearchs.length) ||
     (dataset.masterData.virtualDatasets && dataset.masterData.virtualDatasets.active) ||
