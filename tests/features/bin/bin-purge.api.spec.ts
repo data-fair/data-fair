@@ -85,4 +85,32 @@ test.describe('bin purge', () => {
     await runPurge()
     assert.deepEqual(await binIds(), ids)
   })
+
+  test('a purge claim refuses the restore and hides the item, a stale claim is purged by the next run', async () => {
+    await setBin({ active: true })
+    await restDataset('purge-claimed')
+    await restDataset('purge-stale')
+    await testUser1Org.delete('/api/v1/datasets/purge-claimed')
+    await testUser1Org.delete('/api/v1/datasets/purge-stale')
+    await patchRawDataset('purge-claimed', { 'shelved.purging': new Date().toISOString() })
+    await patchRawDataset('purge-stale', { 'shelved.purging': new Date(Date.now() - 2 * 3600000).toISOString() })
+
+    // a running purge: hidden, neither restorable nor purgeable again
+    assert.deepEqual(await binIds(), ['purge-stale'])
+    const conflict = (err: any) => {
+      assert.equal(err.status, 409)
+      assert.ok(err.data.includes('suppression définitive'), err.data)
+      return true
+    }
+    await assert.rejects(testUser1Org.post('/api/v1/bin/datasets/purge-claimed/_restore'), conflict)
+    await assert.rejects(testUser1Org.delete('/api/v1/bin/datasets/purge-claimed'), conflict)
+    // a crashed purge: listed again, still not restorable (it may be partly deleted)
+    await assert.rejects(testUser1Org.post('/api/v1/bin/datasets/purge-stale/_restore'), conflict)
+    assert.ok((await anonymousAx.get(`${apiUrl}/api/v1/test-env/raw-dataset/purge-claimed`)).data.shelved)
+
+    // not past retention, but a stale claim is purged again by the cron
+    await runPurge()
+    assert.equal((await anonymousAx.get(`${apiUrl}/api/v1/test-env/raw-dataset/purge-stale`, { validateStatus: () => true })).status, 404)
+    assert.ok((await anonymousAx.get(`${apiUrl}/api/v1/test-env/raw-dataset/purge-claimed`)).data.shelved, 'a fresh claim is left to its purge')
+  })
 })

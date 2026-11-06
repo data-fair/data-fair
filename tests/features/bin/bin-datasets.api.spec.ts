@@ -424,4 +424,16 @@ test.describe('shelve and restore', () => {
     assert.equal((await getRawDataset(dataset.id)).shelved, undefined)
     assert.equal((await testUser1Org.get(`/api/v1/datasets/${dataset.id}`)).status, 200)
   })
+
+  test('a second DELETE of a shelved dataset answers 404 and keeps the first marker', async () => {
+    await enableBin()
+    const dataset = await sendDataset('datasets/dataset1.csv', testUser1Org)
+    const notifications = await collectNotifications()
+    assert.equal((await testUser1Org.delete(`/api/v1/datasets/${dataset.id}`)).status, 204)
+    const marker = (await getRawDataset(dataset.id)).shelved
+    await assert.rejects(testUser1Org.delete(`/api/v1/datasets/${dataset.id}`), { status: 404 })
+    assert.deepEqual((await getRawDataset(dataset.id)).shelved, marker)
+    await notifications.waitForCount(1)
+    assert.equal((await notifications.getAll()).filter((n: any) => n.topic.key === `data-fair:dataset-delete:${dataset.id}`).length, 1)
+  })
 })

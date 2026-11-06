@@ -173,4 +173,13 @@ test.describe('shelve and restore', () => {
     assert.equal((await getRawApplication('bin-marker')).shelved, undefined)
     assert.equal((await testUser1Org.get('/api/v1/applications/bin-marker')).status, 200)
   })
+
+  test('a second DELETE of a shelved application answers 404 and keeps the first marker', async () => {
+    await enableBin()
+    const app = (await testUser1Org.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'bin twice' })).data
+    assert.equal((await testUser1Org.delete(`/api/v1/applications/${app.id}`)).status, 204)
+    const marker = (await getRawApplication(app.id)).shelved
+    await assert.rejects(testUser1Org.delete(`/api/v1/applications/${app.id}`), { status: 404 })
+    assert.deepEqual((await getRawApplication(app.id)).shelved, marker)
+  })
 })

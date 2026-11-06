@@ -950,7 +950,8 @@ const datasetProperties = {
         additionalProperties: false,
         properties: { id: { type: 'string' }, name: { type: 'string' } }
       },
-      cascade: { type: 'boolean', const: true, description: 'This fragment was shelved because of its parent.' }
+      cascade: { type: 'boolean', const: true, description: 'This fragment was shelved because of its parent.' },
+      purging: { type: 'string', format: 'date-time', description: 'Set while a purge of this item runs (claim), a restore is refused meanwhile.' }
     }
   },
   partOf: {

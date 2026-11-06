@@ -1,10 +1,11 @@
 import mongo from '#mongo'
+import type { Collection } from 'mongodb'
 import log from '@data-fair/lib-node/log.js'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import type { SessionStateAuthenticated } from '@data-fair/lib-express'
 import { rootSettingsFilter, isMainSettings } from '../settings/operations.ts'
 import escapeStringRegexp from 'escape-string-regexp'
-import { notShelved, onlyShelved, binAudienceFilter, shouldPurge, type Shelved } from './operations.ts'
+import { notShelved, onlyShelved, binAudienceFilter, shouldPurge, isPurgeClaimFresh, purgeClaimableFilter, type Shelved } from './operations.ts'
 import { resourceLogFields } from '../misc/utils/log-fields.ts'
 import * as notifications from '../misc/utils/notifications.ts'
 import catalogsPublicationQueue from '../misc/utils/catalogs-publication-queue.ts'
@@ -94,7 +95,9 @@ const datasetsGone = async (datasets: any[]) => {
 /** Place a dataset, with its fragments, in its owner's bin. `datasetFull` is the stored document. */
 export const shelveDataset = async (sessionState: SessionStateAuthenticated, dataset: any, datasetFull: any): Promise<void> => {
   const marker = shelvedMarker(sessionState)
-  await mongo.datasets.updateOne({ id: datasetFull.id, ...notShelved }, { $set: { shelved: marker } })
+  // a concurrent DELETE already shelved it: its side effects and notification are not repeated
+  const { modifiedCount } = await mongo.datasets.updateOne({ id: datasetFull.id, ...notShelved }, { $set: { shelved: marker } })
+  if (!modifiedCount) return
   const fragments = await shelveFragments('dataset', datasetFull.id, datasetFull.owner, marker)
 
   await datasetsGone([datasetFull, ...fragments.datasets])
@@ -113,7 +116,9 @@ export const shelveDataset = async (sessionState: SessionStateAuthenticated, dat
 /** Place an application, with its fragments, in its owner's bin. Its keys stay stored but grant nothing. */
 export const shelveApplication = async (sessionState: SessionStateAuthenticated, application: any): Promise<void> => {
   const marker = shelvedMarker(sessionState)
-  await mongo.applications.updateOne({ id: application.id, ...notShelved }, { $set: { shelved: marker } })
+  // a concurrent DELETE already shelved it: its side effects and notification are not repeated
+  const { modifiedCount } = await mongo.applications.updateOne({ id: application.id, ...notShelved }, { $set: { shelved: marker } })
+  if (!modifiedCount) return
   const fragments = await shelveFragments('application', application.id, application.owner, marker)
 
   await datasetsGone(fragments.datasets)
@@ -130,13 +135,17 @@ export const shelveApplication = async (sessionState: SessionStateAuthenticated,
   }, sessionState)
 }
 
+const purgingMessage = 'Cette ressource est en cours de suppression définitive, elle ne peut plus être restaurée'
+
 /**
  * Take a resource out of the bin, with the fragments shelved along with it. Permissions are the
- * caller's concern. The catalog publications removed at shelving are not restored.
+ * caller's concern. The catalog publications removed at shelving are not restored. An item claimed
+ * by a purge (`shelved.purging`, even a stale claim: the purge may have deleted part of it) is refused.
  */
 export const restore = async (sessionState: SessionStateAuthenticated, type: BinResourceType, id: string): Promise<void> => {
   const doc: any = await collection(type).findOne({ id, ...onlyShelved })
   if (!doc) throw httpError(404, 'Ressource inconnue dans la corbeille')
+  if (doc.shelved.purging) throw httpError(409, purgingMessage)
   // a fragment shelved on its own before its parent: the parent must come back first
   if (doc.partOf && !doc.shelved.cascade && (await getParent(doc.partOf))?.shelved) {
     throw httpError(409, 'Cette ressource est un fragment d\'une ressource qui est elle-même dans la corbeille, restaurez d\'abord la ressource parente')
@@ -146,7 +155,9 @@ export const restore = async (sessionState: SessionStateAuthenticated, type: Bin
   const datasets = fragments.datasets.filter(d => d.shelved?.cascade)
   const applications = fragments.applications.filter(a => a.shelved?.cascade)
 
-  await collection(type).updateOne({ id }, { $unset: { shelved: '' } })
+  // conditioned on the absence of a purge claim: of a restore and a purge racing, exactly one wins
+  const unset = await collection(type).updateOne({ id, ...onlyShelved, 'shelved.purging': { $exists: false } }, { $unset: { shelved: '' } })
+  if (!unset.modifiedCount) throw httpError(409, purgingMessage)
   if (datasets.length) await mongo.datasets.updateMany({ id: { $in: datasets.map(d => d.id) } }, { $unset: { shelved: '' } })
   if (applications.length) await mongo.applications.updateMany({ id: { $in: applications.map(a => a.id) } }, { $unset: { shelved: '' } })
 
@@ -169,11 +180,19 @@ export const restore = async (sessionState: SessionStateAuthenticated, type: Bin
 /**
  * Permanently delete a shelved resource and its fragments, without notification (sent at shelving
  * time) and without session: called by the bin endpoints, the retention cron and the bin disabling.
- * A no-op if the resource is gone or no longer shelved (idempotent, and a concurrent restore wins).
+ * The item is first claimed (`shelved.purging`), atomically against a restore and another purge. A
+ * no-op, returning false, if the resource is gone, no longer shelved or claimed by a running purge.
+ * A failed purge keeps its claim: the item stays unrestorable and is claimed again once stale.
  */
-export const purgeItem = async (type: BinResourceType, id: string): Promise<void> => {
-  const doc: any = await collection(type).findOne({ id, ...onlyShelved })
-  if (!doc) return
+export const purgeItem = async (type: BinResourceType, id: string): Promise<boolean> => {
+  const now = new Date()
+  // a union of collections has no callable findOneAndUpdate overload
+  const coll: Collection<any> = collection(type)
+  const doc: any = await coll.findOneAndUpdate(
+    { id, ...onlyShelved, ...purgeClaimableFilter(now) },
+    { $set: { 'shelved.purging': now.toISOString() } }
+  )
+  if (!doc) return false
   if (type === 'datasets') {
     await deleteDatasetAndFragments({}, mergeDraft({ ...doc }), doc, { notify: false })
   } else {
@@ -183,6 +202,7 @@ export const purgeItem = async (type: BinResourceType, id: string): Promise<void
   log.info(`${type} purged from the bin ${doc.slug} (${doc.id})`, { code: `df.${type}.purge`, ...resourceLogFields(type, doc) })
   // the application path has no recompute of its own, and fragments may be draft-only
   await updateTotalStorage(doc.owner)
+  return true
 }
 
 export type BinItem = {
@@ -204,7 +224,8 @@ export type BinItem = {
  */
 export const listBin = async (account: OwnerLike, q?: string): Promise<{ count: number, results: BinItem[] }> => {
   const { retentionDays } = await getBinSettings(account)
-  const filter: Record<string, any> = { ...binAudienceFilter(account), ...onlyShelved }
+  // an item claimed by a running purge is already gone for the user (a stale claim shows again, to be purged)
+  const filter: Record<string, any> = { ...binAudienceFilter(account), ...onlyShelved, ...purgeClaimableFilter(new Date()) }
   const cascaded: Record<string, number> = {}
   const results: BinItem[] = []
   for (const type of ['datasets', 'applications'] as const) {
@@ -236,34 +257,41 @@ export const listBin = async (account: OwnerLike, q?: string): Promise<{ count: 
   return { count: results.length, results }
 }
 
-/** The shelved item a bin route targets, 404 if not shelved or a cascaded fragment (restored with its parent only). */
+/**
+ * The shelved item a bin route targets, 404 if not shelved or a cascaded fragment (restored with its
+ * parent only), 409 if a purge of it is running.
+ */
 export const getBinItem = async (type: BinResourceType, id: string): Promise<any> => {
   const doc = await collection(type).findOne({ id, ...onlyShelved }, { projection: { _id: 0, id: 1, owner: 1, shelved: 1 } })
   if (!doc || doc.shelved?.cascade) throw httpError(404, 'Ressource inconnue dans la corbeille')
+  if (isPurgeClaimFresh(doc.shelved?.purging, new Date())) throw httpError(409, purgingMessage)
   return doc
 }
 
 /**
- * Purge the items of an owner's bin that are past retention, or all of them if the bin is off.
- * Cascaded fragments go with their parent. The settings are re-read per item, so a bin re-enabled
- * while this runs keeps the items it was not yet past retention for. Returns the count purged.
+ * Purge the items of an owner's bin that are past retention, or all of them if the bin is off, and
+ * the items whose purge crashed (stale claim). Cascaded fragments go with their parent. The settings
+ * are re-read per item, so a bin re-enabled while this runs keeps the items it was not yet past
+ * retention for. Returns the count purged.
  */
 export const purgeOwner = async (owner: { type: string, id: string }): Promise<number> => {
   const filter = { 'owner.type': owner.type, 'owner.id': owner.id, ...onlyShelved, 'shelved.cascade': { $ne: true } }
-  const items: { type: BinResourceType, id: string, at: string }[] = []
+  const items: { type: BinResourceType, id: string, at: string, purging?: string }[] = []
   for (const type of ['datasets', 'applications'] as const) {
-    const docs = await collection(type).find(filter).project({ _id: 0, id: 1, 'shelved.at': 1 }).toArray()
-    for (const doc of docs) items.push({ type, id: doc.id, at: doc.shelved.at })
+    const docs = await collection(type).find(filter).project({ _id: 0, id: 1, 'shelved.at': 1, 'shelved.purging': 1 }).toArray()
+    for (const doc of docs) items.push({ type, id: doc.id, at: doc.shelved.at, purging: doc.shelved.purging })
   }
   items.sort((a, b) => a.at < b.at ? -1 : a.at > b.at ? 1 : 0)
   let count = 0
   for (const item of items) {
-    const settings = await getBinSettings(owner)
-    if (!shouldPurge(settings, item.at, new Date())) continue
+    // a claimed item was asked to be purged, whatever the settings (purgeItem skips a fresh claim)
+    if (!item.purging) {
+      const settings = await getBinSettings(owner)
+      if (!shouldPurge(settings, item.at, new Date())) continue
+    }
     // one failing item must not block the others, the next run retries it
     try {
-      await purgeItem(item.type, item.id)
-      count++
+      if (await purgeItem(item.type, item.id)) count++
     } catch (err) {
       log.error('bin purge failed for an item', { code: 'bin-purge-item', type: item.type, id: item.id, err })
     }

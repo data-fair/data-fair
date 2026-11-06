@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { isShelvedExpired, shouldPurge, binAudienceFilter, canSeeBin, notShelved, onlyShelved } from '../../../api/src/bin/operations.ts'
+import { isShelvedExpired, shouldPurge, binAudienceFilter, canSeeBin, notShelved, onlyShelved, isPurgeClaimFresh, purgeClaimableFilter } from '../../../api/src/bin/operations.ts'
 
 const session = (role: string, department?: string, adminMode = false): any => ({
   user: { id: 'u', name: 'U', email: 'u@test.com', organizations: [{ id: 'o1', name: 'O1', role, department }], adminMode },
@@ -20,6 +20,16 @@ test.describe('bin operations', () => {
     assert.equal(shouldPurge({ active: false, retentionDays: 30 }, at, now), true, 'bin off purges everything')
     assert.equal(shouldPurge({ active: true, retentionDays: 30 }, at, now), false, 're-enabled keeps non expired')
     assert.equal(shouldPurge({ active: true, retentionDays: 3 }, at, now), true, 'past retention')
+  })
+
+  test('purge claims', () => {
+    const now = new Date('2026-01-01T12:00:00.000Z')
+    assert.equal(isPurgeClaimFresh(undefined, now), false)
+    assert.equal(isPurgeClaimFresh('2026-01-01T11:30:00.000Z', now), true)
+    assert.equal(isPurgeClaimFresh('2026-01-01T11:00:00.000Z', now), false, 'one hour old is stale')
+    assert.deepEqual(purgeClaimableFilter(now), {
+      $or: [{ 'shelved.purging': { $exists: false } }, { 'shelved.purging': { $lte: '2026-01-01T11:00:00.000Z' } }]
+    })
   })
 
   test('filters', () => {
