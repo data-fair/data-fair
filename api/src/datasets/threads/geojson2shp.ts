@@ -4,12 +4,15 @@ import fs from 'fs-extra'
 import _config from 'config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { spawn } from 'node:child_process'
-import { tmpDir } from '../../datasets/utils/files.ts'
+import { resolveTmpDir } from '../../datasets/utils/tmp-dir.ts'
 import { rawEsBuffer2geojson, rawEsBuffer2wkt } from '../../datasets/utils/geo-features.ts'
 import tmp from 'tmp-promise'
 import { getOgrEnv } from '../../misc/utils/ogr.ts'
+import type { ApiConfig } from '#config'
 
-const config = _config as any
+// no #config in this thread: it would validate again what the main process already validated
+const config = _config as unknown as ApiConfig
+const tmpDir = resolveTmpDir(config)
 
 type Params = { geojson?: string, rawBuffer?: Uint8Array, bbox?: any, baseName: string, dataset?: any }
 

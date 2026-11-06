@@ -18,12 +18,11 @@ import { geometrySelfIntersects } from './geo-self-intersection.ts'
 import { simplifyToVertexBudget } from './geo-simplify.ts'
 import { tmpDir } from './files.ts'
 import projections from '../../../contract/projections.js'
-import _config from 'config'
+import config from '#config'
 import type { Dataset, SchemaProperty } from '#types'
 
 const exec = promisify(execCb)
 
-const config = _config as any
 const debug = debugLib('geo')
 
 const geomUri = 'https://purl.org/geojson/vocab#geometry'

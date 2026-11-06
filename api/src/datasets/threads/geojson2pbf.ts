@@ -6,8 +6,10 @@ import _config from 'config'
 import { VectorTile } from '@mapbox/vector-tile'
 import Protobuf from 'pbf'
 import { rawEsBuffer2geojson } from '../utils/geo-features.ts'
+import type { ApiConfig } from '#config'
 
-const config = _config as any
+// no #config in this thread: it would validate again what the main process already validated
+const config = _config as unknown as ApiConfig
 
 type Params = { geojson?: any, xyz: number[], vtPrepared?: any, rawBuffer?: Uint8Array, dataset?: any }
 
