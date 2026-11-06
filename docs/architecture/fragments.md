@@ -528,10 +528,11 @@ permission model on the client, it is purely presentational.
   no schema, so this tab is its whole Structure section; on a dataset it follows the Structure section's `writeDescriptionBreaking`
   gate, which a reader of a virtual dataset lacks anyway (no read is derived on its fragments, §4). It lists fragment datasets and
   applications (two `partOf=` queries in the dataset/application stores, 100 at a time with a "load
-  more" button so none is out of reach) and "Nouveau fragment" buttons that open
-  `/new-dataset?partOf=type:id` or `/new-application?partOf=type:id`. The sub-application button is
-  only offered when the parent's base app declares `<meta name="df:use-apps" content="true">` (it
-  embeds other applications, typically a dashboard), and `writeConfig` on the parent. On those creation pages the owner
+  more" button so none is out of reach), as cards or as a list (the choice is not remembered). The creation buttons
+  depend on the parent: a dataset offers `/new-dataset?partOf=dataset:id`, an application offers no dataset fragment,
+  only `/new-application?partOf=application:id` when its base app declares `<meta name="df:use-apps" content="true">` (it
+  embeds other applications, typically a dashboard) and with `writeConfig` on it. The API and `/new-dataset?partOf=application:id`
+  still accept a dataset fragment of an application. On those creation pages the owner
   picker is replaced by the parent link (`fragment-info.vue`) and the owner is taken from the parent (a fragment has
   exactly its parent's owner), a metadata-only dataset is offered only under a meta-only parent, the breadcrumb leads back to
   the parent, and the duplicate-name check looks at the siblings (`partOf=`) rather than at the
