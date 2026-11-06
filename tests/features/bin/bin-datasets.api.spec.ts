@@ -1,6 +1,6 @@
 import { test } from '../../fixtures/diagnostics.ts'
 import assert from 'node:assert/strict'
-import { axiosAuth, clean, checkPendingTasks, config, mockAppUrl, waitForWorkerIdle } from '../../support/axios.ts'
+import { axiosAuth, clean, checkPendingTasks, config, mockAppUrl, waitForWorkerIdle, anonymousAx, apiUrl } from '../../support/axios.ts'
 import {
   sendDataset, patchRawDataset, patchRawApplication, clearDatasetCache, clearPublicationSitesCache,
   getRawDataset, restCollectionCount, waitForFinalize, waitForDatasetError
@@ -234,6 +234,40 @@ test.describe('shelved is inert', () => {
     const journal = (await ax.get('/api/v1/datasets/bin-slave/journal')).data
     const errorEvent = journal.find((e: any) => e.type === 'error')
     assert.ok(errorEvent?.data?.includes('jeu de données de référence inconnu bin-master'), JSON.stringify(errorEvent))
+  })
+
+  test('a shelved integrity dataset frozen mid-pipeline raises no integrity-check-stale alert', async () => {
+    const ax = testSuperadmin
+    const enrolledRest = async (id: string) => {
+      await ax.post(`/api/v1/datasets/${id}`, { isRest: true, title: id, schema: [{ key: 'attr1', type: 'string' }] })
+      await ax.post(`/api/v1/datasets/${id}/lines`, { attr1: 'a' })
+      await waitForFinalize(ax, id)
+      await ax.put(`/api/v1/datasets/${id}/_integrity`, { active: true })
+      await waitForFlagCleared(id)
+    }
+    await enrolledRest('bin-integrity-shelved')
+    await enrolledRest('bin-integrity-live')
+    const eightDaysAgo = new Date(Date.now() - 8 * 24 * 3600 * 1000).toISOString()
+
+    // a line write left pending (not yet indexed, line anchors not drained), then shelved: the
+    // pipeline that would settle it is frozen, so the relay hint cannot drain
+    await patchRawDataset('bin-integrity-shelved', {
+      shelved: shelved(),
+      _partialRestStatus: 'updated',
+      _needsHistorizingLines: true,
+      'integrity.lastDefinitiveCheck': eightDaysAgo
+    })
+    // control: the same silent clock on a live dataset does alert
+    await patchRawDataset('bin-integrity-live', { 'integrity.lastDefinitiveCheck': eightDaysAgo })
+    await letWorkersPoll()
+    const frozen = await getRawDataset('bin-integrity-shelved')
+    assert.equal(frozen._needsHistorizingLines, true)
+    assert.equal(frozen._partialRestStatus, 'updated')
+
+    const run = (await anonymousAx.post(`${apiUrl}/api/v1/test-env/integrity-stale/run`)).data
+    assert.ok(run.alerted.includes('bin-integrity-live'))
+    assert.ok(!run.alerted.includes('bin-integrity-shelved'))
+    assert.equal((await getRawDataset('bin-integrity-shelved')).integrity.alerts?.['integrity-check-stale'], undefined)
   })
 
   test('integrity historization still drains on a shelved dataset', async () => {

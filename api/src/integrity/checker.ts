@@ -5,6 +5,7 @@ import locks from '@data-fair/lib-node/locks.js'
 import log from '@data-fair/lib-node/log.js'
 import config from '#config'
 import mongo from '#mongo'
+import { notShelved } from '../bin/operations.ts'
 import type { DatasetInternal } from '#types'
 import { isFileDataset, isRestDataset } from '#types/dataset/index.ts'
 import { integrityStore } from './store-factory.ts'
@@ -435,7 +436,10 @@ export const alertStaleChecks = async (): Promise<{ alerted: string[] }> => {
   const maxUnknownDays = config.integrity?.maxUnknownDays ?? 7
   const cutoff = new Date(Date.now() - maxUnknownDays * 24 * 3600 * 1000).toISOString()
   const alerted: string[] = []
-  const cursor = mongo.datasets.find({ 'integrity.active': true, 'integrity.lastDefinitiveCheck': { $lt: cutoff } }).limit(BATCH)
+  // shelved datasets (bin) are skipped: their pipeline is frozen until restore or purge, so a
+  // pending relay state cannot drain and must not raise an alarm (the purge writes the terminal
+  // revision, a restore resumes the pipeline and the clocks)
+  const cursor = mongo.datasets.find({ 'integrity.active': true, 'integrity.lastDefinitiveCheck': { $lt: cutoff }, ...notShelved }).limit(BATCH)
   for await (const dataset of cursor) {
     try {
       if (await maybeAlert(dataset as DatasetInternal, 'integrity-check-stale', true)) alerted.push(dataset.id)
@@ -451,7 +455,8 @@ export const alertStaleChecks = async (): Promise<{ alerted: string[] }> => {
   const indexCursor = mongo.datasets.find({
     'integrity.active': true,
     'integrity.lastDefinitiveIndexCheck': { $lt: cutoff },
-    'integrity.lastDefinitiveCheck': { $gte: cutoff }
+    'integrity.lastDefinitiveCheck': { $gte: cutoff },
+    ...notShelved
   }).limit(BATCH)
   for await (const dataset of indexCursor) {
     try {
@@ -468,7 +473,7 @@ const runOnce = async () => {
   // persisting lastCheck.date, so a hinted dataset would keep sorting first and waste a sweep
   // slot every night until its relay drains
   const cursor = mongo.datasets
-    .find({ 'integrity.active': true, _needsHistorizing: { $exists: false }, _needsHistorizingLines: { $exists: false } })
+    .find({ 'integrity.active': true, _needsHistorizing: { $exists: false }, _needsHistorizingLines: { $exists: false }, ...notShelved })
     .sort({ 'integrity.lastCheck.date': 1 })
     .limit(BATCH)
   for await (const dataset of cursor) {
