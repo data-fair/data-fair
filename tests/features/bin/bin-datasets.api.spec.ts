@@ -402,6 +402,15 @@ test.describe('shelve and restore', () => {
       return true
     })
     await assert.rejects(testUser1Org.post('/api/v1/datasets/my-ds', { isRest: true, title: 'my ds', schema: [] }), { status: 409 })
+    // ids are globally unique: another owner targeting the shelved id gets the same 409, not a duplicate key crash
+    const testUser3 = await axiosAuth('test_user3@test.com')
+    for (const method of ['put', 'post'] as const) {
+      await assert.rejects(testUser3[method]('/api/v1/datasets/my-ds', { isRest: true, title: 'my ds', schema: [] }), (err: any) => {
+        assert.equal(err.status, 409)
+        assert.ok(err.data.includes('corbeille'), err.data)
+        return true
+      })
+    }
     const res = await testUser1Org.post('/api/v1/datasets', { isRest: true, title: original.title, schema: [] })
     assert.equal(res.status, 201)
     assert.notEqual(res.data.slug, original.slug)

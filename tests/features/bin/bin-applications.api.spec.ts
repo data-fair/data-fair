@@ -155,6 +155,8 @@ test.describe('shelve and restore', () => {
       assert.ok(err.data.includes('corbeille'), err.data)
       return true
     })
+    const testUser3 = await axiosAuth('test_user3@test.com')
+    await assert.rejects(testUser3.put('/api/v1/applications/my-app', { url: mockAppUrl('monapp1'), title: 'my app' }), { status: 409 })
     const res = await testUser1Org.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'my app' })
     assert.notEqual(res.data.id, 'my-app')
     assert.notEqual(res.data.slug, 'my-app')

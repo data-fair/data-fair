@@ -35,11 +35,16 @@ export const binActiveFor = async (owner: OwnerLike): Promise<boolean> =>
 const collection = (type: BinResourceType) => type === 'datasets' ? mongo.datasets : mongo.applications
 
 /**
- * Whether a shelved resource of this owner holds the ref (id or slug): a create that explicitly
- * targets it answers 409, an admin must empty or restore the bin first.
+ * Whether a shelved resource holds the ref: a create that explicitly targets it answers 409, an
+ * admin must empty or restore the bin first. Slugs are unique per owner (`_uniqueRefs` of this
+ * owner), ids are globally unique (the id of a shelved resource of ANY owner, or the insert would
+ * crash on the duplicate key).
  */
 export const findShelvedRef = async (type: BinResourceType, owner: OwnerLike, ref: string): Promise<boolean> => {
-  const count = await collection(type).countDocuments({ _uniqueRefs: ref, 'owner.type': owner.type, 'owner.id': owner.id, ...onlyShelved }, { limit: 1 })
+  const count = await collection(type).countDocuments({
+    $or: [{ _uniqueRefs: ref, 'owner.type': owner.type, 'owner.id': owner.id }, { id: ref }],
+    ...onlyShelved
+  }, { limit: 1 })
   return count > 0
 }
 
