@@ -4,7 +4,7 @@
 
 Dataset maps (UI map components under `ui/src/components/dataset/map/`)
 render a MapLibre base layer whose style URL comes from the `map.style`
-config key (`api/config/default.cjs`), shipped to the SPA through
+config key (`api/config/default.mjs`), shipped to the SPA through
 `api/src/ui-config.ts` as `$uiConfig.map`.
 
 - A value starting with `./` is resolved against the **site root**:

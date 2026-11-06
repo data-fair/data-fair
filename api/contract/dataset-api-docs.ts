@@ -1,6 +1,6 @@
 import type { Dataset, Settings } from '#types'
 
-import _config from 'config'
+import config from '#config'
 import prettyBytes from 'pretty-bytes'
 import { resolvedSchema as datasetSchema } from '#types/dataset/index.ts'
 import * as masterData from './master-data.js'
@@ -17,8 +17,6 @@ import { operations as xAgent, datasetRoot as xAgentRoot } from './x-agent.ts'
 type DatasetApiDocsSettings = (Pick<Settings, 'info' | 'compatODS'> & Record<string, any>) | null | undefined
 
 type DatasetApiDocsOptions = { merged?: boolean }
-
-const config = _config as any
 
 const dataFiles = datasetSchema.properties.storage.properties.dataFiles
 

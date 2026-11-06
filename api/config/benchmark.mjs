@@ -3,15 +3,11 @@
 // production-like single-line refresh behavior, and limits raised high enough
 // that the platform, not the rate limiter, is what gets measured
 
-// load .env from the repo root explicitly: development.cjs resolves it from cwd,
-// which only works inside the dotenv-wrapped zellij session
-require('dotenv').config({ path: require('path').resolve(__dirname, '../../.env'), quiet: true })
-
-const development = require('./development.cjs')
+import development from './development.mjs'
 
 const noBandwidthLimit = { dynamic: 10000000000, static: 10000000000 }
 
-module.exports = {
+export default {
   ...development,
   dataDir: '../data/benchmark',
   tmpDir: '../data/benchmark-tmp',

@@ -568,7 +568,7 @@ test('lock renewal extends the payload object too', async () => {
   const payloadKey = latestKey + '.file'
 
   // snapshot both real S3 locks right after the anchor write, before any renewal — dev retention
-  // is only 1 day (see development.cjs), so comparing against an absolute far-future threshold
+  // is only 1 day (see development.mjs), so comparing against an absolute far-future threshold
   // would not discriminate "renewed" from "just-created": both land ~1 day out. Comparing the
   // before/after timestamps directly does discriminate, regardless of the configured retention length
   const revBefore = await integrityTestStore.getRetention(latestKey)

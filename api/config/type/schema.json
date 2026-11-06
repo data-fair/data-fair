@@ -560,10 +560,11 @@
         "attachmentIndexed": { "type": "number" },
         "apiRate": {
           "type": "object",
+          "required": ["anonymous", "user"],
           "properties": {
             "anonymous": { "$ref": "#/$defs/apiRateLimit" },
             "user": { "$ref": "#/$defs/apiRateLimit" },
-            "remoteService": { "$ref": "#/$defs/apiRateLimit" },
+            "remoteService": { "$ref": "#/$defs/remoteServiceRateLimit" },
             "postApplicationKey": { "$ref": "#/$defs/rateLimitSimple" },
             "appCaptures": { "$ref": "#/$defs/rateLimitSimple" },
             "appPreviews": { "$ref": "#/$defs/rateLimitSimple" }
@@ -574,6 +575,23 @@
       }
     },
     "apiRateLimit": {
+      "type": "object",
+      "required": ["duration", "nb", "bandwidth"],
+      "properties": {
+        "duration": { "type": "number" },
+        "nb": { "type": "number" },
+        "computeMs": { "type": "number" },
+        "bandwidth": {
+          "type": "object",
+          "required": ["dynamic", "static"],
+          "properties": {
+            "dynamic": { "type": "number" },
+            "static": { "type": "number" }
+          }
+        }
+      }
+    },
+    "remoteServiceRateLimit": {
       "type": "object",
       "required": ["duration", "nb", "bandwidth"],
       "properties": {

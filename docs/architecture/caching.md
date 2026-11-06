@@ -202,11 +202,11 @@ a `304` reuses it.
 
 ## Configuration reference
 
-`config.cache` (`api/config/default.cjs`, env vars in `custom-environment-variables.cjs`):
+`config.cache` (`api/config/default.mjs`, env vars in `custom-environment-variables.mjs`):
 
 | Key | Default | Env var | Meaning |
 |---|---|---|---|
-| `cache.publicMaxAge` | `300` (5 min); `1` in `development.cjs` | `CACHE_PUBLIC_MAX_AGE` | `max-age` for non-timestamped public GETs |
+| `cache.publicMaxAge` | `300` (5 min); `1` in `development.mjs` | `CACHE_PUBLIC_MAX_AGE` | `max-age` for non-timestamped public GETs |
 | `cache.timestampedPublicMaxAge` | `604800` (1 week) | `CACHE_TIMESTAMPED_PUBLIC_MAX_AGE` | `max-age` when the request carries a `finalizedAt`/`updatedAt` query param |
 | `cache.mongoSize` | `2000` (MB) | `CACHE_MONGO_SIZE` | size of the capped `cache` collection (vector tiles, tile counts) |
 | `cache.reverseProxyCache` | `false` | — | set `true` where the reverse-proxy cache is real: skip the Mongo tile cache for requests the proxy will cache |

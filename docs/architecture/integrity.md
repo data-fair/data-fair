@@ -613,7 +613,7 @@ sidecar (`amazon/aws-cli`) provisions them on startup:
 - `bucketdev` — files storage, mutable
 - `data-fair-integrity` — created with `--object-lock-enabled-for-bucket` (compliance WORM), the integrity store
 
-`api/config/development.cjs` points `s3` and `integrity.s3` at the same RustFS (`S3_PORT`,
+`api/config/development.mjs` points `s3` and `integrity.s3` at the same RustFS (`S3_PORT`,
 `rustfsadmin`/`rustfsadmin`; RustFS enforces credentials, unlike s3mock). `integrity.active`
 is `true` with a 2-day revision retention and a 1-day attribution retention (deliberately
 distinct windows, so tests can tell the two formulas apart), so the capability is on by default —

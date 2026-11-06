@@ -1,10 +1,8 @@
 import path from 'path'
 import { Piscina } from 'piscina'
-import _config from 'config'
+import config from '#config'
 import { transferableRawBuffer, slimDatasetForFlatten } from './worker-transfer.ts'
 import log from '@data-fair/lib-node/log.js'
-
-const config = _config as any
 
 export const geojson2pbfPiscina = new Piscina({
   filename: path.resolve(import.meta.dirname, '../../datasets/threads/geojson2pbf.ts'),

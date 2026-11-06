@@ -17,7 +17,7 @@ test.describe('rate limiting by client IP', () => {
     await setConfig('defaultLimits.apiRate.anonymous.nb', 1)
   })
   test.afterAll(async () => {
-    await setConfig('defaultLimits.apiRate.anonymous.nb', 100) // the dev/test default (api/config/development.cjs)
+    await setConfig('defaultLimits.apiRate.anonymous.nb', 100) // the dev/test default (api/config/development.mjs)
     await clearRateLimiting()
   })
   test.beforeEach(async () => {
