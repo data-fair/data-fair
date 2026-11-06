@@ -7,6 +7,12 @@
  * on the root document and on every dataset's own document.
  *
  * The agent-facing surface these produce is pinned by tests/fixtures/agent-surface.json.
+ *
+ * `openWorldHint: false` marks the tools whose results only hold what the account's members wrote
+ * (application configurations, permissions, deletion acknowledgements): the agents service does not
+ * scan them as outside content nor count them as exposure for its approval reviewer. Dataset
+ * metadata, data and files stay open: they can come from uploaded files, remote sources or
+ * harvested catalogs.
  */
 import type { AgentRoot, AgentOperationAnnotation, AgentProperty, AgentParamOverride } from '@data-fair/openapi-mcp'
 import { agentSecurity } from './scopes-security.ts'
@@ -264,12 +270,14 @@ export const operations = {
   ],
   deleteDataset: {
     name: 'delete_dataset',
+    annotations: { openWorldHint: false },
     title: { fr: 'Supprimer un jeu de données', en: 'Delete a dataset' },
     description: 'Delete a dataset permanently, with its data. The datasets and applications attached to it (partOf) are deleted too. Irreversible.',
     params: { id: datasetId }
   },
   getDatasetPermissions: {
     name: 'get_dataset_permissions',
+    annotations: { openWorldHint: false },
     title: { fr: 'Lire les permissions d\'un jeu de données', en: 'Read a dataset\'s permissions' },
     description: 'Read who can access a dataset: its permission entries for users, organizations, roles and departments, or for everyone.',
     params: { id: datasetId }
@@ -278,11 +286,12 @@ export const operations = {
     name: 'set_dataset_permissions',
     title: { fr: 'Modifier les permissions d\'un jeu de données', en: 'Set a dataset\'s permissions' },
     description: 'Replace the whole list of permission entries of a dataset. Read it with datafair_get_dataset_permissions first, then send the complete new list.',
-    annotations: { destructiveHint: true },
+    annotations: { destructiveHint: true, openWorldHint: false },
     params: { id: datasetId }
   },
   listApplications: {
     name: 'list_account_applications',
+    annotations: { openWorldHint: false },
     title: { fr: 'Lister les applications du compte', en: 'List the account\'s applications' },
     description: 'List the applications (data visualizations) owned by the active account (its department included), with optional text search. Without q it lists all of them, page by page (count is the total): prefer that for an inventory. Returns id, title, status and last update.',
     params: {
@@ -302,6 +311,7 @@ export const operations = {
   },
   getApplication: {
     name: 'describe_application',
+    annotations: { openWorldHint: false },
     title: { fr: 'Décrire une application', en: 'Describe an application' },
     description: 'Get the metadata and configuration of an application: title, description, base application, the datasets its configuration uses, publication status.',
     params: { id: applicationId }
@@ -309,6 +319,7 @@ export const operations = {
   patchApplication: [
     {
       name: 'update_application',
+      annotations: { openWorldHint: false },
       title: { fr: 'Modifier une application', en: 'Update an application' },
       description: 'Update the metadata or configuration of an application: title, description, topics, configuration… Send only the fields to change. Array and object fields (topics, keywords, attachments, schema, configuration…) replace the current value entirely: read it first with datafair_describe_application and send the complete new value. Publishing on portals, publications to remote catalogs and attaching to a parent (partOf) are done with datafair_publish_application. Do not change configuration.datasets[].applicationKeyPermissions unless explicitly asked: it decides what anyone holding the application key can do on that dataset; send it back as you read it.',
       params: { id: applicationId },
@@ -316,6 +327,7 @@ export const operations = {
     },
     {
       name: 'publish_application',
+      annotations: { openWorldHint: false },
       // narrowed to the admin tier, like publish_dataset
       security: agentSecurity('applications', 'admin'),
       title: { fr: 'Publier une application', en: 'Publish an application' },
@@ -334,6 +346,7 @@ export const operations = {
   },
   deleteApplication: {
     name: 'delete_application',
+    annotations: { openWorldHint: false },
     title: { fr: 'Supprimer une application', en: 'Delete an application' },
     description: 'Delete an application permanently. The datasets and applications attached to it (partOf) are deleted too. Irreversible.',
     params: { id: applicationId }
