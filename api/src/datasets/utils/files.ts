@@ -6,14 +6,13 @@ import resolvePath from 'resolve-path' // safe replacement for path.resolve
 import { type Account } from '@data-fair/lib-express'
 import debugModule from 'debug'
 import filesStorage from '#files-storage'
-import { resolveTmpDir } from './tmp-dir.ts'
 
 const debugCleanTmp = debugModule('clean-tmp')
 debugCleanTmp.enabled = true
 
 export const dataDir = path.resolve(config.dataDir)
 
-export const tmpDir = resolveTmpDir(config)
+export const tmpDir = config.tmpDir ? path.resolve(config.tmpDir) : path.join(dataDir, 'tmp')
 
 export const ownerDir = (owner: Account) => {
   return resolvePath(dataDir, path.join(owner.type, owner.id))

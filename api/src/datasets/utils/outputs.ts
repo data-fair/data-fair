@@ -3,6 +3,7 @@ import path from 'path'
 import { Piscina } from 'piscina'
 import mongo from '#mongo'
 import { getCsvSerializer } from './csv-jit.ts'
+import { tmpDir } from './files.ts'
 import { transferableRawBuffer, slimDatasetForFlatten } from './worker-transfer.ts'
 import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
 import { reqDataset } from '../../misc/utils/req-context.ts'
@@ -122,7 +123,7 @@ export const results2sheetFromBuffer = async (req: ReqWithDataset, rawBuffer: Bu
 }
 
 export const geojson2shp = async (geojson: any, baseName: string): Promise<any> => {
-  return geojson2shpPiscina.run({ geojson: JSON.stringify(geojson), baseName })
+  return geojson2shpPiscina.run({ geojson: JSON.stringify(geojson), baseName, tmpDir })
 }
 
 // Zero-copy wkt export (mirror of geojson2shpFromBuffer below): transfer the RAW ES bytes to the render
@@ -141,5 +142,5 @@ export const result2wktFromBuffer = async (rawBuffer: Buffer): Promise<{ wkt: Bu
 // by the caller and appended to the geojson LAST (matching the old read.ts key order type/total/features/bbox).
 export const geojson2shpFromBuffer = async (rawBuffer: Buffer, bbox: any, baseName: string, dataset: any): Promise<any> => {
   const { payload, transferList } = transferableRawBuffer(rawBuffer)
-  return geojson2shpPiscina.run({ rawBuffer: payload, bbox, baseName, dataset: slimDatasetForFlatten(dataset) }, { transferList })
+  return geojson2shpPiscina.run({ rawBuffer: payload, bbox, baseName, tmpDir, dataset: slimDatasetForFlatten(dataset) }, { transferList })
 }

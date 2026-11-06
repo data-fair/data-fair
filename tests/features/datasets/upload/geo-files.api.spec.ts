@@ -293,6 +293,20 @@ test.describe('geo files support', () => {
     assert.ok(res.data.startsWith('GEOMETRYCOLLECTION'))
   })
 
+  test('Export a dataset as a shapefile', async () => {
+    test.skip(!!process.env.OGR2OGR_SKIP, 'ogr2ogr not available in this environment')
+    const ax = testUser1
+    const form = new FormData()
+    form.append('file', fs.readFileSync('./tests/resources/geo/geojson-example.geojson'), 'geojson-example.geojson')
+    const res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
+    const dataset = await waitForFinalize(ax, res.data.id)
+
+    const shp = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { format: 'shp' }, responseType: 'arraybuffer' })
+    assert.equal(shp.headers['content-type'], 'application/zip')
+    assert.equal(shp.headers['content-disposition'], `attachment; filename="${dataset.slug}.zip"`)
+    assert.equal(Buffer.from(shp.data).subarray(0, 2).toString(), 'PK')
+  })
+
   test('Process uploaded GPX dataset', async () => {
     test.skip(!!process.env.OGR2OGR_SKIP, 'ogr2ogr not available in this environment')
     const ax = testUser1

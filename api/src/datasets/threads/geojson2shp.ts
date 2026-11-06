@@ -4,7 +4,6 @@ import fs from 'fs-extra'
 import _config from 'config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { spawn } from 'node:child_process'
-import { resolveTmpDir } from '../../datasets/utils/tmp-dir.ts'
 import { rawEsBuffer2geojson, rawEsBuffer2wkt } from '../../datasets/utils/geo-features.ts'
 import tmp from 'tmp-promise'
 import { getOgrEnv } from '../../misc/utils/ogr.ts'
@@ -12,9 +11,8 @@ import type { ApiConfig } from '#config'
 
 // no #config in this thread: it would validate again what the main process already validated
 const config = _config as unknown as ApiConfig
-const tmpDir = resolveTmpDir(config)
 
-type Params = { geojson?: string, rawBuffer?: Uint8Array, bbox?: any, baseName: string, dataset?: any }
+type Params = { geojson?: string, rawBuffer?: Uint8Array, bbox?: any, baseName: string, tmpDir: string, dataset?: any }
 
 // format=wkt render (named piscina export sharing this pool, run via { name: 'wkt' }): parse the
 // TRANSFERRED raw ES bytes and serialize the page to WKT exactly like geo.result2wkt did on the main
@@ -41,7 +39,7 @@ export default async (params: Params) => {
     geojsonStr = params.geojson as string
   }
 
-  const tmpD = (await tmp.tmpName({ prefix: 'geojson2shp-', tmpdir: tmpDir }))
+  const tmpD = (await tmp.tmpName({ prefix: 'geojson2shp-', tmpdir: params.tmpDir }))
   await fs.ensureDir(tmpD)
   const tmpFile = `${tmpD}/${params.baseName}.shz`
 
