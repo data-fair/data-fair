@@ -11,6 +11,7 @@ import { reqAdminMode, reqUser, reqUserAuthenticated, reqSession, allowAnyScope 
 import type { BaseAppWithContext, Request } from '#types'
 import { initBaseApp, syncBaseApp } from './service.ts'
 import { reqPublicBaseUrl } from '../misc/utils/public-base-url.ts'
+import { notShelved } from '../bin/operations.ts'
 export { init } from './service.ts'
 
 export const router = express.Router()
@@ -99,7 +100,7 @@ router.get('', allowAnyScope, cacheHeaders.noCache, async (_req, res) => {
     const vocabulary = i18nUtils.vocabulary[req.getLocale()]
     if (req.query.dataset === 'any') {
       // match constraints against all datasets of current account
-      const filter = { 'owner.type': account.type, 'owner.id': account.id }
+      const filter = { 'owner.type': account.type, 'owner.id': account.id, ...notShelved }
       datasetCount = await mongo.datasets.countDocuments(filter)
       datasetBBox = !!(await mongo.datasets.countDocuments({ $and: [{ bbox: { $exists: true } }, filter] }))
       const facet = {
@@ -118,7 +119,7 @@ router.get('', allowAnyScope, cacheHeaders.noCache, async (_req, res) => {
       // match constraints against a specific dataset
       datasetCount = 1
       datasetId = req.query.dataset
-      const dataset = await mongo.datasets.findOne({ id: datasetId, 'owner.type': account.type, 'owner.id': account.id })
+      const dataset = await mongo.datasets.findOne({ id: datasetId, 'owner.type': account.type, 'owner.id': account.id, ...notShelved })
       if (!dataset) {
         res.status(404).send(req.__('errors.missingDataset', { id: datasetId }))
         return

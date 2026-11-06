@@ -2,11 +2,13 @@ import { type SessionState } from '@data-fair/lib-express'
 import mongo from '#mongo'
 import * as permissions from '../misc/utils/permissions.ts'
 import catalogApiDocs from '../../contract/site-catalog-api-docs.js'
+import { notShelved } from '../bin/operations.ts'
 
 // datasets published on a publication site, projected to the fields needed for DCAT harvesting
 export const findCatalogDatasets = async (publicationSite: any, sessionState: SessionState) => {
   const query = {
     $and: [
+      notShelved,
       { publicationSites: `${publicationSite.type}:${publicationSite.id}` },
       { $or: permissions.filter(sessionState, 'datasets') }
     ]

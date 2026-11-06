@@ -9,6 +9,7 @@ import filesStorage from '#files-storage'
 import debugModule from 'debug'
 import * as findUtils from '../misc/utils/find.ts'
 import { clean as cleanBaseApp } from '../base-applications/operations.ts'
+import { notShelved } from '../bin/operations.ts'
 
 const debug = debugModule('status')
 
@@ -98,6 +99,7 @@ export async function findDatasetsErrors (reqQuery: Record<string, any>) {
   // user-facing error listing applies, so the operator view and the owner view agree on what
   // counts as broken.
   const query = {
+    ...notShelved,
     $or: [
       { status: 'error' },
       { 'integrity.lastCheck.status': 'breach' },
@@ -148,7 +150,7 @@ export async function findDatasetsEsWarnings (reqQuery: Record<string, any>) {
 
 export async function findApplicationsErrors (reqQuery: Record<string, any>) {
   const applications = mongo.db.collection('applications')
-  const query = { errorMessage: { $exists: true } }
+  const query = { errorMessage: { $exists: true }, ...notShelved }
   const [skip, size] = findUtils.pagination(reqQuery)
   const resultsPromise = applications
     .find(query)
@@ -162,7 +164,7 @@ export async function findApplicationsErrors (reqQuery: Record<string, any>) {
 
 export async function findApplicationsDraftErrors (reqQuery: Record<string, any>) {
   const applications = mongo.db.collection('applications')
-  const query = { errorMessageDraft: { $exists: true } }
+  const query = { errorMessageDraft: { $exists: true }, ...notShelved }
   const [skip, size] = findUtils.pagination(reqQuery)
   const resultsPromise = applications
     .find(query)

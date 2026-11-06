@@ -67,7 +67,7 @@ export const findApplications = async (locale: string, publicationSite: any, pub
     reqQuery.service = config.publicUrl + '/api/v1/remote-services/' + reqQuery.service
   }
 
-  const extraFilters = []
+  const extraFilters: any[] = [notShelved]
   if (asVisitorFilters) extraFilters.push(...asVisitorFilters)
 
   // the api exposed on a secondary domain should not be able to access resources outside of the owner account

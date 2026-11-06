@@ -89,7 +89,8 @@ export const findDatasets = async (db: Db, locale: string, publicationSite: any,
   const explain: Record<string, number> | false | undefined = reqQuery.explain === 'true' && sessionState.user && (sessionState.user.isAdmin || sessionState.user.asAdmin) && {}
   const datasets = db.collection('datasets')
 
-  const extraFilters: any[] = []
+  // shelved datasets (bin) are absent from every listing, results, count, facets and sums
+  const extraFilters: any[] = [notShelved]
   if (options.extraFilters) extraFilters.push(...options.extraFilters)
   if (reqQuery.bbox === 'true') {
     extraFilters.push({ bbox: { $ne: null } })
@@ -768,6 +769,7 @@ export const syncApplications = async (datasetId: string) => {
     .find({
       'owner.type': dataset.owner.type,
       'owner.id': dataset.owner.id,
+      ...notShelved,
       // deprecated href based relation
       // 'configuration.datasets.href': config.publicUrl + '/api/v1/datasets/' + datasetId
       'configuration.datasets.id': datasetId

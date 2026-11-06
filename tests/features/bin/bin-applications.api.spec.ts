@@ -48,3 +48,34 @@ test.describe('shelved reads as missing', () => {
     await assert.rejects(testUser1Org.post('/api/v1/applications', { url: mockAppUrl('monapp1'), initFrom: { application: source.id } }), { status: 404 })
   })
 })
+
+test.describe('shelved absent from listings', () => {
+  test.beforeEach(async () => {
+    await clean()
+  })
+
+  test.afterEach(async ({}, testInfo) => {
+    if (testInfo.status === 'passed') await checkPendingTasks()
+  })
+
+  test('a shelved application is absent from the listing, counts, facets, search, id pinning and activity', async () => {
+    const live = (await testUser1Org.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'bin live quokkalive' })).data
+    const gone = (await testUser1Org.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'bin gone quokkashelved' })).data
+    await patchRawApplication(gone.id, { shelved: shelved() })
+
+    const list = (await testUser1Org.get('/api/v1/applications?owner=organization:test_org1&facets=owner')).data
+    assert.equal(list.count, 1)
+    assert.deepEqual(list.results.map((r: any) => r.id), [live.id])
+    const facetTotal = Object.values(list.facets.owner).reduce((a: number, f: any) => a + f.count, 0)
+    assert.equal(facetTotal, 1)
+
+    assert.equal((await testUser1Org.get('/api/v1/applications?q=quokkashelved')).data.count, 0)
+    assert.equal((await testUser1Org.get('/api/v1/applications?q=quokkalive')).data.count, 1)
+    assert.equal((await testUser1Org.get(`/api/v1/applications?id=${gone.id}`)).data.count, 0)
+    assert.equal((await testUser1Org.get(`/api/v1/applications?id=${live.id}`)).data.count, 1)
+
+    const activity = (await testUser1Org.get('/api/v1/activity')).data.results
+    assert.ok(activity.find((r: any) => r.id === live.id))
+    assert.ok(!activity.find((r: any) => r.id === gone.id))
+  })
+})
