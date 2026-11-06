@@ -1,5 +1,5 @@
 import { settingsSchema } from '#api/types'
-import datasetSchema from '~/../../api/types/dataset/schema.js'
+import datasetSchema from '../../../api/types/dataset/schema.js'
 
 const schema = settingsSchema.properties.datasetsMetadata as any
 const properties: Record<string, any> = schema.properties
@@ -8,16 +8,21 @@ const properties: Record<string, any> = schema.properties
 export const standardMetadata = Object.entries(properties)
   .filter(([, prop]) => prop.properties?.active && (prop.properties.group || prop.properties.title))
   .map(([key, prop]) => {
-    const { active, title, group, description } = prop.properties
+    const { active, title, group, description, weight, recommendedMin, recommendedMax } = prop.properties
     return {
       key,
       active,
       defaultActive: !!active.default,
       alwaysActive: !!active.readOnly,
       renamable: !!title,
-      hasGroup: !!group,
+      hasGroup: !!group && !group.readOnly,
       defaultGroup: group?.['x-default'],
-      hasHelp: !!description
+      hasHelp: !!description,
+      hasWeight: !!weight,
+      weight: weight?.['x-default'],
+      min: recommendedMin?.['x-default'],
+      max: recommendedMax?.['x-default'],
+      unit: recommendedMin?.layout.props.suffix
     }
   })
 
@@ -50,10 +55,12 @@ export const fromMetadataForm = ({ standardMetadata: items, ...datasetsMetadata 
 
 const meta = 'context.metadata[parent.data.key]'
 const shown = `(parent.data.active || ${meta}.alwaysActive)`
+const scoreActive = 'rootData.completeness?.active'
 
 // a field of the list items, built on its definition in the settings schema
 const field = (prop: any, ifExpr: string, getProps: string, cols?: number) => {
-  return { ...prop, layout: { ...prop.layout, if: ifExpr, getProps, ...(cols && { cols }) } }
+  const { 'x-default': _, ...fieldProp } = prop
+  return { ...fieldProp, layout: { ...fieldProp.layout, if: ifExpr, getProps, ...(cols && { cols }) } }
 }
 
 const items = {
@@ -62,7 +69,7 @@ const items = {
     switch: [
       // the row only shows the title and subtitle of the list
       { if: 'summary', children: [] },
-      { children: [{ name: 'metadata-info' }, 'active', 'group', 'title', 'description'] }
+      { children: [{ name: 'metadata-info' }, 'active', 'group', 'title', 'description', 'weight', 'recommendedMin', 'recommendedMax'] }
     ]
   },
   properties: {
@@ -80,7 +87,10 @@ const items = {
       layout: { if: `${shown} && ${meta}.renamable`, getProps: `({ placeholder: ${meta}.title, persistentPlaceholder: true })` }
     },
     group: field(properties.license.properties.group, `${shown} && ${meta}.hasGroup`, `({ ...layout.props, placeholder: context.labels.groups[${meta}.defaultGroup] })`, 12),
-    description: field(properties.license.properties.description, `${shown} && ${meta}.hasHelp`, `({ ...layout.props, placeholder: ${meta}.nativeHelp, persistentPlaceholder: !!${meta}.nativeHelp })`)
+    description: field(properties.license.properties.description, `${shown} && ${meta}.hasHelp`, `({ ...layout.props, placeholder: ${meta}.nativeHelp, persistentPlaceholder: !!${meta}.nativeHelp })`),
+    weight: field(properties.license.properties.weight, `${shown} && ${scoreActive} && ${meta}.hasWeight`, `({ ...layout.props, placeholder: String(${meta}.weight) })`, 4),
+    recommendedMin: field(properties.keywords.properties.recommendedMin, `${shown} && ${scoreActive} && !!${meta}.unit`, `({ ...layout.props, suffix: context.labels.units[${meta}.unit], placeholder: ${meta}.min === undefined ? undefined : String(${meta}.min), persistentPlaceholder: ${meta}.min !== undefined })`, 4),
+    recommendedMax: field(properties.keywords.properties.recommendedMax, `${shown} && ${scoreActive} && !!${meta}.unit`, `({ ...layout.props, suffix: context.labels.units[${meta}.unit], placeholder: ${meta}.max === undefined ? undefined : String(${meta}.max), persistentPlaceholder: ${meta}.max !== undefined })`, 4)
   }
 }
 
@@ -88,12 +98,13 @@ export const metadataFormSchema = {
   ...schema,
   layout: {
     title: null,
-    children: ['informationsTitle', 'coverageTitle', 'groups', 'standardMetadata', 'custom']
+    children: ['informationsTitle', 'coverageTitle', 'groups', 'completeness', { name: 'metadata-score' }, 'standardMetadata', 'custom']
   },
   properties: {
     informationsTitle: properties.informationsTitle,
     coverageTitle: properties.coverageTitle,
     groups: properties.groups,
+    completeness: properties.completeness,
     standardMetadata: {
       type: 'array',
       title: 'Standard metadata',

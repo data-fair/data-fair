@@ -9,7 +9,6 @@ import {
   formatMetadataContext,
   formatMetadataOutcomes,
   FREQUENCY_VALUES,
-  SUMMARY_MAX_LENGTH,
   SEARCH_TERMS_MAX_LENGTH
 } from './agent-metadata-tools-logic'
 
@@ -26,7 +25,7 @@ const messages: Record<string, Record<string, string>> = {
 
 /**
  * Tools for the dataset's metadata card. A single writer for the whole card — title,
- * summary, description, keywords, licence, topics and the optional fields — replaces the
+ * summary, description, keywords, licence, topics, the optional and the custom fields — replaces the
  * former one-tool-per-field pair (`set_dataset_summary`, `set_dataset_description`), so
  * the model has one place to write and one report to read.
  *
@@ -56,7 +55,7 @@ export function useAgentDatasetMetadataTools (
 
   useAgentTool({
     name: 'read_dataset_metadata',
-    description: 'Read the metadata card of the dataset being edited: current title, summary, description, licence, topics, keywords, hidden search terms and optional fields, plus the closed lists of licences and topics this organization allows and which optional fields it has disabled. Call this before set_dataset_metadata so you propose values that exist.',
+    description: 'Read the metadata card of the dataset being edited: current title, summary, description, licence, topics, keywords, hidden search terms and optional fields, plus the closed lists of licences and topics this organization allows, which optional fields it has disabled or renamed, the sizes it recommends for the summary, description and keywords, and its custom metadata (definition, help text, current value). Call this before set_dataset_metadata so you propose values that exist.',
     annotations: { title: t('readDatasetMetadata'), readOnlyHint: true },
     inputSchema: { type: 'object' as const, properties: {} },
     execute: async () => {
@@ -67,13 +66,13 @@ export function useAgentDatasetMetadataTools (
 
   useAgentTool({
     name: 'set_dataset_metadata',
-    description: `Fill the metadata card of the dataset currently being edited. Pass only the fields you want to change; omitted fields are left alone. Nothing is saved — the values land in the form, the changed fields are highlighted, and the user reviews them before clicking Enregistrer. Licence and topics must come from the organization's lists (read_dataset_metadata returns them); an unknown value is refused with the allowed list. The summary is capped at ${SUMMARY_MAX_LENGTH} characters.`,
+    description: 'Fill the metadata card of the dataset currently being edited. Pass only the fields you want to change; omitted fields are left alone. Nothing is saved — the values land in the form, the changed fields are highlighted, and the user reviews them before clicking Enregistrer. Licence and topics must come from the organization\'s lists (read_dataset_metadata returns them); an unknown value is refused with the allowed list. The summary is capped at the recommended maximum read_dataset_metadata gives.',
     annotations: { title: t('setDatasetMetadata') },
     inputSchema: {
       type: 'object' as const,
       properties: {
         title: { type: 'string' as const, description: 'Short title of the dataset' },
-        summary: { type: 'string' as const, description: `One-sentence summary shown in catalogs, ${SUMMARY_MAX_LENGTH} characters max, plain text, opening on the concrete subject` },
+        summary: { type: 'string' as const, description: 'One-sentence summary shown in catalogs, within the recommended size, plain text, opening on the concrete subject' },
         description: { type: 'string' as const, description: 'Detailed markdown description' },
         keywords: { type: 'array' as const, items: { type: 'string' as const }, description: 'Keywords used for search and catalog facets' },
         searchTerms: { type: 'string' as const, description: `Hidden search vocabulary, never displayed: synonyms, acronyms with their expansion, everyday wording, separated by commas or newlines, ${SEARCH_TERMS_MAX_LENGTH} characters max` },
@@ -82,7 +81,8 @@ export function useAgentDatasetMetadataTools (
         origin: { type: 'string' as const, description: 'Where the data comes from (producer, source URL)' },
         creator: { type: 'string' as const, description: 'Person or organization that produced the data' },
         frequency: { type: 'string' as const, enum: FREQUENCY_VALUES as unknown as string[], description: 'Update frequency' },
-        spatial: { type: 'string' as const, description: 'Spatial coverage, in words' }
+        spatial: { type: 'string' as const, description: 'Spatial coverage, in words' },
+        customMetadata: { type: 'object' as const, additionalProperties: true, description: "The organization's custom metadata, keyed by title (read_dataset_metadata lists them): a text, a number, a YYYY-MM-DD date, a link as an URL or { url, title }, a list value from its allowed values, an array when it takes several values; null clears it" }
       }
     },
     execute: async (params: MetadataInput) => {

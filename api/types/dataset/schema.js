@@ -726,6 +726,31 @@ const datasetProperties = {
     description: 'Address of the page where the original data is published, for example on the producer\'s website.',
     'x-i18n-description': { fr: 'Adresse de la page où les données d\'origine sont publiées, par exemple sur le site du producteur.' }
   },
+  completeness: {
+    type: 'integer',
+    minimum: 0,
+    maximum: 100,
+    readOnly: true,
+    description: 'Readonly field. Metadata completeness score, from 0 to 100, present when the owner activated it in the settings.'
+  },
+  completenessCriteria: {
+    type: 'array',
+    readOnly: true,
+    description: 'Readonly field. The metadata the completeness score is computed from, present with the score.',
+    items: {
+      type: 'object',
+      required: ['key', 'custom', 'weight', 'note'],
+      properties: {
+        key: { type: 'string', description: 'A dataset field, or a custom metadata key when custom is true.' },
+        custom: { type: 'boolean' },
+        weight: { type: 'number' },
+        size: { type: 'integer', description: 'Characters of a text, values of a list.' },
+        recommendedMin: { type: 'integer' },
+        recommendedMax: { type: 'integer' },
+        note: { type: 'number', enum: [0, 0.5, 1], description: '0 empty, 0.5 outside the recommended bounds, 1 filled.' }
+      }
+    }
+  },
   constraints: {
     type: 'array',
     title: 'Contraintes',
