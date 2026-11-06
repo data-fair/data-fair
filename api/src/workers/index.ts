@@ -15,6 +15,7 @@ import { Histogram, Gauge } from 'prom-client'
 import log, { withLogContext, getLogContext } from '@data-fair/lib-node/log.js'
 import { resourceLogFields } from '../misc/utils/log-fields.ts'
 import { computeExcludedOwners } from './concurrency.ts'
+import { binAllowedTasks, notShelved } from '../bin/operations.ts'
 
 const debug = debugLib('workers')
 
@@ -72,6 +73,12 @@ const getFreeTasks = (type: ResourceType) => {
     .map(task => ({ task, excludedOwners: workersStatus.find(w => w.key === task.worker)!.excludedOwners }))
 }
 
+// shelved resources (bin) are inert: only the integrity-drain tasks still select them
+const taskFilter = (type: ResourceType, task: { name: string, mongoFilter: () => any }) => {
+  const filter = task.mongoFilter()
+  return binAllowedTasks[type as keyof typeof binAllowedTasks]?.includes(task.name) ? filter : { $and: [filter, notShelved] }
+}
+
 export const queryNextResourceTask = async (_type?: string, _id?: string) => {
   for (const type of ['datasets', 'applications'] as ResourceType[]) {
     if (_type && _type !== type) continue
@@ -80,7 +87,7 @@ export const queryNextResourceTask = async (_type?: string, _id?: string) => {
     if (!freeTasks.length) continue
     for (const freeTask of freeTasks) {
       const task = freeTask.task
-      let filter = task.mongoFilter()
+      let filter = taskFilter(type, task)
       if (freeTask.excludedOwners?.length) {
         const fullFilters = [filter]
         for (const owner of freeTask.excludedOwners) {
@@ -118,7 +125,7 @@ export const queryNextResourceTask = async (_type?: string, _id?: string) => {
           continue
         }
         // re-fetch the resource to check that it was not mutated while waiting for lock
-        const resource = await mongo.db.collection<any>(type).findOne({ $and: [{ id: resourceRef.id }, task.mongoFilter()] })
+        const resource = await mongo.db.collection<any>(type).findOne({ $and: [{ id: resourceRef.id }, taskFilter(type, task)] })
         if (!resource) {
           await locks.release(`${type}:${resourceRef.id}`)
           continue

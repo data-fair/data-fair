@@ -9,6 +9,7 @@ import { getPseudoSessionState } from '../../misc/utils/users.ts'
 import { filterCan } from '../../misc/utils/permissions.ts'
 import { type FindOptions } from 'mongodb'
 import { type VirtualFilter, type QueryableDescendant } from '../es/operations.ts'
+import { notShelved, onlyShelved } from '../../bin/operations.ts'
 
 // distinguish "the dataset does not exist anymore" from "it exists but is not readable by the
 // account owning the virtual dataset" — and report exactly which child is at fault
@@ -28,6 +29,15 @@ const missingChildrenDetails = async (missingIds: string[]) => {
   })
 }
 
+// shelved children (bin) are skipped silently, as if absent — but they stay in virtual.children so
+// that a restore brings them back in their parents. Only called once a child is found missing, so
+// the common path stays a single query
+const shelvedIds = async (childrenIds: string[]) => {
+  if (!childrenIds.length) return new Set<string>()
+  const shelved = await mongo.datasets.find({ id: { $in: childrenIds }, ...onlyShelved }, { projection: { id: 1 } }).toArray()
+  return new Set(shelved.map(d => d.id))
+}
+
 // blacklisted fields are fields that are present in a grandchild but not re-exposed
 // by the child.. it must not be possible to access those fields in the case
 // of another child having the same key
@@ -39,9 +49,10 @@ async function childrenSchemas (owner: Account, children: string[], blackListedF
   const permissionsFilter = filterCan(pseudoSessionState, 'datasets', 'read')
   for (const childId of [...new Set(children)]) {
     const child = await mongo.datasets.findOne(
-      { id: childId, $or: permissionsFilter },
+      { id: childId, $or: permissionsFilter, ...notShelved },
       { projection: { isVirtual: 1, virtual: 1, schema: 1, owner: 1 } })
     if (!child) {
+      if ((await shelvedIds([childId])).size) continue
       // fail fast at creation / patch / finalization time with the same detailed report the
       // query path produces, instead of silently preparing an unreconciled schema
       const details = await missingChildrenDetails([childId])
@@ -219,13 +230,19 @@ const recurseDescendants = async (descendants: any[], dataset: Pick<VirtualDatas
   const childrenIds = [...new Set(dataset.virtual.children)]
   const children = await mongo.datasets.find({
     id: { $in: childrenIds },
-    $or: permissionsFilter
+    $or: permissionsFilter,
+    ...notShelved
   }, mongoOptions).toArray()
 
   if (children.length !== childrenIds.length) {
     const foundIds = new Set(children.map(c => c.id))
-    const details = await missingChildrenDetails(childrenIds.filter(id => !foundIds.has(id)))
-    throw cannotQueryError(`Le jeu de données virtuel "${dataset.id}" ne peut pas être requêté : ${details.join(' ; ')}.`)
+    const notFoundIds = childrenIds.filter(id => !foundIds.has(id))
+    const shelved = await shelvedIds(notFoundIds)
+    const missingIds = notFoundIds.filter(id => !shelved.has(id))
+    if (missingIds.length) {
+      const details = await missingChildrenDetails(missingIds)
+      throw cannotQueryError(`Le jeu de données virtuel "${dataset.id}" ne peut pas être requêté : ${details.join(' ; ')}.`)
+    }
   }
   for (const child of children) {
     if (child.isVirtual && child.virtual?.filterActiveAccount) {

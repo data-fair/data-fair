@@ -8,6 +8,13 @@ export type Shelved = { at: string, by: { id: string, name: string }, cascade?: 
 export const notShelved = Object.freeze({ shelved: Object.freeze({ $exists: false }) }) as { shelved: { $exists: false } }
 export const onlyShelved = Object.freeze({ shelved: Object.freeze({ $exists: true }) }) as { shelved: { $exists: true } }
 
+/**
+ * Worker tasks that keep running on shelved resources: the integrity outbox must drain, or the
+ * checker raises integrity-check-stale for a dataset that merely sits in the bin. Every other task
+ * ignores shelved resources.
+ */
+export const binAllowedTasks: Record<'datasets' | 'applications', string[]> = { datasets: ['historize', 'historizeLines'], applications: [] }
+
 /** Whether an item shelved at shelvedAt is past its retention (purged from the first instant of the day retentionDays later). */
 export const isShelvedExpired = (shelvedAt: string, retentionDays: number, now: Date): boolean =>
   new Date(shelvedAt).getTime() + retentionDays * 86400000 <= now.getTime()
