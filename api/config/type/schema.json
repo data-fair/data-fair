@@ -450,6 +450,25 @@
       "type": "array",
       "items": { "type": "object" }
     },
+    "extraTodoItems": {
+      "type": "array",
+      "description": "Lines of the dashboard to do list coming from a service outside of the data-fair stack (customers...). The services of the stack are integrated directly, see docs/architecture/dashboard.md",
+      "items": {
+        "type": "object",
+        "required": ["id", "title", "url"],
+        "anyOf": [{ "required": ["to"] }, { "required": ["href"] }],
+        "properties": {
+          "id": { "type": "string" },
+          "title": { "description": "A string or an object of translations by locale", "type": ["string", "object"] },
+          "url": { "type": "string", "pattern": "^/", "description": "GET url of the count, same-origin" },
+          "countPath": { "type": "string", "description": "Dotted path of the count in the response, default is count" },
+          "to": { "type": "string", "description": "Route in the back-office" },
+          "href": { "type": "string", "description": "Link outside of the back-office" },
+          "can": { "type": "string", "enum": ["contrib", "admin", "contribDep", "adminDep"] },
+          "icon": { "type": "string", "description": "SVG path of the icon" }
+        }
+      }
+    },
     "extraAdminNavigationItems": {
       "type": "array",
       "items": { "type": "object" }

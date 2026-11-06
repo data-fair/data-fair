@@ -1,0 +1,85 @@
+<template>
+  <v-card>
+    <v-card-item>
+      <v-card-title
+        tag="h2"
+        class="d-flex align-center ga-2"
+      >
+        <v-icon
+          :icon="mdiWeb"
+          color="primary"
+        />
+        {{ t('title') }}
+      </v-card-title>
+    </v-card-item>
+    <v-list
+      density="compact"
+      lines="one"
+      class="pt-0"
+    >
+      <v-list-item
+        v-for="site in sites"
+        :key="site.key"
+        :title="site.title || site.host"
+        :subtitle="site.host"
+        :prepend-gap="12"
+      >
+        <!-- the site favicon, a globe when it cannot load -->
+        <template #prepend>
+          <img
+            v-if="!brokenFavicons.has(site.key)"
+            :src="site.favicon"
+            alt=""
+            width="24"
+            height="24"
+            @error="brokenFavicons.add(site.key)"
+          >
+          <v-icon
+            v-else
+            :icon="mdiWeb"
+            color="primary"
+          />
+        </template>
+        <template #append>
+          <v-btn
+            :icon="mdiOpenInNew"
+            :href="site.url"
+            :title="t('open', { title: site.title || site.host })"
+            target="_blank"
+            variant="text"
+            color="primary"
+            size="small"
+          />
+        </template>
+      </v-list-item>
+    </v-list>
+  </v-card>
+</template>
+
+<i18n lang="yaml">
+fr:
+  title: Vos portails
+  open: Ouvrir {title} (nouvelle fenêtre)
+en:
+  title: Your portals
+  open: Open {title} (new window)
+</i18n>
+
+<script lang="ts">
+export type PublicationSite = { type: string, id: string, title?: string, url?: string, department?: string, canContributeAsDepartment?: boolean }
+</script>
+
+<script setup lang="ts">
+import { mdiWeb, mdiOpenInNew } from '@mdi/js'
+
+const { publicationSites } = defineProps<{ publicationSites: PublicationSite[] }>()
+
+const { t } = useI18n()
+
+const brokenFavicons = reactive(new Set<string>())
+
+const sites = computed(() => publicationSites.map(site => {
+  const host = new URL(site.url!).host
+  return { key: `${site.type}:${site.id}`, title: site.title, url: site.url, host, favicon: new URL('/favicon.ico', site.url).href }
+}))
+</script>
