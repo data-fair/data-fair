@@ -473,7 +473,7 @@ const runOnce = async () => {
   // persisting lastCheck.date, so a hinted dataset would keep sorting first and waste a sweep
   // slot every night until its relay drains
   const cursor = mongo.datasets
-    .find({ 'integrity.active': true, _needsHistorizing: { $exists: false }, _needsHistorizingLines: { $exists: false }, ...notShelved })
+    .find({ 'integrity.active': true, _needsHistorizing: { $exists: false }, _needsHistorizingLines: { $exists: false } })
     .sort({ 'integrity.lastCheck.date': 1 })
     .limit(BATCH)
   for await (const dataset of cursor) {

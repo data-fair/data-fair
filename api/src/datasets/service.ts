@@ -775,7 +775,8 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
 
   if (!dataset.draftReason && !patch.status && patch.schema) {
     // if the schema changed without triggering a worker we might need to actualize virtual datasets schemas too
-    for await (const virtualDataset of db.collection('datasets').find({ 'virtual.children': dataset.id })) {
+    // a shelved parent is left alone: no patch, hence no catalog update, for a deleted dataset
+    for await (const virtualDataset of db.collection('datasets').find({ 'virtual.children': dataset.id, ...notShelved })) {
       try {
         const virtualPatch = await virtualDatasetsUtils.prepareVirtualDatasetPatch(virtualDataset as unknown as VirtualDataset)
         if ('attachmentsAsImage' in virtualPatch || !equal(virtualPatch.schema, virtualDataset.schema)) {

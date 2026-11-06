@@ -1,5 +1,7 @@
 import { test } from '../../fixtures/diagnostics.ts'
 import assert from 'node:assert/strict'
+import fs from 'fs-extra'
+import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks, config, mockAppUrl, waitForWorkerIdle, anonymousAx, apiUrl } from '../../support/axios.ts'
 import {
   sendDataset, patchRawDataset, patchRawApplication, clearDatasetCache, clearPublicationSitesCache,
@@ -454,5 +456,33 @@ test.describe('shelve and restore', () => {
 
     await restore('datasets', id)
     assert.deepEqual((await remoteService()).data.privateAccess.map((p: any) => p.id), ['test_org1', 'test_org2'])
+  })
+
+  test('a file dataset with a pending draft is shelved and restored with its draft', async () => {
+    await enableBin()
+    const dataset = await sendDataset('datasets/dataset1.csv', testUser1Org)
+    const form = new FormData()
+    form.append('file', fs.readFileSync('./tests/resources/datasets/dataset2.csv'), 'dataset2.csv')
+    const draft = (await testUser1Org.post(`/api/v1/datasets/${dataset.id}`, form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() }, params: { draft: true } })).data
+    assert.equal(draft.draftReason.key, 'file-updated')
+    await waitForFinalize(testUser1Org, dataset.id)
+    const views = [{}, { draft: true }]
+    const totals = []
+    for (const params of views) totals.push((await testUser1Org.get(`/api/v1/datasets/${dataset.id}/lines`, { params })).data.total)
+    assert.deepEqual(totals, [2, 6])
+
+    assert.equal((await testUser1Org.delete(`/api/v1/datasets/${dataset.id}`)).status, 204)
+    for (const params of views) {
+      await assert.rejects(testUser1Org.get(`/api/v1/datasets/${dataset.id}`, { params }), { status: 404 }, JSON.stringify(params))
+      await assert.rejects(testUser1Org.get(`/api/v1/datasets/${dataset.id}/lines`, { params }), { status: 404 }, JSON.stringify(params))
+    }
+
+    await restore('datasets', dataset.id)
+    for (const [i, params] of views.entries()) {
+      assert.equal((await testUser1Org.get(`/api/v1/datasets/${dataset.id}`, { params })).status, 200)
+      assert.equal((await testUser1Org.get(`/api/v1/datasets/${dataset.id}/lines`, { params })).data.total, totals[i])
+    }
+    const raw = await getRawDataset(dataset.id)
+    assert.equal(raw.draft.file.name, 'dataset2.csv')
   })
 })
