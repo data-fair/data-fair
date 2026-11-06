@@ -1,3 +1,4 @@
+import { notShelved } from '../../bin/operations.ts'
 import type { SessionState } from '@data-fair/lib-express'
 import type { ResourceType } from '#types'
 import mongo from '#mongo'
@@ -579,7 +580,7 @@ export const getByUniqueRef = async (publicationSite: any, mainPublicationSite: 
       ]
     }
   }
-  const resources = await mongo.db.collection(resourceType + 's').find(filter).project({ _id: 0 }).toArray()
+  const resources = await mongo.db.collection(resourceType + 's').find({ ...filter, ...notShelved }).project({ _id: 0 }).toArray()
   // req[resourceType] = req.resource =
   return resources.find((d: any) => d.id === paramId) || resources.find((d: any) => d.slug === paramId)
 }

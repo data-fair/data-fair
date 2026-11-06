@@ -1,3 +1,4 @@
+import { notShelved } from '../bin/operations.ts'
 import mongo from '#mongo'
 import config from '#config'
 import type { SiteHashes } from './operations.ts'
@@ -20,7 +21,7 @@ export const matchApplicationKey = async (application: any, applicationKeyId: st
       if (application.partOf?.type === 'application' && application.partOf.id === applicationKey._id) return true
       // ths application key can be matched to a parent application key (case of dashboards, etc)
       const isParentApplicationKey = await mongo.db.collection('applications')
-        .countDocuments({ id: applicationKey._id, 'configuration.applications.id': application.id, ...ownerFilter })
+        .countDocuments({ id: applicationKey._id, 'configuration.applications.id': application.id, ...notShelved, ...ownerFilter })
       if (isParentApplicationKey) {
         return true
       }

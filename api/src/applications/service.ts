@@ -1,3 +1,4 @@
+import { notShelved } from '../bin/operations.ts'
 import mongo from '#mongo'
 import config from '#config'
 import moment from 'moment'
@@ -199,8 +200,8 @@ export const createApplication = async (ctx: ApplicationWriteContext, applicatio
   application.id = nanoid()
 
   if (application.initFrom) {
-    const parentApplication = await mongo.applications.findOne({ id: application.initFrom.application })
-    if (!parentApplication) throw new Error('[noretry] application d\'initialisation inconnue ' + application.initFrom.application)
+    const parentApplication = await mongo.applications.findOne({ id: application.initFrom.application, ...notShelved })
+    if (!parentApplication) throw httpError(404, 'application d\'initialisation inconnue ' + application.initFrom.application)
     // mongo findOne returns WithId<Application>, not Resource — cast bridges the gap
     const parentApplicationPermissions = permissions.list('applications', parentApplication as any, ctx.sessionState)
     if (!parentApplicationPermissions.includes('readDescription')) {

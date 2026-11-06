@@ -1,10 +1,11 @@
+import { notShelved } from './bin/operations.ts'
 import mongo from '#mongo'
 
 export const trackEmbed = async (req, res, next) => {
   const urlPath = req.url.replace(/^\//, '')
   const [resourceType, resourceId, embedView] = urlPath.split(/[/?]/)
   if (resourceType === 'dataset' && resourceId) {
-    const dataset = await mongo.db.collection('datasets').findOne({ id: resourceId }, { projection: { owner: 1, id: 1, title: 1 } })
+    const dataset = await mongo.db.collection('datasets').findOne({ id: resourceId, ...notShelved }, { projection: { owner: 1, id: 1, title: 1 } })
     if (dataset) {
       const ownerHeader = { type: dataset.owner.type, id: dataset.owner.id }
       if (dataset.owner.department) ownerHeader.department = dataset.owner.department

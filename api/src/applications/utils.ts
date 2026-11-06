@@ -1,3 +1,4 @@
+import { notShelved } from '../bin/operations.ts'
 import log from '@data-fair/lib-node/log.js'
 import { resourceLogFields, truncateLogValue } from '../misc/utils/log-fields.ts'
 import config from '#config'
@@ -57,7 +58,7 @@ export const clean = (application: Application, publicUrl: string, publicationSi
 }
 
 const memoizedGetFreshDataset = memoize(async (id) => {
-  return await mongo.datasets.findOne({ id })
+  return await mongo.datasets.findOne({ id, ...notShelved })
 }, {
   profileName: 'getAppFreshDataset',
   promise: true,
@@ -99,7 +100,7 @@ export const refreshConfigDatasetsRefs = async (req: Request, application: Appli
 
       const freshDataset = tolerateStale
         ? clone(await memoizedGetFreshDataset(dataset.id))
-        : (await mongo.datasets.findOne({ id: dataset.id }))
+        : (await mongo.datasets.findOne({ id: dataset.id, ...notShelved }))
 
       if (freshDataset) {
         if (checkWithPersonalSession) {

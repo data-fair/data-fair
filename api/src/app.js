@@ -1,3 +1,4 @@
+import { notShelved } from './bin/operations.ts'
 import * as metrics from './misc/utils/metrics.ts' // import early so that memoizee can be used in the following imports
 import { resolve, parse as parsePath, join } from 'node:path'
 import { trackEmbed } from './embed.js'
@@ -327,7 +328,7 @@ export const run = async () => {
           return true
         }
         const [type, id, subject] = channel.split('/')
-        const resource = await db.collection(type).findOne({ id })
+        const resource = await db.collection(type).findOne({ id, ...notShelved })
         if (!resource) throw httpError(404, `Ressource ${type}/${id} inconnue.`)
         // TODO: readApiKey is called without the request here, so the "only from inside the infrastructure"
         // check of adminMode api keys (assertReqInternal) is skipped for websocket subscriptions.
@@ -338,7 +339,7 @@ export const run = async () => {
         let bypassPermissions
         if (type === 'datasets' && (message.applicationKey || message.appId)) {
           // re-read through the typed collection (db.collection(type) above yields an untyped doc)
-          const dataset = await mongo.datasets.findOne({ id })
+          const dataset = await mongo.datasets.findOne({ id, ...notShelved })
           if (dataset) {
             const match = await resolveApplicationContextBypass(message.applicationKey ?? null, dataset, message.appId, sessionState)
             bypassPermissions = match?.bypassPermissions

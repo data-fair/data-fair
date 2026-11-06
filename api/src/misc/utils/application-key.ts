@@ -1,4 +1,5 @@
 // a midleware to check if the endpoint is called from an application with an unauthenticated readOnly application key
+import { notShelved } from '../../bin/operations.ts'
 import log, { withLogContext } from '@data-fair/lib-node/log.js'
 import { sessionLogFields } from '@data-fair/lib-express/req-log-context.js'
 import config from '#config'
@@ -37,6 +38,7 @@ const countParentApplicationOfDataset = memoize(async (appId: string, datasetHre
   return mongo.db.collection('applications').countDocuments({
     id: appId,
     $or: [{ 'configuration.datasets.href': datasetHref }, { 'configuration.datasets.id': datasetId }],
+    ...notShelved,
     ...ownerFilterFromParts(ownerType, ownerId, ownerDep)
   })
 }, { ...memoOpts, profileName: 'applicationKeyParentDataset' })
@@ -45,6 +47,7 @@ const countParentApplicationOfApp = memoize(async (parentAppId: string, appId: s
   return mongo.db.collection('applications').countDocuments({
     id: parentAppId,
     'configuration.applications.id': appId,
+    ...notShelved,
     ...ownerFilterFromParts(ownerType, ownerId, ownerDep)
   })
 }, { ...memoOpts, profileName: 'applicationKeyParentApp' })
@@ -53,6 +56,7 @@ const findMatchingApplication = memoize(async (appId: string, datasetHref: strin
   return mongo.applications.findOne({
     id: appId,
     $or: [{ 'configuration.datasets.href': datasetHref }, { 'configuration.datasets.id': datasetId }],
+    ...notShelved,
     ...ownerFilterFromParts(ownerType, ownerId, ownerDep)
   }, { projection: { 'configuration.datasets': 1, id: 1, baseApp: 1 } })
 }, { ...memoOpts, profileName: 'applicationKeyMatchingApp' })
@@ -61,7 +65,7 @@ const findMatchingApplication = memoize(async (appId: string, datasetHref: strin
 // (_uniqueRefs is only set on applications with a slug, hence the id fallback); an id match wins
 const findCallingApplication = memoize(async (appRef: string, ownerType: string, ownerId: string, ownerDep: string) => {
   const applications = await mongo.applications.find(
-    { $or: [{ id: appRef }, { _uniqueRefs: appRef }], ...ownerFilterFromParts(ownerType, ownerId, ownerDep) },
+    { $or: [{ id: appRef }, { _uniqueRefs: appRef }], ...notShelved, ...ownerFilterFromParts(ownerType, ownerId, ownerDep) },
     { projection: { id: 1, slug: 1, partOf: 1, permissions: 1, owner: 1 } }
   ).toArray()
   return applications.find(a => a.id === appRef) ?? applications.find(a => a.slug === appRef) ?? null

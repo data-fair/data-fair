@@ -323,6 +323,13 @@ export const patchRawDataset = async (datasetId: string, patch: Record<string, a
 }
 
 /**
+ * Directly patch an application's mongo document (test-only), same shape as patchRawDataset.
+ */
+export const patchRawApplication = async (applicationId: string, patch: Record<string, any>): Promise<void> => {
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-application/${applicationId}`, patch)
+}
+
+/**
  * List attachment files for a dataset.
  */
 export const lsAttachments = async (datasetId: string): Promise<string[]> => {

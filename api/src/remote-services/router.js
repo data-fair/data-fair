@@ -1,3 +1,4 @@
+import { notShelved } from '../bin/operations.ts'
 import path from 'path'
 import http from 'http'
 import https from 'https'
@@ -211,7 +212,7 @@ async function getAppOwner (req) {
   if (!refererAppId) return
   debug('Referer application id', refererAppId)
 
-  const refererApp = await mongo.applications.findOne({ id: refererAppId }, { projection: { owner: 1 } })
+  const refererApp = await mongo.applications.findOne({ id: refererAppId, ...notShelved }, { projection: { owner: 1 } })
   if (!refererApp) return log.warn('remote service proxy called from outside a known application', { code: 'remote-service-unknown-app', referer, applicationId: refererAppId })
 
   return refererApp.owner

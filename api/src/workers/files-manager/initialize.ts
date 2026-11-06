@@ -1,3 +1,4 @@
+import { notShelved } from '../../bin/operations.ts'
 import path from 'path'
 import { Readable, Transform, compose } from 'node:stream'
 import * as restUtils from '../../datasets/utils/rest.ts'
@@ -42,7 +43,7 @@ export default async function (dataset: DatasetInternal) {
 
   if (dataset.initFrom) {
     const pseudoSessionState = getPseudoSessionState(dataset.owner, 'initializer', '_init_from', dataset.initFrom.role, dataset.initFrom.department)
-    const parentDataset = await mongo.datasets.findOne({ id: dataset.initFrom.dataset })
+    const parentDataset = await mongo.datasets.findOne({ id: dataset.initFrom.dataset, ...notShelved })
     if (!parentDataset) throw new Error('[noretry] jeu de données d\'initialisation inconnu ' + dataset.initFrom.dataset)
     const parentDatasetPermissions = permissionsUtils.list('datasets', parentDataset, pseudoSessionState)
     if (!parentDatasetPermissions.includes('readDescription')) {

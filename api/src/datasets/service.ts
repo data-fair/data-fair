@@ -1,3 +1,4 @@
+import { notShelved } from '../bin/operations.ts'
 import config from '#config'
 import mongo from '#mongo'
 import debugLib from 'debug'
@@ -289,14 +290,14 @@ export const getDatasetFresh = async (datasetId: string, publicationSite: string
   const cached = await memoizedGetDataset(datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, _acceptedStatuses, reqBody)
   if (!cached.dataset) {
     // cache says not found — but is the cache stale? Do a lightweight check
-    const fresh = await db.collection('datasets').findOne({ _uniqueRefs: datasetId }, { projection: { updatedAt: 1, _id: 0 } })
+    const fresh = await db.collection('datasets').findOne({ _uniqueRefs: datasetId, ...notShelved }, { projection: { updatedAt: 1, _id: 0 } })
     if (!fresh) return cached // dataset really doesn't exist
     // dataset exists but cache missed it — do a full read
     return getDataset(datasetId, publicationSite, mainPublicationSite, useDraft, fillDescendants, acceptInitialDraft, db, _acceptedStatuses, reqBody)
   }
 
   // cache has a result — check if it's still fresh via a lightweight query
-  const fresh = await db.collection('datasets').findOne({ id: cached.dataset.id }, { projection: datasetFreshnessProjection(useDraft) })
+  const fresh = await db.collection('datasets').findOne({ id: cached.dataset.id, ...notShelved }, { projection: datasetFreshnessProjection(useDraft) })
   if (!fresh) return {} // dataset was deleted
 
   if (!isCachedDatasetFresh(cached.datasetFull, fresh, useDraft)) {

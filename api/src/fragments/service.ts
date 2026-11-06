@@ -55,7 +55,8 @@ export const findFragments = async (type: PartOf['type'], id: string, owner: Own
 export const preparePartOf = async (resourceType: FragmentResourceType, fragment: FragmentLike, partOf: PartOf, sessionState: SessionState) => {
   const parent = await getParent(partOf)
   const parentType = partOfCollectionName(partOf.type)
-  if (!parent || !permissions.can(parentType, parent as any, 'readDescription', sessionState)) {
+  // a parent in the bin reads as missing (getParent stays raw: the purge needs it)
+  if (!parent || parent.shelved || !permissions.can(parentType, parent as any, 'readDescription', sessionState)) {
     throw httpError(404, `Ressource parente inconnue (${partOf.type} ${partOf.id})`)
   }
   // An application fragment's configuration declares the operations it grants, in application

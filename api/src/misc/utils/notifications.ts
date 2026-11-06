@@ -1,3 +1,4 @@
+import { notShelved } from '../../bin/operations.ts'
 import config from '#config'
 import mongo from '#mongo'
 // the events service is part of our own infrastructure (configured url, not user input)
@@ -98,7 +99,7 @@ export const propagateDataUpdatedToVirtualParents = async (
   originator: SessionStateAuthenticated | string,
   options: Pick<SendResourceEventOptions, 'i18nKey' | 'localizedParams' | 'params' | 'extra' | 'channels' | 'coalesce'> = {}
 ) => {
-  for await (const virtualParent of mongo.datasets.find({ 'virtual.children': childDataset.id })) {
+  for await (const virtualParent of mongo.datasets.find({ 'virtual.children': childDataset.id, ...notShelved })) {
     await sendResourceEvent('datasets', virtualParent, originator, 'data-updated', options)
   }
 }
