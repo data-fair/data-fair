@@ -874,6 +874,10 @@ what the reviewer reads. Superadmin routes (only documented in admin mode) carry
 so the surface does not vary with the session; routes of the owner's admin class (deletion,
 permissions) are annotated and present for every session; token scopes decide who is offered them.
 
+Deletion tools (`delete_dataset`, `delete_application`) shelve the item when the owner organization's
+bin is active, and an admin can restore it ([bin.md](./bin.md)); otherwise the deletion is permanent.
+Their descriptions say so in one sentence.
+
 Known gap: on a dataset's own document, the `sort` parameter's enum lists column keys only, so
 a generated tool cannot pass `_geo_distance:lon:lat`; the root document has no enum there and
 accepts it. The distance sort is described in the `workflow` skill, not in the parameter.

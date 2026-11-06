@@ -265,7 +265,7 @@ export const operations = {
   deleteDataset: {
     name: 'delete_dataset',
     title: { fr: 'Supprimer un jeu de données', en: 'Delete a dataset' },
-    description: 'Delete a dataset permanently, with its data. The datasets and applications attached to it (partOf) are deleted too. Irreversible.',
+    description: 'Delete a dataset, with its data. The datasets and applications attached to it (partOf) are deleted too. If the organization bin is active, the item is moved to the bin and an admin can restore it; otherwise irreversible.',
     params: { id: datasetId }
   },
   getDatasetPermissions: {
@@ -327,7 +327,7 @@ export const operations = {
   deleteApplication: {
     name: 'delete_application',
     title: { fr: 'Supprimer une application', en: 'Delete an application' },
-    description: 'Delete an application permanently. The datasets and applications attached to it (partOf) are deleted too. Irreversible.',
+    description: 'Delete an application. The datasets and applications attached to it (partOf) are deleted too. If the organization bin is active, the item is moved to the bin and an admin can restore it; otherwise irreversible.',
     params: { id: applicationId }
   }
 } satisfies Record<string, AgentOperationAnnotation>

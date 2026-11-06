@@ -375,7 +375,7 @@
     },
     {
       "name": "datafair_delete_dataset",
-      "description": "Delete a dataset permanently, with its data. The datasets and applications attached to it (partOf) are deleted too. Irreversible.",
+      "description": "Delete a dataset, with its data. The datasets and applications attached to it (partOf) are deleted too. If the organization bin is active, the item is moved to the bin and an admin can restore it; otherwise irreversible.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -681,7 +681,7 @@
     },
     {
       "name": "datafair_delete_application",
-      "description": "Delete an application permanently. The datasets and applications attached to it (partOf) are deleted too. Irreversible.",
+      "description": "Delete an application. The datasets and applications attached to it (partOf) are deleted too. If the organization bin is active, the item is moved to the bin and an admin can restore it; otherwise irreversible.",
       "inputSchema": {
         "type": "object",
         "properties": {

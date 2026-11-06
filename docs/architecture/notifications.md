@@ -78,6 +78,7 @@ Notification topics live under the `data-fair:` namespace on the events service.
 | Draft resource event | `data-fair:<resource>-draft-<event>:<id>` | Same, automatically when `resource.draftReason` is truthy (`sendResourceEvent`). |
 | Publication-site event | `data-fair:<resource>-<event>:<siteType>:<siteId>[:<topicId>]` | `api/src/misc/utils/publication-sites.ts`. Implicit subscriptions for these topics are built by `buildPublicationSiteSubscriptions` (`api/src/settings/operations.ts`). |
 | Settings event | `data-fair:settings:<event>` | `api/src/settings/service.ts` (`writeSettings`, API key creation / deletion). |
+| Bin restore | `data-fair:dataset-restore:<id>`, `data-fair:application-restore:<id>` | `api/src/bin/service.ts` (`restore`). Id only, no slug twin. Shelving sends the regular `*-delete` topic on the id. See [bin.md](./bin.md). |
 | User-custom | `data-fair:dataset-user-notification:<slug>:<topic>` | `api/src/datasets/routes/misc.ts` (`POST /datasets/:id/user-notification`). `<topic>` is free text supplied by the caller (typically a portal). |
 
 See §8 for the topics whose key shape predates these conventions and are kept that way deliberately.
