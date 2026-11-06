@@ -305,7 +305,10 @@ router.get('/:applicationId/preview', readApplication, permissionMiddleware('rea
   const target = capture.appTargetUrl(reqApplication(req).id, query)
   if (draft) target.searchParams.set('draft', 'true')
   const cookie = await pseudoSessionCookie(session)
-  res.json(await capture.inspect(target.href, cookie, { mobile: query.viewport === 'mobile', fullPage }))
+  // the application declares the errors only its code can detect by POSTing to <application.href>/error (the
+  // route above), the render reports them and must not record them: it is a read and the session is GET-only
+  const declaredErrorUrl = `${config.publicUrl}/api/v1/applications/${encodeURIComponent(reqApplication(req).id)}/error`
+  res.json(await capture.inspect(target.href, cookie, { mobile: query.viewport === 'mobile', fullPage, declaredErrorUrl }))
 })
 router.get('/:applicationId/print', readApplication, permissionMiddleware('readPrint', 'read'), cacheHeaders.resourceBased(), async (req, res) => {
   await capture.print(req as RequestWithResource, res)

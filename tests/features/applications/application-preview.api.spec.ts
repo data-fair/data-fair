@@ -4,8 +4,8 @@ import path from 'node:path'
 import { decodeJwt } from 'jose'
 import { axiosAuth as _axiosAuth } from '@data-fair/lib-node/axios-auth.js'
 import { load, toolsForScopes } from '@data-fair/openapi-mcp'
-import { axios, axiosAuth, anonymousAx, clean, checkPendingTasks, baseURL, directoryUrl, mockAppUrl } from '../../support/axios.ts'
-import { setConfig, clearRateLimiting } from '../../support/workers.ts'
+import { axios, axiosAuth, anonymousAx, clean, checkPendingTasks, baseURL, directoryUrl, mockAppUrl, mockAppId } from '../../support/axios.ts'
+import { setConfig, clearRateLimiting, setupMockRoute, clearMockRoutes } from '../../support/workers.ts'
 import { nhiSession, scopeNhiId } from '../../support/nhi.ts'
 
 process.env.NODE_CONFIG_DIR ??= path.resolve(import.meta.dirname, '../../../api/config')
@@ -130,6 +130,34 @@ test.describe('GET /applications/:id/preview', () => {
     assert.ok(new URL(res.data.report.url).pathname.endsWith('/app/' + id), res.data.report.url)
     assert.ok(['ok', 'errors'].includes(res.data.report.verdict), JSON.stringify(res.data.report))
     assert.ok(!res.data.report.finalUrl.includes('/simple-directory/login'), res.data.report.finalUrl)
+  })
+
+  test('reports the error the application declares, without recording it', async () => {
+    skipUnlessAvailable()
+    // a base application that finds its configuration broken, like the real ones do with window.APPLICATION.href
+    const html = `<html><head><title>Broken app</title><meta name="application-name" content="monapperror"><script>window.APPLICATION=%APPLICATION%;</script></head><body>Broken app
+<script>fetch(window.APPLICATION.href + '/error', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ message: 'column "missing" not found' }) })
+  .finally(() => setTimeout(() => window.triggerCapture && window.triggerCapture(), 50))</script></body></html>`
+    await setupMockRoute({ path: '/monapperror/index.html', body: html, contentType: 'text/html' })
+    await setupMockRoute({ path: '/monapperror/config-schema.json', body: {} })
+    try {
+      const superadmin = await axiosAuth('test_superadmin@test.com', undefined, true)
+      await superadmin.post('/api/v1/base-applications', { url: mockAppUrl('monapperror') })
+      await superadmin.patch(`/api/v1/base-applications/${mockAppId('monapperror')}`, { public: true })
+      const ax = await axiosAuth('test_user1@test.com', 'test_org1')
+      const { data: app } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapperror'), title: 'preview-error' })
+      await ax.put(`/api/v1/applications/${app.id}/config`, {})
+      const res = await ax.get(`/api/v1/applications/${app.id}/preview`)
+      assert.equal(res.status, 200)
+      assert.deepEqual(res.data.report.declaredErrors, ['column "missing" not found'], res.data.text)
+      assert.equal(res.data.report.verdict, 'errors')
+      assert.match(res.data.text, /### Declared errors\n- column "missing" not found\n/)
+      const after = (await ax.get(`/api/v1/applications/${app.id}`)).data
+      assert.equal(after.status, 'configured')
+      assert.equal(after.errorMessage, undefined)
+    } finally {
+      await clearMockRoutes()
+    }
   })
 
   test('opens the draft of the application when asked', async () => {

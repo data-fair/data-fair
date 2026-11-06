@@ -188,10 +188,11 @@ export const print = async (req: RequestWithResource, res: Response) => {
  * Renders a page as the owner of the cookie, internal only: returns a screenshot and a report of what was rendered.
  * The capture service is configured to only render pages of our own host.
  */
-export const inspect = async (target: string, cookie: string, opts: { mobile: boolean, fullPage: boolean }): Promise<{ image: { data: string, mediaType: string }, text: string, report: Record<string, unknown> }> => {
+// declaredErrorUrl: where the page POSTs the errors it detects itself, capture reports them instead of sending them
+export const inspect = async (target: string, cookie: string, opts: { mobile: boolean, fullPage: boolean, declaredErrorUrl?: string }): Promise<{ image: { data: string, mediaType: string }, text: string, report: Record<string, unknown> }> => {
   try {
     const res = await axios.get(captureUrl + '/api/v1/inspect', {
-      params: { target, mobile: String(opts.mobile), fullPage: String(opts.fullPage) },
+      params: { target, mobile: String(opts.mobile), fullPage: String(opts.fullPage), ...(opts.declaredErrorUrl ? { declaredErrorUrl: opts.declaredErrorUrl } : {}) },
       headers: { ...secretHeaders(), Cookie: cookie },
       timeout: 60000
     })
