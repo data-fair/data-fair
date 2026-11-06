@@ -1,8 +1,11 @@
-require('dotenv').config({ quiet: true })
+import dotenv from 'dotenv'
+
+// no import.meta in a config file: playwright compiles it to CommonJS when a unit spec loads the config
+dotenv.config({ path: ['.env', '../.env'], quiet: true })
 
 if (!process.env.DEV_API_PORT) throw new Error('missing DEV_API_PORT env variable, run "npx --no df-dev setup" to create .env, then start the env with "npm run dev-zellij"')
 
-module.exports = {
+export default {
   port: process.env.DEV_API_PORT,
   dataDir: '../data/development',
   mongo: {

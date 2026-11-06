@@ -64,7 +64,7 @@ Because the limiters live in process memory, correctness across replicas relies 
 proxy hashing by client IP (`upstream-hash-by: $remote_addr`). Stale limiters/buckets are swept
 every 20 min (one `SweptStore` rule for all three registries). A limiter is keyed by
 `throttlingKey + (userId | clientIp) + limitType`. Limit types come from
-`config.defaultLimits.apiRate` (`api/config/default.cjs`):
+`config.defaultLimits.apiRate` (`api/config/default.mjs`):
 
 | limitType | window | requests / window | `dynamic` bandwidth | `static` bandwidth |
 | --- | --- | --- | --- | --- |

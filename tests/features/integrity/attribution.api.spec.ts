@@ -240,7 +240,7 @@ test('a user PATCH drives the async relay to write the `.who` sibling with its O
   // relay.ts anchorDataset computes, at two different lines:
   //   revision retain-until = now + config.integrity.retention.days
   //   .who     retain-until = now + config.integrity.attribution.retentionDays
-  // The dev/test config (api/config/development.cjs) deliberately sets these to DIFFERENT window
+  // The dev/test config (api/config/development.mjs) deliberately sets these to DIFFERENT window
   // lengths — retention.days: 2, attribution.retentionDays: 1 — precisely so a regression that
   // swaps `attribution?.retentionDays` for `retention?.days` (or vice versa) at either line
   // produces a value a day off and gets caught here, rather than being masked by two configured

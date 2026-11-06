@@ -125,7 +125,7 @@ async function seedReferential (ax: any) {
       }]
     }
   })
-  // chunks under the dev stack's per-request dataset storage limit (api/config/development.cjs)
+  // chunks under the dev stack's per-request dataset storage limit (api/config/development.mjs)
   const lines = await referentialLines()
   for (let i = 0; i < lines.length; i += 1000) await bulkLines(ax, REFERENTIAL_ID, lines.slice(i, i + 1000))
 }

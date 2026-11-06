@@ -167,7 +167,7 @@ test.describe('limits', () => {
     // buckets start FULL: the first bucketSize bytes (4s of bandwidth) are an immediately usable burst
     // allowance, so drain it first — the timed downloads below measure the SUSTAINED rate
 
-    // static data access by authenticated user (400 kb/s defined in config/development.cjs → 1.6MB burst)
+    // static data access by authenticated user (400 kb/s defined in config/development.mjs → 1.6MB burst)
     for (let i = 0; i < 18; i++) await ax.get(`/api/v1/datasets/${dataset.id}/raw`)
     let t0 = new Date().getTime()
     await ax.get(`/api/v1/datasets/${dataset.id}/raw`)
@@ -177,7 +177,7 @@ test.describe('limits', () => {
     let t1 = new Date().getTime()
     assert.ok((t1 - t0 > 500) && (t1 - t0 < 1500), 'throttled download should be around 1s, got ' + (t1 - t0))
 
-    // static data access by anonymous user (200 kb/s defined in config/development.cjs → 800KB burst)
+    // static data access by anonymous user (200 kb/s defined in config/development.mjs → 800KB burst)
     for (let i = 0; i < 10; i++) await anonymous.get(`/api/v1/datasets/${dataset.id}/raw`)
     t0 = new Date().getTime()
     await anonymous.get(`/api/v1/datasets/${dataset.id}/raw`)
@@ -187,7 +187,7 @@ test.describe('limits', () => {
     t1 = new Date().getTime()
     assert.ok((t1 - t0 > 1200) && (t1 - t0 < 3000), 'throttled download should be around 2s, got ' + (t1 - t0))
 
-    // dynamic data access by authenticated user (200 kb/s defined in config/development.cjs → 800KB burst)
+    // dynamic data access by authenticated user (200 kb/s defined in config/development.mjs → 800KB burst)
     for (let i = 0; i < 12; i++) await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { size: 500 } })
     t0 = new Date().getTime()
     await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { size: 500 } })

@@ -321,7 +321,7 @@ an authenticated user and goes through the normal rate limiter instead:
    The token effectively imposes a "the user spent a few seconds on the page before submitting"
    delay — bots that fetch-and-immediately-submit get blocked.
 3. **Per-IP rate limit** — `rateLimiting.consume(req, 'postApplicationKey', tokenId|iat)`. The
-   default config (`api/config/default.cjs:204-207`) is `{ duration: 60, nb: 1 }` — *one* anonymous
+   default config (`api/config/default.mjs:204-207`) is `{ duration: 60, nb: 1 }` — *one* anonymous
    write per 60 s per IP, per anonymous-token. The proxy's `upstream-hash-by: $remote_addr`
    setting (see `load-management.md` §2) is what makes this consistent across replicas.
 
@@ -360,6 +360,6 @@ A failing test in `api-keys.api.spec.ts` lines 440-458 walks the full flow: too-
 | Websocket application context (data)   | `api/src/app.js` (`canSubscribe` callback)           |
 | Permission bypass plumbing             | `api/src/misc/utils/permissions.ts:114-160` (owner-role/permission exclusion), `:171-182` (bypass early-return) |
 | Schema for `applicationKeyPermissions` | `api/types/application/.type/index.js`               |
-| Rate-limit config                      | `api/config/default.cjs` (`postApplicationKey`)      |
+| Rate-limit config                      | `api/config/default.mjs` (`postApplicationKey`)      |
 | Tests covering the full flow          | `tests/features/auth/api-keys.api.spec.ts` (lines 245-499) |
 | Fragments (`partOf`), the doc extending this one | `docs/architecture/fragments.md`           |

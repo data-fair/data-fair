@@ -52,7 +52,7 @@ file/REST input ─► sniff (detect type+format) ─► format (normalize) ─�
 `sniff()` infers a column's type from sample values, trying, in order: boolean → integer → number →
 **date-time (by format list)** → date-time (RFC 3339 via ajv) → **date (by format list)** → date
 (RFC 3339 via ajv) → string. The candidate formats are **French-first** and configurable
-(`SniffDateConfig`); the defaults live in `api/config/default.cjs`:
+(`SniffDateConfig`); the defaults live in `api/config/default.mjs`:
 
 ```
 dateFormats:     ['D/M/YYYY', 'D/M/YY', 'YYYY/M/D']
@@ -230,7 +230,7 @@ from `Intl.DateTimeFormat().resolvedOptions().timeZone`.
 |---|---|
 | Sniff + normalize (pure) | `api/src/datasets/utils/operations.ts` (`sniff`, `format`) |
 | Config injection wrapper | `api/src/datasets/utils/fields-sniffer.ts` |
-| Default formats & timezone | `api/config/default.cjs` (`defaultTimeZone`, sniff formats), env `DEFAULT_TIME_ZONE` |
+| Default formats & timezone | `api/config/default.mjs` (`defaultTimeZone`, sniff formats), env `DEFAULT_TIME_ZONE` |
 | ES mapping | `api/src/datasets/es/operations.ts` |
 | Read / range filters | `api/src/datasets/es/commons.ts` |
 | Aggregations | `api/src/datasets/es/values-agg.ts`, `api/src/datasets/es/metric-agg.ts` |

@@ -1193,7 +1193,7 @@ const formatWho = (who?: WhoHint): string => {
 const state = ref<IntegrityState | null>(null)
 const { dayjs } = useLocaleDayjs()
 
-// defaults mirror api/config/default.cjs, for an API that predates the `policy` field
+// defaults mirror api/config/default.mjs, for an API that predates the `policy` field
 const policy = computed(() => state.value?.policy ?? { retentionDays: 365, attributionRetentionDays: 180, maxLines: 100000, maxUnknownDays: 7 })
 
 // an 'ok' older than this is shown with a warning: the nightly sweep checks a bounded batch

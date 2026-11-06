@@ -1002,7 +1002,7 @@ test('a line write drives the relay to write the `.who` sibling with its OWN ret
   expect(revisionRetention).toBeTruthy()
   expect(whoRetention).toBeTruthy()
 
-  // dev/test config (api/config/development.cjs): attribution.retentionDays: 1, retention.days: 2
+  // dev/test config (api/config/development.mjs): attribution.retentionDays: 1, retention.days: 2
   const attributionRetentionMs = 1 * 24 * 3600 * 1000
   const revisionRetentionMs = 2 * 24 * 3600 * 1000
   const toleranceMs = 60 * 60 * 1000 // 1h, generous for relay scheduling + worker clock skew

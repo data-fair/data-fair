@@ -7,7 +7,7 @@ import path from 'node:path'
 // process.cwd() unless NODE_CONFIG_DIR is set — and the live api process runs with cwd=api/,
 // while this unit test runs from the repo root. Point it at the real api/config directory so the
 // SAME config the running server uses (dotenv/config already populated the env-var overrides
-// custom-environment-variables.cjs reads) backs these assertions, rather than a stand-in.
+// custom-environment-variables.mjs reads) backs these assertions, rather than a stand-in.
 process.env.NODE_CONFIG_DIR ??= path.resolve(import.meta.dirname, '../../../api/config')
 process.env.NODE_ENV ??= 'development'
 

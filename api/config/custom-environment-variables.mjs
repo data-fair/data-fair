@@ -1,4 +1,4 @@
-module.exports = {
+export default {
   port: 'PORT',
   mode: 'MODE',
   apiKeysExpirationCron: 'API_KEYS_EXPIRATION_CRON',
