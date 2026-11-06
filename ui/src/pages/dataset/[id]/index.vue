@@ -254,17 +254,29 @@
         </v-tabs-window-item>
 
         <v-tabs-window-item value="applications">
-          <v-btn
-            v-if="canContribDep"
-            :to="`/new-application?dataset=${dataset.id}`"
-            :prepend-icon="mdiPlus"
-            class="mb-4"
-            color="primary"
-            variant="flat"
+          <div
+            v-if="canContribDep || applications.length"
+            class="d-flex align-center flex-wrap ga-2 mb-4"
           >
-            {{ t('configureApp') }}
-          </v-btn>
-          <v-row v-if="applications.length">
+            <v-btn
+              v-if="canContribDep"
+              :to="`/new-application?dataset=${dataset.id}`"
+              :prepend-icon="mdiPlus"
+              color="primary"
+              variant="flat"
+            >
+              {{ t('configureApp') }}
+            </v-btn>
+            <view-mode-toggle
+              v-if="applications.length"
+              v-model="applicationsViewMode"
+              class="ml-auto"
+            />
+          </div>
+          <p v-if="!applications.length">
+            {{ t('noApplications') }}
+          </p>
+          <v-row v-else-if="applicationsViewMode === 'grid'">
             <v-col
               v-for="app in applications"
               :key="app.id"
@@ -275,9 +287,16 @@
               <application-card :application="app" />
             </v-col>
           </v-row>
-          <p v-else>
-            {{ t('noApplications') }}
-          </p>
+          <v-list
+            v-else
+            lines="two"
+          >
+            <application-list-item
+              v-for="app in applications"
+              :key="app.id"
+              :application="app"
+            />
+          </v-list>
         </v-tabs-window-item>
       </template>
     </df-section-tabs>
@@ -830,6 +849,7 @@ en:
 </i18n>
 
 <script setup lang="ts">
+import type { ViewMode } from '~/composables/use-view-mode'
 import informationsSvg from '~/assets/svg/data-process-two-color.svg?raw'
 import buildingSvg from '~/assets/svg/team-building-two-color.svg?raw'
 import dataSvg from '~/assets/svg/data-storage-two-color.svg?raw'
@@ -1131,6 +1151,7 @@ watch(dataset, (d) => {
 }, { immediate: true })
 
 const applications = computed(() => applicationsFetch.data.value?.results ?? [])
+const applicationsViewMode = ref<ViewMode>('grid')
 
 const catalogPublicationsUrl = computed(() => {
   if (!dataset.value) return ''

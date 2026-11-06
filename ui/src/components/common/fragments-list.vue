@@ -1,26 +1,37 @@
 <template>
   <div>
-    <v-btn
-      v-if="canContribDep"
-      :to="`/new-dataset?partOf=${partOf.type}:${partOf.id}`"
-      :prepend-icon="mdiPlus"
-      class="mb-4 mr-2"
-      color="primary"
-      variant="flat"
+    <div
+      v-if="canCreateDataset || canCreateApplication || hasFragments"
+      class="d-flex align-center flex-wrap ga-2 mb-4"
     >
-      {{ t('newDatasetFragment') }}
-    </v-btn>
-    <v-btn
-      v-if="canContribDep && partOf.type === 'application' && canWriteParentConfig && usesApps"
-      :to="`/new-application?partOf=${partOf.type}:${partOf.id}`"
-      :prepend-icon="mdiPlus"
-      class="mb-4"
-      color="primary"
-      variant="flat"
-    >
-      {{ t('newApplicationFragment') }}
-    </v-btn>
-    <v-row v-if="fragments.datasets.length || fragments.applications.length">
+      <v-btn
+        v-if="canCreateDataset"
+        :to="`/new-dataset?partOf=${partOf.type}:${partOf.id}`"
+        :prepend-icon="mdiPlus"
+        color="primary"
+        variant="flat"
+      >
+        {{ t('newDatasetFragment') }}
+      </v-btn>
+      <v-btn
+        v-if="canCreateApplication"
+        :to="`/new-application?partOf=${partOf.type}:${partOf.id}`"
+        :prepend-icon="mdiPlus"
+        color="primary"
+        variant="flat"
+      >
+        {{ t('newApplicationFragment') }}
+      </v-btn>
+      <view-mode-toggle
+        v-if="hasFragments"
+        v-model="viewMode"
+        class="ml-auto"
+      />
+    </div>
+    <p v-if="!hasFragments">
+      {{ t('noFragments') }}
+    </p>
+    <v-row v-else-if="viewMode === 'grid'">
       <v-col
         v-for="dataset in fragments.datasets"
         :key="dataset.id"
@@ -33,41 +44,12 @@
           :dataset="dataset"
           class="flex-grow-1"
         />
-        <!-- a virtual parent: whether the fragment is one of its sources, adding it is an explicit step -->
-        <div
+        <fragment-source-status
           v-if="sources"
-          class="d-flex align-center flex-wrap ga-2 mt-2"
-        >
-          <v-chip
-            v-if="sources.includes(dataset.id)"
-            :prepend-icon="mdiCheck"
-            color="success"
-            size="small"
-            variant="tonal"
-          >
-            {{ t('isSource') }}
-          </v-chip>
-          <template v-else>
-            <v-chip
-              size="small"
-              variant="tonal"
-            >
-              {{ t('notSource') }}
-            </v-chip>
-            <v-btn
-              v-if="canAddSource && dataset.status === 'finalized'"
-              :prepend-icon="mdiPlus"
-              :loading="addingSource === dataset.id"
-              :disabled="!!addingSource"
-              size="small"
-              color="primary"
-              variant="text"
-              @click="emit('addSource', dataset.id)"
-            >
-              {{ t('addSource') }}
-            </v-btn>
-          </template>
-        </div>
+          v-bind="sourceStatus(dataset)"
+          class="mt-2"
+          @add="emit('addSource', dataset.id)"
+        />
       </v-col>
       <v-col
         v-for="application in fragments.applications"
@@ -79,9 +61,33 @@
         <application-card :application="application" />
       </v-col>
     </v-row>
-    <p v-else>
-      {{ t('noFragments') }}
-    </p>
+    <v-list
+      v-else
+      lines="two"
+    >
+      <!-- the source status stays outside of the item: its button would sit inside the item's link -->
+      <div
+        v-for="dataset in fragments.datasets"
+        :key="dataset.id"
+        class="d-flex align-center flex-wrap"
+      >
+        <dataset-list-item
+          :dataset="dataset"
+          style="flex: 1 1 240px; min-width: 0;"
+        />
+        <fragment-source-status
+          v-if="sources"
+          v-bind="sourceStatus(dataset)"
+          class="flex-shrink-0 mx-2"
+          @add="emit('addSource', dataset.id)"
+        />
+      </div>
+      <application-list-item
+        v-for="application in fragments.applications"
+        :key="application.id"
+        :application="application"
+      />
+    </v-list>
     <v-btn
       v-if="hasMore"
       class="mt-4"
@@ -100,24 +106,19 @@ fr:
   newApplicationFragment: Nouvelle application fragment
   noFragments: Aucun fragment.
   loadMore: Voir plus de fragments
-  isSource: Source du jeu de données
-  notSource: Pas encore une source
-  addSource: Ajouter aux sources
 en:
   newDatasetFragment: New dataset fragment
   newApplicationFragment: New application fragment
   noFragments: No fragment.
   loadMore: Show more fragments
-  isSource: Source of the dataset
-  notSource: Not a source yet
-  addSource: Add to the sources
 </i18n>
 
 <script setup lang="ts">
-import { mdiCheck, mdiPlus } from '@mdi/js'
+import type { ViewMode } from '~/composables/use-view-mode'
+import { mdiPlus } from '@mdi/js'
 import { usePermissions } from '~/composables/use-permissions'
 
-defineProps<{
+const props = defineProps<{
   partOf: { type: 'dataset' | 'application', id: string },
   fragments: { datasets: any[], applications: any[] },
   hasMore?: boolean
@@ -135,4 +136,15 @@ defineProps<{
 const emit = defineEmits<{ loadMore: [], addSource: [id: string] }>()
 const { t } = useI18n()
 const { canContribDep } = usePermissions()
+
+const canCreateDataset = computed(() => canContribDep.value && props.partOf.type === 'dataset')
+const canCreateApplication = computed(() => canContribDep.value && props.partOf.type === 'application' && props.canWriteParentConfig && props.usesApps)
+const viewMode = ref<ViewMode>('grid')
+const hasFragments = computed(() => !!(props.fragments.datasets.length || props.fragments.applications.length))
+const sourceStatus = (dataset: { id: string, status?: string }) => ({
+  isSource: !!props.sources?.includes(dataset.id),
+  canAdd: !!props.canAddSource && dataset.status === 'finalized',
+  adding: props.addingSource === dataset.id,
+  addDisabled: !!props.addingSource
+})
 </script>

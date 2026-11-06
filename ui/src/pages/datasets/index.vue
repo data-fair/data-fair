@@ -176,20 +176,7 @@
 
       <!-- View toggle (below filters) -->
       <div class="d-flex justify-end mx-4 mt-4">
-        <v-btn-toggle
-          v-model="viewMode"
-          density="compact"
-          mandatory
-        >
-          <v-btn
-            value="grid"
-            :icon="mdiViewGrid"
-          />
-          <v-btn
-            value="list"
-            :icon="mdiViewList"
-          />
-        </v-btn-toggle>
+        <view-mode-toggle v-model="viewMode" />
       </div>
     </df-navigation-right>
   </v-container>
@@ -197,7 +184,7 @@
 
 <script setup lang="ts">
 import type { Dataset } from '#api/types'
-import { mdiDatabaseOff, mdiPlusCircle, mdiViewGrid, mdiViewList } from '@mdi/js'
+import { mdiDatabaseOff, mdiPlusCircle } from '@mdi/js'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import dfSearchField from '@data-fair/lib-vuetify/search-field.vue'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
@@ -220,13 +207,7 @@ watch(q, (val) => { if (val !== searchInput.value) searchInput.value = val || ''
 
 const sort = useStringSearchParam('sort', 'createdAt:-1')
 
-// View mode persisted per user
-const viewModeKey = computed(() => {
-  const a = account.value
-  return a ? `${a.type}:${a.id}:datasets:render-mode` : 'df-datasets-view'
-})
-const viewMode = ref(localStorage.getItem(viewModeKey.value) || 'grid')
-watch(viewMode, (v) => { localStorage.setItem(viewModeKey.value, v) })
+const viewMode = useViewMode('datasets')
 
 // Facet filter URL params
 const facetOwner = useStringsArraySearchParam('owner')
