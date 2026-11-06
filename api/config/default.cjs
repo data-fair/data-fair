@@ -249,7 +249,7 @@ module.exports = {
     ignoreRateLimiting: null,
     registry: null, // shared with the registry service; reserved for future server-to-server calls
     portals: null, // shared with the portals service: publication-site writes on behalf of an agent session
-    capture: null, // shared with the capture service: /inspect renders for the agent previews
+    capture: null, // the SECRET_INSPECT of the capture service: /inspect renders for the agent previews
     pseudoSession: null // shared with simple-directory: short-lived GET-only sessions for the agent previews
   },
   locks: {
