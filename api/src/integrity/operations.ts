@@ -68,7 +68,10 @@ export const whoKey = (owner: { type: string, id: string }, datasetId: string, i
 export const EXCLUDED_TOP_LEVEL = new Set([
   'status', 'draft', 'integrity', 'count', 'storage', 'esWarning', 'finalizedAt',
   'dataUpdatedAt', 'dataUpdatedBy', 'updatedAt', 'updatedBy', 'createdBy',
-  'errorStatus', 'errorRetry', 'loaded', 'descendants'
+  'errorStatus', 'errorRetry', 'loaded', 'descendants',
+  // the bin marker: set and unset raw at shelve/restore, operational state (a restore leaves the
+  // covered projection exactly as it was)
+  'shelved'
 ])
 
 export const coveredPatchKeys = (patch: Record<string, any>): string[] =>

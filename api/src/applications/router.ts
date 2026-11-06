@@ -35,6 +35,7 @@ import { downloadFileFromStorage } from '../files-storage/utils.ts'
 import resolvePath from 'resolve-path'
 import filesStorage from '#files-storage'
 import type { Application, Request, RequestWithResource } from '#types'
+import { binActiveFor, shelveApplication } from '../bin/service.ts'
 
 const validateKeys = ajv.compile(applicationKeys)
 
@@ -197,9 +198,14 @@ router.put('/:applicationId/owner', readApplication, permissionMiddleware('delet
 // Delete an application configuration
 router.delete('/:applicationId', readApplication, permissionMiddleware('delete', 'admin'), async (req, res) => {
   const ctx = { sessionState: reqSessionAuthenticated(req) }
-  // fragments first: a failed fragment deletion leaves a still-consistent parent (spec §6)
-  await fragmentsService.deleteFragments(req.app, ctx, 'application', reqApplication(req).id, reqApplication(req).owner)
-  await service.deleteApplication(ctx, reqApplication(req))
+  const application = reqApplication(req)
+  if (await binActiveFor(application.owner)) {
+    await shelveApplication(ctx.sessionState, application)
+  } else {
+    // fragments first: a failed fragment deletion leaves a still-consistent parent (spec §6)
+    await fragmentsService.deleteFragments(null, ctx, 'application', application.id, application.owner)
+    await service.deleteApplication(ctx, application)
+  }
   res.sendStatus(204)
 })
 

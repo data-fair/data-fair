@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks, config, mockAppUrl, waitForWorkerIdle, anonymousAx, apiUrl } from '../../support/axios.ts'
 import {
   sendDataset, patchRawDataset, patchRawApplication, clearDatasetCache, clearPublicationSitesCache,
-  getRawDataset, restCollectionCount, waitForFinalize, waitForDatasetError
+  getRawDataset, restCollectionCount, waitForFinalize, waitForDatasetError, collectNotifications
 } from '../../support/workers.ts'
 import { ensureIntegrityBucket, waitForFlagCleared } from '../../support/integrity.ts'
 
@@ -282,5 +282,129 @@ test.describe('shelved is inert', () => {
     assert.equal(raw._needsHistorizing, undefined)
     assert.ok(raw.integrity.lastRevision)
     assert.ok(raw.shelved)
+  })
+})
+
+test.describe('shelve and restore', () => {
+  test.beforeEach(async () => {
+    await clean()
+  })
+
+  test.afterEach(async ({}, testInfo) => {
+    if (testInfo.status === 'passed') await checkPendingTasks()
+  })
+
+  const enableBin = async () => {
+    await testUser1Org.patch('/api/v1/settings/organization/test_org1', { bin: { active: true } })
+  }
+  // temporary trigger, replaced by the bin router in a later task
+  const restore = async (type: 'datasets' | 'applications', id: string) => {
+    await testUser1Org.post(`/api/v1/test-env/bin-restore/${type}/${id}`)
+  }
+  const withoutUpdatedAt = ({ updatedAt, ...rest }: any) => rest
+
+  test('DELETE shelves a dataset when the org bin is active, restore brings it back intact', async () => {
+    await enableBin()
+    await testUser1Org.post('/api/v1/datasets/bin-shelve', { isRest: true, title: 'bin shelve', schema: [{ key: 'str', type: 'string' }] })
+    await testUser1Org.post('/api/v1/datasets/bin-shelve/_bulk_lines', [{ str: 'a' }, { str: 'b' }])
+    await waitForFinalize(testUser1Org, 'bin-shelve')
+    const before = (await testUser1Org.get('/api/v1/datasets/bin-shelve')).data
+    const linesBefore = (await testUser1Org.get('/api/v1/datasets/bin-shelve/lines')).data.total
+    assert.equal(linesBefore, 2)
+    const limitsBefore = (await testUser1Org.get('/api/v1/limits/organization/test_org1')).data
+    const notifications = await collectNotifications()
+
+    assert.equal((await testUser1Org.delete('/api/v1/datasets/bin-shelve')).status, 204)
+    const raw = await getRawDataset('bin-shelve')
+    assert.equal(raw.shelved.by.id, 'test_user1')
+    assert.ok(raw.shelved.at)
+    assert.equal(raw.shelved.cascade, undefined)
+    await assert.rejects(testUser1Org.get('/api/v1/datasets/bin-shelve'), { status: 404 })
+    await assert.rejects(testUser1Org.get('/api/v1/datasets/bin-shelve/lines'), { status: 404 })
+    const limitsAfter = (await testUser1Org.get('/api/v1/limits/organization/test_org1')).data
+    assert.deepEqual(limitsAfter.nb_datasets, limitsBefore.nb_datasets)
+    const shelveNotif = (await notifications.waitForCount(1)).find((n: any) => n.topic.key === 'data-fair:dataset-delete:bin-shelve')
+    assert.equal(shelveNotif?.title, 'Jeu de données placé dans la corbeille')
+
+    await restore('datasets', 'bin-shelve')
+    assert.equal((await getRawDataset('bin-shelve')).shelved, undefined)
+    const after = (await testUser1Org.get('/api/v1/datasets/bin-shelve')).data
+    assert.deepEqual(withoutUpdatedAt(after), withoutUpdatedAt(before))
+    assert.equal((await testUser1Org.get('/api/v1/datasets/bin-shelve/lines')).data.total, linesBefore)
+    const restoreNotif = (await notifications.getAll()).find((n: any) => n.topic.key === 'data-fair:dataset-restore:bin-shelve')
+    assert.equal(restoreNotif?.title, 'Jeu de données restauré depuis la corbeille')
+  })
+
+  test('DELETE removes the dataset when the bin is off', async () => {
+    const dataset = await sendDataset('datasets/dataset1.csv', testUser1Org)
+    assert.equal((await testUser1Org.delete(`/api/v1/datasets/${dataset.id}`)).status, 204)
+    await assert.rejects(getRawDataset(dataset.id), { status: 404 })
+  })
+
+  test('DELETE removes a user-owned dataset even when the org bin is active', async () => {
+    await enableBin()
+    const testUser1 = await axiosAuth('test_user1@test.com')
+    const dataset = await sendDataset('datasets/dataset1.csv', testUser1)
+    assert.equal(dataset.owner.type, 'user')
+    assert.equal((await testUser1.delete(`/api/v1/datasets/${dataset.id}`)).status, 204)
+    await assert.rejects(getRawDataset(dataset.id), { status: 404 })
+  })
+
+  test('shelving a dataset shelves its fragments, restoring it brings them back', async () => {
+    await enableBin()
+    const parent = (await testUser1Org.post('/api/v1/datasets', { isMetaOnly: true, title: 'bin parent' })).data
+    const fragment = await sendDataset('datasets/dataset1.csv', testUser1Org, {}, { partOf: { type: 'dataset', id: parent.id } })
+    // an independently shelved fragment keeps its own marker and is not restored with the parent
+    const otherFragment = await sendDataset('datasets/dataset1.csv', testUser1Org, {}, { partOf: { type: 'dataset', id: parent.id } })
+    await testUser1Org.delete(`/api/v1/datasets/${otherFragment.id}`)
+    assert.equal((await getRawDataset(otherFragment.id)).shelved.cascade, undefined)
+
+    await testUser1Org.delete(`/api/v1/datasets/${parent.id}`)
+    await assert.rejects(testUser1Org.get(`/api/v1/datasets/${fragment.id}`), { status: 404 })
+    assert.equal((await getRawDataset(fragment.id)).shelved.cascade, true)
+    assert.equal((await getRawDataset(parent.id)).shelved.cascade, undefined)
+
+    await restore('datasets', parent.id)
+    assert.equal((await testUser1Org.get(`/api/v1/datasets/${parent.id}`)).status, 200)
+    assert.equal((await testUser1Org.get(`/api/v1/datasets/${fragment.id}`)).status, 200)
+    assert.equal((await getRawDataset(fragment.id)).shelved, undefined)
+    assert.ok((await getRawDataset(otherFragment.id)).shelved)
+  })
+
+  test('shelve and restore re-finalize the virtual parents of the dataset', async () => {
+    await enableBin()
+    const childA = await sendDataset('datasets/dataset1.csv', testUser1Org)
+    const childB = await sendDataset('datasets/dataset1.csv', testUser1Org)
+    const virtual = (await testUser1Org.post('/api/v1/datasets', { isVirtual: true, virtual: { children: [childA.id, childB.id] }, title: 'bin virtual parent' })).data
+    const finalized = await waitForFinalize(testUser1Org, virtual.id)
+    assert.equal((await testUser1Org.get(`/api/v1/datasets/${virtual.id}/lines`)).data.total, 4)
+
+    await testUser1Org.delete(`/api/v1/datasets/${childA.id}`)
+    const afterShelve = await waitForFinalize(testUser1Org, virtual.id)
+    assert.ok(afterShelve.finalizedAt > finalized.finalizedAt, 'the virtual parent was re-finalized at shelving')
+    assert.equal((await testUser1Org.get(`/api/v1/datasets/${virtual.id}/lines`)).data.total, 2)
+    assert.deepEqual((await getRawDataset(virtual.id)).virtual.children, [childA.id, childB.id])
+
+    await restore('datasets', childA.id)
+    const afterRestore = await waitForFinalize(testUser1Org, virtual.id)
+    assert.ok(afterRestore.finalizedAt > afterShelve.finalizedAt, 'the virtual parent was re-finalized at restore')
+    assert.equal((await testUser1Org.get(`/api/v1/datasets/${virtual.id}/lines`)).data.total, 4)
+  })
+
+  test('an explicit create on a shelved id answers 409, a derived slug gets another one', async () => {
+    await enableBin()
+    await testUser1Org.put('/api/v1/datasets/my-ds', { isRest: true, title: 'my ds', schema: [] })
+    const original = (await testUser1Org.get('/api/v1/datasets/my-ds')).data
+    await testUser1Org.delete('/api/v1/datasets/my-ds')
+    await assert.rejects(testUser1Org.put('/api/v1/datasets/my-ds', { isRest: true, title: 'my ds', schema: [] }), (err: any) => {
+      assert.equal(err.status, 409)
+      assert.ok(err.data.includes('corbeille'), err.data)
+      return true
+    })
+    await assert.rejects(testUser1Org.post('/api/v1/datasets/my-ds', { isRest: true, title: 'my ds', schema: [] }), { status: 409 })
+    const res = await testUser1Org.post('/api/v1/datasets', { isRest: true, title: original.title, schema: [] })
+    assert.equal(res.status, 201)
+    assert.notEqual(res.data.slug, original.slug)
+    assert.notEqual(res.data.id, 'my-ds')
   })
 })

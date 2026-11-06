@@ -7,7 +7,7 @@ import debugModule from 'debug'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import log from '@data-fair/lib-node/log.js'
 import { resourceLogFields } from '../../misc/utils/log-fields.ts'
-import { session, reqSession, reqSessionAuthenticated } from '@data-fair/lib-express'
+import { reqSession, reqSessionAuthenticated } from '@data-fair/lib-express'
 import config from '#config'
 import mongo from '#mongo'
 import { readDataset, reqDataset, reqDatasetFull, lockDataset, assertWriteBodyPermissions } from '../middlewares.ts'
@@ -30,7 +30,8 @@ import * as limits from '../../limits/service.ts'
 import { syncDataset as syncRemoteService } from '../../remote-services/service.ts'
 import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
 import { reqPublicationSite } from '../../misc/utils/publication-sites.ts'
-import { findDatasets, applyPatch, deleteDataset, changeDatasetOwner } from '../service.ts'
+import { findDatasets, applyPatch, deleteDatasetAndFragments, changeDatasetOwner } from '../service.ts'
+import { binActiveFor, shelveDataset } from '../../bin/service.ts'
 import { hasAttachmentField } from '../../integrity/service.ts'
 import { whoFromReq } from '../../integrity/who.ts'
 import * as fragmentsService from '../../fragments/service.ts'
@@ -345,28 +346,12 @@ export const registerMetadataRoutes = (router: Router) => {
   router.delete('/:datasetId', readDataset({ acceptedStatuses: ['*'], alwaysDraft: true }), apiKeyMiddlewareAdmin, rateLimiting.middleware, permissions.middleware('delete', 'admin'), async (req, res) => {
     const dataset: any = reqDataset(req)
     const datasetFull: any = reqDatasetFull(req)
-
-    // fragments first: a failed fragment deletion leaves a still-consistent parent (spec §6)
-    await fragmentsService.deleteFragments(req.app, { sessionState: reqSessionAuthenticated(req) }, 'dataset', dataset.id, dataset.owner)
-
-    await deleteDataset(req.app, dataset)
-    if (dataset.draftReason && datasetFull.status !== 'draft') {
-      await deleteDataset(req.app, datasetFull)
+    const sessionState = reqSessionAuthenticated(req)
+    if (await binActiveFor(dataset.owner)) {
+      await shelveDataset(sessionState, dataset, datasetFull)
+    } else {
+      await deleteDatasetAndFragments({ sessionState }, dataset, datasetFull)
     }
-
-    log.info(`dataset deleted ${dataset.slug} (${dataset.id})`, { code: 'df.datasets.delete', ...resourceLogFields('datasets', dataset) })
-    const sessionState = await session.req(req)
-    await notifications.send({
-      title: 'Jeu de données supprimé',
-      body: `${dataset.title} (${dataset.slug})`,
-      topic: {
-        key: `data-fair:dataset-delete:${dataset.id}`
-      },
-      sender: dataset.owner
-    }, sessionState)
-
-    await syncRemoteService({ ...datasetFull, masterData: null })
-    await updateTotalStorage(datasetFull.owner)
     res.sendStatus(204)
   })
 }

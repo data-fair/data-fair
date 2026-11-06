@@ -252,6 +252,20 @@ router.delete('/rate-limiting', (req, res) => {
   res.json({ ok: true })
 })
 
+// Restore from the bin (temporary trigger until the bin router exists)
+router.post('/bin-restore/:type/:id', async (req, res, next) => {
+  try {
+    const { reqSessionAuthenticated } = await import('@data-fair/lib-express')
+    const { restore } = await import('../../bin/service.ts')
+    const type = req.params.type
+    if (type !== 'datasets' && type !== 'applications') return res.status(400).send()
+    await restore(reqSessionAuthenticated(req), type, req.params.id)
+    res.status(204).send()
+  } catch (err) {
+    next(err)
+  }
+})
+
 // Clear memoized publication site settings cache
 router.delete('/publication-sites-cache', (req, res) => {
   memoizedGetPublicationSiteSettings.clear()

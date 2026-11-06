@@ -461,6 +461,13 @@ fragment) after all fragment datasets are gone. This is deliberately noted in a 
 site: **do not remove it as apparent dead weight on the dataset path** — doing so would silently
 leave the owner's cached storage total stale whenever fragments are deleted through an application.
 
+**Bin cascade.** When the owner organization's bin is active, `DELETE` shelves instead
+(`api/src/bin/service.ts`, `shelveDataset` / `shelveApplication`): the parent gets a `shelved`
+marker and each of its live owned fragments the same marker with `cascade: true`. A fragment
+already shelved on its own keeps its marker. `restore` unsets the marker on the parent and on the
+fragments with `cascade` only; `purgeItem` runs the full delete cascade above
+(`deleteDatasetAndFragments`, or `deleteFragments` + `deleteApplication`) without notifications.
+
 **Owner change cascade.** `PUT /:id/owner` on a fragment itself is refused (403, "détachez-le
 d'abord"); on a parent it moves every fragment along, so the same-owner invariant (§1) holds after the
 transfer as it did before. Both owner-change routes (`datasets/routes/metadata.ts`,

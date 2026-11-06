@@ -16,7 +16,7 @@ import { validateDraftAlias, deleteIndex, updateDatasetMapping } from './es/mana
 import * as webhooks from '../misc/utils/webhooks.ts'
 import { send as sendNotification, sendResourceEvent, propagateDataUpdatedToVirtualParents } from '../misc/utils/notifications.ts'
 import catalogsPublicationQueue from '../misc/utils/catalogs-publication-queue.ts'
-import { updateStorage } from './utils/storage.ts'
+import { updateStorage, updateTotalStorage } from './utils/storage.ts'
 import { dir, filePath, fullFilePath, originalFilePath, attachmentsDir, metadataAttachmentsDir, cancelledDraftDiagnosticFilePath } from './utils/files.ts'
 import { fixConcepts, getSchemaBreakingChanges, checkSchemaKeys } from './utils/data-schema.ts'
 import { checkConstraints, dateCoherenceProps, dateCoherenceViolation } from './utils/constraints.ts'
@@ -485,6 +485,37 @@ export const deleteDataset = async (app: any, dataset: any) => {
       await updateStorage(dataset, { deleted: true })
     }
   }
+}
+
+/**
+ * The full deletion of a dataset (the DELETE route without bin, and the bin purge): its fragments
+ * first (a failed fragment deletion leaves a still-consistent parent), the dataset itself (and
+ * its draft), the remote service sync and the owner's storage totals.
+ * `dataset` may be a draft view, `datasetFull` is the stored document. The purge runs without a
+ * session and with `notify: false` (the deletion was notified at shelving time).
+ */
+export const deleteDatasetAndFragments = async (ctx: { sessionState?: SessionStateAuthenticated }, dataset: any, datasetFull: any, opts: { notify?: boolean } = {}) => {
+  await fragmentsService.deleteFragments(null, ctx, 'dataset', dataset.id, dataset.owner, opts)
+
+  await deleteDataset(null, dataset)
+  if (dataset.draftReason && datasetFull.status !== 'draft') {
+    await deleteDataset(null, datasetFull)
+  }
+
+  log.info(`dataset deleted ${dataset.slug} (${dataset.id})`, { code: 'df.datasets.delete', ...resourceLogFields('datasets', dataset) })
+  if (opts.notify !== false) {
+    await sendNotification({
+      title: 'Jeu de données supprimé',
+      body: `${dataset.title} (${dataset.slug})`,
+      topic: {
+        key: `data-fair:dataset-delete:${dataset.id}`
+      },
+      sender: dataset.owner
+    }, ctx.sessionState)
+  }
+
+  await syncRemoteService({ ...datasetFull, masterData: null })
+  await updateTotalStorage(datasetFull.owner)
 }
 
 /**

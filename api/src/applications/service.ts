@@ -418,7 +418,8 @@ export const changeApplicationOwner = async (ctx: ApplicationWriteContext, appli
   return patchedApp! as Application
 }
 
-export const deleteApplication = async (ctx: ApplicationWriteContext, application: Application) => {
+/** The purge (bin) runs without a session and without the deletion notification, sent at shelving time. */
+export const deleteApplication = async (ctx: { sessionState?: SessionStateAuthenticated }, application: Application, opts: { notify?: boolean } = {}) => {
   const db = mongo.db
   await db.collection('applications').deleteOne({ id: application.id })
   await db.collection('journals').deleteOne({ type: 'application', id: application.id })
@@ -437,15 +438,16 @@ export const deleteApplication = async (ctx: ApplicationWriteContext, applicatio
 
   log.info(`deleted application ${application.slug} (${application.id})`, { code: 'df.applications.delete', ...resourceLogFields('applications', application) })
 
-  const sessionState = ctx.sessionState
-  await notifications.send({
-    title: "Suppression d'une application",
-    body: `${application.title} (${application.slug})`,
-    topic: {
-      key: `data-fair:application-delete:${application.id}`
-    },
-    sender: application.owner
-  }, sessionState)
+  if (opts.notify !== false) {
+    await notifications.send({
+      title: "Suppression d'une application",
+      body: `${application.title} (${application.slug})`,
+      topic: {
+        key: `data-fair:application-delete:${application.id}`
+      },
+      sender: application.owner
+    }, ctx.sessionState)
+  }
 
   await syncDatasets(application)
 }

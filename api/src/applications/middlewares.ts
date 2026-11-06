@@ -17,6 +17,7 @@ import * as service from './service.ts'
 import { matchApplicationKey } from './proxy-service.ts'
 import { clean } from './utils.ts'
 import type { Application, BaseApp } from '#types'
+import { findShelvedRef } from '../bin/service.ts'
 
 // The global `/app-sw.js` route reads the application optionally (no middleware sets it there → undefined,
 // service-worker served for the whole site); all other readers use reqApplication (throws).
@@ -129,6 +130,8 @@ export const attemptInsert: RequestHandler = async (req, res, next) => {
   // direct) permission on the existing sub-resource. It is an optimization, not a TOCTOU-safe guard on its
   // own — tryInsertApplication's duplicate-key handling right below remains the actual source of truth.
   const alreadyExists = await mongo.applications.countDocuments({ id: req.params.applicationId }, { limit: 1 }) > 0
+  // the id or slug of a resource in the bin stays taken: an explicit create must not fall through to a 404
+  if (await findShelvedRef('applications', newApplication.owner, req.params.applicationId)) throw httpError(409, req.__('errors.shelvedRef'))
 
   // Try insertion if the user is authorized, in case of conflict go on with the update scenario
   if (!alreadyExists && permissions.canDoForOwner(newApplication.owner, 'applications', 'post', ctx.sessionState)) {

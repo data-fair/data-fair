@@ -208,7 +208,7 @@ export const changeFragmentsOwner = async (ctx: { sessionState: SessionStateAuth
  * Delete every fragment of a parent through the full service deletes (journal, index, files, keys).
  * Dynamic imports: datasets/service and applications/service both import this module.
  */
-export const deleteFragments = async (app: any, ctx: { sessionState: SessionStateAuthenticated }, parentType: PartOf['type'], parentId: string, parentOwner: OwnerLike) => {
+export const deleteFragments = async (app: any, ctx: { sessionState?: SessionStateAuthenticated }, parentType: PartOf['type'], parentId: string, parentOwner: OwnerLike, opts: { notify?: boolean } = {}) => {
   const { datasets, applications } = await findFragments(parentType, parentId, parentOwner)
   if (datasets.length) {
     const { deleteDataset, mergeDraft } = await import('../datasets/service.ts')
@@ -235,6 +235,6 @@ export const deleteFragments = async (app: any, ctx: { sessionState: SessionStat
   }
   if (applications.length) {
     const { deleteApplication } = await import('../applications/service.ts')
-    for (const application of applications) await deleteApplication(ctx, application as any)
+    for (const application of applications) await deleteApplication(ctx, application as any, opts)
   }
 }

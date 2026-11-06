@@ -26,6 +26,7 @@ import * as publicationSites from '../../misc/utils/publication-sites.ts'
 import { emit as workerPing } from '../../workers/ping.ts'
 import { syncDataset as syncRemoteService } from '../../remote-services/service.ts'
 import { createDataset, applyPatch, cancelDraft, deleteDataset } from '../service.ts'
+import { findShelvedRef } from '../../bin/service.ts'
 import { whoFromReq } from '../../integrity/who.ts'
 import { assertFragmentWriteBody } from '../../fragments/middlewares.ts'
 import { preparePatch } from '../utils/patch.ts'
@@ -84,6 +85,8 @@ const createDatasetRoute = async (req: DfRequest, res: Response) => {
         throw httpError(400, req.__('errors.urlFriendly', { value: datasetId, slug: slug(datasetId, { lower: true, strict: true }) }))
       }
       (body as any).id = datasetId
+      // the id or slug of a resource in the bin stays taken: an explicit create must not silently get another one
+      if (await findShelvedRef('datasets', owner, datasetId)) throw httpError(409, req.__('errors.shelvedRef'))
     }
 
     const onClose = (callback: () => void) => res.on('close', callback)
