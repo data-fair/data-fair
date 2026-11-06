@@ -453,6 +453,49 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           }
         }
       },
+      '/applications/{id}/preview': {
+        parameters: [applicationIdParam],
+        get: {
+          summary: 'Prévisualiser une application',
+          description: "Afficher l'application comme le ferait l'utilisateur authentifié et retourner une capture d'écran avec un rapport du rendu (erreurs, appels en échec, délai dépassé). Les paramètres `app_*` ouvrent l'application dans un état précis, comme pour la capture.",
+          operationId: 'previewApplication',
+          'x-agent': xAgent.previewApplication,
+          'x-permissionClass': 'read',
+          tags: ['Applications'],
+          parameters: [
+            utils.booleanParam('draft', 'Ouvrir le brouillon de la configuration', 'Ouvrir la version brouillon de la configuration de l\'application (`false` par défaut).'),
+            { in: 'query', name: 'viewport', description: "Taille de l'écran simulé.", required: false, schema: { type: 'string', enum: ['desktop', 'mobile'], default: 'desktop' } },
+            utils.booleanParam('fullPage', 'Capturer toute la hauteur de la page', 'Capturer toute la hauteur de la page plutôt que le seul écran visible (`false` par défaut).')
+          ],
+          responses: {
+            200: {
+              description: 'Capture d\'écran et rapport du rendu.',
+              content: {
+                'application/json': {
+                  schema: {
+                    type: 'object',
+                    required: ['image', 'text', 'report'],
+                    properties: {
+                      image: {
+                        type: 'object',
+                        required: ['data', 'mediaType'],
+                        properties: {
+                          data: { type: 'string', description: 'Image en base64.' },
+                          mediaType: { type: 'string', description: "Type de l'image, par exemple image/png." }
+                        }
+                      },
+                      text: { type: 'string', description: 'Rapport lisible : page, erreurs de la console, requêtes en échec et arbre d\'accessibilité.' },
+                      report: { type: 'object', description: 'Rapport structuré du rendu (url, finalUrl, verdict…).', additionalProperties: true }
+                    }
+                  }
+                }
+              }
+            },
+            ...readErrorResponses,
+            429: { description: 'Trop de prévisualisations demandées, réessayer plus tard.', content: { 'text/plain': { schema: { type: 'string' } } } }
+          }
+        }
+      },
       '/applications/{id}': {
         parameters: [applicationIdParam],
         get: {

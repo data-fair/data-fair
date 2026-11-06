@@ -346,7 +346,9 @@
         "sendMails": { "type": ["string", "null"] },
         "ignoreRateLimiting": { "type": ["string", "null"] },
         "registry": { "type": ["string", "null"] },
-        "portals": { "type": ["string", "null"] }
+        "portals": { "type": ["string", "null"] },
+        "capture": { "type": ["string", "null"] },
+        "pseudoSession": { "type": ["string", "null"] }
       }
     },
     "locks": {
@@ -563,7 +565,8 @@
             "user": { "$ref": "#/$defs/apiRateLimit" },
             "remoteService": { "$ref": "#/$defs/apiRateLimit" },
             "postApplicationKey": { "$ref": "#/$defs/rateLimitSimple" },
-            "appCaptures": { "$ref": "#/$defs/rateLimitSimple" }
+            "appCaptures": { "$ref": "#/$defs/rateLimitSimple" },
+            "appPreviews": { "$ref": "#/$defs/rateLimitSimple" }
           }
         },
         "hideBrand": { "type": "number" },

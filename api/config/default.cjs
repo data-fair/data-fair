@@ -214,6 +214,11 @@ module.exports = {
       appCaptures: {
         duration: 60,
         nb: 5
+      },
+      // agent previews (capture inspect renders), expensive
+      appPreviews: {
+        duration: 600,
+        nb: 30
       }
     },
     hideBrand: 0,
@@ -243,7 +248,9 @@ module.exports = {
     sendMails: null,
     ignoreRateLimiting: null,
     registry: null, // shared with the registry service; reserved for future server-to-server calls
-    portals: null // shared with the portals service: publication-site writes on behalf of an agent session
+    portals: null, // shared with the portals service: publication-site writes on behalf of an agent session
+    capture: null, // shared with the capture service: /inspect renders for the agent previews
+    pseudoSession: null // shared with simple-directory: short-lived GET-only sessions for the agent previews
   },
   locks: {
     // in seconds

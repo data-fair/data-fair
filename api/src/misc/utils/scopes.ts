@@ -24,7 +24,7 @@ export const vocabulary = defineScopes({
     tiers: ['read', 'write', 'admin'],
     descriptions: {
       umbrella: { fr: 'Tous les droits sur les applications', en: 'All application scopes' },
-      read: { fr: 'Lire les applications, leur configuration, leur journal ; les applications qui référencent des jeux de données demandent aussi datasets:read', en: 'Read applications, their configuration and journal; applications referencing datasets also need datasets:read' },
+      read: { fr: 'Lire les applications, leur configuration, leur journal ; les applications qui référencent des jeux de données demandent aussi datasets:read, sauf pour preview_application, qui les affiche avec les permissions du rôle', en: 'Read applications, their configuration and journal; applications referencing datasets also need datasets:read, except in preview_application, which renders them with the role\'s permissions' },
       write: { fr: 'Modifier les applications et leur configuration, en créer', en: 'Edit applications and their configuration, create applications' },
       admin: { fr: 'Administrer les applications : suppression, permissions, publication', en: 'Administer applications: deletion, permissions, publication' }
     }

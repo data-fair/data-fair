@@ -45,6 +45,7 @@ services:
       - SECRET_SITES=secret-sites
       - SECRET_EVENTS=secret-events
       - SECRET_SENDMAILS=secret-sendmails
+      - SECRET_PSEUDO_SESSION=secret-pseudo-session
       - PRIVATE_EVENTS_URL=http://localhost:${EVENTS_PORT}
       # data-fair's tests: publication sites on unknown hosts, listing and roles of members, org creation
       - ACCEPT_UNKNOWN_SITE=true
@@ -211,13 +212,14 @@ services:
   capture:
     profiles:
       - capture
-    image: ghcr.io/data-fair/capture:master
+    image: ${CAPTURE_IMAGE:-ghcr.io/data-fair/capture:master}
     network_mode: host
     shm_size: '1gb'
     environment:
       - PORT=${CAPTURE_PORT}
       - PUBLIC_URL=http://${DEV_HOST}:${NGINX_PORT}/capture
-      - ONLY_SAME_HOST=false
+      - ONLY_SAME_HOST=true
+      - SECRET_CAPTURE=secret-capture
       - OBSERVER_ACTIVE=false
       - PUPPETEER_ARGS=["--no-sandbox"]
 

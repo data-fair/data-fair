@@ -324,6 +324,14 @@ export const operations = {
       bodyFields: applicationPatchFields.manage
     }
   ],
+  previewApplication: {
+    name: 'preview_application',
+    title: { fr: 'Prévisualiser une application', en: 'Preview an application' },
+    description: 'Render the application as a visitor would and return a screenshot with a report of what happened: errors, failed API calls, timeout. Call it after datafair_update_application to check the result. The text gives the page URL and title, the errors the application declared about its own configuration ("Declared errors", the most direct diagnosis), console errors, failed requests and the accessibility snapshot of the page in Playwright\'s YAML format. Read it first: an error there explains an empty or broken picture. Use this tool, not fetch_url, for this platform\'s applications: fetch_url runs no JavaScript and has no session. The render reads the datasets the application uses with your account\'s permissions, so their content in the result is expected. Do not use this tool to read data your scopes do not otherwise grant.',
+    annotations: { readOnlyHint: true, openWorldHint: true },
+    params: { id: applicationId },
+    response: { image: '/image', text: '/text' }
+  },
   deleteApplication: {
     name: 'delete_application',
     title: { fr: 'Supprimer une application', en: 'Delete an application' },

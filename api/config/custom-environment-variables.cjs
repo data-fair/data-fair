@@ -188,7 +188,9 @@ module.exports = {
     sendMails: 'SECRET_SENDMAILS',
     ignoreRateLimiting: 'SECRET_IGNORE_RATE_LIMITING',
     registry: 'SECRET_REGISTRY',
-    portals: 'SECRET_PORTALS'
+    portals: 'SECRET_PORTALS',
+    capture: 'SECRET_CAPTURE',
+    pseudoSession: 'SECRET_PSEUDO_SESSION'
   },
   brand: {
     logo: 'BRAND_LOGO',
