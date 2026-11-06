@@ -252,7 +252,7 @@
       <df-section-tabs
         v-if="sections.features"
         id="features"
-        :inert="featuresEdit.save.loading.value"
+        :inert="featuresEdit.save.loading.value || binDisableConfirm?.loading"
         :svg="compatSvg"
         svg-no-margin
         :title="sections.features.title"
@@ -273,8 +273,8 @@
             class="ml-2"
             color="accent"
             variant="flat"
-            :loading="featuresEdit.save.loading.value"
-            @click="featuresEdit.save.execute()"
+            :loading="featuresEdit.save.loading.value || binDisableConfirm?.loading"
+            @click="binDisableConfirm?.save(featuresEdit)"
           >
             {{ t('save') }}
           </v-btn>
@@ -294,6 +294,32 @@
                 v-model="settings.agentChatAudience"
                 :departments="departments.filter(d => d.id !== '__root')"
                 :roles="accountDetailsFetch.data.value?.roles ?? []"
+              />
+            </template>
+            <template v-if="showBin">
+              <h3 class="text-title-medium">
+                {{ t('binTitle') }}
+              </h3>
+              <p class="text-body-medium">
+                {{ t('binSubtitle') }}
+              </p>
+              <v-checkbox
+                :model-value="!!settings.bin?.active"
+                :label="t('binToggle')"
+                hide-details
+                @update:model-value="value => setBin({ active: !!value })"
+              />
+              <v-number-input
+                v-if="settings.bin?.active"
+                :model-value="settings.bin?.retentionDays ?? 30"
+                :label="t('binRetentionDays')"
+                :min="1"
+                control-variant="stacked"
+                variant="outlined"
+                density="compact"
+                class="mt-2"
+                max-width="300"
+                @update:model-value="value => { if (value && value >= 1) setBin({ retentionDays: Math.round(value) }) }"
               />
             </template>
             <template v-if="showCompat">
@@ -341,6 +367,12 @@
       :previous="settingsEditFetch.serverData.value"
       :current="settings"
     />
+    <!-- disabling the bin purges it at once, the save asks for confirmation first -->
+    <settings-bin-disable-confirm
+      ref="bin-disable-confirm"
+      :previous="settingsEditFetch.serverData.value"
+      :current="settings"
+    />
   </v-container>
 </template>
 
@@ -365,6 +397,10 @@ fr:
   compatTitle: Gestion des compatibilités
   compatSubtitle: Compatibilité des APIs avec d'autres services. Peut être utile en période de transition.
   compatODS: Activer la compatibilité ODS
+  binTitle: Corbeille
+  binSubtitle: Les jeux de données et applications supprimés sont conservés dans la corbeille pendant la durée choisie, un administrateur peut les restaurer.
+  binToggle: Activer la corbeille
+  binRetentionDays: Durée de conservation (jours)
   sections:
     info:
       title: Informations de contact
@@ -410,6 +446,10 @@ en:
   compatTitle: Compatibility management
   compatSubtitle: API compatibility with other services. Can be useful during transition periods.
   compatODS: Enable ODS compatibility
+  binTitle: Bin
+  binSubtitle: Deleted datasets and applications are kept in the bin for the chosen duration, an admin can restore them.
+  binToggle: Enable the bin
+  binRetentionDays: Retention (days)
   sections:
     info:
       title: Contact information
@@ -443,6 +483,8 @@ import { mdiBookOpenVariant, mdiCancel, mdiCertificate, mdiFileDocumentEdit, mdi
 import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import ConfirmMenu from '~/components/confirm-menu.vue'
+import equal from 'fast-deep-equal'
+import { useBinSettings } from '~/composables/use-bin-settings'
 import qualitySvg from '~/assets/svg/Quality Check_Monochromatic.svg?raw'
 import securitySvg from '~/assets/svg/Security_Two Color.svg?raw'
 import uiSvg from '~/assets/svg/User Interface _Two Color.svg?raw'
@@ -513,7 +555,7 @@ const catalogEdit = settingsEditFetch.createSubEdit(
   { success: t('saved') }
 )
 const portalsEdit = settingsEditFetch.createSubEdit(['publicationSites'], { success: t('saved') })
-const featuresEdit = settingsEditFetch.createSubEdit(['agentChat', 'agentChatAudience', 'compatODS'], { success: t('saved') })
+const featuresEdit = settingsEditFetch.createSubEdit(['agentChat', 'agentChatAudience', 'compatODS', 'bin'], { success: t('saved') })
 
 const webhooksEdit = settingsEditFetch.createSubEdit(['webhooks'], { success: t('saved') })
 
@@ -528,6 +570,7 @@ useLeaveGuard(anyDirty, { locale })
 const catalogTab = ref('topics')
 const integrationsTab = ref('apiKeys')
 const saveConfirm = useTemplateRef('save-confirm')
+const binDisableConfirm = useTemplateRef('bin-disable-confirm')
 
 // Validation state from child components
 const infoValid = ref(true)
@@ -549,6 +592,19 @@ function tabColor (hasDiff: boolean, valid: boolean): string | undefined {
 
 // agentChat and compatODS are activated at the organization level only, departments inherit them
 const showAgentChat = computed(() => !settingsAccount.value.department && !!$uiConfig.agentsIntegration)
+// the bin too, and only for organizations
+const showBin = computed(() => !settingsAccount.value.department && settingsAccount.value.type === 'organization')
+function setBin (patch: { active?: boolean, retentionDays?: number }) {
+  const bin = { ...settings.value!.bin, ...patch }
+  // back to the server state when nothing was ever set, the switch left untouched
+  if (!settingsEditFetch.serverData.value?.bin && !bin.active && bin.retentionDays === undefined) delete settings.value!.bin
+  else settings.value!.bin = bin
+}
+// the navigation and the delete dialogs read the bin setting, refreshed once saved
+const binSettings = useBinSettings()
+watch(() => settingsEditFetch.serverData.value?.bin, (bin, oldBin) => {
+  if (!settingsAccount.value.department && !equal(bin, oldBin)) binSettings.refresh()
+})
 const showCompat = computed(() => !settingsAccount.value.department && !!$uiConfig.compatODS && !!session.user.value.adminMode)
 
 const sections = computed(() => {
@@ -575,7 +631,7 @@ const sections = computed(() => {
   if (!$uiConfig.disablePublicationSites) {
     result.publicationSites = { title: t('sections.publicationSites.title') }
   }
-  if (showAgentChat.value || showCompat.value) {
+  if (showAgentChat.value || showCompat.value || showBin.value) {
     result.features = { title: t('sections.features.title') }
   }
   return result

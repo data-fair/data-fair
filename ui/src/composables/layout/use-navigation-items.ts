@@ -1,6 +1,7 @@
 import { computed, type ComputedRef, type Ref } from 'vue'
 import { type ComposerTranslation } from 'vue-i18n'
 import { usePermissions } from '~/composables/use-permissions'
+import { useBinSettings, type BinSettings } from '~/composables/use-bin-settings'
 import { $uiConfig, $sdUrl } from '~/context'
 import {
   mdiDatabase,
@@ -26,6 +27,7 @@ import {
   mdiMonitorDashboard,
   mdiRobotOutline,
   mdiShieldAccountOutline,
+  mdiTrashCanOutline,
 } from '@mdi/js'
 
 export interface NavItem {
@@ -42,8 +44,9 @@ export interface NavGroup {
   items: NavItem[]
 }
 
-export function useNavigationItems (options: { t: ComposerTranslation, locale: Ref<string> }): { navigationGroups: ComputedRef<NavGroup[]> } {
+export function useNavigationItems (options: { t: ComposerTranslation, locale: Ref<string>, binSettings?: BinSettings }): { navigationGroups: ComputedRef<NavGroup[]> } {
   const { t, locale } = options
+  const binSettings = options.binSettings ?? useBinSettings()
   const { site, account, user, organization } = useSession()
   const { canContrib, canAdmin, canContribDep, canAdminDep } = usePermissions()
 
@@ -101,6 +104,9 @@ export function useNavigationItems (options: { t: ComposerTranslation, locale: R
     }
     if (canAdminDep.value) {
       management.push({ to: '/settings', icon: mdiCog, title: t('params') })
+    }
+    if (binSettings.active.value && canAdminDep.value && account.value?.type === 'organization') {
+      management.push({ to: '/bin', icon: mdiTrashCanOutline, title: t('bin') })
     }
     if (canAdminDep.value && $uiConfig.portalsIntegration) {
       management.push({ to: '/portals', icon: mdiMonitorDashboard, title: t('portals') })

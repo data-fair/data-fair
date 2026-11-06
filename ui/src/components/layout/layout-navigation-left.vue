@@ -126,6 +126,7 @@ fr:
   dep: Gestion du département
   accessAudit: Audit des accès
   params: Paramètres
+  bin: Corbeille
   catalogs: Catalogues distants
   processings: Traitements périodiques
   agents: Agents
@@ -164,6 +165,7 @@ en:
   dep: Manage department
   accessAudit: Access audit
   params: Parameters
+  bin: Bin
   catalogs: Remote catalogs
   processings: Periodic processings
   agents: Agents

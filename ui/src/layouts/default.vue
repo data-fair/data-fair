@@ -65,6 +65,7 @@ import { useAgentApplicationTools } from '~/composables/application/agent-tools'
 import { useAgentConnectorTools } from '~/composables/agent/connector-tools'
 import { useAgentDataQualityTools } from '~/composables/dataset/agent-data-quality-tools'
 import { provideShowAgentChat } from '~/composables/agent/use-show-chat'
+import { provideBinSettings } from '~/composables/use-bin-settings'
 import { useAgentState } from '@data-fair/lib-vue-agents'
 import { buildLocationState } from '~/composables/agent/host-state'
 import { toAbsoluteUrl } from '~/composables/agent/url-utils'
@@ -79,7 +80,9 @@ const breadcrumbs = provideBreadcrumbs()
 const route = useRoute()
 const router = useRouter()
 const { t, locale } = useI18n()
-const { navigationGroups } = useNavigationItems({ t, locale })
+// provided here, read through options: inject does not see what the same component provides
+const binSettings = provideBinSettings(session)
+const { navigationGroups } = useNavigationItems({ t, locale, binSettings })
 
 const showAgentChat = provideShowAgentChat(session)
 

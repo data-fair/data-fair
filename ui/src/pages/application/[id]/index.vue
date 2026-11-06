@@ -409,7 +409,7 @@
               {{ t('deleteApp') }}
             </div>
             <div class="text-body-medium text-medium-emphasis">
-              {{ t('deleteAppDesc') }}
+              {{ binShelves ? t('deleteAppBinDesc', { n: binSettings.retentionDays.value }) : t('deleteAppDesc') }}
             </div>
             <template #append>
               <v-btn
@@ -453,7 +453,18 @@
         :loading="confirmRemove.loading.value ? 'warning' : undefined"
       >
         <v-card-text>
-          {{ t('deleteMsg', { title: application?.title }) }}
+          <template v-if="binShelves">
+            <p>{{ t('deleteBinMsg', { title: application?.title }) }}</p>
+            <p class="mt-2">
+              {{ t('deleteBinInaccessible') }}
+            </p>
+            <p class="mt-2">
+              {{ t('deleteBinRestore', { n: binSettings.retentionDays.value }) }}
+            </p>
+          </template>
+          <template v-else>
+            {{ t('deleteMsg', { title: application?.title }) }}
+          </template>
           <v-alert
             v-if="nbFragments"
             type="warning"
@@ -549,6 +560,10 @@ fr:
   deleteApp: Supprimer l'application
   deleteAppSuccess: L'application a bien été supprimée.
   deleteAppDesc: La suppression est définitive et la configuration ne pourra pas être récupérée.
+  deleteAppBinDesc: L'application sera placée dans la corbeille, un administrateur pourra la restaurer pendant {n} jours.
+  deleteBinMsg: Voulez-vous vraiment supprimer l'application "{title}" ?
+  deleteBinInaccessible: L'application sera placée dans la corbeille et deviendra immédiatement inaccessible (portails, intégrations, pages de visualisation).
+  deleteBinRestore: Un administrateur pourra la restaurer pendant {n} jours, après quoi elle sera définitivement supprimée.
   deleteMsg: Voulez-vous vraiment supprimer l'application "{title}" ? La suppression est définitive et la configuration de l'application ne pourra pas être récupérée.
   yes: Oui
   no: Non
@@ -601,6 +616,10 @@ en:
   deleteApp: Delete application
   deleteAppSuccess: Application was deleted successfully.
   deleteAppDesc: Deletion is permanent and configuration cannot be recovered.
+  deleteAppBinDesc: The application will be moved to the bin, an admin will be able to restore it for {n} days.
+  deleteBinMsg: Do you really want to delete the application "{title}"?
+  deleteBinInaccessible: The application will be moved to the bin and will immediately become inaccessible (portals, embeds, visualization pages).
+  deleteBinRestore: An admin will be able to restore it for {n} days, after which it will be permanently deleted.
   deleteMsg: Do you really want to delete the application "{title}"? Deletion is permanent and the application configuration cannot be recovered.
   yes: Yes
   no: No
@@ -621,6 +640,7 @@ import securitySvg from '~/assets/svg/Security_Two Color.svg?raw'
 import { useApplicationVersions } from '~/composables/application/versions'
 import { useApplicationWatch } from '~/composables/application/watch'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
+import { useBinSettings } from '~/composables/use-bin-settings'
 import { useAgentApplicationMetadataTools } from '~/composables/application/agent-metadata-tools'
 import { useAgentApplicationPageGuidance } from '~/composables/application/agent-page-guidance-tools'
 import { $uiConfig, $apiPath } from '~/context'
@@ -687,6 +707,11 @@ const cancelMetadata = () => {
 const showUpgradeDialog = ref(false)
 const showOwnerDialog = ref(false)
 const showDeleteDialog = ref(false)
+
+// with the bin of the owner organization active, a deletion shelves the application
+const session = useSession()
+const binSettings = useBinSettings()
+const binShelves = computed(() => binSettings.active.value && application.value?.owner.type === 'organization' && application.value.owner.id === session.account.value?.id)
 const upgrading = ref(false)
 
 // Fetch additional data once application is loaded

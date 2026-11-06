@@ -101,3 +101,14 @@ yet expired, and one failing item is logged (`bin-purge-item`) without blocking 
 - `GET /api/v1/settings/:type/:id/bin`: `{ active, retentionDays }`, readable by any member of the
   owner so the UI can adapt its delete wording.
 - No `allowAnyScope`: a scoped (NHI) session is refused on the bin routes, as on settings writes.
+
+## 8. UI
+
+- `ui/src/composables/use-bin-settings.ts`: the bin setting of the active organization (`GET
+  /settings/:type/:id/bin`), provided by the default layout and refreshed by the settings page
+  after a save. It drives the "Corbeille" navigation entry (org and department admins) and the
+  delete dialogs wording (dataset and application pages).
+- `ui/src/pages/bin.vue`: the listing, restore and permanent delete.
+- Settings page, "Fonctionnalités" section (organization root only): the switch and the
+  retention; disabling a non-empty bin asks for confirmation with its item count
+  (`settings-bin-disable-confirm.vue`).

@@ -543,7 +543,7 @@
                 {{ t('deleteDataset') }}
               </div>
               <div class="text-body-medium text-medium-emphasis">
-                {{ t('deleteDatasetDesc') }}
+                {{ binShelves ? t('deleteDatasetBinDesc', { n: binSettings.retentionDays.value }) : t('deleteDatasetDesc') }}
               </div>
             </div>
             <template #append>
@@ -588,7 +588,24 @@
         :loading="confirmRemove.loading.value ? 'warning' : undefined"
       >
         <v-card-text class="pb-0">
-          {{ t('deleteMsg', { title: dataset?.title }) }}
+          <template v-if="binShelves">
+            <p>{{ t('deleteBinMsg', { title: dataset?.title }) }}</p>
+            <p class="mt-2">
+              {{ t('deleteBinInaccessible') }}
+            </p>
+            <p class="mt-2">
+              {{ t('deleteBinRestore', { n: binSettings.retentionDays.value }) }}
+            </p>
+            <p
+              v-if="catalogPublicationsCount"
+              class="mt-2"
+            >
+              {{ t('deleteBinCatalogs') }}
+            </p>
+          </template>
+          <template v-else>
+            {{ t('deleteMsg', { title: dataset?.title }) }}
+          </template>
           <v-alert
             v-if="nbFragments"
             type="warning"
@@ -749,6 +766,11 @@ fr:
   deleteDatasetDesc: La suppression est définitive et les données ne pourront pas être récupérées.
   deleteMsg: Voulez-vous vraiment supprimer le jeu de données "{title}" ? La suppression est définitive et les données ne pourront pas être récupérées.
   deleteDatasetSuccess: Le jeu de données a bien été supprimé.
+  deleteDatasetBinDesc: Le jeu de données sera placé dans la corbeille, un administrateur pourra le restaurer pendant {n} jours.
+  deleteBinMsg: Voulez-vous vraiment supprimer le jeu de données "{title}" ?
+  deleteBinInaccessible: Le jeu de données sera placé dans la corbeille et deviendra immédiatement inaccessible (API, portails, applications).
+  deleteBinRestore: Un administrateur pourra le restaurer pendant {n} jours, après quoi il sera définitivement supprimé.
+  deleteBinCatalogs: Ses publications sur les catalogues distants seront supprimées et ne seront pas restaurées.
   deleteAllLinesSuccess: Toutes les lignes ont bien été supprimées.
   yes: Oui
   no: Non
@@ -824,6 +846,11 @@ en:
   deleteDatasetDesc: Deletion is permanent and data cannot be recovered.
   deleteMsg: Do you really want to delete the dataset "{title}"? Deletion is permanent and data cannot be recovered.
   deleteDatasetSuccess: Dataset was deleted successfully.
+  deleteDatasetBinDesc: The dataset will be moved to the bin, an admin will be able to restore it for {n} days.
+  deleteBinMsg: Do you really want to delete the dataset "{title}"?
+  deleteBinInaccessible: The dataset will be moved to the bin and will immediately become inaccessible (API, portals, applications).
+  deleteBinRestore: An admin will be able to restore it for {n} days, after which it will be permanently deleted.
+  deleteBinCatalogs: Its publications on remote catalogs will be deleted and will not be restored.
   deleteAllLinesSuccess: All lines were deleted successfully.
   yes: Yes
   no: No
@@ -852,6 +879,8 @@ import { refreshExtensionPatch } from '~/utils/extensions'
 import { useDatasetWatch } from '~/composables/dataset/watch'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 import { usePermissions } from '~/composables/use-permissions'
+import { useBinSettings } from '~/composables/use-bin-settings'
+import { ofetch } from 'ofetch'
 import { fieldGroup, modifiedGroups, usedGroups } from '~/utils/metadata-groups'
 import { useAgentDatasetSummaryTools } from '~/composables/dataset/agent-summary-tools'
 import { useAgentDatasetDescriptionTools } from '~/composables/dataset/agent-description-tools'
@@ -1056,6 +1085,21 @@ const onRefreshExtension = async (extension: any) => {
 
 const showOwnerDialog = ref(false)
 const showDeleteDialog = ref(false)
+
+// with the bin of the owner organization active, a deletion shelves the dataset
+const binSettings = useBinSettings()
+const binShelves = computed(() => binSettings.active.value && dataset.value?.owner.type === 'organization' && dataset.value.owner.id === session.account.value?.id)
+// the catalogs service drops its publications at shelving, they do not come back on restore
+const catalogPublicationsCount = ref(0)
+watch(showDeleteDialog, async (show) => {
+  if (!show || !binShelves.value || !$uiConfig.catalogsIntegration || accountRole.value !== 'admin' || !dataset.value) return
+  try {
+    const res = await ofetch<{ count: number }>(`${$sitePath}/catalogs/api/publications`, { query: { dataFairDatasetId: dataset.value.id, size: 0 } })
+    catalogPublicationsCount.value = res.count
+  } catch {
+    catalogPublicationsCount.value = 0
+  }
+})
 const showDeleteAllLinesDialog = ref(false)
 const diagnoseRef = useTemplateRef<{ refresh: () => void, loading: boolean }>('diagnoseRef')
 
