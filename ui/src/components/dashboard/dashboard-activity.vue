@@ -12,6 +12,7 @@
     <v-card-text class="py-0">
       <d-frame
         :src="`${$sitePath}/events/embed/events-compact`"
+        resize="yes"
         @notif="(e: any) => sendUiNotif(frameNotifArg(e.detail))"
       />
     </v-card-text>
