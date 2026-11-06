@@ -6,6 +6,12 @@
         :schema="metadataFormSchema"
         :options="vjsfOptions"
       >
+        <template #metadata-score>
+          <settings-metadata-score
+            v-if="datasetsMetadata?.completeness?.active"
+            :shares="shares"
+          />
+        </template>
         <template #metadata-info="{ node }">
           <div class="text-body-small">
             {{ metadataByKey[node.data.key]?.info }}
@@ -21,6 +27,7 @@ fr:
   notOffered: Non proposée
   customHelp: Infobulle personnalisée
   category: "Catégorie : {title}"
+  weight: "Poids {weight}"
   informations: Informations générales
   coverage: Informations complémentaires
   keyPrefix: "Clé : "
@@ -32,10 +39,13 @@ fr:
   typeLink: Lien
   withEnum: ", liste de valeurs"
   withMultiple: ", plusieurs valeurs"
+  unitChars: car.
+  unitValues: val.
 en:
   notOffered: Not offered
   customHelp: Custom help
   category: "Category: {title}"
+  weight: "Weight {weight}"
   informations: General information
   coverage: Additional information
   keyPrefix: "Key: "
@@ -47,21 +57,29 @@ en:
   typeLink: Link
   withEnum: ", list of values"
   withMultiple: ", multiple values"
+  unitChars: chars
+  unitValues: values
 </i18n>
 
 <script setup lang="ts">
-import { type Settings } from '#api/types'
+import { type Settings, completenessCriteria, settingsSchema } from '#api/types'
 import equal from 'fast-deep-equal'
 import Vjsf, { type Options as VjsfOptions } from '@koumoul/vjsf'
 import { fieldGroup } from '~/utils/metadata-groups'
+import { withSchemaDefaults } from '~/utils/schema-defaults'
 import { fromMetadataForm, localizedMetadata, metadataFormSchema, standardMetadata, standardMetadataItems, toMetadataForm } from '~/utils/settings-metadata-form'
 
 const datasetsMetadata = defineModel<Settings['datasetsMetadata']>()
 const valid = defineModel<boolean>('valid', { default: true })
 const editDatasetsMetadata = ref<Record<string, any>>()
+// what vjsf fills in by itself is not an edit
+const sameMetadata = (form: Record<string, any>) => {
+  const { datasetsMetadata: schema } = settingsSchema.properties
+  return equal(withSchemaDefaults(fromMetadataForm(form), schema), withSchemaDefaults(datasetsMetadata.value, schema))
+}
 watchDeepDiff(datasetsMetadata, () => {
   // a new model resets vjsf and closes the edit dialog: its own changes are not sent back
-  if (editDatasetsMetadata.value && equal(fromMetadataForm(editDatasetsMetadata.value), datasetsMetadata.value)) return
+  if (editDatasetsMetadata.value && sameMetadata(editDatasetsMetadata.value)) return
   editDatasetsMetadata.value = toMetadataForm(datasetsMetadata.value)
 }, { immediate: true })
 watchDeepDiff(editDatasetsMetadata, () => {
@@ -71,7 +89,7 @@ watchDeepDiff(editDatasetsMetadata, () => {
     editDatasetsMetadata.value = { ...editDatasetsMetadata.value, groups: groups.map(g => g.key ? g : { ...g, key: Math.random().toString(36).slice(2, 10) }) }
     return
   }
-  datasetsMetadata.value = fromMetadataForm(editDatasetsMetadata.value!) as Settings['datasetsMetadata']
+  if (!sameMetadata(editDatasetsMetadata.value!)) datasetsMetadata.value = fromMetadataForm(editDatasetsMetadata.value!) as Settings['datasetsMetadata']
 }, {})
 const { t, locale } = useI18n()
 
@@ -82,8 +100,28 @@ const labels = computed(() => ({
   category: t('categoryPrefix'),
   types: { string: t('typeString'), integer: t('typeInteger'), number: t('typeNumber'), date: t('typeDate'), link: t('typeLink') },
   enum: t('withEnum'),
-  multiple: t('withMultiple')
+  multiple: t('withMultiple'),
+  units: { chars: t('unitChars'), values: t('unitValues') }
 }))
+
+// the share of the score each metadata carries
+const shares = computed(() => {
+  const metadata = datasetsMetadata.value as Record<string, any> | undefined
+  if (!metadata?.completeness?.active) return []
+  const criteria = completenessCriteria({}, metadata)
+  const total = criteria.reduce((sum, c) => sum + c.weight, 0)
+  return criteria.map(c => ({
+    key: c.key,
+    title: (c.custom ? metadata.custom?.find((m: any) => m.key === c.key)?.title : metadata[c.key]?.title || metadataByKey.value[c.key]?.title) as string,
+    weight: c.weight,
+    share: c.weight / total
+  })).sort((a, b) => b.share - a.share)
+})
+
+const scoreLabel = (key: string) => {
+  const share = shares.value.find(s => s.key === key)
+  return `${t('weight', { weight: share?.weight ?? 0 })} (${Math.round((share?.share ?? 0) * 100)} %)`
+}
 
 const metadataSubtitles = computed(() => {
   const metadata = (datasetsMetadata.value ?? {}) as Record<string, any>
@@ -97,9 +135,15 @@ const metadataSubtitles = computed(() => {
     if (!active) return [m.key, t('notOffered')]
     return [m.key, [
       m.hasGroup && t('category', { title: tabTitle(fieldGroup(metadata, m.key)) }),
-      metadata[m.key]?.description && t('customHelp')
+      metadata[m.key]?.description && t('customHelp'),
+      metadata.completeness?.active && m.hasWeight && scoreLabel(m.key)
     ].filter(Boolean).join(' · ')]
   }))
+})
+
+const customScores = computed(() => {
+  if (!datasetsMetadata.value?.completeness?.active) return {}
+  return Object.fromEntries((datasetsMetadata.value.custom ?? []).filter(c => c.key).map(c => [c.key, scoreLabel(c.key!)]))
 })
 
 const vjsfOptions = computed<VjsfOptions>(() => ({
@@ -108,7 +152,7 @@ const vjsfOptions = computed<VjsfOptions>(() => ({
   density: 'comfortable',
   xI18n: true,
   locale: locale.value,
-  context: { metadata: metadataByKey.value, metadataItems: standardMetadataItems, metadataSubtitles: metadataSubtitles.value, labels: labels.value }
+  context: { metadata: metadataByKey.value, metadataItems: standardMetadataItems, metadataSubtitles: metadataSubtitles.value, customScores: customScores.value, labels: labels.value }
 }))
 
 // http://localhost:5600/data-fair/embed/settings/user/superadmin/datasetsMetadata

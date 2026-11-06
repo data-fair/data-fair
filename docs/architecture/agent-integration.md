@@ -234,8 +234,8 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 | **Skill** | `summarize-dataset-changes` — reads unified diff, produces <500 char plain text summary |
 | **Pattern** | Direct, no user confirmation needed (read-only output) |
 | **Tools** | `read_dataset_changes` |
-| `read_dataset_metadata` | Dataset metadata | R | `dataset/agent-metadata-tools.ts` |
-| `set_dataset_metadata` | Dataset metadata (title, summary, description, keywords, searchTerms, license, topics, origin, creator, frequency, spatial) | **W** | `dataset/agent-metadata-tools.ts` |
+| `read_dataset_metadata` | Dataset metadata, plus the owner's settings: closed lists, disabled or renamed fields, recommended sizes, custom metadata (definition, help text, value) | R | `dataset/agent-metadata-tools.ts` |
+| `set_dataset_metadata` | Dataset metadata (title, summary, description, keywords, searchTerms, license, topics, origin, creator, frequency, spatial, and the owner's custom metadata keyed by title, checked against their type and list of values) | **W** | `dataset/agent-metadata-tools.ts` |
 | `read_schema_for_annotation` | Schema annotation | R | `dataset/agent-schema-annotation-tools.ts` |
 | `annotate_schema` | Schema annotation | **W** | `dataset/agent-schema-annotation-tools.ts` |
 | `reorder_columns` | Schema order | **W** | `dataset/agent-schema-order-tools.ts` |
@@ -403,7 +403,7 @@ mentions the link to the parent and, for a dataset fragment, the "Add to the sou
 | `list_datasets` | Dataset metadata | R | `dataset/agent-tools.ts` |
 | `describe_dataset` | Dataset metadata, incl. provenance (origin, producer) and, for an editable dataset, row history and updater tracking | R | `dataset/agent-tools.ts` |
 | `read_dataset_metadata` | Dataset metadata | R | `dataset/agent-metadata-tools.ts` |
-| `set_dataset_metadata` | Dataset metadata (title, summary, description, keywords, searchTerms, license, topics, origin, creator, frequency, spatial) | **W** | `dataset/agent-metadata-tools.ts` |
+| `set_dataset_metadata` | Dataset metadata (title, summary, description, keywords, searchTerms, license, topics, origin, creator, frequency, spatial, and the owner's custom metadata keyed by title, checked against their type and list of values) | **W** | `dataset/agent-metadata-tools.ts` |
 | `get_dataset_schema` | Dataset data | R | `dataset/agent-data-tools.ts` |
 | `search_data` | Dataset data | R | `dataset/agent-data-tools.ts` |
 | `aggregate_data` | Dataset data | R | `dataset/agent-data-tools.ts` |

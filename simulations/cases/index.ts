@@ -67,6 +67,15 @@ export const cases: SimulationCase[] = [
     goal: 'Tu veux que ce jeu de données soit trouvé quand quelqu\'un tape des mots courants comme "gymnase", "piscine" ou "stade" dans la recherche du portail, et tu veux voir ce qui a été ajouté avant que ce soit enregistré.',
     maxTurns: 8
   },
+  // The organization's own metadata rules: a recommended summary size that is not the
+  // assistant's built-in default, and custom metadata the assistant must find and fill.
+  {
+    name: 'metadonnees-de-l-organisation',
+    route: '/data-fair/dataset/sim-equipements-sportifs',
+    persona: 'Tu es chargé de mission dans une petite collectivité, tu publies des données sans être informaticien. Ton organisation a fixé ses propres règles pour les fiches des jeux de données, mais tu ne les connais pas par cœur. Si on te dit que c\'est fait sans que tu voies un changement à l\'écran, tu le dis.',
+    goal: 'Tu veux savoir quelle longueur ton organisation recommande pour le résumé d\'un jeu de données, puis que l\'assistant rédige ce résumé en la respectant. Tu veux aussi qu\'il indique que les données sont produites par la direction des sports et qu\'elles relèvent du thème sport. Tu veux voir tout ça à l\'écran avant d\'enregistrer ; tu enregistres toi-même.',
+    maxTurns: 8
+  },
   // The handover at the end of a workflow: does the assistant keep working once
   // the wizard is gone?
   //

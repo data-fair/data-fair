@@ -206,6 +206,9 @@ test.describe('diffDataset', () => {
     }
     const out = diffDataset({ metadataServer: { searchTerms: '' }, metadataEdited: { searchTerms: 'gymnase, piscine' } })
     assert.ok(out.includes('**termes de recherche associés**'))
+    const custom = diffDataset({ metadataServer: { customMetadata: { service: 'DSI' } }, metadataEdited: { customMetadata: { theme: ['Sport'] } } })
+    assert.ok(custom.includes('**métadonnée personnalisée service** : DSI → (vide)'))
+    assert.ok(custom.includes('**métadonnée personnalisée theme** : (vide) → Sport'))
   })
 
   test('reports what the old text diff could not see: capabilities, groups and labels', () => {

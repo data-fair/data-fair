@@ -115,6 +115,16 @@
           :access-sources="cardAccessSources"
           class="ml-2"
         />
+        <v-progress-circular
+          v-if="dataset.completeness != null"
+          :model-value="dataset.completeness"
+          :color="dataset.completeness >= 75 ? 'success' : dataset.completeness >= 50 ? 'warning' : 'error'"
+          :title="t('completeness', { score: dataset.completeness })"
+          size="16"
+          width="3"
+          class="ml-2"
+          style="transform: scaleX(-1)"
+        />
         <span
           v-if="dataset.updatedAt"
           class="ml-2"
@@ -188,6 +198,7 @@ fr:
   error: Erreur
   records: "0 enregistrement | 1 enregistrement | {count} enregistrements"
   updatedAt: Mis à jour le {date}
+  completeness: 'Score de complétion des métadonnées : {score} %'
 en:
   virtual: Virtual
   editable: Editable
@@ -196,4 +207,5 @@ en:
   error: Error
   records: "0 record | 1 record | {count} records"
   updatedAt: Updated on {date}
+  completeness: 'Metadata completeness score: {score} %'
 </i18n>

@@ -426,6 +426,77 @@ test.describe('settings department switch guard', () => {
   })
 })
 
+test.describe('settings metadata score', () => {
+  test.beforeEach(async () => {
+    await clean()
+  })
+
+  test('standard and custom metadata lines show their weight and share', async ({ page, goToWithAuth }) => {
+    const ax = await axiosAuth('test_user1@test.com', 'test_org1')
+    await ax.patch('/api/v1/settings/organization/test_org1', {
+      datasetsMetadata: { completeness: { active: true }, custom: [{ title: 'Service producteur', weight: 3 }, { title: 'Sans poids', weight: 0 }] }
+    })
+
+    await goToSettingsOrg(page, goToWithAuth)
+    await page.locator('#catalog').getByRole('tab', { name: 'Métadonnées' }).click()
+    const line = (title: string) => page.locator('.v-list-item').filter({ hasText: title })
+    await expect(line('Répartition')).toHaveCount(0)
+    await expect(page.getByText('Répartition du score')).toBeVisible()
+    await expect(line('Description').first()).toContainText('Poids 4 (24 %)')
+    await expect(line('Service producteur')).toContainText('Poids 3 (18 %)')
+    await expect(line('Sans poids')).toContainText('Poids 0 (0 %)')
+  })
+})
+
+test.describe('settings defaults filled by the form', () => {
+  test.beforeEach(async () => {
+    await clean()
+  })
+
+  test('opening a line of a list is not an edit, changing it is', async ({ page, goToWithAuth }) => {
+    const ax = await axiosAuth('test_user1@test.com', 'test_org1')
+    await ax.patch('/api/v1/settings/organization/test_org1', {
+      datasetsMetadata: { custom: [{ title: 'Service producteur' }] },
+      privateVocabulary: [{ title: 'Mon concept' }]
+    })
+
+    await goToSettingsOrg(page, goToWithAuth)
+    const catalog = page.locator('#catalog')
+    const openLine = async (title: string) => {
+      const row = catalog.locator('.vjsf-list-item').filter({ hasText: title })
+      await row.hover()
+      await row.getByRole('button', { name: 'Actions' }).click()
+      await page.getByRole('listitem').filter({ hasText: 'Éditer' }).click()
+    }
+
+    await catalog.getByRole('tab', { name: 'Vocabulaire privé' }).click()
+    await openLine('Mon concept')
+    await catalog.getByRole('tab', { name: 'Métadonnées' }).click()
+    await openLine('Service producteur')
+    await expect(catalog.getByRole('textbox', { name: 'Libellé' })).toHaveValue('Service producteur')
+    await expect(catalog.getByRole('button', { name: 'Enregistrer' })).toHaveCount(0)
+
+    await catalog.getByRole('textbox', { name: 'Libellé' }).fill('Service renommé')
+    await catalog.getByRole('textbox', { name: 'Libellé' }).blur()
+    await expect(catalog.getByRole('button', { name: 'Enregistrer' })).toBeVisible()
+  })
+
+  test('the embedded metadata form saves nothing until an edit', async ({ page, goToWithAuth }) => {
+    const patches: string[] = []
+    page.on('request', request => { if (request.method() === 'PATCH') patches.push(request.url()) })
+
+    await goToWithAuth('/data-fair/embed/settings/user/test_user1/datasets-metadata', 'test_user1')
+    const score = page.getByRole('checkbox', { name: /Activer le score/ })
+    await expect(score).toBeVisible({ timeout: 15000 })
+    await page.waitForTimeout(1000)
+    expect(patches).toEqual([])
+
+    await score.check()
+    await expect(page.getByText('Répartition du score')).toBeVisible()
+    await expect.poll(() => patches.length).toBe(1)
+  })
+})
+
 test.describe('settings AI assistant audience', () => {
   test.beforeEach(async () => {
     await clean()

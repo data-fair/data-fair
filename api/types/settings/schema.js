@@ -28,6 +28,49 @@ const metadataGroup = (defaultGroup, toggleable = false, cols = 4) => ({
   }
 })
 
+const scoreActive = 'rootData.completeness?.active'
+const weightTitles = { title: 'Weight', 'x-i18n-title': { fr: 'Poids' } }
+/**
+ * @param {{ title: string, 'x-i18n-title'?: Record<string, string> }} titles
+ * @param {number | undefined} value
+ * @param {string} [ifExpr]
+ * @param {Record<string, any>} [props]
+ * @param {string} [getProps]
+ * @param {Record<string, number>} [cols]
+ */
+const scoreField = (titles, value, ifExpr, props, getProps, cols) => ({
+  type: 'integer',
+  minimum: 0,
+  ...titles,
+  'x-default': value,
+  layout: {
+    ...(ifExpr && { if: ifExpr }),
+    ...(cols && { cols }),
+    props: { controlVariant: 'hidden', ...props, ...(value !== undefined && { placeholder: String(value), persistentPlaceholder: true }) },
+    ...(getProps && { getProps })
+  }
+})
+/** @typedef {{ unit: string, min?: number, max?: number }} Bounds */
+// weight of a metadata in the completeness score, and for a text or a list its recommended size
+// x-default is read by the score, not a json schema default: vjsf would store it
+// the unit is a key of context.labels.units
+/**
+ * @param {number} weight
+ * @param {Bounds} [bounds]
+ */
+const scoreProperties = (weight, bounds) => ({
+  weight: scoreField(weightTitles, weight),
+  ...(bounds && {
+    recommendedMin: scoreField({ title: 'Min.' }, bounds.min, undefined, { suffix: bounds.unit }),
+    recommendedMax: scoreField({ title: 'Max.' }, bounds.max, undefined, { suffix: bounds.unit })
+  })
+})
+const chars = 'chars'
+const values = 'values'
+const textType = '(parent.data?.type ?? "string") === "string"'
+// a single value picked in a list has no size to recommend
+const customBounds = `${scoreActive} && ${textType} && (parent.data?.multiple || !parent.data?.enum?.length)`
+
 // replaces the help shown next to the field in the dataset form, the form gives the native help as placeholder
 const metadataHelp = (toggleable = false) => ({
   type: 'string',
@@ -41,22 +84,26 @@ const metadataHelp = (toggleable = false) => ({
   }
 })
 
-// a metadata always shown on a dataset: only its tab and help can be chosen
+// a metadata always shown on a dataset: its tab can be chosen, except for summary and description, and its help
 /**
  * @param {string} title
  * @param {{ key: string }} defaultGroup
  * @param {string} description
  * @param {string} titleEn
  * @param {string} descriptionEn
+ * @param {number} weight
+ * @param {Bounds} [bounds]
+ * @param {boolean} [fixedGroup]
  */
-const fixedMetadata = (title, defaultGroup, description, titleEn, descriptionEn) => ({
+const fixedMetadata = (title, defaultGroup, description, titleEn, descriptionEn, weight, bounds, fixedGroup = false) => ({
   type: 'object',
   // an empty middle column, where the other rows have their custom label, keeps the help next to the switch
   layout: { children: ['active', { text: '\u00a0', cols: 4 }, 'group', 'description'] },
   properties: {
     active: { title, description, 'x-i18n-title': { en: titleEn }, 'x-i18n-description': { en: descriptionEn }, type: 'boolean', readOnly: true, default: true, layout: { comp: 'switch', cols: 4 } },
-    group: metadataGroup(defaultGroup),
-    description: metadataHelp()
+    group: fixedGroup ? { ...metadataGroup(defaultGroup), readOnly: true } : metadataGroup(defaultGroup),
+    description: metadataHelp(),
+    ...scoreProperties(weight, bounds)
   }
 })
 
@@ -453,11 +500,28 @@ export default {
             }
           }
         },
-        license: fixedMetadata('Licence', informationsGroup, "Conditions de réutilisation des données. La liste des licences proposées se règle dans l'onglet Licences.", 'License', 'Terms for reusing the data. The list of offered licenses is set in the Licenses tab.'),
-        origin: fixedMetadata('Provenance', informationsGroup, "Adresse de la page où les données d'origine sont publiées, par exemple sur le site du producteur.", 'Origin', "Address of the page where the original data is published, for example on the producer's website."),
-        image: fixedMetadata('Vignette', coverageGroup, "Adresse d'une image utilisée comme vignette du jeu de données, dans les listes et sur les portails.", 'Thumbnail', 'Address of an image used as the dataset thumbnail, in lists and on portals.'),
-        topics: fixedMetadata('Thématiques', informationsGroup, 'Thématiques définies dans la section Thématiques des paramètres. Elles servent à classer et à filtrer les jeux de données sur les portails.', 'Topics', 'Topics defined in the Topics section of the settings. They classify and filter datasets on portals.'),
-        relatedDatasets: fixedMetadata('Jeux de données liés', coverageGroup, "Sélectionnez d'autres jeux de données proches (même thématique, structure similaire, ou autre critère) pour les proposer aux utilisateurs de portails.", 'Related datasets', 'Select other similar datasets (same topic, similar structure or any other criterion) to suggest them to portal users.'),
+        completeness: {
+          type: 'object',
+          properties: {
+            active: {
+              type: 'boolean',
+              title: 'Enable the metadata completeness score',
+              'x-i18n-title': { fr: 'Activer le score de complétion des métadonnées' },
+              description: 'Computes a score from 0 to 100 on each dataset. Each filled metadata brings its weight, or only half of it if its size is outside the recommended minimum and maximum. A metadata with a weight of 0 does not count.',
+              'x-i18n-description': { fr: 'Calcule sur chaque jeu de données un score de 0 à 100. Chaque métadonnée renseignée rapporte son poids, ou la moitié seulement si sa taille sort du minimum et du maximum recommandés. Une métadonnée de poids 0 ne compte pas.' },
+              default: false,
+              layout: { comp: 'switch' }
+            }
+          }
+        },
+        summary: fixedMetadata('Résumé', informationsGroup, 'Courte présentation du jeu de données, affichée dans les listes et sur les vignettes des portails.', 'Summary', 'Short presentation of the dataset, shown in lists and on portal thumbnails.', 3, { unit: chars, min: 100, max: 300 }, true),
+        // Google Dataset rich results expect a description of 50 to 5000 characters
+        description: fixedMetadata('Description', informationsGroup, 'Présentation détaillée du jeu de données, rédigée en markdown.', 'Description', 'Detailed presentation of the dataset, written in markdown.', 4, { unit: chars, min: 300, max: 5000 }, true),
+        license: fixedMetadata('Licence', informationsGroup, "Conditions de réutilisation des données. La liste des licences proposées se règle dans l'onglet Licences.", 'License', 'Terms for reusing the data. The list of offered licenses is set in the Licenses tab.', 3),
+        origin: fixedMetadata('Provenance', informationsGroup, "Adresse de la page où les données d'origine sont publiées, par exemple sur le site du producteur.", 'Origin', "Address of the page where the original data is published, for example on the producer's website.", 1),
+        image: fixedMetadata('Vignette', coverageGroup, "Adresse d'une image utilisée comme vignette du jeu de données, dans les listes et sur les portails.", 'Thumbnail', 'Address of an image used as the dataset thumbnail, in lists and on portals.', 1),
+        topics: fixedMetadata('Thématiques', informationsGroup, 'Thématiques définies dans la section Thématiques des paramètres. Elles servent à classer et à filtrer les jeux de données sur les portails.', 'Topics', 'Topics defined in the Topics section of the settings. They classify and filter datasets on portals.', 2, { unit: values }),
+        relatedDatasets: fixedMetadata('Jeux de données liés', coverageGroup, "Sélectionnez d'autres jeux de données proches (même thématique, structure similaire, ou autre critère) pour les proposer aux utilisateurs de portails.", 'Related datasets', 'Select other similar datasets (same topic, similar structure or any other criterion) to suggest them to portal users.', 0, { unit: values }),
         creator: {
           type: 'object',
           properties: {
@@ -480,7 +544,8 @@ export default {
               }
             },
             group: metadataGroup(informationsGroup, true),
-            description: metadataHelp(true)
+            description: metadataHelp(true),
+            ...scoreProperties(2)
           }
         },
         // https://www.w3.org/TR/vocab-dcat-2/#Property:dataset_spatial
@@ -506,7 +571,8 @@ export default {
               }
             },
             group: metadataGroup(coverageGroup, true),
-            description: metadataHelp(true)
+            description: metadataHelp(true),
+            ...scoreProperties(1)
           }
         },
         // https://www.w3.org/TR/vocab-dcat-2/#Property:dataset_temporal
@@ -532,7 +598,8 @@ export default {
               }
             },
             group: metadataGroup(coverageGroup, true),
-            description: metadataHelp(true)
+            description: metadataHelp(true),
+            ...scoreProperties(1)
           }
         },
         // https://www.w3.org/TR/vocab-dcat-2/#Property:dataset_frequency and https://www.dublincore.org/specifications/dublin-core/collection-description/frequency/
@@ -558,7 +625,8 @@ export default {
               }
             },
             group: metadataGroup(coverageGroup, true),
-            description: metadataHelp(true)
+            description: metadataHelp(true),
+            ...scoreProperties(2)
           }
         },
         modified: {
@@ -583,7 +651,8 @@ export default {
               }
             },
             group: metadataGroup(coverageGroup, true),
-            description: metadataHelp(true)
+            description: metadataHelp(true),
+            ...scoreProperties(0)
           }
         },
         keywords: {
@@ -608,7 +677,8 @@ export default {
               }
             },
             group: metadataGroup(coverageGroup, true),
-            description: metadataHelp(true)
+            description: metadataHelp(true),
+            ...scoreProperties(2, { unit: values })
           }
         },
         searchTerms: {
@@ -633,7 +703,8 @@ export default {
               }
             },
             group: metadataGroup(coverageGroup, true),
-            description: metadataHelp(true)
+            description: metadataHelp(true),
+            ...scoreProperties(0)
           }
         },
         conformsTo: {
@@ -673,7 +744,7 @@ export default {
             // a copy gets its own key, generated from its title on save
             itemCopy: '{ ...item, key: undefined }',
             itemTitle: 'item.title',
-            itemSubtitle: `[item.key && context.labels.key + item.key, context.labels.types[item.type ?? "string"] + (item.enum?.length ? context.labels.enum : "") + (item.multiple ? context.labels.multiple : ""), context.labels.category + (${allGroupsExpr}.find(g => g.key === item.group) ?? ${allGroupsExpr}[0]).title].filter(Boolean).join(" · ")`
+            itemSubtitle: `[item.key && context.labels.key + item.key, context.labels.types[item.type ?? "string"] + (item.enum?.length ? context.labels.enum : "") + (item.multiple ? context.labels.multiple : ""), context.labels.category + (${allGroupsExpr}.find(g => g.key === item.group) ?? ${allGroupsExpr}[0]).title, context.customScores?.[item.key]].filter(Boolean).join(" · ")`
           },
           items: {
             type: 'object',
@@ -682,6 +753,14 @@ export default {
               switch: [{
                 if: 'summary',
                 children: []
+              }, {
+                // the weight takes the room of min and max when a metadata has none
+                children: [
+                  'title', 'type', 'group',
+                  { key: 'weight', cols: { xs: 12, lg: 1 }, if: customBounds },
+                  { key: 'weight', cols: { xs: 12, lg: 3 }, if: `${scoreActive} && !(${customBounds})` },
+                  'recommendedMin', 'recommendedMax', 'enum', 'multiple', 'description'
+                ]
               }]
             },
             properties: {
@@ -692,12 +771,13 @@ export default {
                 readOnly: true,
                 layout: 'none'
               },
+              // label, type and category then the score, in line with the other metadata rows
               title: {
                 title: 'Label',
                 'x-i18n-title': { fr: 'Libellé' },
                 type: 'string',
                 minLength: 3,
-                layout: { cols: 4 }
+                layout: { cols: 3 }
               },
               type: {
                 title: 'Type',
@@ -713,20 +793,8 @@ export default {
                 ]
               },
               group: metadataGroup(informationsGroup, false, 3),
-              multiple: {
-                title: 'Multiple values',
-                'x-i18n-title': { fr: 'Plusieurs valeurs' },
-                type: 'boolean',
-                layout: { cols: 2, comp: 'checkbox', if: '(parent.data?.type ?? "string") === "string"' }
-              },
-              description: {
-                title: 'Tooltip',
-                description: 'Help text shown next to the field, in the dataset form.',
-                'x-i18n-title': { fr: 'Infobulle' },
-                'x-i18n-description': { fr: "Texte d'aide affiché à côté du champ, dans le formulaire du jeu de données." },
-                type: 'string',
-                layout: 'textarea'
-              },
+              weight: scoreField(weightTitles, 1, scoreActive, {}, undefined, { xs: 12, lg: 3 }),
+              // the options of a text, then the size recommended for its values
               enum: {
                 title: 'List of values',
                 description: 'Leave empty for free input.',
@@ -734,7 +802,29 @@ export default {
                 'x-i18n-description': { fr: 'Laissez vide pour une saisie libre.' },
                 type: 'array',
                 items: { type: 'string' },
-                layout: { if: '(parent.data?.type ?? "string") === "string"' }
+                layout: { cols: { xs: 12, lg: 9 }, if: textType }
+              },
+              multiple: {
+                title: 'Multiple values',
+                'x-i18n-title': { fr: 'Plusieurs valeurs' },
+                type: 'boolean',
+                layout: { cols: { xs: 12, lg: 3 }, comp: 'checkbox', if: textType }
+              },
+              ...Object.fromEntries(['recommendedMin', 'recommendedMax'].map((key, i) => [key, scoreField(
+                { title: ['Min.', 'Max.'][i] },
+                undefined,
+                customBounds,
+                {},
+                `({ ...layout.props, suffix: context.labels.units[parent.data?.multiple ? ${JSON.stringify(values)} : ${JSON.stringify(chars)}] })`,
+                { xs: 6, lg: 1 }
+              )])),
+              description: {
+                title: 'Tooltip',
+                description: 'Help text shown next to the field, in the dataset form.',
+                'x-i18n-title': { fr: 'Infobulle' },
+                'x-i18n-description': { fr: "Texte d'aide affiché à côté du champ, dans le formulaire du jeu de données." },
+                type: 'string',
+                layout: 'textarea'
               }
             }
           }

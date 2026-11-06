@@ -95,6 +95,11 @@ export const cleanDatasetsMetadata = (datasetsMetadata: OptionsDesMetadonneesDeJ
         delete customMedata.enum
         delete customMedata.multiple
       }
+      // a recommended size only for a free text or several values, the settings form hides it otherwise
+      if ((customMedata.type ?? 'string') !== 'string' || (customMedata.enum?.length && !customMedata.multiple)) {
+        delete customMedata.recommendedMin
+        delete customMedata.recommendedMax
+      }
     }
   }
 }
