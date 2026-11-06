@@ -44,6 +44,18 @@ export const recommendedSize = (key: string, datasetsMetadata?: DatasetsMetadata
   return { min, max }
 }
 
+/** Metadata whose recommended minimum is above the maximum once the defaults apply: no size could respect them. */
+export const invertedRecommendedSizes = (datasetsMetadata?: DatasetsMetadata | null) => {
+  const entries: [string | undefined, ScoreSettings, Record<string, any>][] = [
+    ...scoredFields.map((key): [string, ScoreSettings, Record<string, any>] => [key, datasetsMetadata?.[key] ?? {}, metadataSchema[key].properties]),
+    ...(datasetsMetadata?.custom ?? []).map((settings): [string | undefined, ScoreSettings, Record<string, any>] => [settings.key, settings, customSchema])
+  ]
+  return entries.filter(([, settings, defaults]) => {
+    const [, min, max] = withDefaults(settings, defaults)
+    return min !== undefined && max !== undefined && min > max
+  }).map(([key]) => key)
+}
+
 const rate = (key: string, custom: boolean, value: unknown, settings: ScoreSettings, defaults: Record<string, any>): CompletenessCriterion => {
   const [weight, recommendedMin, recommendedMax] = withDefaults(settings, defaults)
   const size = sizeOf(value)

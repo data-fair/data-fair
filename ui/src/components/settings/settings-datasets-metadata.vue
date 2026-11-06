@@ -111,7 +111,8 @@ const shares = computed(() => {
   const criteria = completenessCriteria({}, metadata)
   const total = criteria.reduce((sum, c) => sum + c.weight, 0)
   return criteria.map(c => ({
-    key: c.key,
+    // a custom metadata can share the key of a fixed one
+    key: c.custom ? `custom.${c.key}` : c.key,
     title: (c.custom ? metadata.custom?.find((m: any) => m.key === c.key)?.title : metadata[c.key]?.title || metadataByKey.value[c.key]?.title) as string,
     weight: c.weight,
     share: c.weight / total
@@ -143,7 +144,7 @@ const metadataSubtitles = computed(() => {
 
 const customScores = computed(() => {
   if (!datasetsMetadata.value?.completeness?.active) return {}
-  return Object.fromEntries((datasetsMetadata.value.custom ?? []).filter(c => c.key).map(c => [c.key, scoreLabel(c.key!)]))
+  return Object.fromEntries((datasetsMetadata.value.custom ?? []).filter(c => c.key).map(c => [c.key, scoreLabel(`custom.${c.key}`)]))
 })
 
 const vjsfOptions = computed<VjsfOptions>(() => ({

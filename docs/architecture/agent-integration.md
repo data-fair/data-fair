@@ -209,9 +209,9 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 |---|---|
 | **Trigger** | Action button next to the summary textarea, on the metadata form |
 | **Action ID** | `summarize-dataset` |
-| **Skill** | `write-dataset-summary` — reads metadata and sample data, produces ≤300 char plain text summary |
-| **Pattern** | Generate, present to user, apply on approval via `set_dataset_metadata` (summary field). The write tool validates: rejects summaries over 300 chars or starting with generic phrasing ("This dataset is…" / "Ce jeu de données est…"), forcing the agent to retry. Nothing is saved — the user still clicks Enregistrer. |
-| **Tools** | `read_dataset_info` (includes 5 sample rows), `set_dataset_metadata` |
+| **Skill** | `write-dataset-summary` — reads metadata and sample data, produces a plain text summary within the owner's recommended size (100 to 300 characters by default) |
+| **Pattern** | Generate, present to user, apply on approval via `set_dataset_metadata` (summary field). The write tool validates: rejects summaries over the owner's recommended maximum or starting with generic phrasing ("This dataset is…" / "Ce jeu de données est…"), forcing the agent to retry. Nothing is saved — the user still clicks Enregistrer. |
+| **Tools** | `read_dataset_info` (includes 5 sample rows), `read_dataset_metadata` (the owner's recommended sizes), `set_dataset_metadata` |
 | **Source** | `ui/src/composables/dataset/agent-summary-tools.ts` (skill), `ui/src/composables/dataset/agent-metadata-tools.ts` (write tool), `ui/src/components/dataset/metadata/dataset-metadata-form.vue` (action button) |
 
 ### 4.6 Write Dataset Description
@@ -220,9 +220,9 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 |---|---|
 | **Trigger** | Action button next to the description markdown editor, on the metadata form |
 | **Action ID** | `describe-dataset` |
-| **Skill** | `write-dataset-description` — reads metadata, produces 500-2000 char markdown description |
+| **Skill** | `write-dataset-description` — reads metadata, produces a markdown description within the owner's recommended size |
 | **Pattern** | Asks user what to emphasize, generates, presents, applies on approval via `set_dataset_metadata` (description field). Nothing is saved — the user still clicks Enregistrer. |
-| **Tools** | `read_dataset_info`, `set_dataset_metadata` |
+| **Tools** | `read_dataset_info`, `read_dataset_metadata` (the owner's recommended sizes), `set_dataset_metadata` |
 | **Source** | `ui/src/composables/dataset/agent-description-tools.ts` (skill), `ui/src/composables/dataset/agent-metadata-tools.ts` (write tool), `ui/src/components/dataset/metadata/dataset-metadata-form.vue` (action button) |
 
 ### 4.7 Summarize Metadata Changes
@@ -477,9 +477,9 @@ Registered with `useAgentSkill` (the shared `query-dataset-data` one comes from 
 |-------|---------|---------------|
 | `query-dataset-data` | Data exploration and querying | `get_dataset_schema`, `search_data`, `aggregate_data`, `calculate_metric`, `get_field_values` |
 | `check-data-quality` | Systematic data quality audit (6-step) | Same as `query-dataset-data` |
-| `write-dataset-summary` | Generate ≤300 char dataset summaries (with sample data, validated on write) | `read_dataset_info` |
+| `write-dataset-summary` | Generate dataset summaries within the owner's recommended size (with sample data, validated on write) | `read_dataset_info` |
 | `write-search-terms` | Propose hidden catalog-search terms (synonyms, acronyms with expansion, everyday wording) | `read_dataset_info` |
-| `write-dataset-description` | Generate 500-2000 char markdown descriptions | `read_dataset_info` |
+| `write-dataset-description` | Generate markdown descriptions within the owner's recommended size | `read_dataset_info` |
 | `summarize-dataset-changes` | Summarize metadata diff (<500 chars) | `read_dataset_changes` |
 | `write-expression` | Write and test expr-eval expressions | `get_expression_context`, `get_sample_data`, `test_expression` |
 | `annotate-schema` | Suggest column titles and descriptions | Schema annotation tools |

@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { completenessCriteria, computeCompleteness, scoredFields } from '../../../api/types/metadata-completeness.ts'
+import { completenessCriteria, computeCompleteness, invertedRecommendedSizes, scoredFields } from '../../../api/types/metadata-completeness.ts'
 
 const active = { completeness: { active: true } }
 const longText = (n: number) => 'x'.repeat(n)
@@ -77,6 +77,13 @@ test.describe('metadata completeness', () => {
     assert.deepEqual(completenessCriteria(dataset, settings).map(c => [c.key, c.custom, c.weight, c.note]),
       [['service', true, 1, 1], ['contact', true, 1, 0], ['effectif', true, 2, 1]])
     assert.equal(computeCompleteness(dataset, settings), 75)
+  })
+
+  test('a recommended minimum above the maximum is detected, defaults included', () => {
+    assert.deepEqual(invertedRecommendedSizes(undefined), [])
+    assert.deepEqual(invertedRecommendedSizes({ summary: { recommendedMin: 400, recommendedMax: 500 } } as any), [])
+    assert.deepEqual(invertedRecommendedSizes({ summary: { recommendedMin: 400 } } as any), ['summary'])
+    assert.deepEqual(invertedRecommendedSizes({ custom: [{ key: 'note', recommendedMin: 10, recommendedMax: 5 }] } as any), ['note'])
   })
 
   test('nothing weighted means no score', () => {

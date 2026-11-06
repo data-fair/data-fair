@@ -301,6 +301,22 @@ test.describe('settings integrations', () => {
     await expect(section.getByText('Clé « Auto key » créée')).toBeVisible()
   })
 
+  test('a key stored before this visit does not block adding another one', async ({ page, goToWithAuth }) => {
+    const ax = await axiosAuth('test_user1@test.com')
+    await ax.patch('/api/v1/settings/user/test_user1', { apiKeys: [{ title: 'Stored key', scopes: ['datasets'] }] })
+
+    await goToSettings(page, goToWithAuth)
+    const section = page.locator('#integrations')
+    await section.scrollIntoViewIfNeeded()
+    await section.getByRole('button', { name: /Ajouter une clé d'API/i }).click()
+    const dialog = page.getByRole('dialog')
+    await dialog.getByLabel('Titre', { exact: true }).fill('Second key')
+    await dialog.getByRole('button', { name: 'Ajouter', exact: true }).click()
+
+    await expect(section.getByText('Clé « Second key » créée')).toBeVisible()
+    assert.equal((await ax.get('/api/v1/settings/user/test_user1')).data.apiKeys.length, 2)
+  })
+
   test('a refused API key save is rolled back and the next one still goes out', async ({ page, goToWithAuth }) => {
     const ax = await axiosAuth('test_user1@test.com')
     await goToSettings(page, goToWithAuth)

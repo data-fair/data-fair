@@ -15,6 +15,7 @@
           :label="t('sort')"
           :items="items"
           :disabled="disabled"
+          :clearable="false"
           rounded="md"
           hide-details
           @update:model-value="sort = `${$event}:${order}`"

@@ -47,9 +47,22 @@ test.describe('trimSettings', () => {
     trimSettings(settings)
     assert.deepEqual(settings, { id: 'org' })
   })
+
+  test('the help of summary and description is trimmed, a blank one falls back to the native help', () => {
+    const settings: any = { datasetsMetadata: { summary: { description: ' Aide\n' }, description: { description: '   ' } } }
+    trimSettings(settings)
+    assert.equal(settings.datasetsMetadata.summary.description, 'Aide')
+    assert.equal('description' in settings.datasetsMetadata.description, false)
+  })
 })
 
 test.describe('cleanDatasetsMetadata', () => {
+  test('summary and description stay in the general tab', () => {
+    const datasetsMetadata: any = { summary: { group: 'coverage', weight: 2 }, description: { group: 'coverage' } }
+    cleanDatasetsMetadata(datasetsMetadata)
+    assert.deepEqual(datasetsMetadata, { summary: { weight: 2 }, description: {} })
+  })
+
   test('gives a key to the categories created without one and keeps the existing keys', () => {
     const datasetsMetadata: any = { groups: [{ key: 'gouv', title: 'Gouvernance' }, { title: 'Qualité' }] }
     cleanDatasetsMetadata(datasetsMetadata)

@@ -77,6 +77,8 @@ export const fillSettings = (owner: AccountKeys, user: User, settings: any): Set
 }
 
 export const cleanDatasetsMetadata = (datasetsMetadata: OptionsDesMetadonneesDeJeuxDeDonnees) => {
+  // summary and description stay in the general tab, the dataset form has no other place for them
+  for (const main of [datasetsMetadata.summary, datasetsMetadata.description] as any[]) delete main?.group
   for (const group of datasetsMetadata.groups ?? []) {
     if (!group.key) group.key = nanoid()
   }
@@ -194,11 +196,11 @@ export const trimSettings = (settings: Partial<Settings>) => {
     if (webhook.target?.params) trimFields(webhook.target.params, 'url')
   }
   if (settings.datasetsMetadata) {
-    const { license, origin, image, topics, relatedDatasets, spatial, temporal, frequency, creator, modified, keywords, searchTerms, conformsTo } = settings.datasetsMetadata
+    const { summary, description, license, origin, image, topics, relatedDatasets, spatial, temporal, frequency, creator, modified, keywords, searchTerms, conformsTo } = settings.datasetsMetadata
     for (const option of [spatial, temporal, frequency, creator, modified, keywords, searchTerms, conformsTo]) {
       if (option) trimFields(option, 'title')
     }
-    for (const option of [license, origin, image, topics, relatedDatasets, spatial, temporal, frequency, creator, modified, keywords, searchTerms]) {
+    for (const option of [summary, description, license, origin, image, topics, relatedDatasets, spatial, temporal, frequency, creator, modified, keywords, searchTerms]) {
       if (!option) continue
       trimFields(option, 'description')
       // a blank help falls back to the native one, vjsf would drop an empty string and show a false diff

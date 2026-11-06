@@ -490,11 +490,15 @@ const settingsEditFetch = useEditFetch<Settings>(
 )
 const settings = settingsEditFetch.data
 
+// the API compares the API keys it gets back with the stored ones: a default added here would read as an edit
+const { apiKeys: _apiKeys, ...normalizedProperties } = settingsSchema.properties
+const normalizedSchema = { ...settingsSchema, properties: normalizedProperties }
+
 // vjsf fills schema defaults on mount and when a list line opens, both sides get them to prevent false diffs
 function normalizeSettings (s: any) {
   if (!s) return
   s.info = s.info || {}
-  Object.assign(s, withSchemaDefaults(s, settingsSchema))
+  Object.assign(s, withSchemaDefaults(s, normalizedSchema))
 }
 watch(settingsEditFetch.serverData, (s) => {
   if (s) {

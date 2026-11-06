@@ -20,6 +20,7 @@ import { markStale } from '../misc/utils/text-search/mark-stale.ts'
 import * as notifications from '../misc/utils/notifications.ts'
 import { validateSettings, cleanSettings, fillSettings, cleanDatasetsMetadata, trimSettings, isMainSettings, isDepartmentSettings, rootSettingsFilter, matchAgentChatAudience, type SettingsParams } from './operations.ts'
 import { stampHistorizeMany } from '../integrity/outbox.ts'
+import { invertedRecommendedSizes } from '#types/metadata-completeness.ts'
 
 const debugPublicationSites = debugLib('publication-sites')
 
@@ -178,6 +179,8 @@ const writeSettings = async (ctx: SettingsWriteContext, existingSettings: Settin
 
   if (isMainSettings(settings) && settings.datasetsMetadata) {
     cleanDatasetsMetadata(settings.datasetsMetadata)
+    const inverted = invertedRecommendedSizes(settings.datasetsMetadata)
+    if (inverted.length) throw httpError(400, `La taille minimale recommandée dépasse la taille maximale pour : ${inverted.join(', ')}`)
     // category keys are tab values on the dataset page, next to the fixed tabs
     const seenKeys = new Map<string, string>()
     for (const group of settings.datasetsMetadata.groups ?? []) {

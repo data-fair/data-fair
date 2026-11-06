@@ -1,7 +1,7 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
-import { getRawDataset, patchRawDataset } from '../../support/workers.ts'
+import { getRawDataset, patchRawDataset, sendDataset } from '../../support/workers.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
 const settingsUrl = '/api/v1/settings/user/test_user1'
@@ -59,6 +59,33 @@ test.describe('metadata completeness score', () => {
     await patchRawDataset(dataset.id, { completeness: 7 })
     const res = await testUser1.patch('/api/v1/datasets/' + dataset.id, { title: 'stale, renamed' })
     assert.equal(res.data.completeness, 50)
+  })
+
+  test('settings with a recommended minimum above the maximum are refused', async () => {
+    await assert.rejects(testUser1.patch(settingsUrl, { datasetsMetadata: { completeness: { active: true }, summary: { recommendedMin: 400 } } }), { status: 400 })
+    await testUser1.patch(settingsUrl, { datasetsMetadata: { completeness: { active: true }, summary: { recommendedMin: 400, recommendedMax: 500 } } })
+  })
+
+  test('the new owner rescores a dataset', async () => {
+    await testUser1.patch(settingsUrl, { datasetsMetadata: { completeness: { active: true }, ...summaryOnly } })
+    const dataset = (await testUser1.post('/api/v1/datasets', { isRest: true, title: 'owner change', schema: [{ key: 'str', type: 'string' }] })).data
+    assert.equal(typeof (await getRawDataset(dataset.id)).completeness, 'number')
+
+    // the organization has not activated the score
+    await testUser1.put(`/api/v1/datasets/${dataset.id}/owner`, { type: 'organization', id: 'test_org1', name: 'Test Org 1' })
+    assert.equal((await waitForRescore(dataset.id)).completeness, undefined)
+  })
+
+  test('a fragment loses its score, and gets it back when detached', async () => {
+    await testUser1.patch(settingsUrl, { datasetsMetadata: { completeness: { active: true }, ...summaryOnly } })
+    const plain = await sendDataset('datasets/dataset1.csv', testUser1)
+    assert.equal(typeof (await getRawDataset(plain.id)).completeness, 'number')
+    const virtual = (await testUser1.post('/api/v1/datasets', { isVirtual: true, title: 'parent', virtual: { children: [plain.id] } })).data
+
+    await testUser1.patch(`/api/v1/datasets/${plain.id}`, { partOf: { type: 'dataset', id: virtual.id } })
+    assert.equal((await waitForRescore(plain.id)).completeness, undefined)
+    await testUser1.patch(`/api/v1/datasets/${plain.id}`, { partOf: null })
+    assert.equal(typeof (await waitForRescore(plain.id)).completeness, 'number')
   })
 
   test('a settings change rescores the datasets, deactivating removes the score', async () => {
