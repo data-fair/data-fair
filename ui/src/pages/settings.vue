@@ -438,7 +438,7 @@ en:
 </i18n>
 
 <script setup lang="ts">
-import { type Settings, settingsSchema } from '#api/types'
+import { type Settings } from '#api/types'
 import { mdiBookOpenVariant, mdiCancel, mdiCertificate, mdiFileDocumentEdit, mdiBookAlphabet, mdiTagMultiple, mdiKey, mdiWebhook } from '@mdi/js'
 import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
@@ -489,15 +489,10 @@ const settingsEditFetch = useEditFetch<Settings>(
 )
 const settings = settingsEditFetch.data
 
-// Normalize datasetsMetadata to prevent false diffs caused by VJSF filling
-// schema defaults (active: false) on mount when the server has no value yet
+// the settings forms never write the schema defaults (vjsf useDefault: false), only the info section starts empty
 function normalizeSettings (s: any) {
   if (!s) return
   s.info = s.info || {}
-  const dm = s.datasetsMetadata = s.datasetsMetadata || {}
-  for (const [key, prop] of Object.entries(settingsSchema.properties.datasetsMetadata.properties as Record<string, any>)) {
-    if (prop.properties?.active && !dm[key]) dm[key] = { active: prop.properties.active.default }
-  }
 }
 watch(settingsEditFetch.serverData, (s) => {
   if (s) {

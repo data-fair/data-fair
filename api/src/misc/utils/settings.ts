@@ -15,7 +15,8 @@ export const getPrivateOwnerVocabulary = async (owner: Account) => {
     if (pv.description && typeof pv.description === 'string') {
       pv.description = sanitizeHtml(pv.description)
     }
-    return { ...pv, identifiers }
+    // the settings forms never write the schema default of the type
+    return { ...pv, type: pv.type ?? 'string', identifiers }
   }) || []
 }
 

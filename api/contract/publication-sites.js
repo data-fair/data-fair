@@ -27,7 +27,8 @@ export default (admin = false) => ({
         title: 'Type de site',
         description: 'Utilisé pour séparer la gestion des sites par groupes.',
         default: 'data-fair-portals',
-        layout: admin ? {} : 'none'
+        // written on a new site, the settings forms never write the schema defaults
+        layout: admin ? { defaultData: 'data-fair-portals' } : 'none'
       },
       id: {
         type: 'string',

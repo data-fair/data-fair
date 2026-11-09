@@ -1,5 +1,5 @@
 import { settingsSchema } from '#api/types'
-import datasetSchema from '~/../../api/types/dataset/schema.js'
+import datasetSchema from '../../../api/types/dataset/schema.js'
 
 const schema = settingsSchema.properties.datasetsMetadata as any
 const properties: Record<string, any> = schema.properties
@@ -15,8 +15,8 @@ export const standardMetadata = Object.entries(properties)
       defaultActive: !!active.default,
       alwaysActive: !!active.readOnly,
       renamable: !!title,
-      hasGroup: !!group,
-      defaultGroup: group?.['x-default'],
+      hasGroup: !!group && !group.readOnly,
+      defaultGroup: group?.default,
       hasHelp: !!description
     }
   })
@@ -43,8 +43,13 @@ export const toMetadataForm = (datasetsMetadata: Record<string, any> | null | un
   for (const m of standardMetadata) delete form[m.key]
   return form
 }
+// the rows start from context.metadataItems: an activation left at its default is not stored, a row left empty neither
 export const fromMetadataForm = ({ standardMetadata: items, ...datasetsMetadata }: Record<string, any>) => {
-  for (const { key, ...item } of items ?? []) datasetsMetadata[key] = item
+  for (const { key, ...item } of items ?? []) {
+    const m = standardMetadata.find(m => m.key === key)
+    if (m && (m.alwaysActive || item.active === m.defaultActive)) delete item.active
+    if (Object.values(item).some(v => v !== undefined)) datasetsMetadata[key] = item
+  }
   return datasetsMetadata
 }
 
@@ -62,7 +67,8 @@ const items = {
     switch: [
       // the row only shows the title and subtitle of the list
       { if: 'summary', children: [] },
-      { children: [{ name: 'metadata-info' }, 'active', 'group', 'title', 'description'] }
+      // the switch, the category and the label on a line, the help below
+      { children: [{ name: 'metadata-info' }, { key: 'active', cols: 4 }, { key: 'group', cols: 4 }, { key: 'title', cols: 4 }, 'description'] }
     ]
   },
   properties: {
@@ -79,7 +85,7 @@ const items = {
       'x-i18n-title': { fr: 'Libellé personnalisé' },
       layout: { if: `${shown} && ${meta}.renamable`, getProps: `({ placeholder: ${meta}.title, persistentPlaceholder: true })` }
     },
-    group: field(properties.license.properties.group, `${shown} && ${meta}.hasGroup`, `({ ...layout.props, placeholder: context.labels.groups[${meta}.defaultGroup] })`, 12),
+    group: field(properties.license.properties.group, `${shown} && ${meta}.hasGroup`, `({ ...layout.props, placeholder: context.labels.groups[${meta}.defaultGroup] })`),
     description: field(properties.license.properties.description, `${shown} && ${meta}.hasHelp`, `({ ...layout.props, placeholder: ${meta}.nativeHelp, persistentPlaceholder: !!${meta}.nativeHelp })`)
   }
 }
