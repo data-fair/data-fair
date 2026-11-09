@@ -455,7 +455,7 @@ La valeur du paramètre est la dimension passée sous la form largeurxhauteur (3
       `,
         schema: {
           type: 'string',
-          enum: [null, 'neighbors', 'max']
+          enum: ['neighbors', 'max']
         }
       })
     }
@@ -776,7 +776,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
             description: "Afficher une ligne de résultat par valeur distincte d'une colonne.",
             schema: {
               type: 'string',
-              enum: isSampleDataset ? undefined : [null, ...valuesProperties.map((p: any) => p.key)]
+              enum: isSampleDataset ? undefined : valuesProperties.map((p: any) => p.key)
             }
           }, {
             in: 'query',
