@@ -82,6 +82,7 @@ fr:
   width: Largeur
   height: Hauteur
   cancel: Annuler
+  captureError: La capture a échoué
 en:
   capture: Screenshot
   captureMsg: A static image with PNG format will be created based on this application.
@@ -90,6 +91,7 @@ en:
   width: Width
   height: Height
   cancel: Cancel
+  captureError: The screenshot failed
 </i18n>
 
 <script setup lang="ts">
@@ -98,6 +100,7 @@ import '@data-fair/frame/lib/d-frame.js'
 import useApplicationStore from '~/composables/application/application-store'
 
 const { t } = useI18n()
+const { sendUiNotif } = useUiNotif()
 const { application, applicationLink, baseAppFetch } = useApplicationStore()
 
 const width = ref(800)
@@ -150,6 +153,11 @@ const download = async () => {
   downloading.value = true
   try {
     const res = await fetch(captureHref.value)
+    // an error (the rate limit of the captures, a failed render) is shown, not downloaded as a file
+    if (!res.ok) {
+      sendUiNotif({ type: 'error', msg: t('captureError'), error: await res.text() })
+      return
+    }
     const blob = await res.blob()
     const contentType = res.headers.get('content-type') || 'image/png'
     const ext = contentType.split('/').pop() || 'png'

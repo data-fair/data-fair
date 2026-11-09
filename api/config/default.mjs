@@ -211,14 +211,18 @@ export default {
         duration: 60,
         nb: 1
       },
+      // captures that bypass the thumbnail cache (application params, sizes, gifs) and prints.
+      // The capture service bounds its own queue (503 when overloaded), this keeps a single client
+      // to about a quarter of a capture pod (~70 captures/min at concurrency 2)
       appCaptures: {
         duration: 60,
-        nb: 5
+        nb: 20
       },
-      // agent previews (capture inspect renders), expensive
+      // agent previews (capture inspect renders): an agent previews after each edit, same limit as
+      // the custom captures
       appPreviews: {
-        duration: 600,
-        nb: 30
+        duration: 60,
+        nb: 20
       }
     },
     hideBrand: 0,

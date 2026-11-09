@@ -1,5 +1,6 @@
 import config from '#config'
 import path from 'path'
+import { randomUUID } from 'node:crypto'
 // the capture service is part of our own infrastructure (configured url, not user input)
 import { privateAxios as axios } from './axios.ts'
 import pump from './pipe.ts'
@@ -8,7 +9,7 @@ import debug from 'debug'
 import * as permissionsUtils from './permissions.ts'
 import { reqResource } from './req-context.ts'
 import { upstreamError } from './pseudo-session.ts'
-import { reqPublicBaseUrl } from './public-base-url.ts'
+import { setNoCache } from './cache-headers.ts'
 import resolvePath from 'resolve-path'
 import log from '@data-fair/lib-node/log.js'
 import type { RequestWithResource } from '#types'
@@ -96,14 +97,85 @@ const printRequestOpts = (req: RequestWithResource): AxiosRequestConfig => {
   }
 }
 
+// a failed capture, with what the capture service answered
+class CaptureError extends Error {
+  status: number
+  retryAfter?: number
+  constructor (status: number, retryAfter?: number) {
+    super(`failure in capture - ${status}`)
+    this.status = status
+    this.retryAfter = retryAfter
+  }
+}
+
+const captureError = (err: any): CaptureError => {
+  if (err instanceof CaptureError) return err
+  const status = err.status ?? err.response?.status ?? 500
+  const retryAfter = Number(err.response?.headers?.['retry-after'])
+  return new CaptureError(status, Number.isFinite(retryAfter) && retryAfter > 0 ? retryAfter : undefined)
+}
+
+// the capture is written next to the thumbnail, then moved over it: a failed or partial capture
+// never replaces (nor deletes) the previous thumbnail
 const stream2file = async (reqOpts: AxiosRequestConfig, capturePath: string) => {
+  const tmpPath = `${capturePath}.${randomUUID()}.tmp`
   try {
     const captureReq = await axios({ ...reqOpts, responseType: 'stream' })
-    await filesStorage.writeStream(captureReq.data, capturePath)
+    await filesStorage.writeStream(captureReq.data, tmpPath)
+    await filesStorage.moveFile(tmpPath, capturePath)
   } catch (err: any) {
-    log.error('screenshot capture failed', { code: 'capture', err })
-    throw new Error(`failure in capture - ${err.status}`)
+    await filesStorage.removeFile(tmpPath).catch(() => {})
+    throw captureError(err)
   }
+}
+
+// a thumbnail that failed is not captured again for this long: without it every view of every
+// page listing the application pays 2 captures and a pause, and loads the capture service
+const failureTtl = 5 * 60 * 1000
+const thumbnailFailures = new Map<string, { at: number, error: CaptureError }>()
+// thumbnails being generated: concurrent requests for the same one share the capture
+const thumbnailGenerations = new Map<string, Promise<void>>()
+
+export const clearThumbnailFailures = () => thumbnailFailures.clear()
+
+const recentFailure = (key: string) => {
+  const failure = thumbnailFailures.get(key)
+  if (!failure) return undefined
+  if (Date.now() - failure.at > failureTtl) {
+    thumbnailFailures.delete(key)
+    return undefined
+  }
+  return failure.error
+}
+
+// 2 attempts, as capture can have some stability issues. A 4xx would fail again, an overloaded
+// capture service (503) says when to come back
+const generateThumbnail = async (reqOpts: AxiosRequestConfig, capturePath: string) => {
+  try {
+    await stream2file(reqOpts, capturePath)
+  } catch (err: any) {
+    const error = captureError(err)
+    if (error.status >= 400 && error.status < 500) throw error
+    const wait = error.status === 503 && error.retryAfter ? Math.min(error.retryAfter * 1000, 10000) : 4000
+    await new Promise(resolve => setTimeout(resolve, wait))
+    await stream2file(reqOpts, capturePath)
+  }
+}
+
+const sharedThumbnailGeneration = (key: string, reqOpts: AxiosRequestConfig, capturePath: string) => {
+  let generation = thumbnailGenerations.get(key)
+  if (!generation) {
+    generation = generateThumbnail(reqOpts, capturePath)
+      .catch((err) => {
+        const error = captureError(err)
+        thumbnailFailures.set(key, { at: Date.now(), error })
+        log.error('failed to capture an application thumbnail', { code: 'app-thumbnail', status: error.status, err })
+        throw error
+      })
+      .finally(() => thumbnailGenerations.delete(key))
+    thumbnailGenerations.set(key, generation)
+  }
+  return generation
 }
 
 const stream2req = async (reqOpts: AxiosRequestConfig, res: Response) => {
@@ -131,38 +203,42 @@ export const screenshot = async (req: RequestWithResource, res: Response) => {
   const reqOpts = screenshotRequestOpts(req, isDefaultThumbnail)
 
   if (isDefaultThumbnail) {
-    if (await filesStorage.fileExists(capturePath)) {
+    const exists = await filesStorage.fileExists(capturePath)
+    if (exists) {
       const stats = await filesStorage.fileStats(capturePath)
       if (resource.updatedAt && Math.floor(stats.lastModified.getTime() / 1000) >= Math.floor(new Date(resource.updatedAt).getTime() / 1000)) {
         res.set('x-capture-cache-status', 'HIT')
         return await downloadFileFromStorage(capturePath, req, res)
-      } else {
-        res.set('x-capture-cache-status', 'EXPIRED')
       }
-    } else {
-      res.set('x-capture-cache-status', 'MISS')
     }
 
-    try {
+    const key = `${resource.id}:${resource.updatedAt}`
+    let error = recentFailure(key)
+    if (!error) {
       try {
-        await stream2file(reqOpts, capturePath)
+        await sharedThumbnailGeneration(key, reqOpts, capturePath)
+        res.set('x-capture-cache-status', exists ? 'EXPIRED' : 'MISS')
+        return await downloadFileFromStorage(capturePath, req, res)
       } catch (err) {
-        // we try twice as capture can have some stability issues
-        await new Promise(resolve => setTimeout(resolve, 4000))
-        await stream2file(reqOpts, capturePath)
+        error = captureError(err)
       }
-      return await downloadFileFromStorage(capturePath, req, res)
-    } catch (err) {
-      // catch err locally as this method is called without waiting for result
-
-      log.error('failed to capture an application thumbnail', { code: 'app-thumbnail', err })
-
-      // In case of error do not keep corrupted or empty file
-      await filesStorage.removeFile(capturePath)
-      res.set('Cache-Control', 'no-cache')
-      res.set('Expires', '-1')
-      return res.redirect(reqPublicBaseUrl(req) + '/no-preview.png')
     }
+
+    // the capture failed, now or a few minutes ago: never cached, so that the next view retries
+    setNoCache(req, res)
+    if (exists) {
+      // the previous thumbnail, better than nothing
+      res.set('x-capture-cache-status', 'STALE')
+      return await downloadFileFromStorage(capturePath, req, res)
+    }
+    // an error status, not an image: an <img> fires its error event and the clients show their
+    // fallback (the portals move on to the next image of the card)
+    res.set('x-capture-cache-status', 'ERROR')
+    if (error.status === 503) {
+      res.set('Retry-After', String(error.retryAfter ?? Math.ceil(failureTtl / 1000)))
+      return res.status(503).type('text/plain').send('the capture service is overloaded, retry later')
+    }
+    return res.status(502).type('text/plain').send(`the capture of the application failed (${error.status})`)
   } else {
     if (!rateLimiting.consume(req, 'appCaptures')) {
       return res.status(429).type('text/plain').send(req.__('errors.exceedRateLimiting'))
