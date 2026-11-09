@@ -105,6 +105,13 @@ test.describe('buildMetadataPatch', () => {
     assert.ok(outcomes[0].reason!.includes('disabled'))
   })
 
+  test('refuses a field left at its default off, the settings no longer store it', () => {
+    const saved = { ...ctx, datasetsMetadata: { keywords: { active: true } } }
+    const { patch, outcomes } = buildMetadataPatch({ spatial: 'France' }, {}, saved)
+    assert.deepEqual(patch, {})
+    assert.ok(outcomes[0].reason!.includes('disabled'))
+  })
+
   test('allows an optional field when the organization has no settings at all', () => {
     const { patch } = buildMetadataPatch({ keywords: ['insee', 'insee', ' recensement '] }, {}, ctx)
     assert.deepEqual(patch.keywords, ['insee', 'recensement'])
