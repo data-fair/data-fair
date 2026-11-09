@@ -11,6 +11,7 @@ import { memoizedGetDataset } from '../../datasets/service.ts'
 import { clearApiKeysCache } from '../utils/api-key.ts'
 import { clearApplicationKeysCaches } from '../utils/application-key.ts'
 import * as rateLimiting from '../utils/rate-limiting.ts'
+import { clearThumbnailFailures } from '../utils/capture.ts'
 import testEvents from '../utils/test-events.ts'
 import filesStorage from '../../files-storage/index.ts'
 import { dataDir, tmpDir } from '../../datasets/utils/files.ts'
@@ -101,6 +102,7 @@ router.delete('/', async (req, res, next) => {
     clearApiKeysCache()
     clearApplicationKeysCaches()
     rateLimiting.clear()
+    clearThumbnailFailures()
     testEvents.removeAllListeners()
 
     // re-initialize remote services and base apps from config after cleanup

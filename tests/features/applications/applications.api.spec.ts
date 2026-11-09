@@ -384,11 +384,39 @@ test.describe('Applications', () => {
       assert.equal(err.status, 500)
       return true
     })
-    // when an error in cached default thumbnail mode a no-preview image is returned
+    // when the capture of an expired default thumbnail fails, the previous thumbnail is served,
+    // never cached so that a later view retries
     await ax.put('/api/v1/applications/' + app.id + '/config', { datasets: [{ href: dataset.href, id: dataset.id }], test: 'ok2' })
-    await assert.rejects(ax.get('/api/v1/applications/' + app.id + '/capture?app_capture-test-error=true', { maxRedirects: 0 }), (err: any) => {
-      assert.equal(err.status, 302)
-      assert.ok(err.headers.location.endsWith('/no-preview.png'))
+    const newUpdatedAt = (await ax.get('/api/v1/applications/' + app.id)).data.updatedAt
+    res = await ax.get('/api/v1/applications/' + app.id + '/capture?updatedAt=' + newUpdatedAt + '&app_capture-test-error=true')
+    assert.equal(res.status, 200)
+    assert.equal(res.headers['content-type'], 'image/png')
+    assert.equal(res.headers['x-capture-cache-status'], 'STALE')
+    assert.equal(res.headers['cache-control'], 'must-revalidate, private, max-age=0')
+    // the failure is remembered: the next views get the previous thumbnail without a new capture
+    // (a failing capture takes seconds: 2 attempts and a pause)
+    const t0 = Date.now()
+    res = await ax.get('/api/v1/applications/' + app.id + '/capture?updatedAt=' + newUpdatedAt + '&app_capture-test-error=true')
+    assert.equal(res.headers['x-capture-cache-status'], 'STALE')
+    assert.ok(Date.now() - t0 < 1000, `the failed capture was attempted again (${Date.now() - t0}ms)`)
+
+    // concurrent views of a thumbnail being generated share its capture, and all get the image
+    const { data: app3 } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
+    const concurrent = await Promise.all([1, 2, 3].map(() => ax.get('/api/v1/applications/' + app3.id + '/capture', { responseType: 'arraybuffer' })))
+    for (const r of concurrent) {
+      assert.equal(r.status, 200)
+      assert.equal(r.headers['content-type'], 'image/png')
+      assert.equal(r.headers['x-capture-cache-status'], 'MISS')
+      assert.ok(r.data.byteLength > 0)
+    }
+
+    // without any previous thumbnail, an error status: an <img> fires its error event and the
+    // clients show their fallback, there is no placeholder image
+    const { data: app2 } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
+    await assert.rejects(ax.get('/api/v1/applications/' + app2.id + '/capture?app_capture-test-error=true'), (err: any) => {
+      assert.equal(err.status, 502)
+      assert.equal(err.headers['x-capture-cache-status'], 'ERROR')
+      assert.equal(err.headers['cache-control'], 'must-revalidate, private, max-age=0')
       return true
     })
 

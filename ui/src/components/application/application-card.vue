@@ -23,7 +23,18 @@
       :src="captureUrl"
       :aspect-ratio="1050 / 450"
       class="flex-grow-1"
-    />
+    >
+      <!-- the capture failed and there is no previous one: data-fair answers an error status -->
+      <template #error>
+        <div class="d-flex align-center justify-center fill-height bg-surface-light">
+          <v-icon
+            :icon="mdiImageOffOutline"
+            size="48"
+            color="medium-emphasis"
+          />
+        </div>
+      </template>
+    </v-img>
 
     <!--
       min-height: auto => remove default v-card-actions min-height
@@ -64,6 +75,7 @@
 
 <script setup lang="ts">
 import type { Application } from '#api/types'
+import { mdiImageOffOutline } from '@mdi/js'
 import ownerAvatar from '@data-fair/lib-vuetify/owner-avatar.vue'
 import { foreignReferences, type ReferencingResource } from '~/utils/fragments'
 
