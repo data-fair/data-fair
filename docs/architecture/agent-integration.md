@@ -534,6 +534,7 @@ The three form skills are published by the VJSF component itself (named from its
 | `ui/src/components/application/application-config.vue` | `configure-application` action button + VJSF form tools and `app-config-form` skill |
 | `ui/src/pages/new-application.vue` | `help-create-application` action button + creation tools registration |
 | `ui/src/pages/new-dataset.vue` | `help-create-dataset` action button + creation tools registration |
+| `ui/src/components/dashboard/dashboard-hero.vue` | "Ask the assistant" button of the dashboard, opens the drawer without sending a message |
 | `ui/src/components/layout/layout-navigation-top.vue` | `DfAgentChatToggle` button in top navigation |
 | `api/src/ui-config.ts` | Exports `agentsIntegration` flag |
 | `api/src/settings/router.ts` | `GET /settings/:type/:id/agent-chat` endpoint |

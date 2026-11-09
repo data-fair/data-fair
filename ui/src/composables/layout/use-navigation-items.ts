@@ -42,6 +42,11 @@ export interface NavGroup {
   items: NavItem[]
 }
 
+export const resolveTitle = (title: string | Record<string, string>, locale: string): string => {
+  if (typeof title === 'string') return title
+  return title[locale] || title.fr || Object.values(title)[0] || ''
+}
+
 export function useNavigationItems (options: { t: ComposerTranslation, locale: Ref<string> }): { navigationGroups: ComputedRef<NavGroup[]> } {
   const { t, locale } = options
   const { site, account, user, organization } = useSession()
@@ -59,11 +64,6 @@ export function useNavigationItems (options: { t: ComposerTranslation, locale: R
       return false
     })
   })
-
-  function resolveTitle (title: string | Record<string, string>): string {
-    if (typeof title === 'string') return title
-    return title[locale.value] || title.fr || Object.values(title)[0] || ''
-  }
 
   const navigationGroups = computed<NavGroup[]>(() => {
     const groups: NavGroup[] = []
@@ -145,7 +145,7 @@ export function useNavigationItems (options: { t: ComposerTranslation, locale: R
       help.push({ to: '/api-doc', icon: mdiCloud, title: t('apiDoc') })
     }
     for (const docLink of ($uiConfig.extraDocLinks ?? [])) {
-      help.push({ href: docLink.href, icon: docLink.icon || mdiCloud, title: resolveTitle(docLink.title) })
+      help.push({ href: docLink.href, icon: docLink.icon || mdiCloud, title: resolveTitle(docLink.title, locale.value) })
     }
     if (help.length) groups.push({ key: 'help', title: t('group.help'), items: help })
 
@@ -155,8 +155,8 @@ export function useNavigationItems (options: { t: ComposerTranslation, locale: R
         to: extra.iframe ? `/extra/${extra.id}` : extra.to,
         href: extra.href,
         icon: extra.icon || mdiCloud,
-        title: resolveTitle(extra.title),
-        subtitle: extra.subtitle ? resolveTitle(extra.subtitle) : undefined
+        title: resolveTitle(extra.title, locale.value),
+        subtitle: extra.subtitle ? resolveTitle(extra.subtitle, locale.value) : undefined
       }
       if (extra.group) {
         const group = groups.find(g => g.key === extra.group)
@@ -201,8 +201,8 @@ export function useNavigationItems (options: { t: ComposerTranslation, locale: R
           to: extra.iframe ? `/admin-extra/${extra.id}` : extra.to,
           href: extra.href,
           icon: extra.icon || mdiCloud,
-          title: resolveTitle(extra.title),
-          subtitle: extra.subtitle ? resolveTitle(extra.subtitle) : undefined
+          title: resolveTitle(extra.title, locale.value),
+          subtitle: extra.subtitle ? resolveTitle(extra.subtitle, locale.value) : undefined
         })
       }
       groups.push({ key: 'admin', title: t('group.admin'), items: admin })
