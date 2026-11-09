@@ -65,8 +65,8 @@
 <i18n lang="yaml">
 fr:
   noInfo: (pas d'information de stockage)
-  indexedData: de données indexées
-  storedData: de données stockées
+  indexedData: indexés
+  storedData: stockés
   original-file: fichier original
   normalized-file: fichier converti
   full-file: fichier enrichi
@@ -78,11 +78,11 @@ fr:
   revisions: révisions historisées
   master-data: d'équivalence en données de référence
   indexed: indexé
-  legacyIndexed: La taille des données indexées de ce jeu de données est encore calculée par une ancienne méthode (taille physique du fichier ou de la collection). Elle sera remplacée par l'équivalent CSV des lignes indexées lors du prochain traitement complet du jeu de données.
+  legacyIndexed: Le volume de ce jeu de données est encore calculé par une ancienne méthode (taille physique du fichier ou de la collection). Il sera remplacé par l'équivalent CSV des lignes indexées lors du prochain traitement complet du jeu de données.
 en:
   noInfo: (no storage information)
-  indexedData: of indexed data
-  storedData: of stored data
+  indexedData: indexed
+  storedData: stored
   original-file: original file
   normalized-file: converted file
   full-file: extended file
@@ -94,7 +94,7 @@ en:
   revisions: revisions
   master-data: equivalence in master data
   indexed: indexed
-  legacyIndexed: This dataset's indexed size is still computed by a deprecated method (physical size of the file or database collection). It will be replaced by the CSV equivalent of the indexed lines after the next full processing of the dataset.
+  legacyIndexed: This dataset's volume is still computed by a deprecated method (physical size of the file or database collection). It will be replaced by the CSV equivalent of the indexed lines after the next full processing of the dataset.
 
 </i18n>
 
