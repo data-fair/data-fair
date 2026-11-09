@@ -165,7 +165,7 @@ const { roDataset } = defineProps({
   roDataset: { type: Boolean, default: false }
 })
 
-const { application, applicationLink, patch, canWriteConfig, configFetch, configDraftFetch, configDraft, writeConfig, writeConfigDraft, cancelConfigDraft, baseAppDraft, schemaFetch } = useApplicationStore()
+const { application, applicationLink, patch, canWriteConfig, configFetch, configDraftFetch, configDraft, writeConfig, writeConfigDraft, isSavingConfigDraft, cancelConfigDraft, baseAppDraft, schemaFetch } = useApplicationStore()
 const { availableVersions } = useApplicationVersions()
 useApplicationWatch('draft-error')
 
@@ -195,8 +195,11 @@ const configureContext = computed(() => {
 
 const editUrl = computed(() => application.value?.urlDraft || application.value?.url)
 const editConfig = ref<AppConfig | null>(null)
+// the last state sent by this form: its stored copy must not replace what was edited since
+let savedConfig: AppConfig | null = null
 watch(configDraft, (config) => {
   debug('update editConfig from stored draft', toRaw(editConfig.value) === toRaw(config))
+  if (toRaw(config) === savedConfig) return
   editConfig.value = config
 }, { immediate: true })
 // return true if some local changes were not yet synced with the server
@@ -298,9 +301,11 @@ const vjsfOptions = computed<VjsfOptions | null>(() => {
 // TODO: editUrl is not saved yet as urlDraft ?
 const saveDraft = async () => {
   if (!canWriteConfig.value || !formValid.value || !editConfig.value) return
-  if (equal(toRaw(configDraft.value), toRaw(editConfig.value))) return
+  // a save in flight compares to a state about to be replaced: going back to the stored one is an edit
+  if (!isSavingConfigDraft() && equal(toRaw(configDraft.value), toRaw(editConfig.value))) return
   const wasInError = !!application.value?.errorMessageDraft
-  await writeConfigDraft(editConfig.value)
+  savedConfig = toRaw(editConfig.value)
+  await writeConfigDraft(savedConfig)
   if (baseAppDraft.value?.meta?.['df:sync-config'] === 'true') {
     debug('send set-config message to app', editConfig.value)
     // @ts-ignore
