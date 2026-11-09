@@ -24,6 +24,8 @@ const vjsfOptions = computed<VjsfOptions>(() => ({
   validateOn: 'input',
   updateOn: 'blur',
   density: 'comfortable',
+  // a schema default is a fallback read by the code, never stored with the settings
+  useDefault: false,
   xI18n: true,
   locale: locale.value
 }))

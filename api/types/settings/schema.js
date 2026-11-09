@@ -13,8 +13,8 @@ const metadataGroup = (defaultGroup, toggleable = false, cols = 4) => ({
   type: 'string',
   title: 'Category',
   'x-i18n-title': { fr: 'Catégorie' },
-  // read by the dataset form, not a json schema default: vjsf would store it
-  'x-default': defaultGroup.key,
+  // a fallback read by the code, the settings forms never write defaults (vjsf useDefault: false)
+  default: defaultGroup.key,
   layout: {
     ...(toggleable && { if: 'parent.data.active' }),
     cols,
@@ -28,34 +28,40 @@ const metadataGroup = (defaultGroup, toggleable = false, cols = 4) => ({
   }
 })
 
+// a help is a sentence or two: two lines to start with, more as it is typed
+const helpProps = { rows: 2, autoGrow: true }
+
 // replaces the help shown next to the field in the dataset form, the form gives the native help as placeholder
 const metadataHelp = (toggleable = false) => ({
   type: 'string',
   title: 'Tooltip',
   'x-i18n-title': { fr: 'Infobulle' },
+  description: 'Help text shown next to the field, in the dataset form.',
+  'x-i18n-description': { fr: "Texte d'aide affiché à côté du champ, dans le formulaire du jeu de données." },
   layout: {
     comp: 'textarea',
     ...(toggleable && { if: 'parent.data.active' }),
     cols: 12,
-    props: { rows: 1, autoGrow: true, density: 'compact' }
+    props: helpProps
   }
 })
 
-// a metadata always shown on a dataset: only its tab and help can be chosen
+// a metadata always shown on a dataset: its tab can be chosen, except for summary and description, and its help
 /**
  * @param {string} title
  * @param {{ key: string }} defaultGroup
  * @param {string} description
  * @param {string} titleEn
  * @param {string} descriptionEn
+ * @param {boolean} [fixedGroup]
  */
-const fixedMetadata = (title, defaultGroup, description, titleEn, descriptionEn) => ({
+const fixedMetadata = (title, defaultGroup, description, titleEn, descriptionEn, fixedGroup = false) => ({
   type: 'object',
   // an empty middle column, where the other rows have their custom label, keeps the help next to the switch
   layout: { children: ['active', { text: '\u00a0', cols: 4 }, 'group', 'description'] },
   properties: {
     active: { title, description, 'x-i18n-title': { en: titleEn }, 'x-i18n-description': { en: descriptionEn }, type: 'boolean', readOnly: true, default: true, layout: { comp: 'switch', cols: 4 } },
-    group: metadataGroup(defaultGroup),
+    group: fixedGroup ? { ...metadataGroup(defaultGroup), readOnly: true } : metadataGroup(defaultGroup),
     description: metadataHelp()
   }
 })
@@ -393,7 +399,8 @@ export default {
           title: { type: 'string', title: 'Titre', minLength: 3 },
           description: { type: 'string', title: 'Description' },
           tag: { type: 'string', title: 'Catégorie' },
-          type: { type: 'string', title: 'Type', default: 'string', oneOf: [{ title: 'Chaîne de caractère', const: 'string' }, { title: 'Nombre', const: 'number' }] }
+          // the default is a fallback read by the code, never written: the placeholder shows it
+          type: { type: 'string', title: 'Type', default: 'string', layout: { props: { placeholder: 'Chaîne de caractère', persistentPlaceholder: true } }, oneOf: [{ title: 'Chaîne de caractère', const: 'string' }, { title: 'Nombre', const: 'number' }] }
         }
       }
     },
@@ -453,6 +460,8 @@ export default {
             }
           }
         },
+        summary: fixedMetadata('Résumé', informationsGroup, 'Courte présentation du jeu de données, affichée dans les listes et sur les vignettes des portails.', 'Summary', 'Short presentation of the dataset, shown in lists and on portal thumbnails.', true),
+        description: fixedMetadata('Description', informationsGroup, 'Présentation détaillée du jeu de données, rédigée en markdown.', 'Description', 'Detailed presentation of the dataset, written in markdown.', true),
         license: fixedMetadata('Licence', informationsGroup, "Conditions de réutilisation des données. La liste des licences proposées se règle dans l'onglet Licences.", 'License', 'Terms for reusing the data. The list of offered licenses is set in the Licenses tab.'),
         origin: fixedMetadata('Provenance', informationsGroup, "Adresse de la page où les données d'origine sont publiées, par exemple sur le site du producteur.", 'Origin', "Address of the page where the original data is published, for example on the producer's website."),
         image: fixedMetadata('Vignette', coverageGroup, "Adresse d'une image utilisée comme vignette du jeu de données, dans les listes et sur les portails.", 'Thumbnail', 'Address of an image used as the dataset thumbnail, in lists and on portals.'),
@@ -703,7 +712,8 @@ export default {
                 title: 'Type',
                 type: 'string',
                 default: 'string',
-                layout: { cols: 3 },
+                // the default is a fallback, never written: the placeholder shows it
+                layout: { cols: 3, props: { placeholder: 'Text', 'x-i18n-placeholder': { fr: 'Texte' }, persistentPlaceholder: true } },
                 oneOf: [
                   { const: 'string', title: 'Text', 'x-i18n-title': { fr: 'Texte' } },
                   { const: 'integer', title: 'Integer', 'x-i18n-title': { fr: 'Nombre entier' } },
@@ -725,7 +735,7 @@ export default {
                 'x-i18n-title': { fr: 'Infobulle' },
                 'x-i18n-description': { fr: "Texte d'aide affiché à côté du champ, dans le formulaire du jeu de données." },
                 type: 'string',
-                layout: 'textarea'
+                layout: { comp: 'textarea', props: helpProps }
               },
               enum: {
                 title: 'List of values',

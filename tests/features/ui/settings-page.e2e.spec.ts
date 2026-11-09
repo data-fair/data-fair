@@ -301,6 +301,22 @@ test.describe('settings integrations', () => {
     await expect(section.getByText('Clé « Auto key » créée')).toBeVisible()
   })
 
+  test('a key stored before this visit does not block adding another one', async ({ page, goToWithAuth }) => {
+    const ax = await axiosAuth('test_user1@test.com')
+    await ax.patch('/api/v1/settings/user/test_user1', { apiKeys: [{ title: 'Stored key', scopes: ['datasets'] }] })
+
+    await goToSettings(page, goToWithAuth)
+    const section = page.locator('#integrations')
+    await section.scrollIntoViewIfNeeded()
+    await section.getByRole('button', { name: /Ajouter une clé d'API/i }).click()
+    const dialog = page.getByRole('dialog')
+    await dialog.getByLabel('Titre', { exact: true }).fill('Second key')
+    await dialog.getByRole('button', { name: 'Ajouter', exact: true }).click()
+
+    await expect(section.getByText('Clé « Second key » créée')).toBeVisible()
+    assert.equal((await ax.get('/api/v1/settings/user/test_user1')).data.apiKeys.length, 2)
+  })
+
   test('a refused API key save is rolled back and the next one still goes out', async ({ page, goToWithAuth }) => {
     const ax = await axiosAuth('test_user1@test.com')
     await goToSettings(page, goToWithAuth)
@@ -423,6 +439,50 @@ test.describe('settings department switch guard', () => {
     // the restore of the previous department used to ask again, endlessly
     await page.waitForTimeout(500)
     expect(dialogs).toBe(1)
+  })
+})
+
+test.describe('settings defaults filled by the form', () => {
+  test.beforeEach(async () => {
+    await clean()
+  })
+
+  test('opening a line of a list is not an edit, changing it is', async ({ page, goToWithAuth }) => {
+    const ax = await axiosAuth('test_user1@test.com', 'test_org1')
+    await ax.patch('/api/v1/settings/organization/test_org1', {
+      datasetsMetadata: { custom: [{ title: 'Service producteur' }] },
+      privateVocabulary: [{ title: 'Mon concept' }]
+    })
+
+    await goToSettingsOrg(page, goToWithAuth)
+    const catalog = page.locator('#catalog')
+    const openLine = async (title: string) => {
+      const row = catalog.locator('.vjsf-list-item').filter({ hasText: title })
+      await row.hover()
+      await row.getByRole('button', { name: 'Actions' }).click()
+      await page.getByRole('listitem').filter({ hasText: 'Éditer' }).click()
+    }
+
+    await catalog.getByRole('tab', { name: 'Vocabulaire privé' }).click()
+    await openLine('Mon concept')
+    await catalog.getByRole('tab', { name: 'Métadonnées' }).click()
+    await openLine('Service producteur')
+    await expect(catalog.getByRole('textbox', { name: 'Libellé' })).toHaveValue('Service producteur')
+    await expect(catalog.getByRole('button', { name: 'Enregistrer' })).toHaveCount(0)
+
+    await catalog.getByRole('textbox', { name: 'Libellé' }).fill('Service renommé')
+    await catalog.getByRole('textbox', { name: 'Libellé' }).blur()
+    await expect(catalog.getByRole('button', { name: 'Enregistrer' })).toBeVisible()
+  })
+
+  test('the embedded metadata form saves nothing until an edit', async ({ page, goToWithAuth }) => {
+    const patches: string[] = []
+    page.on('request', request => { if (request.method() === 'PATCH') patches.push(request.url()) })
+
+    await goToWithAuth('/data-fair/embed/settings/user/test_user1/datasets-metadata', 'test_user1')
+    await expect(page.locator('.v-list-item').filter({ hasText: 'Licence' }).first()).toBeVisible({ timeout: 15000 })
+    await page.waitForTimeout(1000)
+    expect(patches).toEqual([])
   })
 })
 

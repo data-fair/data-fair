@@ -7,6 +7,8 @@
 // closed licence and topic lists, and the dataset's own write permission. A field that
 // the form would not render is refused rather than written silently.
 
+import { settingsSchema } from '#api/types'
+
 export const FREQUENCY_VALUES = [
   'triennial', 'biennial', 'annual', 'semiannual', 'threeTimesAYear', 'quarterly',
   'bimonthly', 'monthly', 'semimonthly', 'biweekly', 'threeTimesAMonth', 'weekly',
@@ -64,7 +66,9 @@ const isFieldAvailable = (field: string, ctx: MetadataContext): boolean => {
   // An owner with no `datasets-metadata` settings at all gets the platform defaults,
   // where every optional field is rendered.
   if (!ctx.datasetsMetadata) return true
-  return ctx.datasetsMetadata[field]?.active !== false
+  // an activation left at its schema default is not stored
+  const defaultActive = (settingsSchema.properties.datasetsMetadata.properties as Record<string, any>)[field]?.properties?.active?.default
+  return ctx.datasetsMetadata[field]?.active ?? defaultActive ?? true
 }
 
 const norm = (s: string) => s.trim().toLowerCase()

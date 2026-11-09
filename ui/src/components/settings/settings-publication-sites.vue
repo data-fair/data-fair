@@ -33,14 +33,10 @@
 
 <i18n lang="yaml">
 fr:
-  summary: Résumé
-  description: Description
   noPortal: Aucun portail.
   portalsIntegration: "Les portails sont ajoutés automatiquement lorsque vous les créez dans la {link}."
   portalsLink: gestion des portails
 en:
-  summary: Summary
-  description: Description
   noPortal: No portal.
   portalsIntegration: "Portals are added automatically when you create them in the {link}."
   portalsLink: portals management
@@ -48,8 +44,9 @@ en:
 
 <script setup lang="ts">
 import publicationSitesContract from '~/../../api/contract/publication-sites'
-import { type Settings, settingsSchema } from '#api/types'
+import { type Settings } from '#api/types'
 import Vjsf, { type Options as VjsfOptions } from '@koumoul/vjsf'
+import { localizedMetadata } from '~/utils/settings-metadata-form'
 
 const publicationSites = defineModel<Settings['publicationSites']>()
 const valid = defineModel<boolean>('valid', { default: true })
@@ -60,7 +57,6 @@ const { user } = useSessionAuthenticated()
 const publicationSitesSchema = publicationSitesContract(false)
 const publicationSitesAdminSchema = publicationSitesContract(true)
 const schema = computed(() => user.value.adminMode ? publicationSitesAdminSchema : publicationSitesSchema)
-const datasetsMetadataSchema = settingsSchema.properties.datasetsMetadata
 
 const editPublicationSites = ref<Settings['publicationSites']>()
 watchDeepDiff(publicationSites, () => {
@@ -70,20 +66,19 @@ watchDeepDiff(editPublicationSites, () => {
   publicationSites.value = editPublicationSites.value
 }, {})
 
-// summary and description have no settings row, every other metadata shown on datasets can be required
+// every metadata shown on datasets can be required
 const context = computed(() => ({
-  DatasetsMetadata: [
-    { key: 'summary', title: t('summary') },
-    { key: 'description', title: t('description') }
-  ].concat(Object.entries(datasetsMetadataSchema.properties as Record<string, any>)
-    .filter(([key, prop]) => prop.properties?.active && (prop.properties.active.readOnly || ((datasetsMetadata as any)?.[key]?.active ?? prop.properties.active.default)))
-    .map(([key, prop]) => ({ key, title: prop.properties.active.title })))
+  DatasetsMetadata: Object.values(localizedMetadata(locale.value))
+    .filter(m => m.alwaysActive || ((datasetsMetadata as any)?.[m.key]?.active ?? m.defaultActive))
+    .map(({ key, title }) => ({ key, title }))
 }))
 
 const vjsfOptions = computed<VjsfOptions>(() => ({
   validateOn: 'input',
   updateOn: 'blur',
   density: 'comfortable',
+  // a schema default is a fallback read by the code, never stored with the settings
+  useDefault: false,
   xI18n: true,
   locale: locale.value,
   context: context.value

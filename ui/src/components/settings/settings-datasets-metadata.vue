@@ -59,9 +59,11 @@ import { fromMetadataForm, localizedMetadata, metadataFormSchema, standardMetada
 const datasetsMetadata = defineModel<Settings['datasetsMetadata']>()
 const valid = defineModel<boolean>('valid', { default: true })
 const editDatasetsMetadata = ref<Record<string, any>>()
+// both sides go through the form: an activation stored at its default, by an older version, is no edit either
+const sameMetadata = (form: Record<string, any>) => equal(fromMetadataForm(form), fromMetadataForm(toMetadataForm(datasetsMetadata.value)))
 watchDeepDiff(datasetsMetadata, () => {
   // a new model resets vjsf and closes the edit dialog: its own changes are not sent back
-  if (editDatasetsMetadata.value && equal(fromMetadataForm(editDatasetsMetadata.value), datasetsMetadata.value)) return
+  if (editDatasetsMetadata.value && sameMetadata(editDatasetsMetadata.value)) return
   editDatasetsMetadata.value = toMetadataForm(datasetsMetadata.value)
 }, { immediate: true })
 watchDeepDiff(editDatasetsMetadata, () => {
@@ -71,7 +73,7 @@ watchDeepDiff(editDatasetsMetadata, () => {
     editDatasetsMetadata.value = { ...editDatasetsMetadata.value, groups: groups.map(g => g.key ? g : { ...g, key: Math.random().toString(36).slice(2, 10) }) }
     return
   }
-  datasetsMetadata.value = fromMetadataForm(editDatasetsMetadata.value!) as Settings['datasetsMetadata']
+  if (!sameMetadata(editDatasetsMetadata.value!)) datasetsMetadata.value = fromMetadataForm(editDatasetsMetadata.value!) as Settings['datasetsMetadata']
 }, {})
 const { t, locale } = useI18n()
 
@@ -106,6 +108,8 @@ const vjsfOptions = computed<VjsfOptions>(() => ({
   validateOn: 'input',
   updateOn: 'blur',
   density: 'comfortable',
+  // a schema default is a fallback read by the code, never stored with the settings
+  useDefault: false,
   xI18n: true,
   locale: locale.value,
   context: { metadata: metadataByKey.value, metadataItems: standardMetadataItems, metadataSubtitles: metadataSubtitles.value, labels: labels.value }
