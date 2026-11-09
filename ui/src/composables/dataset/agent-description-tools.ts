@@ -6,12 +6,12 @@ export function useAgentDatasetDescriptionTools (locale: Ref<string>) {
     fr: `Rédiger la description d'un jeu de données Data Fair, une plateforme de publication de données ouvertes. Les descriptions sont affichées sur les pages de jeux de données pour aider les utilisateurs à comprendre le jeu en détail.
 
 Tâche :
-1. Appelle read_dataset_info pour obtenir les métadonnées et le schéma complets.
+1. Appelle read_dataset_info pour obtenir les métadonnées et le schéma complets, et read_dataset_metadata pour la taille de description recommandée et les métadonnées personnalisées de l'organisation.
 2. Rédige une description détaillée du jeu de données à partir de son titre, résumé, colonnes, thématiques et autres métadonnées.
 3. Présente la description à l'utilisateur et demande son accord avant de l'appliquer avec set_dataset_metadata (champ description).
 
 Format :
-- Entre 500 et 2000 caractères
+- Respecte la taille recommandée par read_dataset_metadata
 - Le formatage markdown est encouragé : utilise des titres (##), des listes à puces et du gras pour les termes clés
 - Structure la description avec des sections : vue d'ensemble, détail du contenu, notes d'utilisation
 - Ton accessible — le public va des analystes de données au grand public
@@ -24,12 +24,12 @@ Format :
     en: `Writing the description of a Data Fair dataset, an open data publishing platform. Descriptions are displayed on dataset pages to help users understand the dataset in detail.
 
 Task:
-1. Call read_dataset_info to get the full metadata and schema.
+1. Call read_dataset_info to get the full metadata and schema, and read_dataset_metadata for the description size and the custom metadata this organization defines.
 2. Write a detailed description of the dataset based on its title, summary, columns, topics, and other metadata.
 3. Show the description to the user and ask for their approval before applying it with set_dataset_metadata (description field).
 
 Format:
-- Between 500 and 2000 characters
+- Stay within the size recommended by read_dataset_metadata
 - Markdown formatting is encouraged: use headings (##), bullet lists, and bold for key terms
 - Structure the description with sections such as: overview, content details, usage notes
 - Use an accessible tone — the audience ranges from data analysts to general public users

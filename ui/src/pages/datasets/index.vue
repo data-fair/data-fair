@@ -237,10 +237,11 @@ const ownerParam = computed(() => {
 
 const datasetsQuery = computed(() => {
   const params: Record<string, any> = {
-    select: 'title,description,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,draft.file,draft.originalFile,count,finalizedAt,updatedAt,visibility,owner,draftReason,integrity,partOf',
+    select: 'title,description,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,draft.file,draft.originalFile,count,finalizedAt,updatedAt,visibility,owner,draftReason,integrity,partOf,completeness',
   }
   if (q.value) params.q = q.value
-  else params.sort = sort.value
+  // many datasets share a score: the id keeps the pages from repeating or skipping them
+  else params.sort = sort.value.startsWith('completeness:') ? `${sort.value},id:1` : sort.value
   if (ownerParam.value) params.owner = ownerParam.value
   if (facetStatus.value?.length) params.status = facetStatus.value.join(',')
   if (facetDraftStatus.value?.length) params.draftStatus = facetDraftStatus.value.join(',')
@@ -270,11 +271,15 @@ watch(() => catalog.totalCount.value, (count) => {
   breadcrumbs.receive({ breadcrumbs: [{ text: t('datasets', { count }) }] })
 }, { immediate: true })
 
+// the score exists only once the account activated it in its settings
+const datasetsMetadataFetch = useFetch<{ completeness?: { active?: boolean } }>(() => account.value && `${$apiPath}/settings/${account.value.type}/${account.value.id}/datasets-metadata`)
+
 const sortItems = computed(() => [
   { title: t('sortCreatedAt'), value: 'createdAt' },
   { title: t('sortUpdatedAt'), value: 'updatedAt' },
   { title: t('sortDataUpdatedAt'), value: 'dataUpdatedAt' },
-  { title: t('sortTitle'), value: 'title' }
+  { title: t('sortTitle'), value: 'title' },
+  ...(datasetsMetadataFetch.data.value?.completeness?.active ? [{ title: t('sortCompleteness'), value: 'completeness' }] : [])
 ])
 </script>
 
@@ -284,6 +289,7 @@ fr:
   sortUpdatedAt: Mise à jour
   sortDataUpdatedAt: Mise à jour des données
   sortTitle: Titre
+  sortCompleteness: Score de complétion des métadonnées
   showAll: Voir tous les jeux de données
   showFragments: Voir aussi les fragments
   createDataset: Créer un nouveau jeu de données
@@ -294,6 +300,7 @@ en:
   sortUpdatedAt: Update
   sortDataUpdatedAt: Data update
   sortTitle: Title
+  sortCompleteness: Metadata completeness score
   showAll: Show all datasets
   showFragments: Also show fragments
   createDataset: Create a dataset
