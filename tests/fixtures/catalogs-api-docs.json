@@ -966,6 +966,11 @@
       "importConfiguration": {
         "type": "object",
         "additionalProperties": false,
+        "required": [
+          "shouldUpdateMetadata",
+          "shouldUpdateSchema",
+          "scheduling"
+        ],
         "properties": {
           "config": {
             "type": "object",
@@ -3140,7 +3145,7 @@
       "post": {
         "operationId": "postImport",
         "summary": "Import a remote resource",
-        "description": "Import a resource of a remote catalog (listCatalogResources) as a data-fair dataset of the owner of the catalog. The worker runs it within seconds. With dataFairDataset the import overwrites that existing dataset, and replaces the import that pointed to it.",
+        "description": "Import a resource of a remote catalog (listCatalogResources) as a data-fair dataset of the owner of the catalog. The worker runs it within seconds. With dataFairDataset the import overwrites that existing dataset, and replaces the import that pointed to it: dataFairDataset and separator need the admin tier of the catalogs scopes.",
         "tags": [
           "Imports"
         ],
@@ -3648,7 +3653,7 @@
             "en": "Import a remote resource",
             "fr": "Importer une ressource distante"
           },
-          "description": "Import a resource of a remote catalog as a data-fair dataset of the owner of the catalog. The remoteResource id and title come from catalogs_browse_remote_resources. Without dataFairDataset a new dataset is created; with dataFairDataset (an existing dataset, from datafair_list_account_datasets) the import overwrites it. The worker runs it within seconds: follow it with catalogs_describe_import. Configure its scheduling and plugin options afterwards with the catalogs_import_configuration tools.",
+          "description": "Import a resource of a remote catalog as a data-fair dataset of the owner of the catalog. The remoteResource id and title come from catalogs_browse_remote_resources. Without dataFairDataset a new dataset is created; with dataFairDataset (an existing dataset, from datafair_list_account_datasets) the import overwrites it, which needs the admin tier of the catalogs scopes. The worker runs it within seconds: follow it with catalogs_describe_import. Configure its scheduling and plugin options afterwards with the catalogs_import_configuration tools.",
           "annotations": {
             "openWorldHint": true
           },
@@ -4473,7 +4478,7 @@
       "put": {
         "operationId": "putImportConfiguration",
         "summary": "Replace the configuration of an import",
-        "description": "Replace the scheduling, update options and plugin import config. A missing optional part is removed; config is refused when the catalog has no importConfig capability.",
+        "description": "Replace the scheduling, update options and plugin import config. A missing isSchedulingActive is set to its default (true); config is required when the catalog has the importConfig capability and refused otherwise.",
         "tags": [
           "Imports"
         ],
