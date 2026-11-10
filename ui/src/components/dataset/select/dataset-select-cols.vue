@@ -110,8 +110,8 @@ fr:
   fold: Plier
   unfold: Déplier
 en:
-  selectColsTitle: Chose visible columns
-  selectColsTitleHidden: "Chose visible columns ({visible}/{total} column shown) | Chose visible columns ({visible}/{total} columns shown)"
+  selectColsTitle: Choose visible columns
+  selectColsTitleHidden: "Choose visible columns ({visible}/{total} column shown) | Choose visible columns ({visible}/{total} columns shown)"
   visibleColumns: Visible columns
   showAll: Show all
   fold: Fold
@@ -133,7 +133,7 @@ const { dataset } = useDatasetStore()
 const selectableProps = computed(() => dataset.value?.schema?.filter(isVisibleCol) ?? [])
 // cols empty means all columns are visible
 const hiddenCount = computed(() => cols.value.length ? selectableProps.value.filter(p => !cols.value.includes(p.key)).length : 0)
-// explicit aria-label: otherwise the badge's own label becomes the button's accessible name
+// explicit aria-label: the icon and the count chip are hidden from assistive technologies
 const visibleCount = computed(() => selectableProps.value.length - hiddenCount.value)
 const btnTitle = computed(() => hiddenCount.value ? t('selectColsTitleHidden', { visible: visibleCount.value, total: selectableProps.value.length }, visibleCount.value) : t('selectColsTitle'))
 
