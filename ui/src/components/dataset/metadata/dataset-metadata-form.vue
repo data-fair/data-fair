@@ -79,7 +79,7 @@ const vjsfModel = computed(() => {
 const onUpdate = (value: any) => {
   emitted = value
   const changed = Object.keys(schema.value.properties).filter(key => !equal(value[key], vjsfModel.value[key]))
-  // the schema depends on the dataset: vjsf re-emits after each replacement, an unchanged emit must stop there
+  // vjsf re-emits after a replacement from outside, an unchanged emit must stop there
   if (!changed.length) return
   const next = { ...dataset.value, customMetadata: { ...dataset.value.customMetadata } }
   for (const key of changed) {
@@ -272,7 +272,8 @@ const vjsfOptions = computed<VjsfOptions>(() => ({
 }))
 
 const summarizeContext = 'Write a summary for this dataset, following the write-dataset-summary skill. Present it to the user and ask for their approval before applying it. If approved, apply it with set_dataset_metadata (summary field). If the user wants changes, adjust accordingly.'
-const describeContext = 'The user wants help writing a description for this dataset. The description field supports markdown and should be more detailed than the summary. Ask the user what aspects they want to emphasize or if they have any specific requirements, then write it following the write-dataset-description skill. Present it to the user and ask for their approval before applying it. If approved, apply it with set_dataset_metadata (description field). If the user wants changes, adjust accordingly.'
-const searchTermsContext = 'Following the write-search-terms skill, propose hidden search terms for this dataset (synonyms, acronyms with their expansion, everyday wording — never displayed, only used by the catalog search). Present the list to the user and ask for their approval before applying it. If approved, apply it with set_dataset_metadata (searchTerms field, one line of terms separated by commas or newlines). If the user wants changes, adjust accordingly.'
 
+const describeContext = 'The user wants help writing a description for this dataset. The description field supports markdown and should be more detailed than the summary. Ask the user what aspects they want to emphasize or if they have any specific requirements, then write it following the write-dataset-description skill. Present it to the user and ask for their approval before applying it. If approved, apply it with set_dataset_metadata (description field). If the user wants changes, adjust accordingly.'
+
+const searchTermsContext = 'Following the write-search-terms skill, propose hidden search terms for this dataset (synonyms, acronyms with their expansion, everyday wording — never displayed, only used by the catalog search). Present the list to the user and ask for their approval before applying it. If approved, apply it with set_dataset_metadata (searchTerms field, one line of terms separated by commas or newlines). If the user wants changes, adjust accordingly.'
 </script>
