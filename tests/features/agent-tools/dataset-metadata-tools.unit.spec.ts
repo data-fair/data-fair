@@ -178,6 +178,7 @@ test.describe('buildMetadataPatch on custom metadata', () => {
     assert.match(outcomes[0].reason!, /Available: Service \| Thème interne/)
     assert.match(outcomes[1].reason!, /Available: Eau \| Air/)
     assert.match(outcomes[2].reason!, /not an integer/)
+    assert.match(buildMetadataPatch({ customMetadata: { Depuis: '2024-02-30' } }, current, customCtx).outcomes[0].reason!, /not a date/)
     assert.match(outcomes[3].reason!, /YYYY-MM-DD/)
     assert.match(outcomes[4].reason!, /http\(s\) URL/)
     assert.match(outcomes[5].reason!, /single value/)
@@ -216,8 +217,11 @@ test.describe('formatMetadataContext', () => {
 
   test('gives the sizes the organization recommends, else the platform defaults', () => {
     assert.match(formatMetadataContext({ title: 'T' }, ctx), /- summary: 100 to 300 characters\n- description: 300 to 5000 characters/)
-    const custom = { ...ctx, datasetsMetadata: { summary: { recommendedMax: 150 } } }
+    const custom = { ...ctx, datasetsMetadata: { completeness: { active: true }, summary: { recommendedMax: 150 } } }
     assert.match(formatMetadataContext({ title: 'T' }, custom), /- summary: 100 to 150 characters/)
+    // with the score off the settings form hides the sizes, so they no longer apply
+    const scoreOff = { ...ctx, datasetsMetadata: { summary: { recommendedMax: 150 } } }
+    assert.match(formatMetadataContext({ title: 'T' }, scoreOff), /- summary: 100 to 300 characters/)
     // the recommended maximum is also the cap set_dataset_metadata enforces
     const out = buildMetadataPatch({ summary: 'Recense ' + 'x'.repeat(200) }, {}, custom)
     assert.equal(out.outcomes[0].status, 'rejected')
@@ -226,6 +230,7 @@ test.describe('formatMetadataContext', () => {
 
   test('describes the custom metadata and the renamed fields of the organization', () => {
     const datasetsMetadata = {
+      completeness: { active: true },
       creator: { active: true, title: 'Service producteur' },
       custom: [{ key: 'theme', title: 'Thème interne', enum: ['eau', 'air'], multiple: true, description: 'Choisir les thèmes du référentiel', recommendedMax: 2 }, { title: 'Pas encore enregistrée' }]
     }

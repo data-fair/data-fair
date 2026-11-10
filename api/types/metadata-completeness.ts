@@ -1,29 +1,13 @@
 import settingsSchema from './settings/schema.js'
+import type { Dataset } from './dataset/.type/index.js'
+import type { Settings } from './settings/.type/index.js'
+import { isCustomMetadataEmpty } from './custom-metadata.ts'
 
 type ScoreSettings = { active?: boolean, weight?: number, recommendedMin?: number, recommendedMax?: number }
-type DatasetsMetadata = Record<string, any> & {
-  completeness?: { active?: boolean }
-  custom?: (ScoreSettings & { key?: string, title: string })[]
-}
+type DatasetsMetadata = NonNullable<Settings['datasetsMetadata']>
 
-export type CompletenessCriterion = {
-  // a dataset field, or a custom metadata key when custom is true
-  key: string
-  custom: boolean
-  weight: number
-  // characters of a text, values of a list, nothing for other values
-  size?: number
-  recommendedMin?: number
-  recommendedMax?: number
-  // 0 empty, 0.5 outside the recommended bounds, 1 filled
-  note: 0 | 0.5 | 1
-}
-
-export type Completeness = {
-  // from 0 to 100
-  score: number
-  criteria: CompletenessCriterion[]
-}
+export type Completeness = NonNullable<Dataset['completeness']>
+export type CompletenessCriterion = Completeness['criteria'][number]
 
 const metadataSchema = settingsSchema.properties.datasetsMetadata.properties as Record<string, any>
 const customSchema = metadataSchema.custom.items.properties
@@ -45,24 +29,40 @@ const sizeOf = (value: any) => typeof value === 'string' ? value.trim().length :
 const withDefaults = (settings: ScoreSettings, defaults: Record<string, any>) => (['weight', 'recommendedMin', 'recommendedMax'] as const)
   .map(prop => settings[prop] ?? defaults[prop]?.default)
 
-/** Size recommended for a dataset field (characters of a text, values of a list): the owner's setting, else the platform default. */
+/** Size recommended for a dataset field (characters of a text, values of a list): the owner's setting while the score is active (the form hides it otherwise), else the platform default. */
 export const recommendedSize = (key: string, datasetsMetadata?: DatasetsMetadata | null) => {
-  const [, min, max] = withDefaults(datasetsMetadata?.[key] ?? {}, metadataSchema[key]?.properties ?? {})
+  const settings = datasetsMetadata?.completeness?.active ? datasetsMetadata[key] as ScoreSettings | undefined : undefined
+  const [, min, max] = withDefaults(settings ?? {}, metadataSchema[key]?.properties ?? {})
   return { min, max }
+}
+
+/** The settings the stored scores depend on, undefined when the score is off: other changes (titles, tooltips, groups) do not rescore. */
+export const scoreInputs = (datasetsMetadata?: DatasetsMetadata | null) => {
+  if (!datasetsMetadata?.completeness?.active) return undefined
+  const fields = scoredFields.map(key => {
+    const { active, weight, recommendedMin, recommendedMax } = (datasetsMetadata[key] as ScoreSettings | undefined) ?? {}
+    return { active, weight, recommendedMin, recommendedMax }
+  })
+  // type, multiple and enum changes remove values from the datasets (updateDatasetsMetadata)
+  const custom = (datasetsMetadata.custom ?? []).map(({ key, type, multiple, enum: values, weight, recommendedMin, recommendedMax }) =>
+    ({ key, type, multiple, values, weight, recommendedMin, recommendedMax }))
+  return { fields, custom }
 }
 
 const rate = (key: string, custom: boolean, value: unknown, settings: ScoreSettings, defaults: Record<string, any>): CompletenessCriterion => {
   const [weight, recommendedMin, recommendedMax] = withDefaults(settings, defaults)
   const size = sizeOf(value)
   const outside = size !== undefined && ((recommendedMin !== undefined && size < recommendedMin) || (recommendedMax !== undefined && size > recommendedMax))
-  return { key, custom, weight: weight ?? 0, size, recommendedMin, recommendedMax, note: isEmpty(value) ? 0 : outside ? 0.5 : 1 }
+  // a custom value is empty by the rule its save applies (a link without url is dropped)
+  const empty = custom ? isCustomMetadataEmpty(value) : isEmpty(value)
+  return { key, custom, weight: weight ?? 0, size, recommendedMin, recommendedMax, note: empty ? 0 : outside ? 0.5 : 1 }
 }
 
 /** The metadata a dataset is scored on, as shown to its owner: active and weighted above 0. */
 export const completenessCriteria = (dataset: Record<string, any>, datasetsMetadata?: DatasetsMetadata | null): CompletenessCriterion[] => {
   const criteria: CompletenessCriterion[] = []
   for (const key of scoredFields) {
-    const settings: ScoreSettings = datasetsMetadata?.[key] ?? {}
+    const settings = (datasetsMetadata?.[key] as ScoreSettings | undefined) ?? {}
     const defaults = metadataSchema[key].properties
     if (!(settings.active ?? defaults.active.default)) continue
     criteria.push(rate(key, false, dataset[key], settings, defaults))

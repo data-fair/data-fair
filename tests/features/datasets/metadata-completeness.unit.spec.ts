@@ -1,6 +1,6 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { completenessCriteria, computeCompleteness, scoredFields } from '../../../api/types/metadata-completeness.ts'
+import { completenessCriteria, computeCompleteness, scoreInputs, scoredFields } from '../../../api/types/metadata-completeness.ts'
 
 const active = { completeness: { active: true } }
 const longText = (n: number) => 'x'.repeat(n)
@@ -69,8 +69,8 @@ test.describe('metadata completeness', () => {
       topics: { weight: 0 },
       custom: [
         { key: 'service', title: 'Service' },
-        { key: 'contact', title: 'Contact', type: 'link' },
-        { key: 'effectif', title: 'Effectif', type: 'integer', weight: 2 },
+        { key: 'contact', title: 'Contact', type: 'link' as const },
+        { key: 'effectif', title: 'Effectif', type: 'integer' as const, weight: 2 },
         { key: 'ignored', title: 'Ignored', weight: 0 }
       ]
     }
@@ -88,6 +88,19 @@ test.describe('metadata completeness', () => {
     const maxOnly = { completeness: { active: true }, custom: [{ key: 'note', title: 'Note', recommendedMax: 5 }] } as any
     assert.deepEqual(completenessCriteria({ customMetadata: { note: 'abc' } }, maxOnly).find(c => c.custom)?.note, 1)
     assert.deepEqual(completenessCriteria({ customMetadata: { note: 'too long' } }, maxOnly).find(c => c.custom)?.note, 0.5)
+  })
+
+  test('a link without url is empty, as its save drops it', () => {
+    const settings = { ...active, custom: [{ key: 'page', title: 'Page', type: 'link' as const }] }
+    assert.equal(completenessCriteria({ customMetadata: { page: { url: '', title: 'Site' } } }, settings).find(c => c.custom)?.note, 0)
+  })
+
+  test('only the settings the score reads trigger a rescore', () => {
+    const settings = { ...active, summary: { weight: 3, description: 'Aide' }, custom: [{ key: 'note', title: 'Note' }] }
+    assert.deepEqual(scoreInputs({ ...settings, summary: { weight: 3, description: 'Autre aide' }, informationsTitle: 'Infos', custom: [{ key: 'note', title: 'Remarque' }] }), scoreInputs(settings))
+    assert.notDeepEqual(scoreInputs({ ...settings, summary: { weight: 4 } }), scoreInputs(settings))
+    assert.notDeepEqual(scoreInputs({ ...settings, custom: [{ key: 'note', title: 'Note', type: 'integer' as const }] }), scoreInputs(settings))
+    assert.equal(scoreInputs({ summary: { weight: 3 } }), undefined)
   })
 
   test('nothing weighted means no score', () => {

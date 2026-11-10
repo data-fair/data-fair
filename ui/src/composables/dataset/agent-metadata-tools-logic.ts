@@ -7,9 +7,7 @@
 // closed licence and topic lists, and the dataset's own write permission. A field that
 // the form would not render is refused rather than written silently.
 
-import { settingsSchema } from '#api/types'
-import { recommendedSize } from '../../../../api/types/metadata-completeness.ts'
-import { type CustomMetadataDefinition, formatCustomMetadata, isCustomMetadataEmpty, trimCustomMetadata } from '../../../../api/types/custom-metadata.ts'
+import { settingsSchema, recommendedSize, type CustomMetadataDefinition, formatCustomMetadata, isCustomMetadataEmpty, trimCustomMetadata } from '#api/types'
 
 export const FREQUENCY_VALUES = [
   'triennial', 'biennial', 'annual', 'semiannual', 'threeTimesAYear', 'quarterly',
@@ -131,7 +129,8 @@ const checkCustomItem = (item: any, definition: CustomDefinition): { value?: unk
       return { value: n }
     }
     case 'date':
-      if (typeof item !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(item.trim()) || isNaN(Date.parse(item.trim()))) return { error: `${JSON.stringify(item)} is not a date in YYYY-MM-DD form` }
+      // the day check rejects impossible dates, which Date rolls over (2024-02-30 → 1 March)
+      if (typeof item !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(item.trim()) || new Date(item.trim()).getUTCDate() !== Number(item.trim().slice(8))) return { error: `${JSON.stringify(item)} is not a date in YYYY-MM-DD form` }
       return { value: item }
     case 'link': {
       const link = typeof item === 'string' ? { url: item } : item
@@ -376,7 +375,7 @@ export function formatMetadataContext (dataset: any, ctx: MetadataContext): stri
         c.type ?? 'string',
         c.enum?.length && `values: ${c.enum.join(' | ')}`,
         c.multiple && 'several values',
-        range(c.recommendedMin, c.recommendedMax) && `recommended ${range(c.recommendedMin, c.recommendedMax)} ${c.multiple ? 'values' : 'characters'}`
+        ctx.datasetsMetadata?.completeness?.active && range(c.recommendedMin, c.recommendedMax) && `recommended ${range(c.recommendedMin, c.recommendedMax)} ${c.multiple ? 'values' : 'characters'}`
       ].filter(Boolean).join(', ')
       sections.push(`- ${c.title} (${details}): ${isCustomMetadataEmpty(value) ? '(empty)' : formatCustomMetadata(value)}${c.description ? ` — help shown in the form: ${c.description}` : ''}`)
     }
