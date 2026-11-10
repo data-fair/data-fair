@@ -152,6 +152,26 @@ test.describe('dataset activable metadata fields', () => {
     await expect(url).toHaveValue('https://b.fr')
   })
 
+  test('editing a field keeps the unsaved edits of the other fields', async ({ page, goToWithAuth }) => {
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    const metadata = page.locator('#metadata')
+    await expect(metadata).toBeVisible({ timeout: 15000 })
+    const summary = metadata.getByRole('textbox', { name: /Résumé/ })
+    await summary.pressSequentially('Un résumé')
+    await metadata.locator('.CodeMirror').click()
+    await page.keyboard.type('Une description')
+    await summary.pressSequentially(' modifié')
+    await metadata.getByRole('textbox', { name: /^Titre/ }).click()
+    await expect(metadata.locator('.CodeMirror')).toContainText('Une description')
+
+    await metadata.getByRole('button', { name: /Enregistrer/ }).click()
+    await expect(metadata.getByRole('button', { name: /Enregistrer/ })).not.toBeVisible({ timeout: 10000 })
+    const ax = await axiosAuth('test_user1@test.com')
+    const saved = (await ax.get(`/api/v1/datasets/${datasetId}`)).data
+    expect(saved.summary).toBe('Un résumé modifié')
+    expect(saved.description).toBe('Une description')
+  })
+
   test('a type change empties the value and the form still saves', async ({ page, goToWithAuth }) => {
     const ax = await axiosAuth('test_user1@test.com')
     const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'stale', schema: [{ key: 'a', type: 'string' }], customMetadata: { ancien: 3 } })).data
