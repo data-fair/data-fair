@@ -638,7 +638,7 @@ en:
 import type { ViewMode } from '~/composables/use-view-mode'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import ConfirmMenu from '~/components/confirm-menu.vue'
-import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
+import { useAgentLeaveGuard } from '~/composables/use-agent-leave-guard'
 import { useTheme } from 'vuetify'
 import { mdiAccountSwitch, mdiBell, mdiCancel, mdiClipboardTextClock, mdiCloudKey, mdiCodeTags, mdiDatabase, mdiDelete, mdiImageMultiple, mdiInformation, mdiPaperclip, mdiPresentation, mdiPuzzle, mdiSecurity, mdiSquareEditOutline, mdiWebhook } from '@mdi/js'
 import informationsSvg from '~/assets/svg/data-process-two-color.svg?raw'
@@ -702,7 +702,7 @@ watch(() => application.value?.image, (newImage) => {
   }
 })
 
-useLeaveGuard(metadataEditFetch.hasDiff, { locale })
+useAgentLeaveGuard(metadataEditFetch.hasDiff, { locale, label: 'metadata card' })
 
 // Agent tools for metadata editing
 useAgentApplicationMetadataTools(

@@ -181,7 +181,7 @@
           color="accent"
           variant="flat"
           :loading="metadataEditFetch.save.loading.value"
-          @click="metadataEditFetch.save.execute()"
+          @click="saveMetadata()"
         >
           {{ t('save') }}
         </v-btn>
@@ -869,7 +869,7 @@ import DatasetRestConfig from '~/components/dataset/rest/dataset-rest-config.vue
 import { mdiAccountSwitch, mdiAlertCircle, mdiAllInclusive, mdiAttachment, mdiBell, mdiCalendarText, mdiCancel, mdiClipboardTextClock, mdiCodeJson, mdiCodeTags, mdiContentCopy, mdiDatabaseSearch, mdiDelete, mdiDeleteSweep, mdiEarth, mdiFingerprint, mdiHistory, mdiImage, mdiImageMultiple, mdiInformation, mdiKey, mdiLock, mdiMap, mdiPictureInPictureBottomRightOutline, mdiPlus, mdiPresentation, mdiPuzzle, mdiRefresh, mdiSecurity, mdiShapeOutline, mdiShieldKey, mdiStarFourPoints, mdiTable, mdiTableCog, mdiTableColumnPlusAfter, mdiTransitConnection, mdiWebhook } from '@mdi/js'
 import equal from 'fast-deep-equal'
 import { useWindowSize } from '@vueuse/core'
-import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
+import { useAgentLeaveGuard } from '~/composables/use-agent-leave-guard'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import useStore from '~/composables/use-store'
 import { useDatasetStore } from '~/composables/dataset/dataset-store'
@@ -1256,9 +1256,16 @@ const saveStructure = async () => {
   })
 }
 
-// Leave guards for unsaved changes
-useLeaveGuard(structureHasRealDiff, { locale })
-useLeaveGuard(metadataEditFetch.hasDiff, { locale })
+/** Save the metadata card, then report it — what a wait declared after set_dataset_metadata resolves on. */
+const saveMetadata = async () => {
+  await metadataEditFetch.save.execute()
+  if (metadataEditFetch.hasDiff.value) return
+  emitAgentEvent('dataset-metadata-saved', { id: metadataEditFetch.data.value?.id })
+}
+
+// Leave guards for unsaved changes, also refused by the assistant's navigate tool
+useAgentLeaveGuard(structureHasRealDiff, { locale, label: 'dataset structure' })
+useAgentLeaveGuard(metadataEditFetch.hasDiff, { locale, label: 'metadata card' })
 
 const sections = computedDeepDiff(() => {
   if (!dataset.value) return {}

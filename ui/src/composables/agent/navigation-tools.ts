@@ -1,8 +1,9 @@
 import type { ComputedRef, Ref } from 'vue'
-import type { Router } from 'vue-router'
+import { isNavigationFailure, NavigationFailureType, type Router } from 'vue-router'
 import { useAgentTool } from '@data-fair/lib-vue-agents'
 import { unwrapFilterQuery } from '@data-fair/agent-tools-data-fair/_utils'
 import { createAgentTranslator, untilStable } from './utils'
+import { formatUnsavedEditsRefusal, pendingUnsavedEdits } from './unsaved-edits'
 import { toAbsoluteUrl, toRoutePath, suggestRoutes, toolsChangeNote } from './url-utils'
 import type { NavGroup } from '~/composables/layout/use-navigation-items'
 
@@ -138,12 +139,30 @@ export function useAgentNavigationTools ({ router, navigationGroups, locale }: A
           }
         }
 
+        // Leaving a page with pending edits would discard them, or stop on a confirm
+        // dialog only the person can answer: see unsaved-edits.ts. A query-only change
+        // stays on the page, so it is let through.
+        if (resolved.path !== router.currentRoute.value.path) {
+          const pending = pendingUnsavedEdits()
+          if (pending.length) {
+            return { content: [{ type: 'text' as const, text: formatUnsavedEditsRefusal(pending) }], isError: true }
+          }
+        }
+
         const toolNames = () => {
           const tools = (navigator as any).modelContext?.listTools?.()
           return Array.isArray(tools) ? tools.map((t: { name: string }) => t.name).sort().join(',') : ''
         }
         const toolsBefore = toolNames()
-        await router.push(query ? { path, query } : path)
+        const failure = await router.push(query ? { path, query } : path)
+        // aborted: a leave guard said no (the person cancelled its confirm). A duplicated
+        // navigation, to the page already shown, is not a failure for the caller.
+        if (isNavigationFailure(failure, NavigationFailureType.aborted | NavigationFailureType.cancelled)) {
+          return {
+            content: [{ type: 'text' as const, text: `**Success**: false\n**Error**: the navigation did not happen (${failure.message}). You are still on ${router.currentRoute.value.path}.` }],
+            isError: true
+          }
+        }
         // Return once the destination has registered its tools: the chat offers a
         // tool registered while a host tool runs on its very next step. This used to
         // sleep 500ms and then call those tools "not callable in this request",
