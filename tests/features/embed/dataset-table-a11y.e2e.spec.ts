@@ -120,9 +120,10 @@ test.describe('embed dataset table — accessibility (RGAA)', () => {
 
     // hiding a column shows a count on the column selector and names it for assistive technologies
     await menu.getByRole('listitem').filter({ hasText: /masquer|hide/i }).first().click()
-    const selectCols = page.getByRole('button', { name: /colonnes? masquées?|columns? hidden/i })
-    await expect(selectCols).toHaveAccessibleName(/1 colonne masquée|1 column hidden/i)
-    await expect(selectCols.locator('.v-badge__badge')).toHaveText('1')
+    const selectCols = page.getByRole('button', { name: /colonnes? affichées?|columns? shown/i })
+    const [, visible, total] = (await selectCols.locator('.v-chip').textContent())!.match(/^(\d+)\/(\d+)$/)!
+    expect(Number(visible)).toBe(Number(total) - 1)
+    await expect(selectCols).toHaveAccessibleName(new RegExp(`${visible}/${total} (colonnes? affichées?|columns? shown)`, 'i'))
   })
 
   test.describe('keyboard navigation between cells (7.3)', () => {
