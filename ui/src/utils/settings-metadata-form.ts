@@ -103,7 +103,7 @@ export const metadataFormSchema = {
   ...schema,
   layout: {
     title: null,
-    children: ['informationsTitle', 'coverageTitle', 'groups', 'completeness', { name: 'metadata-score' }, 'standardMetadata', 'custom']
+    children: ['informationsTitle', 'coverageTitle', 'groups', 'completeness', 'standardMetadata', 'custom']
   },
   properties: {
     informationsTitle: properties.informationsTitle,

@@ -456,8 +456,6 @@ test.describe('settings metadata score', () => {
     await goToSettingsOrg(page, goToWithAuth)
     await page.locator('#catalog').getByRole('tab', { name: 'Métadonnées' }).click()
     const line = (title: string) => page.locator('.v-list-item').filter({ hasText: title })
-    await expect(line('Répartition')).toHaveCount(0)
-    await expect(page.getByText('Répartition du score')).toBeVisible()
     await expect(line('Description').first()).toContainText('Poids 4 (24 %)')
     await expect(line('Service producteur')).toContainText('Poids 3 (18 %)')
     await expect(line('Sans poids')).toContainText('Poids 0 (0 %)')
@@ -508,7 +506,7 @@ test.describe('settings defaults filled by the form', () => {
     expect(patches).toEqual([])
 
     await score.check()
-    await expect(page.getByText('Répartition du score')).toBeVisible()
+    await expect(page.getByText(/^Poids \d+ \(/).first()).toBeVisible()
     await expect.poll(() => patches.length).toBe(1)
   })
 })

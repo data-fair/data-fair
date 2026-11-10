@@ -6,12 +6,6 @@
         :schema="metadataFormSchema"
         :options="vjsfOptions"
       >
-        <template #metadata-score>
-          <settings-metadata-score
-            v-if="datasetsMetadata?.completeness?.active"
-            :shares="shares"
-          />
-        </template>
         <template #metadata-info="{ node }">
           <div class="text-body-small">
             {{ metadataByKey[node.data.key]?.info }}
@@ -109,10 +103,9 @@ const shares = computed(() => {
   return criteria.map(c => ({
     // a custom metadata can share the key of a fixed one
     key: c.custom ? `custom.${c.key}` : c.key,
-    title: (c.custom ? metadata.custom?.find((m: any) => m.key === c.key)?.title : metadata[c.key]?.title || metadataByKey.value[c.key]?.title) as string,
     weight: c.weight,
     share: c.weight / total
-  })).sort((a, b) => b.share - a.share)
+  }))
 })
 
 const scoreLabel = (key: string) => {
