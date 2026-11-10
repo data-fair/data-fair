@@ -5,6 +5,7 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import path from 'node:path'
+import { readFileSync } from 'node:fs'
 import { snakeCase as openapiMcpSnakeCase, validateVocabulary, load, toolsForScopes } from '@data-fair/openapi-mcp'
 import { prepareFragment, mergePlatformDoc, snakeCase, agentEntryKeys, agentTagKeys, agentSkillKeys, type PlatformService, type PreparedFragment } from '../../../api/contract/platform-api-docs.ts'
 
@@ -579,5 +580,23 @@ test.describe('platform api docs', () => {
         for (const scheme of Object.keys(requirement)) assert.ok(doc.components.securitySchemes[scheme], scheme)
       }
     }
+  })
+
+  test('the processings document prepares without warnings and its editor loads in openapi-mcp', async () => {
+    const processings: PlatformService = { id: 'processings', title: 'Processings', mountPath: '/processings/api/v1', docPath: '/processings/api/v1/api-docs.json' }
+    const source = JSON.parse(readFileSync(path.resolve(import.meta.dirname, '../../fixtures/processings-api-docs.json'), 'utf8'))
+    const result = prepareFragment(processings, source)
+    assert.ok('fragment' in result, 'refused' in result ? result.refused : '')
+    assert.deepEqual(result.fragment.warnings, [])
+    assert.deepEqual(result.fragment.skills.map(s => s.name), ['processings-workflow'])
+    assert.ok(Object.keys(result.fragment.scopes).includes('processings:write'))
+
+    const doc = mergePlatformDoc('https://example.test', [{ service: processings, fragment: result.fragment, status: 'ok' }], { version: '1.0.0', oauth2Description: 'tokens' })
+    const toolSet = await load(doc, { lint: 'error' })
+    const names = (scopes?: string[]) => (scopes ? toolsForScopes(toolSet, scopes) : toolSet).tools.map(tool => tool.name)
+    assert.deepEqual(names().filter(name => !name.startsWith('processings_')), [])
+    assert.ok(names().includes('processings_processing_config_saveForm'))
+    assert.deepEqual(names(['processings:read']).sort(), ['processings_describe_processing', 'processings_describe_run', 'processings_list_processings', 'processings_list_runs'])
+    assert.ok(!names(['processings:write']).includes('processings_delete_processing'))
   })
 })

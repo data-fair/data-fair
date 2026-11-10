@@ -1,0 +1,3793 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "API Processings",
+    "description": "Periodic processings: plugins that ingest, transform and publish datasets, their configs and their runs.",
+    "version": "1.0.0"
+  },
+  "x-agent": {
+    "skills": [
+      {
+        "name": "workflow",
+        "description": "How to set up and follow processings: find a plugin, create a processing, fill its config, schedule and activate it, trigger it, then follow its runs and diagnose a failed one from its log. Read it before creating or repairing a processing.",
+        "href": "agents/skills/workflow.md",
+        "tools": [
+          "list_processings",
+          "describe_processing",
+          "create_processing",
+          "update_processing",
+          "update_processing_permissions",
+          "trigger_processing",
+          "list_runs",
+          "describe_run",
+          "kill_run",
+          "delete_processing"
+        ]
+      }
+    ]
+  },
+  "servers": [
+    {
+      "url": "/processings/api/v1"
+    }
+  ],
+  "components": {
+    "securitySchemes": {
+      "sdCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "id_token"
+      },
+      "oauth2": {
+        "type": "oauth2",
+        "description": "Jeton d'accès délivré par simple-directory. Un jeton sans claim de scope est une session de premier niveau, non restreinte. Un jeton avec scope ne donne accès qu'aux opérations couvertes par ses scopes, dans la limite du rôle de son identité.",
+        "flows": {
+          "clientCredentials": {
+            "tokenUrl": "/simple-directory/api/auth/nhi-token",
+            "scopes": {
+              "processings": "Tous les droits sur les traitements",
+              "processings:read": "Lire les traitements du compte, leurs exécutions et leurs journaux",
+              "processings:write": "Créer et configurer les traitements, déclencher et arrêter leurs exécutions",
+              "processings:admin": "Supprimer les traitements, gérer leurs permissions, leur propriétaire et leur clé de webhook",
+              "all:read": "Lire tout ce que permet le rôle, sur tous les services",
+              "all:write": "Lire et modifier tout ce que permet le rôle, sur tous les services",
+              "all:admin": "Tous les droits que permet le rôle, sur tous les services"
+            }
+          }
+        }
+      }
+    },
+    "schemas": {
+      "processing": {
+        "title": "processing",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "_id",
+          "owner",
+          "plugin",
+          "scheduling",
+          "title"
+        ],
+        "properties": {
+          "_id": {
+            "type": "string",
+            "title": "Identifiant du traitement",
+            "readOnly": true
+          },
+          "title": {
+            "type": "string",
+            "title": "Titre"
+          },
+          "active": {
+            "title": "Actif",
+            "type": "boolean",
+            "default": false,
+            "layout": {
+              "comp": "switch",
+              "switch": [
+                {
+                  "if": "!parent.data.active",
+                  "props": {
+                    "base-color": "error"
+                  }
+                }
+              ],
+              "props": {
+                "color": "primary"
+              }
+            }
+          },
+          "created": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "id",
+              "date"
+            ],
+            "readOnly": true,
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Id of the user that created this processing"
+              },
+              "name": {
+                "type": "string",
+                "description": "Name of the user that created this processing"
+              },
+              "date": {
+                "type": "string",
+                "description": "Creation date of this processing",
+                "format": "date-time"
+              }
+            }
+          },
+          "config": {
+            "type": "object",
+            "description": "The config of the plugin, its schema is returned by getPluginConfigSchema."
+          },
+          "debug": {
+            "type": "boolean",
+            "title": "Mode debug",
+            "description": "Capture des logs détaillés (stacks d'erreurs, appels HTTP) réservés aux super-admins, pour diagnostiquer un plugin en erreur.",
+            "readOnly": true
+          },
+          "owner": {
+            "readOnly": true,
+            "type": "object",
+            "title": "account",
+            "required": [
+              "type",
+              "id",
+              "name"
+            ],
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "user",
+                  "organization"
+                ]
+              },
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "department": {
+                "type": "string"
+              },
+              "departmentName": {
+                "type": "string"
+              }
+            },
+            "$defs": {
+              "accountKeys": {
+                "type": "object",
+                "title": "account keys",
+                "required": [
+                  "type",
+                  "id"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "user",
+                      "organization"
+                    ]
+                  },
+                  "id": {
+                    "type": "string"
+                  },
+                  "department": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "plugin": {
+            "type": "string",
+            "readOnly": true,
+            "description": "Registry artefact id of the plugin (e.g. @data-fair-processing-hello-world-1)."
+          },
+          "scheduling": {
+            "type": "array",
+            "title": "Planification du traitement",
+            "layout": {
+              "messages": {
+                "addItem": "Ajouter une règle de planification"
+              },
+              "cols": 6
+            },
+            "items": {
+              "title": "Scheduling",
+              "type": "object",
+              "required": [
+                "type",
+                "month",
+                "dayOfWeek",
+                "dayOfMonth",
+                "hour",
+                "minute"
+              ],
+              "oneOfLayout": {
+                "emptyData": true
+              },
+              "oneOf": [
+                {
+                  "title": "Monthly",
+                  "x-i18n-title": {
+                    "fr": "Mensuel"
+                  },
+                  "properties": {
+                    "type": {
+                      "const": "monthly"
+                    },
+                    "month": {
+                      "const": "*"
+                    },
+                    "dayOfWeek": {
+                      "const": "*"
+                    },
+                    "dayOfMonth": {
+                      "title": "Day of the Month",
+                      "x-i18n-title": {
+                        "fr": "Jour fixe dans le mois"
+                      },
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 28,
+                      "default": 1,
+                      "layout": {
+                        "cols": {
+                          "xs": 6
+                        },
+                        "switch": [
+                          {
+                            "if": "parent.data?.lastDayOfMonth",
+                            "props": {
+                              "disabled": true
+                            }
+                          }
+                        ]
+                      }
+                    },
+                    "lastDayOfMonth": {
+                      "title": "Last Day of the Month",
+                      "x-i18n-title": {
+                        "fr": "Dernier jour du mois"
+                      },
+                      "type": "boolean",
+                      "default": false,
+                      "layout": {
+                        "cols": {
+                          "xs": 6
+                        }
+                      }
+                    },
+                    "hour": {
+                      "title": "Hour",
+                      "x-i18n-title": {
+                        "fr": "Heure fixe dans le jour"
+                      },
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 23,
+                      "default": 0,
+                      "layout": {
+                        "cols": {
+                          "xs": 6
+                        }
+                      }
+                    },
+                    "minute": {
+                      "title": "Minute",
+                      "x-i18n-title": {
+                        "fr": "Minute fixe dans l'heure"
+                      },
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 59,
+                      "default": 0,
+                      "layout": {
+                        "cols": {
+                          "xs": 6
+                        }
+                      }
+                    },
+                    "timeZone": {
+                      "type": "string",
+                      "title": "Time Zone",
+                      "x-i18n-title": {
+                        "fr": "Fuseau horaire"
+                      },
+                      "default": "Europe/Paris",
+                      "layout": {
+                        "comp": "autocomplete",
+                        "getItems": "context.utcs"
+                      }
+                    }
+                  }
+                },
+                {
+                  "title": "Weekly",
+                  "x-i18n-title": {
+                    "fr": "Hebdomadaire"
+                  },
+                  "properties": {
+                    "type": {
+                      "const": "weekly"
+                    },
+                    "month": {
+                      "const": "*"
+                    },
+                    "dayOfMonth": {
+                      "const": "*"
+                    },
+                    "dayOfWeek": {
+                      "title": "Day of the Week",
+                      "x-i18n-title": {
+                        "fr": "Jour fixe dans la semaine"
+                      },
+                      "type": "string",
+                      "oneOf": [
+                        {
+                          "const": "1",
+                          "title": "Monday",
+                          "x-i18n-title": {
+                            "fr": "Lundi"
+                          }
+                        },
+                        {
+                          "const": "2",
+                          "title": "Tuesday",
+                          "x-i18n-title": {
+                            "fr": "Mardi"
+                          }
+                        },
+                        {
+                          "const": "3",
+                          "title": "Wednesday",
+                          "x-i18n-title": {
+                            "fr": "Mercredi"
+                          }
+                        },
+                        {
+                          "const": "4",
+                          "title": "Thursday",
+                          "x-i18n-title": {
+                            "fr": "Jeudi"
+                          }
+                        },
+                        {
+                          "const": "5",
+                          "title": "Friday",
+                          "x-i18n-title": {
+                            "fr": "Vendredi"
+                          }
+                        },
+                        {
+                          "const": "6",
+                          "title": "Saturday",
+                          "x-i18n-title": {
+                            "fr": "Samedi"
+                          }
+                        },
+                        {
+                          "const": "0",
+                          "title": "Sunday",
+                          "x-i18n-title": {
+                            "fr": "Dimanche"
+                          }
+                        }
+                      ],
+                      "default": "1"
+                    },
+                    "hour": {
+                      "title": "Hour",
+                      "x-i18n-title": {
+                        "fr": "Heure fixe dans le jour"
+                      },
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 23,
+                      "default": 0,
+                      "layout": {
+                        "cols": {
+                          "xs": 6
+                        }
+                      }
+                    },
+                    "minute": {
+                      "title": "Minute",
+                      "x-i18n-title": {
+                        "fr": "Minute fixe dans l'heure"
+                      },
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 59,
+                      "default": 0,
+                      "layout": {
+                        "cols": {
+                          "xs": 6
+                        }
+                      }
+                    },
+                    "timeZone": {
+                      "type": "string",
+                      "title": "Time Zone",
+                      "x-i18n-title": {
+                        "fr": "Fuseau horaire"
+                      },
+                      "default": "Europe/Paris",
+                      "layout": {
+                        "comp": "autocomplete",
+                        "getItems": "context.utcs"
+                      }
+                    }
+                  }
+                },
+                {
+                  "title": "Daily",
+                  "x-i18n-title": {
+                    "fr": "Journalier"
+                  },
+                  "properties": {
+                    "type": {
+                      "const": "daily"
+                    },
+                    "month": {
+                      "const": "*"
+                    },
+                    "dayOfMonth": {
+                      "const": "*"
+                    },
+                    "dayOfWeek": {
+                      "const": "*"
+                    },
+                    "hour": {
+                      "title": "Hour",
+                      "x-i18n-title": {
+                        "fr": "Heure fixe dans le jour"
+                      },
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 23,
+                      "default": 0,
+                      "layout": {
+                        "cols": {
+                          "xs": 6
+                        }
+                      }
+                    },
+                    "minute": {
+                      "title": "Minute",
+                      "x-i18n-title": {
+                        "fr": "Minute fixe dans l'heure"
+                      },
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 59,
+                      "default": 0,
+                      "layout": {
+                        "cols": {
+                          "xs": 6
+                        }
+                      }
+                    },
+                    "timeZone": {
+                      "type": "string",
+                      "title": "Time Zone",
+                      "x-i18n-title": {
+                        "fr": "Fuseau horaire"
+                      },
+                      "default": "Europe/Paris",
+                      "layout": {
+                        "comp": "autocomplete",
+                        "getItems": "context.utcs"
+                      }
+                    }
+                  }
+                },
+                {
+                  "title": "Each # Hours",
+                  "x-i18n-title": {
+                    "fr": "Toutes les # heures"
+                  },
+                  "properties": {
+                    "type": {
+                      "const": "hours"
+                    },
+                    "month": {
+                      "const": "*"
+                    },
+                    "dayOfMonth": {
+                      "const": "*"
+                    },
+                    "dayOfWeek": {
+                      "const": "*"
+                    },
+                    "hour": {
+                      "const": "*"
+                    },
+                    "hourStep": {
+                      "title": "Interval in Hours",
+                      "x-i18n-title": {
+                        "fr": "Interval en heures"
+                      },
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 12,
+                      "default": 1,
+                      "layout": {
+                        "cols": {
+                          "xs": 6
+                        }
+                      }
+                    },
+                    "minute": {
+                      "title": "Minute",
+                      "x-i18n-title": {
+                        "fr": "Minute fixe dans l'heure"
+                      },
+                      "type": "integer",
+                      "minimum": 0,
+                      "maximum": 59,
+                      "default": 0,
+                      "layout": {
+                        "cols": {
+                          "xs": 6
+                        }
+                      }
+                    },
+                    "timeZone": {
+                      "type": "string",
+                      "title": "Time Zone",
+                      "x-i18n-title": {
+                        "fr": "Fuseau horaire"
+                      },
+                      "default": "Europe/Paris",
+                      "layout": {
+                        "comp": "autocomplete",
+                        "getItems": "context.utcs"
+                      }
+                    }
+                  }
+                }
+              ],
+              "layout": {
+                "switch": [
+                  {
+                    "if": "summary",
+                    "slots": {
+                      "component": "scheduling-summary"
+                    }
+                  }
+                ]
+              },
+              "$defs": {
+                "hour": {
+                  "title": "Hour",
+                  "x-i18n-title": {
+                    "fr": "Heure fixe dans le jour"
+                  },
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 23,
+                  "default": 0,
+                  "layout": {
+                    "cols": {
+                      "xs": 6
+                    }
+                  }
+                },
+                "minute": {
+                  "title": "Minute",
+                  "x-i18n-title": {
+                    "fr": "Minute fixe dans l'heure"
+                  },
+                  "type": "integer",
+                  "minimum": 0,
+                  "maximum": 59,
+                  "default": 0,
+                  "layout": {
+                    "cols": {
+                      "xs": 6
+                    }
+                  }
+                },
+                "timeZone": {
+                  "type": "string",
+                  "title": "Time Zone",
+                  "x-i18n-title": {
+                    "fr": "Fuseau horaire"
+                  },
+                  "default": "Europe/Paris",
+                  "layout": {
+                    "comp": "autocomplete",
+                    "getItems": "context.utcs"
+                  }
+                }
+              }
+            }
+          },
+          "secrets": {
+            "type": "object",
+            "readOnly": true,
+            "additionalProperties": {
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "iv",
+                "alg",
+                "data"
+              ],
+              "properties": {
+                "iv": {
+                  "type": "string"
+                },
+                "alg": {
+                  "type": "string",
+                  "const": "aes256"
+                },
+                "data": {
+                  "type": "string"
+                }
+              }
+            }
+          },
+          "permissions": {
+            "type": "array",
+            "title": "Permissions",
+            "layout": {
+              "messages": {
+                "addItem": "Ajouter une permission"
+              },
+              "cols": 6
+            },
+            "items": {
+              "title": "permission",
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "profile",
+                "target"
+              ],
+              "properties": {
+                "profile": {
+                  "type": "string",
+                  "title": "profil",
+                  "default": "read",
+                  "oneOf": [
+                    {
+                      "const": "read",
+                      "title": "lecture - permet d'accéder aux informations essentielles du traitement dont les logs, mais pas aux informations sensibles"
+                    },
+                    {
+                      "const": "exec",
+                      "title": "exécution - permet d'accéder aux informations essentielles du traitement et de déclencher le traitement"
+                    }
+                  ]
+                },
+                "target": {
+                  "type": "object",
+                  "oneOfLayout": {
+                    "label": "type de cible"
+                  },
+                  "oneOf": [
+                    {
+                      "title": "utilisateur désigné par son email",
+                      "required": [
+                        "email"
+                      ],
+                      "properties": {
+                        "type": {
+                          "const": "userEmail"
+                        },
+                        "email": {
+                          "type": "string",
+                          "title": "email"
+                        }
+                      }
+                    },
+                    {
+                      "title": "organisation partenaire",
+                      "required": [
+                        "organization",
+                        "roles"
+                      ],
+                      "properties": {
+                        "type": {
+                          "const": "partner"
+                        },
+                        "organization": {
+                          "type": "object",
+                          "title": "organisation",
+                          "additionalProperties": true,
+                          "layout": {
+                            "cols": 8,
+                            "getItems": {
+                              "url": "${context.directoryUrl}/api/organizations/${context.owner.id}",
+                              "itemsResults": "data.partners",
+                              "itemKey": "data.id",
+                              "itemTitle": "data.name"
+                            }
+                          },
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "name": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "roles": {
+                          "type": "array",
+                          "title": "rôles",
+                          "default": [
+                            "admin"
+                          ],
+                          "layout": {
+                            "cols": 4
+                          },
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "admin",
+                              "contrib",
+                              "user"
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "updated": {
+            "type": "object",
+            "additionalProperties": false,
+            "readOnly": true,
+            "required": [
+              "id",
+              "date"
+            ],
+            "properties": {
+              "id": {
+                "type": "string",
+                "description": "Id of the user that last updated this processing"
+              },
+              "name": {
+                "type": "string",
+                "description": "Name of the user that last updated this processing"
+              },
+              "date": {
+                "type": "string",
+                "description": "Date of the last update for this processing",
+                "format": "date-time"
+              }
+            }
+          },
+          "userProfile": {
+            "type": "string",
+            "readOnly": true
+          },
+          "lastRun": {
+            "$ref": "#/components/schemas/run",
+            "readOnly": true,
+            "description": "The last run of the processing."
+          },
+          "nextRun": {
+            "$ref": "#/components/schemas/run",
+            "readOnly": true,
+            "description": "The next scheduled run of the processing."
+          },
+          "webhookKey": {
+            "type": "string",
+            "title": "Clé pour exécution à distance du traitement",
+            "readOnly": true
+          }
+        }
+      },
+      "run": {
+        "title": "run",
+        "type": "object",
+        "additionalProperties": true,
+        "readOnly": true,
+        "required": [
+          "_id",
+          "owner",
+          "processing",
+          "createdAt",
+          "status",
+          "log"
+        ],
+        "properties": {
+          "_id": {
+            "type": "string"
+          },
+          "owner": {
+            "type": "object",
+            "title": "account",
+            "required": [
+              "type",
+              "id",
+              "name"
+            ],
+            "properties": {
+              "type": {
+                "type": "string",
+                "enum": [
+                  "user",
+                  "organization"
+                ]
+              },
+              "id": {
+                "type": "string"
+              },
+              "name": {
+                "type": "string"
+              },
+              "department": {
+                "type": "string"
+              },
+              "departmentName": {
+                "type": "string"
+              }
+            },
+            "$defs": {
+              "accountKeys": {
+                "type": "object",
+                "title": "account keys",
+                "required": [
+                  "type",
+                  "id"
+                ],
+                "additionalProperties": false,
+                "properties": {
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "user",
+                      "organization"
+                    ]
+                  },
+                  "id": {
+                    "type": "string"
+                  },
+                  "department": {
+                    "type": "string"
+                  }
+                }
+              }
+            }
+          },
+          "processing": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": [
+              "_id",
+              "title"
+            ],
+            "properties": {
+              "_id": {
+                "type": "string"
+              },
+              "title": {
+                "type": "string"
+              }
+            }
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "status": {
+            "type": "string",
+            "enum": [
+              "triggered",
+              "scheduled",
+              "running",
+              "error",
+              "finished",
+              "kill",
+              "killed"
+            ]
+          },
+          "scheduledAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "startedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "finishedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "log": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "type": {
+                  "type": "string",
+                  "enum": [
+                    "step",
+                    "error",
+                    "warning",
+                    "info",
+                    "debug"
+                  ]
+                },
+                "date": {
+                  "type": "string",
+                  "format": "date-time"
+                },
+                "msg": {
+                  "type": "string"
+                },
+                "extra": {
+                  "type": "object"
+                }
+              }
+            }
+          },
+          "permissions": {
+            "type": "array",
+            "items": {
+              "title": "permission",
+              "type": "object",
+              "additionalProperties": false,
+              "required": [
+                "profile",
+                "target"
+              ],
+              "properties": {
+                "profile": {
+                  "type": "string",
+                  "title": "profil",
+                  "default": "read",
+                  "oneOf": [
+                    {
+                      "const": "read",
+                      "title": "lecture - permet d'accéder aux informations essentielles du traitement dont les logs, mais pas aux informations sensibles"
+                    },
+                    {
+                      "const": "exec",
+                      "title": "exécution - permet d'accéder aux informations essentielles du traitement et de déclencher le traitement"
+                    }
+                  ]
+                },
+                "target": {
+                  "type": "object",
+                  "oneOfLayout": {
+                    "label": "type de cible"
+                  },
+                  "oneOf": [
+                    {
+                      "title": "utilisateur désigné par son email",
+                      "required": [
+                        "email"
+                      ],
+                      "properties": {
+                        "type": {
+                          "const": "userEmail"
+                        },
+                        "email": {
+                          "type": "string",
+                          "title": "email"
+                        }
+                      }
+                    },
+                    {
+                      "title": "organisation partenaire",
+                      "required": [
+                        "organization",
+                        "roles"
+                      ],
+                      "properties": {
+                        "type": {
+                          "const": "partner"
+                        },
+                        "organization": {
+                          "type": "object",
+                          "title": "organisation",
+                          "additionalProperties": true,
+                          "layout": {
+                            "cols": 8,
+                            "getItems": {
+                              "url": "${context.directoryUrl}/api/organizations/${context.owner.id}",
+                              "itemsResults": "data.partners",
+                              "itemKey": "data.id",
+                              "itemTitle": "data.name"
+                            }
+                          },
+                          "properties": {
+                            "id": {
+                              "type": "string"
+                            },
+                            "name": {
+                              "type": "string"
+                            }
+                          }
+                        },
+                        "roles": {
+                          "type": "array",
+                          "title": "rôles",
+                          "default": [
+                            "admin"
+                          ],
+                          "layout": {
+                            "cols": 4
+                          },
+                          "items": {
+                            "type": "string",
+                            "enum": [
+                              "admin",
+                              "contrib",
+                              "user"
+                            ]
+                          }
+                        }
+                      }
+                    }
+                  ]
+                }
+              }
+            }
+          },
+          "deleteOnComplete": {
+            "type": "boolean",
+            "description": "If true, the run will be automatically deleted after completion"
+          }
+        }
+      },
+      "limit": {
+        "title": "limit",
+        "type": "object",
+        "additionalProperties": false,
+        "required": [
+          "id",
+          "type",
+          "lastUpdate"
+        ],
+        "properties": {
+          "type": {
+            "type": "string"
+          },
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "lastUpdate": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "defaults": {
+            "type": "boolean",
+            "title": "these limits were defined using default values only, not specifically defined"
+          },
+          "processings_seconds": {
+            "type": "object",
+            "additionalProperties": false,
+            "properties": {
+              "limit": {
+                "type": "number"
+              },
+              "consumption": {
+                "type": "number"
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "security": [
+    {
+      "sdCookie": []
+    }
+  ],
+  "tags": [
+    {
+      "name": "Traitements"
+    },
+    {
+      "name": "Exécutions"
+    },
+    {
+      "name": "Limites"
+    }
+  ],
+  "paths": {
+    "/processings": {
+      "get": {
+        "operationId": "listProcessings",
+        "summary": "List processings",
+        "description": "List the processings the session can read, with facets on their statuses, plugins and owners.",
+        "tags": [
+          "Traitements"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "description": "Number of results per page.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "description": "Page number, starting at 1.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "skip",
+            "required": false,
+            "description": "Number of results to skip.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "showAll",
+            "required": false,
+            "description": "true to list the processings of every account (superadmin only).",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "description": "Sort keys, comma separated, prefixed by - for descending order (e.g. -updated.date).",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "select",
+            "required": false,
+            "description": "Fields to return, comma separated.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "q",
+            "required": false,
+            "description": "Full text search.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "statuses",
+            "required": false,
+            "description": "Statuses of the last run, comma separated (e.g. error,finished).",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "plugins",
+            "required": false,
+            "description": "Plugin ids, comma separated.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "owner",
+            "required": false,
+            "description": "Owners, comma separated, as type:id or type:id:department (e.g. organization:myorg).",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of processings.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "count": {
+                      "type": "integer"
+                    },
+                    "results": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/processing"
+                      }
+                    },
+                    "facets": {
+                      "type": "object"
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sdCookie": []
+          },
+          {
+            "oauth2": [
+              "processings:read"
+            ]
+          },
+          {
+            "oauth2": [
+              "processings:write"
+            ]
+          },
+          {
+            "oauth2": [
+              "processings:admin"
+            ]
+          },
+          {
+            "oauth2": [
+              "processings"
+            ]
+          },
+          {
+            "oauth2": [
+              "all:read"
+            ]
+          },
+          {
+            "oauth2": [
+              "all:write"
+            ]
+          },
+          {
+            "oauth2": [
+              "all:admin"
+            ]
+          }
+        ],
+        "x-agent": {
+          "name": "list_processings",
+          "title": {
+            "en": "List processings",
+            "fr": "Lister les traitements"
+          },
+          "description": "List the processings of the active account: periodic or on-demand tasks that run a plugin to ingest, transform or publish datasets. Each result tells its plugin, whether it is active, its last run and next scheduled run, and the profile of the caller on it (admin, exec or read). Use describe_processing for one processing.",
+          "annotations": {
+            "readOnlyHint": true,
+            "openWorldHint": false
+          },
+          "params": {
+            "q": {
+              "description": "Full text search on the titles."
+            },
+            "statuses": {
+              "description": "Statuses of the last run, comma separated: triggered, scheduled, running, error, finished, kill, killed."
+            },
+            "plugins": {
+              "description": "Plugin ids, comma separated."
+            },
+            "size": {
+              "default": 10,
+              "maximum": 50,
+              "description": "Number of processings per page."
+            },
+            "page": {
+              "default": 1,
+              "description": "Page number, starting at 1."
+            },
+            "select": {
+              "exclude": true
+            },
+            "skip": {
+              "exclude": true
+            },
+            "sort": {
+              "exclude": true
+            },
+            "owner": {
+              "exclude": true
+            },
+            "showAll": {
+              "exclude": true
+            }
+          },
+          "response": {
+            "rows": "/results",
+            "concise": [
+              "_id",
+              "title",
+              "plugin",
+              "active",
+              "lastRun",
+              "nextRun",
+              "userProfile"
+            ],
+            "detailed": true
+          }
+        }
+      },
+      "post": {
+        "operationId": "postProcessing",
+        "summary": "Create a processing",
+        "description": "Create a processing of a plugin. The owner defaults to the active account; the processing is inactive until it has a valid config.",
+        "tags": [
+          "Traitements"
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "required": [
+                  "title",
+                  "plugin"
+                ],
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "title": "Titre"
+                  },
+                  "plugin": {
+                    "type": "string",
+                    "readOnly": true,
+                    "description": "Registry artefact id of the plugin (e.g. @data-fair-processing-hello-world-1)."
+                  },
+                  "owner": {
+                    "readOnly": true,
+                    "type": "object",
+                    "title": "account",
+                    "required": [
+                      "type",
+                      "id",
+                      "name"
+                    ],
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": [
+                          "user",
+                          "organization"
+                        ]
+                      },
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "department": {
+                        "type": "string"
+                      },
+                      "departmentName": {
+                        "type": "string"
+                      }
+                    },
+                    "$defs": {
+                      "accountKeys": {
+                        "type": "object",
+                        "title": "account keys",
+                        "required": [
+                          "type",
+                          "id"
+                        ],
+                        "additionalProperties": false,
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "user",
+                              "organization"
+                            ]
+                          },
+                          "id": {
+                            "type": "string"
+                          },
+                          "department": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "active": {
+                    "title": "Actif",
+                    "type": "boolean",
+                    "default": false,
+                    "layout": {
+                      "comp": "switch",
+                      "switch": [
+                        {
+                          "if": "!parent.data.active",
+                          "props": {
+                            "base-color": "error"
+                          }
+                        }
+                      ],
+                      "props": {
+                        "color": "primary"
+                      }
+                    }
+                  },
+                  "scheduling": {
+                    "type": "array",
+                    "title": "Planification du traitement",
+                    "layout": {
+                      "messages": {
+                        "addItem": "Ajouter une règle de planification"
+                      },
+                      "cols": 6
+                    },
+                    "items": {
+                      "title": "Scheduling",
+                      "type": "object",
+                      "required": [
+                        "type",
+                        "month",
+                        "dayOfWeek",
+                        "dayOfMonth",
+                        "hour",
+                        "minute"
+                      ],
+                      "oneOfLayout": {
+                        "emptyData": true
+                      },
+                      "oneOf": [
+                        {
+                          "title": "Monthly",
+                          "x-i18n-title": {
+                            "fr": "Mensuel"
+                          },
+                          "properties": {
+                            "type": {
+                              "const": "monthly"
+                            },
+                            "month": {
+                              "const": "*"
+                            },
+                            "dayOfWeek": {
+                              "const": "*"
+                            },
+                            "dayOfMonth": {
+                              "title": "Day of the Month",
+                              "x-i18n-title": {
+                                "fr": "Jour fixe dans le mois"
+                              },
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 28,
+                              "default": 1,
+                              "layout": {
+                                "cols": {
+                                  "xs": 6
+                                },
+                                "switch": [
+                                  {
+                                    "if": "parent.data?.lastDayOfMonth",
+                                    "props": {
+                                      "disabled": true
+                                    }
+                                  }
+                                ]
+                              }
+                            },
+                            "lastDayOfMonth": {
+                              "title": "Last Day of the Month",
+                              "x-i18n-title": {
+                                "fr": "Dernier jour du mois"
+                              },
+                              "type": "boolean",
+                              "default": false,
+                              "layout": {
+                                "cols": {
+                                  "xs": 6
+                                }
+                              }
+                            },
+                            "hour": {
+                              "title": "Hour",
+                              "x-i18n-title": {
+                                "fr": "Heure fixe dans le jour"
+                              },
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 23,
+                              "default": 0,
+                              "layout": {
+                                "cols": {
+                                  "xs": 6
+                                }
+                              }
+                            },
+                            "minute": {
+                              "title": "Minute",
+                              "x-i18n-title": {
+                                "fr": "Minute fixe dans l'heure"
+                              },
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 59,
+                              "default": 0,
+                              "layout": {
+                                "cols": {
+                                  "xs": 6
+                                }
+                              }
+                            },
+                            "timeZone": {
+                              "type": "string",
+                              "title": "Time Zone",
+                              "x-i18n-title": {
+                                "fr": "Fuseau horaire"
+                              },
+                              "default": "Europe/Paris",
+                              "layout": {
+                                "comp": "autocomplete",
+                                "getItems": "context.utcs"
+                              }
+                            }
+                          }
+                        },
+                        {
+                          "title": "Weekly",
+                          "x-i18n-title": {
+                            "fr": "Hebdomadaire"
+                          },
+                          "properties": {
+                            "type": {
+                              "const": "weekly"
+                            },
+                            "month": {
+                              "const": "*"
+                            },
+                            "dayOfMonth": {
+                              "const": "*"
+                            },
+                            "dayOfWeek": {
+                              "title": "Day of the Week",
+                              "x-i18n-title": {
+                                "fr": "Jour fixe dans la semaine"
+                              },
+                              "type": "string",
+                              "oneOf": [
+                                {
+                                  "const": "1",
+                                  "title": "Monday",
+                                  "x-i18n-title": {
+                                    "fr": "Lundi"
+                                  }
+                                },
+                                {
+                                  "const": "2",
+                                  "title": "Tuesday",
+                                  "x-i18n-title": {
+                                    "fr": "Mardi"
+                                  }
+                                },
+                                {
+                                  "const": "3",
+                                  "title": "Wednesday",
+                                  "x-i18n-title": {
+                                    "fr": "Mercredi"
+                                  }
+                                },
+                                {
+                                  "const": "4",
+                                  "title": "Thursday",
+                                  "x-i18n-title": {
+                                    "fr": "Jeudi"
+                                  }
+                                },
+                                {
+                                  "const": "5",
+                                  "title": "Friday",
+                                  "x-i18n-title": {
+                                    "fr": "Vendredi"
+                                  }
+                                },
+                                {
+                                  "const": "6",
+                                  "title": "Saturday",
+                                  "x-i18n-title": {
+                                    "fr": "Samedi"
+                                  }
+                                },
+                                {
+                                  "const": "0",
+                                  "title": "Sunday",
+                                  "x-i18n-title": {
+                                    "fr": "Dimanche"
+                                  }
+                                }
+                              ],
+                              "default": "1"
+                            },
+                            "hour": {
+                              "title": "Hour",
+                              "x-i18n-title": {
+                                "fr": "Heure fixe dans le jour"
+                              },
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 23,
+                              "default": 0,
+                              "layout": {
+                                "cols": {
+                                  "xs": 6
+                                }
+                              }
+                            },
+                            "minute": {
+                              "title": "Minute",
+                              "x-i18n-title": {
+                                "fr": "Minute fixe dans l'heure"
+                              },
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 59,
+                              "default": 0,
+                              "layout": {
+                                "cols": {
+                                  "xs": 6
+                                }
+                              }
+                            },
+                            "timeZone": {
+                              "type": "string",
+                              "title": "Time Zone",
+                              "x-i18n-title": {
+                                "fr": "Fuseau horaire"
+                              },
+                              "default": "Europe/Paris",
+                              "layout": {
+                                "comp": "autocomplete",
+                                "getItems": "context.utcs"
+                              }
+                            }
+                          }
+                        },
+                        {
+                          "title": "Daily",
+                          "x-i18n-title": {
+                            "fr": "Journalier"
+                          },
+                          "properties": {
+                            "type": {
+                              "const": "daily"
+                            },
+                            "month": {
+                              "const": "*"
+                            },
+                            "dayOfMonth": {
+                              "const": "*"
+                            },
+                            "dayOfWeek": {
+                              "const": "*"
+                            },
+                            "hour": {
+                              "title": "Hour",
+                              "x-i18n-title": {
+                                "fr": "Heure fixe dans le jour"
+                              },
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 23,
+                              "default": 0,
+                              "layout": {
+                                "cols": {
+                                  "xs": 6
+                                }
+                              }
+                            },
+                            "minute": {
+                              "title": "Minute",
+                              "x-i18n-title": {
+                                "fr": "Minute fixe dans l'heure"
+                              },
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 59,
+                              "default": 0,
+                              "layout": {
+                                "cols": {
+                                  "xs": 6
+                                }
+                              }
+                            },
+                            "timeZone": {
+                              "type": "string",
+                              "title": "Time Zone",
+                              "x-i18n-title": {
+                                "fr": "Fuseau horaire"
+                              },
+                              "default": "Europe/Paris",
+                              "layout": {
+                                "comp": "autocomplete",
+                                "getItems": "context.utcs"
+                              }
+                            }
+                          }
+                        },
+                        {
+                          "title": "Each # Hours",
+                          "x-i18n-title": {
+                            "fr": "Toutes les # heures"
+                          },
+                          "properties": {
+                            "type": {
+                              "const": "hours"
+                            },
+                            "month": {
+                              "const": "*"
+                            },
+                            "dayOfMonth": {
+                              "const": "*"
+                            },
+                            "dayOfWeek": {
+                              "const": "*"
+                            },
+                            "hour": {
+                              "const": "*"
+                            },
+                            "hourStep": {
+                              "title": "Interval in Hours",
+                              "x-i18n-title": {
+                                "fr": "Interval en heures"
+                              },
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 12,
+                              "default": 1,
+                              "layout": {
+                                "cols": {
+                                  "xs": 6
+                                }
+                              }
+                            },
+                            "minute": {
+                              "title": "Minute",
+                              "x-i18n-title": {
+                                "fr": "Minute fixe dans l'heure"
+                              },
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 59,
+                              "default": 0,
+                              "layout": {
+                                "cols": {
+                                  "xs": 6
+                                }
+                              }
+                            },
+                            "timeZone": {
+                              "type": "string",
+                              "title": "Time Zone",
+                              "x-i18n-title": {
+                                "fr": "Fuseau horaire"
+                              },
+                              "default": "Europe/Paris",
+                              "layout": {
+                                "comp": "autocomplete",
+                                "getItems": "context.utcs"
+                              }
+                            }
+                          }
+                        }
+                      ],
+                      "layout": {
+                        "switch": [
+                          {
+                            "if": "summary",
+                            "slots": {
+                              "component": "scheduling-summary"
+                            }
+                          }
+                        ]
+                      },
+                      "$defs": {
+                        "hour": {
+                          "title": "Hour",
+                          "x-i18n-title": {
+                            "fr": "Heure fixe dans le jour"
+                          },
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 23,
+                          "default": 0,
+                          "layout": {
+                            "cols": {
+                              "xs": 6
+                            }
+                          }
+                        },
+                        "minute": {
+                          "title": "Minute",
+                          "x-i18n-title": {
+                            "fr": "Minute fixe dans l'heure"
+                          },
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 59,
+                          "default": 0,
+                          "layout": {
+                            "cols": {
+                              "xs": 6
+                            }
+                          }
+                        },
+                        "timeZone": {
+                          "type": "string",
+                          "title": "Time Zone",
+                          "x-i18n-title": {
+                            "fr": "Fuseau horaire"
+                          },
+                          "default": "Europe/Paris",
+                          "layout": {
+                            "comp": "autocomplete",
+                            "getItems": "context.utcs"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "config": {
+                    "type": "object",
+                    "description": "The config of the plugin, its schema is returned by getPluginConfigSchema."
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The created processing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/processing"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sdCookie": []
+          },
+          {
+            "oauth2": [
+              "processings:write"
+            ]
+          },
+          {
+            "oauth2": [
+              "processings:admin"
+            ]
+          },
+          {
+            "oauth2": [
+              "processings"
+            ]
+          },
+          {
+            "oauth2": [
+              "all:write"
+            ]
+          },
+          {
+            "oauth2": [
+              "all:admin"
+            ]
+          }
+        ],
+        "x-agent": {
+          "name": "create_processing",
+          "title": {
+            "en": "Create a processing",
+            "fr": "Créer un traitement"
+          },
+          "description": "Create a processing of a plugin. The plugin id is the _id of a processing artefact found with registry_search_artefacts (category processing). The owner defaults to the active account. The processing is created inactive and without config: fill the config next with the processing_config tools, then activate it with update_processing.",
+          "annotations": {
+            "openWorldHint": false
+          },
+          "bodyFields": [
+            "title",
+            "plugin",
+            "owner"
+          ],
+          "bodyRequired": [
+            "title",
+            "plugin"
+          ]
+        }
+      }
+    },
+    "/processings/{id}": {
+      "get": {
+        "operationId": "getProcessing",
+        "summary": "Read a processing",
+        "description": "Its config, permissions and webhook key are only returned to the admins of the processing.",
+        "tags": [
+          "Traitements"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "description": "Id of the processing.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The processing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/processing"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sdCookie": []
+          },
+          {
+            "oauth2": [
+              "processings:read"
+            ]
+          },
+          {
+            "oauth2": [
+              "processings:write"
+            ]
+          },
+          {
+            "oauth2": [
+              "processings:admin"
+            ]
+          },
+          {
+            "oauth2": [
+              "processings"
+            ]
+          },
+          {
+            "oauth2": [
+              "all:read"
+            ]
+          },
+          {
+            "oauth2": [
+              "all:write"
+            ]
+          },
+          {
+            "oauth2": [
+              "all:admin"
+            ]
+          }
+        ],
+        "x-agent": {
+          "name": "describe_processing",
+          "title": {
+            "en": "Describe a processing",
+            "fr": "Décrire un traitement"
+          },
+          "description": "Read a processing: its plugin, scheduling, activation, last and next runs. Its config and permissions are included when the caller is an admin of the processing.",
+          "annotations": {
+            "readOnlyHint": true,
+            "openWorldHint": false
+          }
+        }
+      },
+      "patch": {
+        "operationId": "patchProcessing",
+        "summary": "Update a processing",
+        "description": "Update some parts of a processing. permissions and owner need the admin tier of the processings scopes. A null value removes a part.",
+        "tags": [
+          "Traitements"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "description": "Id of the processing.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object",
+                "properties": {
+                  "title": {
+                    "type": "string",
+                    "title": "Titre"
+                  },
+                  "active": {
+                    "title": "Actif",
+                    "type": "boolean",
+                    "default": false,
+                    "layout": {
+                      "comp": "switch",
+                      "switch": [
+                        {
+                          "if": "!parent.data.active",
+                          "props": {
+                            "base-color": "error"
+                          }
+                        }
+                      ],
+                      "props": {
+                        "color": "primary"
+                      }
+                    }
+                  },
+                  "scheduling": {
+                    "type": "array",
+                    "title": "Planification du traitement",
+                    "layout": {
+                      "messages": {
+                        "addItem": "Ajouter une règle de planification"
+                      },
+                      "cols": 6
+                    },
+                    "items": {
+                      "title": "Scheduling",
+                      "type": "object",
+                      "required": [
+                        "type",
+                        "month",
+                        "dayOfWeek",
+                        "dayOfMonth",
+                        "hour",
+                        "minute"
+                      ],
+                      "oneOfLayout": {
+                        "emptyData": true
+                      },
+                      "oneOf": [
+                        {
+                          "title": "Monthly",
+                          "x-i18n-title": {
+                            "fr": "Mensuel"
+                          },
+                          "properties": {
+                            "type": {
+                              "const": "monthly"
+                            },
+                            "month": {
+                              "const": "*"
+                            },
+                            "dayOfWeek": {
+                              "const": "*"
+                            },
+                            "dayOfMonth": {
+                              "title": "Day of the Month",
+                              "x-i18n-title": {
+                                "fr": "Jour fixe dans le mois"
+                              },
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 28,
+                              "default": 1,
+                              "layout": {
+                                "cols": {
+                                  "xs": 6
+                                },
+                                "switch": [
+                                  {
+                                    "if": "parent.data?.lastDayOfMonth",
+                                    "props": {
+                                      "disabled": true
+                                    }
+                                  }
+                                ]
+                              }
+                            },
+                            "lastDayOfMonth": {
+                              "title": "Last Day of the Month",
+                              "x-i18n-title": {
+                                "fr": "Dernier jour du mois"
+                              },
+                              "type": "boolean",
+                              "default": false,
+                              "layout": {
+                                "cols": {
+                                  "xs": 6
+                                }
+                              }
+                            },
+                            "hour": {
+                              "title": "Hour",
+                              "x-i18n-title": {
+                                "fr": "Heure fixe dans le jour"
+                              },
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 23,
+                              "default": 0,
+                              "layout": {
+                                "cols": {
+                                  "xs": 6
+                                }
+                              }
+                            },
+                            "minute": {
+                              "title": "Minute",
+                              "x-i18n-title": {
+                                "fr": "Minute fixe dans l'heure"
+                              },
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 59,
+                              "default": 0,
+                              "layout": {
+                                "cols": {
+                                  "xs": 6
+                                }
+                              }
+                            },
+                            "timeZone": {
+                              "type": "string",
+                              "title": "Time Zone",
+                              "x-i18n-title": {
+                                "fr": "Fuseau horaire"
+                              },
+                              "default": "Europe/Paris",
+                              "layout": {
+                                "comp": "autocomplete",
+                                "getItems": "context.utcs"
+                              }
+                            }
+                          }
+                        },
+                        {
+                          "title": "Weekly",
+                          "x-i18n-title": {
+                            "fr": "Hebdomadaire"
+                          },
+                          "properties": {
+                            "type": {
+                              "const": "weekly"
+                            },
+                            "month": {
+                              "const": "*"
+                            },
+                            "dayOfMonth": {
+                              "const": "*"
+                            },
+                            "dayOfWeek": {
+                              "title": "Day of the Week",
+                              "x-i18n-title": {
+                                "fr": "Jour fixe dans la semaine"
+                              },
+                              "type": "string",
+                              "oneOf": [
+                                {
+                                  "const": "1",
+                                  "title": "Monday",
+                                  "x-i18n-title": {
+                                    "fr": "Lundi"
+                                  }
+                                },
+                                {
+                                  "const": "2",
+                                  "title": "Tuesday",
+                                  "x-i18n-title": {
+                                    "fr": "Mardi"
+                                  }
+                                },
+                                {
+                                  "const": "3",
+                                  "title": "Wednesday",
+                                  "x-i18n-title": {
+                                    "fr": "Mercredi"
+                                  }
+                                },
+                                {
+                                  "const": "4",
+                                  "title": "Thursday",
+                                  "x-i18n-title": {
+                                    "fr": "Jeudi"
+                                  }
+                                },
+                                {
+                                  "const": "5",
+                                  "title": "Friday",
+                                  "x-i18n-title": {
+                                    "fr": "Vendredi"
+                                  }
+                                },
+                                {
+                                  "const": "6",
+                                  "title": "Saturday",
+                                  "x-i18n-title": {
+                                    "fr": "Samedi"
+                                  }
+                                },
+                                {
+                                  "const": "0",
+                                  "title": "Sunday",
+                                  "x-i18n-title": {
+                                    "fr": "Dimanche"
+                                  }
+                                }
+                              ],
+                              "default": "1"
+                            },
+                            "hour": {
+                              "title": "Hour",
+                              "x-i18n-title": {
+                                "fr": "Heure fixe dans le jour"
+                              },
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 23,
+                              "default": 0,
+                              "layout": {
+                                "cols": {
+                                  "xs": 6
+                                }
+                              }
+                            },
+                            "minute": {
+                              "title": "Minute",
+                              "x-i18n-title": {
+                                "fr": "Minute fixe dans l'heure"
+                              },
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 59,
+                              "default": 0,
+                              "layout": {
+                                "cols": {
+                                  "xs": 6
+                                }
+                              }
+                            },
+                            "timeZone": {
+                              "type": "string",
+                              "title": "Time Zone",
+                              "x-i18n-title": {
+                                "fr": "Fuseau horaire"
+                              },
+                              "default": "Europe/Paris",
+                              "layout": {
+                                "comp": "autocomplete",
+                                "getItems": "context.utcs"
+                              }
+                            }
+                          }
+                        },
+                        {
+                          "title": "Daily",
+                          "x-i18n-title": {
+                            "fr": "Journalier"
+                          },
+                          "properties": {
+                            "type": {
+                              "const": "daily"
+                            },
+                            "month": {
+                              "const": "*"
+                            },
+                            "dayOfMonth": {
+                              "const": "*"
+                            },
+                            "dayOfWeek": {
+                              "const": "*"
+                            },
+                            "hour": {
+                              "title": "Hour",
+                              "x-i18n-title": {
+                                "fr": "Heure fixe dans le jour"
+                              },
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 23,
+                              "default": 0,
+                              "layout": {
+                                "cols": {
+                                  "xs": 6
+                                }
+                              }
+                            },
+                            "minute": {
+                              "title": "Minute",
+                              "x-i18n-title": {
+                                "fr": "Minute fixe dans l'heure"
+                              },
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 59,
+                              "default": 0,
+                              "layout": {
+                                "cols": {
+                                  "xs": 6
+                                }
+                              }
+                            },
+                            "timeZone": {
+                              "type": "string",
+                              "title": "Time Zone",
+                              "x-i18n-title": {
+                                "fr": "Fuseau horaire"
+                              },
+                              "default": "Europe/Paris",
+                              "layout": {
+                                "comp": "autocomplete",
+                                "getItems": "context.utcs"
+                              }
+                            }
+                          }
+                        },
+                        {
+                          "title": "Each # Hours",
+                          "x-i18n-title": {
+                            "fr": "Toutes les # heures"
+                          },
+                          "properties": {
+                            "type": {
+                              "const": "hours"
+                            },
+                            "month": {
+                              "const": "*"
+                            },
+                            "dayOfMonth": {
+                              "const": "*"
+                            },
+                            "dayOfWeek": {
+                              "const": "*"
+                            },
+                            "hour": {
+                              "const": "*"
+                            },
+                            "hourStep": {
+                              "title": "Interval in Hours",
+                              "x-i18n-title": {
+                                "fr": "Interval en heures"
+                              },
+                              "type": "integer",
+                              "minimum": 1,
+                              "maximum": 12,
+                              "default": 1,
+                              "layout": {
+                                "cols": {
+                                  "xs": 6
+                                }
+                              }
+                            },
+                            "minute": {
+                              "title": "Minute",
+                              "x-i18n-title": {
+                                "fr": "Minute fixe dans l'heure"
+                              },
+                              "type": "integer",
+                              "minimum": 0,
+                              "maximum": 59,
+                              "default": 0,
+                              "layout": {
+                                "cols": {
+                                  "xs": 6
+                                }
+                              }
+                            },
+                            "timeZone": {
+                              "type": "string",
+                              "title": "Time Zone",
+                              "x-i18n-title": {
+                                "fr": "Fuseau horaire"
+                              },
+                              "default": "Europe/Paris",
+                              "layout": {
+                                "comp": "autocomplete",
+                                "getItems": "context.utcs"
+                              }
+                            }
+                          }
+                        }
+                      ],
+                      "layout": {
+                        "switch": [
+                          {
+                            "if": "summary",
+                            "slots": {
+                              "component": "scheduling-summary"
+                            }
+                          }
+                        ]
+                      },
+                      "$defs": {
+                        "hour": {
+                          "title": "Hour",
+                          "x-i18n-title": {
+                            "fr": "Heure fixe dans le jour"
+                          },
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 23,
+                          "default": 0,
+                          "layout": {
+                            "cols": {
+                              "xs": 6
+                            }
+                          }
+                        },
+                        "minute": {
+                          "title": "Minute",
+                          "x-i18n-title": {
+                            "fr": "Minute fixe dans l'heure"
+                          },
+                          "type": "integer",
+                          "minimum": 0,
+                          "maximum": 59,
+                          "default": 0,
+                          "layout": {
+                            "cols": {
+                              "xs": 6
+                            }
+                          }
+                        },
+                        "timeZone": {
+                          "type": "string",
+                          "title": "Time Zone",
+                          "x-i18n-title": {
+                            "fr": "Fuseau horaire"
+                          },
+                          "default": "Europe/Paris",
+                          "layout": {
+                            "comp": "autocomplete",
+                            "getItems": "context.utcs"
+                          }
+                        }
+                      }
+                    }
+                  },
+                  "config": {
+                    "type": "object",
+                    "description": "The config of the plugin, its schema is returned by getPluginConfigSchema."
+                  },
+                  "permissions": {
+                    "type": "array",
+                    "title": "Permissions",
+                    "layout": {
+                      "messages": {
+                        "addItem": "Ajouter une permission"
+                      },
+                      "cols": 6
+                    },
+                    "items": {
+                      "title": "permission",
+                      "type": "object",
+                      "additionalProperties": false,
+                      "required": [
+                        "profile",
+                        "target"
+                      ],
+                      "properties": {
+                        "profile": {
+                          "type": "string",
+                          "title": "profil",
+                          "default": "read",
+                          "oneOf": [
+                            {
+                              "const": "read",
+                              "title": "lecture - permet d'accéder aux informations essentielles du traitement dont les logs, mais pas aux informations sensibles"
+                            },
+                            {
+                              "const": "exec",
+                              "title": "exécution - permet d'accéder aux informations essentielles du traitement et de déclencher le traitement"
+                            }
+                          ]
+                        },
+                        "target": {
+                          "type": "object",
+                          "oneOfLayout": {
+                            "label": "type de cible"
+                          },
+                          "oneOf": [
+                            {
+                              "title": "utilisateur désigné par son email",
+                              "required": [
+                                "email"
+                              ],
+                              "properties": {
+                                "type": {
+                                  "const": "userEmail"
+                                },
+                                "email": {
+                                  "type": "string",
+                                  "title": "email"
+                                }
+                              }
+                            },
+                            {
+                              "title": "organisation partenaire",
+                              "required": [
+                                "organization",
+                                "roles"
+                              ],
+                              "properties": {
+                                "type": {
+                                  "const": "partner"
+                                },
+                                "organization": {
+                                  "type": "object",
+                                  "title": "organisation",
+                                  "additionalProperties": true,
+                                  "layout": {
+                                    "cols": 8,
+                                    "getItems": {
+                                      "url": "${context.directoryUrl}/api/organizations/${context.owner.id}",
+                                      "itemsResults": "data.partners",
+                                      "itemKey": "data.id",
+                                      "itemTitle": "data.name"
+                                    }
+                                  },
+                                  "properties": {
+                                    "id": {
+                                      "type": "string"
+                                    },
+                                    "name": {
+                                      "type": "string"
+                                    }
+                                  }
+                                },
+                                "roles": {
+                                  "type": "array",
+                                  "title": "rôles",
+                                  "default": [
+                                    "admin"
+                                  ],
+                                  "layout": {
+                                    "cols": 4
+                                  },
+                                  "items": {
+                                    "type": "string",
+                                    "enum": [
+                                      "admin",
+                                      "contrib",
+                                      "user"
+                                    ]
+                                  }
+                                }
+                              }
+                            }
+                          ]
+                        }
+                      }
+                    }
+                  },
+                  "owner": {
+                    "readOnly": true,
+                    "type": "object",
+                    "title": "account",
+                    "required": [
+                      "type",
+                      "id",
+                      "name"
+                    ],
+                    "properties": {
+                      "type": {
+                        "type": "string",
+                        "enum": [
+                          "user",
+                          "organization"
+                        ]
+                      },
+                      "id": {
+                        "type": "string"
+                      },
+                      "name": {
+                        "type": "string"
+                      },
+                      "department": {
+                        "type": "string"
+                      },
+                      "departmentName": {
+                        "type": "string"
+                      }
+                    },
+                    "$defs": {
+                      "accountKeys": {
+                        "type": "object",
+                        "title": "account keys",
+                        "required": [
+                          "type",
+                          "id"
+                        ],
+                        "additionalProperties": false,
+                        "properties": {
+                          "type": {
+                            "type": "string",
+                            "enum": [
+                              "user",
+                              "organization"
+                            ]
+                          },
+                          "id": {
+                            "type": "string"
+                          },
+                          "department": {
+                            "type": "string"
+                          }
+                        }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The updated processing.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/processing"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sdCookie": []
+          },
+          {
+            "oauth2": [
+              "processings:write"
+            ]
+          },
+          {
+            "oauth2": [
+              "processings:admin"
+            ]
+          },
+          {
+            "oauth2": [
+              "processings"
+            ]
+          },
+          {
+            "oauth2": [
+              "all:write"
+            ]
+          },
+          {
+            "oauth2": [
+              "all:admin"
+            ]
+          }
+        ],
+        "x-agent": [
+          {
+            "name": "update_processing",
+            "title": {
+              "en": "Update a processing",
+              "fr": "Modifier un traitement"
+            },
+            "description": "Rename a processing, activate or deactivate it, or replace its scheduling. A processing needs a valid config to be activated. The scheduling is the whole list of its schedules, an empty list for on-demand runs only. Use the processing_config tools for its config.",
+            "annotations": {
+              "openWorldHint": false
+            },
+            "bodyFields": [
+              "title",
+              "active",
+              "scheduling"
+            ]
+          },
+          {
+            "name": "update_processing_permissions",
+            "title": {
+              "en": "Update the permissions of a processing",
+              "fr": "Modifier les permissions d'un traitement"
+            },
+            "description": "Replace the whole permissions list of a processing, which gives other users or partner organizations a read or exec profile on it, or give the processing to another owner. Read the current permissions first with describe_processing: the list sent replaces them all.",
+            "annotations": {
+              "destructiveHint": true,
+              "openWorldHint": false
+            },
+            "bodyFields": [
+              "permissions",
+              "owner"
+            ],
+            "security": [
+              {
+                "sdCookie": []
+              },
+              {
+                "oauth2": [
+                  "processings:admin"
+                ]
+              },
+              {
+                "oauth2": [
+                  "processings"
+                ]
+              },
+              {
+                "oauth2": [
+                  "all:admin"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      "delete": {
+        "operationId": "deleteProcessing",
+        "summary": "Delete a processing",
+        "description": "Delete a processing and its runs.",
+        "tags": [
+          "Traitements"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "description": "Id of the processing.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "The processing is deleted."
+          }
+        },
+        "security": [
+          {
+            "sdCookie": []
+          },
+          {
+            "oauth2": [
+              "processings:admin"
+            ]
+          },
+          {
+            "oauth2": [
+              "processings"
+            ]
+          },
+          {
+            "oauth2": [
+              "all:admin"
+            ]
+          }
+        ],
+        "x-agent": {
+          "name": "delete_processing",
+          "title": {
+            "en": "Delete a processing",
+            "fr": "Supprimer un traitement"
+          },
+          "description": "Delete a processing permanently, its runs are deleted too. The datasets it published stay.",
+          "annotations": {
+            "destructiveHint": true,
+            "openWorldHint": false
+          }
+        }
+      }
+    },
+    "/processings/{id}/config": {
+      "get": {
+        "operationId": "getProcessingConfig",
+        "summary": "Read the config of a processing",
+        "description": "The config follows the schema returned by getPluginConfigSchema. Admins of the processing only.",
+        "tags": [
+          "Traitements"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "description": "Id of the processing.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The config, an empty object when the processing has none.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sdCookie": []
+          },
+          {
+            "oauth2": [
+              "processings:read"
+            ]
+          },
+          {
+            "oauth2": [
+              "processings:write"
+            ]
+          },
+          {
+            "oauth2": [
+              "processings:admin"
+            ]
+          },
+          {
+            "oauth2": [
+              "processings"
+            ]
+          },
+          {
+            "oauth2": [
+              "all:read"
+            ]
+          },
+          {
+            "oauth2": [
+              "all:write"
+            ]
+          },
+          {
+            "oauth2": [
+              "all:admin"
+            ]
+          }
+        ]
+      },
+      "put": {
+        "operationId": "putProcessingConfig",
+        "summary": "Replace the config of a processing",
+        "description": "Replace the whole config, validated against the schema returned by getPluginConfigSchema. Admins of the processing only.",
+        "tags": [
+          "Traitements"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "description": "Id of the processing.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "type": "object"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "The saved config.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sdCookie": []
+          },
+          {
+            "oauth2": [
+              "processings:write"
+            ]
+          },
+          {
+            "oauth2": [
+              "processings:admin"
+            ]
+          },
+          {
+            "oauth2": [
+              "processings"
+            ]
+          },
+          {
+            "oauth2": [
+              "all:write"
+            ]
+          },
+          {
+            "oauth2": [
+              "all:admin"
+            ]
+          }
+        ],
+        "x-agent": {
+          "name": "processing_config",
+          "title": {
+            "en": "Processing config",
+            "fr": "Configuration d'un traitement"
+          },
+          "description": "Edit the config of a processing, a form defined by the schema of its plugin.",
+          "annotations": {
+            "openWorldHint": false
+          },
+          "editor": {
+            "schemaOperation": "getPluginConfigSchema",
+            "schemaParams": {
+              "agent": true
+            },
+            "readOperation": "getProcessingConfig"
+          }
+        }
+      }
+    },
+    "/processings/{id}/plugin-config-schema": {
+      "get": {
+        "operationId": "getPluginConfigSchema",
+        "summary": "Read the config schema of a processing",
+        "description": "The JSON schema of the config of the processing, defined by its plugin.",
+        "tags": [
+          "Traitements"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "description": "Id of the processing.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "agent",
+            "required": false,
+            "description": "true for the schema in json-layout v3 syntax, with the urls and owner filters of its layout resolved.",
+            "schema": {
+              "type": "boolean"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A JSON schema.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sdCookie": []
+          },
+          {
+            "oauth2": [
+              "processings:read"
+            ]
+          },
+          {
+            "oauth2": [
+              "processings:write"
+            ]
+          },
+          {
+            "oauth2": [
+              "processings:admin"
+            ]
+          },
+          {
+            "oauth2": [
+              "processings"
+            ]
+          },
+          {
+            "oauth2": [
+              "all:read"
+            ]
+          },
+          {
+            "oauth2": [
+              "all:write"
+            ]
+          },
+          {
+            "oauth2": [
+              "all:admin"
+            ]
+          }
+        ]
+      }
+    },
+    "/processings/{id}/plugin": {
+      "get": {
+        "operationId": "getProcessingPlugin",
+        "summary": "Read the plugin of a processing",
+        "description": "The metadata of the plugin version the processing runs.",
+        "tags": [
+          "Traitements"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "description": "Id of the processing.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The plugin metadata.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sdCookie": []
+          },
+          {
+            "oauth2": [
+              "processings:read"
+            ]
+          },
+          {
+            "oauth2": [
+              "processings:write"
+            ]
+          },
+          {
+            "oauth2": [
+              "processings:admin"
+            ]
+          },
+          {
+            "oauth2": [
+              "processings"
+            ]
+          },
+          {
+            "oauth2": [
+              "all:read"
+            ]
+          },
+          {
+            "oauth2": [
+              "all:write"
+            ]
+          },
+          {
+            "oauth2": [
+              "all:admin"
+            ]
+          }
+        ]
+      }
+    },
+    "/runs": {
+      "get": {
+        "operationId": "listRuns",
+        "summary": "List runs",
+        "description": "List the runs of the processings the session can read, most recent first. Logs are not included.",
+        "tags": [
+          "Exécutions"
+        ],
+        "parameters": [
+          {
+            "in": "query",
+            "name": "processing",
+            "required": false,
+            "description": "Id of the processing whose runs are listed.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "size",
+            "required": false,
+            "description": "Number of results per page.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "page",
+            "required": false,
+            "description": "Page number, starting at 1.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "skip",
+            "required": false,
+            "description": "Number of results to skip.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "showAll",
+            "required": false,
+            "description": "true to list the processings of every account (superadmin only).",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "owner",
+            "required": false,
+            "description": "Owners, comma separated, as type:id or type:id:department (e.g. organization:myorg).",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "sort",
+            "required": false,
+            "description": "Sort keys, comma separated, prefixed by - for descending order (e.g. -updated.date).",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "select",
+            "required": false,
+            "description": "Fields to return, comma separated.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "A page of runs.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "object",
+                  "properties": {
+                    "count": {
+                      "type": "integer"
+                    },
+                    "results": {
+                      "type": "array",
+                      "items": {
+                        "$ref": "#/components/schemas/run"
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sdCookie": []
+          },
+          {
+            "oauth2": [
+              "processings:read"
+            ]
+          },
+          {
+            "oauth2": [
+              "processings:write"
+            ]
+          },
+          {
+            "oauth2": [
+              "processings:admin"
+            ]
+          },
+          {
+            "oauth2": [
+              "processings"
+            ]
+          },
+          {
+            "oauth2": [
+              "all:read"
+            ]
+          },
+          {
+            "oauth2": [
+              "all:write"
+            ]
+          },
+          {
+            "oauth2": [
+              "all:admin"
+            ]
+          }
+        ],
+        "x-agent": {
+          "name": "list_runs",
+          "title": {
+            "en": "List runs",
+            "fr": "Lister les exécutions"
+          },
+          "description": "List the runs of the processings of the active account, most recent first, without their logs. Each run tells its status (triggered, scheduled, running, error, finished, kill, killed) and its dates. Use describe_run for the log of one run.",
+          "annotations": {
+            "readOnlyHint": true,
+            "openWorldHint": false
+          },
+          "params": {
+            "processing": {
+              "description": "The _id of the processing whose runs are listed."
+            },
+            "size": {
+              "default": 10,
+              "maximum": 50,
+              "description": "Number of runs per page."
+            },
+            "page": {
+              "default": 1,
+              "description": "Page number, starting at 1."
+            },
+            "select": {
+              "exclude": true
+            },
+            "sort": {
+              "exclude": true
+            },
+            "owner": {
+              "exclude": true
+            },
+            "showAll": {
+              "exclude": true
+            },
+            "skip": {
+              "exclude": true
+            }
+          },
+          "response": {
+            "rows": "/results",
+            "concise": [
+              "_id",
+              "status",
+              "createdAt",
+              "startedAt",
+              "finishedAt",
+              "processing"
+            ],
+            "detailed": true
+          }
+        }
+      }
+    },
+    "/runs/{id}": {
+      "get": {
+        "operationId": "getRun",
+        "summary": "Read a run",
+        "description": "A run with its logs.",
+        "tags": [
+          "Exécutions"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "description": "Id of the run.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The run.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/run"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sdCookie": []
+          },
+          {
+            "oauth2": [
+              "processings:read"
+            ]
+          },
+          {
+            "oauth2": [
+              "processings:write"
+            ]
+          },
+          {
+            "oauth2": [
+              "processings:admin"
+            ]
+          },
+          {
+            "oauth2": [
+              "processings"
+            ]
+          },
+          {
+            "oauth2": [
+              "all:read"
+            ]
+          },
+          {
+            "oauth2": [
+              "all:write"
+            ]
+          },
+          {
+            "oauth2": [
+              "all:admin"
+            ]
+          }
+        ],
+        "x-agent": {
+          "name": "describe_run",
+          "title": {
+            "en": "Describe a run",
+            "fr": "Décrire une exécution"
+          },
+          "description": "Read a run with its log: the steps, infos, warnings and errors the plugin wrote. The tool to explain why a run failed. The log may quote data of external sources.",
+          "annotations": {
+            "readOnlyHint": true
+          }
+        }
+      }
+    },
+    "/limits/{type}/{id}": {
+      "get": {
+        "operationId": "getAccountLimits",
+        "summary": "Read the limits of an account",
+        "description": "The processing time quota of an account and its consumption. Members of the account only.",
+        "tags": [
+          "Limites"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "type",
+            "required": true,
+            "description": "user or organization.",
+            "schema": {
+              "type": "string",
+              "enum": [
+                "user",
+                "organization"
+              ]
+            }
+          },
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "description": "Id of the account.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The limits.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/limit"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sdCookie": []
+          },
+          {
+            "oauth2": [
+              "processings:read"
+            ]
+          },
+          {
+            "oauth2": [
+              "processings:write"
+            ]
+          },
+          {
+            "oauth2": [
+              "processings:admin"
+            ]
+          },
+          {
+            "oauth2": [
+              "processings"
+            ]
+          },
+          {
+            "oauth2": [
+              "all:read"
+            ]
+          },
+          {
+            "oauth2": [
+              "all:write"
+            ]
+          },
+          {
+            "oauth2": [
+              "all:admin"
+            ]
+          }
+        ]
+      }
+    },
+    "/processings/{id}/_trigger": {
+      "post": {
+        "operationId": "triggerProcessing",
+        "summary": "Trigger a run",
+        "description": "Run an active processing now, or after a delay. With a webhook key the call needs no credentials.",
+        "tags": [
+          "Traitements"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "description": "Id of the processing.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "key",
+            "required": false,
+            "description": "The webhook key of the processing, instead of a session.",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "in": "query",
+            "name": "delay",
+            "required": false,
+            "description": "Delay before the run, in seconds.",
+            "schema": {
+              "type": "integer",
+              "minimum": 0
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The triggered run.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/run"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "The processing is not active."
+          }
+        },
+        "security": [
+          {
+            "sdCookie": []
+          },
+          {
+            "oauth2": [
+              "processings:write"
+            ]
+          },
+          {
+            "oauth2": [
+              "processings:admin"
+            ]
+          },
+          {
+            "oauth2": [
+              "processings"
+            ]
+          },
+          {
+            "oauth2": [
+              "all:write"
+            ]
+          },
+          {
+            "oauth2": [
+              "all:admin"
+            ]
+          }
+        ],
+        "x-agent": {
+          "name": "trigger_processing",
+          "title": {
+            "en": "Trigger a processing",
+            "fr": "Déclencher un traitement"
+          },
+          "description": "Run a processing now, or after a delay, out of its scheduling. The processing must be active (an error 409 otherwise). Follow the run with list_runs and describe_run.",
+          "annotations": {
+            "openWorldHint": false
+          },
+          "params": {
+            "key": {
+              "exclude": true
+            },
+            "delay": {
+              "description": "Delay before the run starts, in seconds."
+            }
+          }
+        }
+      }
+    },
+    "/runs/{id}/_kill": {
+      "post": {
+        "operationId": "killRun",
+        "summary": "Kill a run",
+        "description": "Ask the worker to stop a running run.",
+        "tags": [
+          "Exécutions"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "description": "Id of the run.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The run, in kill status.",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/run"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sdCookie": []
+          },
+          {
+            "oauth2": [
+              "processings:write"
+            ]
+          },
+          {
+            "oauth2": [
+              "processings:admin"
+            ]
+          },
+          {
+            "oauth2": [
+              "processings"
+            ]
+          },
+          {
+            "oauth2": [
+              "all:write"
+            ]
+          },
+          {
+            "oauth2": [
+              "all:admin"
+            ]
+          }
+        ],
+        "x-agent": {
+          "name": "kill_run",
+          "title": {
+            "en": "Kill a run",
+            "fr": "Arrêter une exécution"
+          },
+          "description": "Stop a running run: its status becomes kill until the worker stops it (killed). The work done by the plugin so far is not rolled back.",
+          "annotations": {
+            "destructiveHint": true,
+            "openWorldHint": false
+          }
+        }
+      }
+    },
+    "/processings/{id}/webhook-key": {
+      "get": {
+        "operationId": "getProcessingWebhookKey",
+        "summary": "Read the webhook key of a processing",
+        "description": "The key that triggers the processing without credentials (triggerProcessing with key).",
+        "tags": [
+          "Traitements"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "description": "Id of the processing.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The key.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sdCookie": []
+          },
+          {
+            "oauth2": [
+              "processings:admin"
+            ]
+          },
+          {
+            "oauth2": [
+              "processings"
+            ]
+          },
+          {
+            "oauth2": [
+              "all:admin"
+            ]
+          }
+        ]
+      },
+      "delete": {
+        "operationId": "deleteProcessingWebhookKey",
+        "summary": "Renew the webhook key of a processing",
+        "description": "Replace the webhook key by a new one, the previous key stops working.",
+        "tags": [
+          "Traitements"
+        ],
+        "parameters": [
+          {
+            "in": "path",
+            "name": "id",
+            "required": true,
+            "description": "Id of the processing.",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "The new key.",
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "sdCookie": []
+          },
+          {
+            "oauth2": [
+              "processings:admin"
+            ]
+          },
+          {
+            "oauth2": [
+              "processings"
+            ]
+          },
+          {
+            "oauth2": [
+              "all:admin"
+            ]
+          }
+        ]
+      }
+    }
+  }
+}
