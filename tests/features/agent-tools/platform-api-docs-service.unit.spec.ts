@@ -208,5 +208,12 @@ test.describe('platform document fragment cache', () => {
     assert.equal(withProcessings[2].url, 'http://processings:8080/api/v1/api-docs.json')
     assert.equal(withProcessings[2].service.mountPath, '/processings/api/v1')
     assert.equal(withProcessings[2].service.docPath, '/processings/api/v1/api-docs.json')
+
+    const withCatalogs = platformServices({ publicUrl: 'https://main.test/data-fair', directoryUrl: 'https://main.test/simple-directory', privateCatalogsUrl: 'http://catalogs:8080' })
+    assert.deepEqual(withCatalogs.map(s => s.service.id), ['datafair', 'sd', 'catalogs'])
+    assert.deepEqual(withCatalogs[2], {
+      service: { id: 'catalogs', title: 'Catalogs', mountPath: '/catalogs/api', docPath: '/catalogs/api/api-docs.json' },
+      url: 'http://catalogs:8080/api/api-docs.json'
+    })
   })
 })
