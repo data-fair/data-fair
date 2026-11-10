@@ -8,7 +8,7 @@ const properties: Record<string, any> = schema.properties
 export const standardMetadata = Object.entries(properties)
   .filter(([, prop]) => prop.properties?.active && (prop.properties.group || prop.properties.title))
   .map(([key, prop]) => {
-    const { active, title, group, description } = prop.properties
+    const { active, title, group, description, weight, recommendedMin, recommendedMax } = prop.properties
     return {
       key,
       active,
@@ -17,7 +17,12 @@ export const standardMetadata = Object.entries(properties)
       renamable: !!title,
       hasGroup: !!group && !group.readOnly,
       defaultGroup: group?.default,
-      hasHelp: !!description
+      hasHelp: !!description,
+      hasWeight: !!weight,
+      weight: weight?.default,
+      min: recommendedMin?.default,
+      max: recommendedMax?.default,
+      unit: recommendedMin?.layout.props.suffix
     }
   })
 
@@ -55,6 +60,7 @@ export const fromMetadataForm = ({ standardMetadata: items, ...datasetsMetadata 
 
 const meta = 'context.metadata[parent.data.key]'
 const shown = `(parent.data.active || ${meta}.alwaysActive)`
+const scoreActive = 'rootData.completeness?.active'
 
 // a field of the list items, built on its definition in the settings schema
 const field = (prop: any, ifExpr: string, getProps: string, cols?: number) => {
@@ -68,7 +74,7 @@ const items = {
       // the row only shows the title and subtitle of the list
       { if: 'summary', children: [] },
       // the switch, the category and the label on a line, the help below
-      { children: [{ name: 'metadata-info' }, { key: 'active', cols: 4 }, { key: 'group', cols: 4 }, { key: 'title', cols: 4 }, 'description'] }
+      { children: [{ name: 'metadata-info' }, { key: 'active', cols: 4 }, { key: 'group', cols: 4 }, { key: 'title', cols: 4 }, 'description', 'weight', 'recommendedMin', 'recommendedMax'] }
     ]
   },
   properties: {
@@ -86,7 +92,10 @@ const items = {
       layout: { if: `${shown} && ${meta}.renamable`, getProps: `({ placeholder: ${meta}.title, persistentPlaceholder: true })` }
     },
     group: field(properties.license.properties.group, `${shown} && ${meta}.hasGroup`, `({ ...layout.props, placeholder: context.labels.groups[${meta}.defaultGroup] })`),
-    description: field(properties.license.properties.description, `${shown} && ${meta}.hasHelp`, `({ ...layout.props, placeholder: ${meta}.nativeHelp, persistentPlaceholder: !!${meta}.nativeHelp })`)
+    description: field(properties.license.properties.description, `${shown} && ${meta}.hasHelp`, `({ ...layout.props, placeholder: ${meta}.nativeHelp, persistentPlaceholder: !!${meta}.nativeHelp })`),
+    weight: field(properties.license.properties.weight, `${shown} && ${scoreActive} && ${meta}.hasWeight`, `({ ...layout.props, placeholder: String(${meta}.weight) })`, 4),
+    recommendedMin: field(properties.keywords.properties.recommendedMin, `${shown} && ${scoreActive} && !!${meta}.unit`, `({ ...layout.props, suffix: context.labels.units[${meta}.unit], placeholder: ${meta}.min === undefined ? undefined : String(${meta}.min), persistentPlaceholder: ${meta}.min !== undefined })`, 4),
+    recommendedMax: field(properties.keywords.properties.recommendedMax, `${shown} && ${scoreActive} && !!${meta}.unit`, `({ ...layout.props, suffix: context.labels.units[${meta}.unit], placeholder: ${meta}.max === undefined ? undefined : String(${meta}.max), persistentPlaceholder: ${meta}.max !== undefined })`, 4)
   }
 }
 
@@ -94,12 +103,13 @@ export const metadataFormSchema = {
   ...schema,
   layout: {
     title: null,
-    children: ['informationsTitle', 'coverageTitle', 'groups', 'standardMetadata', 'custom']
+    children: ['informationsTitle', 'coverageTitle', 'groups', 'completeness', 'standardMetadata', 'custom']
   },
   properties: {
     informationsTitle: properties.informationsTitle,
     coverageTitle: properties.coverageTitle,
     groups: properties.groups,
+    completeness: properties.completeness,
     standardMetadata: {
       type: 'array',
       title: 'Standard metadata',

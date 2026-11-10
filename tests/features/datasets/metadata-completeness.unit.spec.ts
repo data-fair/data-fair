@@ -1,0 +1,110 @@
+import { test } from '@playwright/test'
+import assert from 'node:assert/strict'
+import { completenessCriteria, computeCompleteness, scoreInputs, scoredFields } from '../../../api/types/metadata-completeness.ts'
+
+const active = { completeness: { active: true } }
+const longText = (n: number) => 'x'.repeat(n)
+const score = (...args: Parameters<typeof computeCompleteness>) => computeCompleteness(...args)?.score
+
+test.describe('metadata completeness', () => {
+  test('no score unless the owner activated it', () => {
+    assert.equal(computeCompleteness({ summary: 'a' }, {}), undefined)
+    assert.equal(computeCompleteness({ summary: 'a' }, null), undefined)
+    assert.equal(computeCompleteness({ summary: 'a' }, { completeness: { active: false } }), undefined)
+  })
+
+  test('a fragment has no score', () => {
+    assert.equal(computeCompleteness({ partOf: { type: 'dataset', id: 'parent' } }, active), undefined)
+  })
+
+  test('scored fields come from the settings entries carrying a weight', () => {
+    assert.ok(scoredFields.includes('summary'))
+    assert.ok(scoredFields.includes('keywords'))
+    assert.ok(!scoredFields.includes('custom'))
+    assert.ok(!scoredFields.includes('groups'))
+    assert.ok(!scoredFields.includes('completeness'))
+  })
+
+  test('default weights apply to the metadata shown by default', () => {
+    // summary 3, description 4, license 3, origin 1, image 1, topics 2: the toggleable ones are off by default
+    assert.deepEqual(completenessCriteria({}, active).map(c => [c.key, c.weight]),
+      [['summary', 3], ['description', 4], ['license', 3], ['origin', 1], ['image', 1], ['topics', 2]])
+    assert.equal(score({}, active), 0)
+    assert.equal(score({
+      summary: longText(100),
+      description: longText(600),
+      license: { title: 'Licence ouverte', href: 'https://www.etalab.gouv.fr/licence-ouverte' },
+      origin: 'https://example.com',
+      image: 'https://example.com/image.png',
+      topics: [{ id: 't1', title: 'Topic' }]
+    }, active), 100)
+  })
+
+  test('a filled metadata outside its recommended bounds counts for half', () => {
+    const settings = { ...active, summary: { weight: 1 }, description: { weight: 0 }, license: { weight: 0 }, origin: { weight: 0 }, image: { weight: 0 }, topics: { weight: 0 } }
+    assert.equal(score({ summary: longText(10) }, settings), 50)
+    assert.equal(score({ summary: longText(301) }, settings), 50)
+    assert.equal(score({ summary: longText(200) }, settings), 100)
+    // blank text is empty
+    assert.equal(score({ summary: '   ' }, settings), 0)
+    // the owner bounds replace the defaults
+    assert.equal(score({ summary: longText(10) }, { ...settings, summary: { weight: 1, recommendedMin: 5 } }), 100)
+  })
+
+  test('lists are measured in values, objects are only filled or empty', () => {
+    const settings = { ...active, summary: { weight: 0 }, description: { weight: 0 }, license: { weight: 0 }, origin: { weight: 0 }, image: { weight: 0 }, topics: { weight: 0 }, keywords: { active: true, recommendedMin: 3 }, temporal: { active: true } }
+    const criteria = completenessCriteria({ keywords: ['a'], temporal: { start: '2020-01-01' } }, settings)
+    assert.deepEqual(criteria.map(c => [c.key, c.size, c.note]), [['temporal', undefined, 1], ['keywords', 1, 0.5]])
+    assert.equal(score({ keywords: [], temporal: { start: '', end: null } }, settings), 0)
+  })
+
+  test('custom metadata weigh 1 by default, 0 removes them', () => {
+    const settings = {
+      ...active,
+      summary: { weight: 0 },
+      description: { weight: 0 },
+      license: { weight: 0 },
+      origin: { weight: 0 },
+      image: { weight: 0 },
+      topics: { weight: 0 },
+      custom: [
+        { key: 'service', title: 'Service' },
+        { key: 'contact', title: 'Contact', type: 'link' as const },
+        { key: 'effectif', title: 'Effectif', type: 'integer' as const, weight: 2 },
+        { key: 'ignored', title: 'Ignored', weight: 0 }
+      ]
+    }
+    const dataset = { customMetadata: { service: 'Voirie', contact: { url: '' }, effectif: 0, ignored: 'x' } }
+    assert.deepEqual(completenessCriteria(dataset, settings).map(c => [c.key, c.custom, c.weight, c.note]),
+      [['service', true, 1, 1], ['contact', true, 1, 0], ['effectif', true, 2, 1]])
+    assert.equal(score(dataset, settings), 75)
+    assert.deepEqual(computeCompleteness(dataset, settings)?.criteria, completenessCriteria(dataset, settings))
+  })
+
+  test('a single recommended bound only checks its own side', () => {
+    const minOnly = { completeness: { active: true }, custom: [{ key: 'note', title: 'Note', recommendedMin: 5 }] } as any
+    assert.deepEqual(completenessCriteria({ customMetadata: { note: 'long enough' } }, minOnly).find(c => c.custom)?.note, 1)
+    assert.deepEqual(completenessCriteria({ customMetadata: { note: 'abc' } }, minOnly).find(c => c.custom)?.note, 0.5)
+    const maxOnly = { completeness: { active: true }, custom: [{ key: 'note', title: 'Note', recommendedMax: 5 }] } as any
+    assert.deepEqual(completenessCriteria({ customMetadata: { note: 'abc' } }, maxOnly).find(c => c.custom)?.note, 1)
+    assert.deepEqual(completenessCriteria({ customMetadata: { note: 'too long' } }, maxOnly).find(c => c.custom)?.note, 0.5)
+  })
+
+  test('a link without url is empty, as its save drops it', () => {
+    const settings = { ...active, custom: [{ key: 'page', title: 'Page', type: 'link' as const }] }
+    assert.equal(completenessCriteria({ customMetadata: { page: { url: '', title: 'Site' } } }, settings).find(c => c.custom)?.note, 0)
+  })
+
+  test('only the settings the score reads trigger a rescore', () => {
+    const settings = { ...active, summary: { weight: 3, description: 'Aide' }, custom: [{ key: 'note', title: 'Note' }] }
+    assert.deepEqual(scoreInputs({ ...settings, summary: { weight: 3, description: 'Autre aide' }, informationsTitle: 'Infos', custom: [{ key: 'note', title: 'Remarque' }] }), scoreInputs(settings))
+    assert.notDeepEqual(scoreInputs({ ...settings, summary: { weight: 4 } }), scoreInputs(settings))
+    assert.notDeepEqual(scoreInputs({ ...settings, custom: [{ key: 'note', title: 'Note', type: 'integer' as const }] }), scoreInputs(settings))
+    assert.equal(scoreInputs({ summary: { weight: 3 } }), undefined)
+  })
+
+  test('nothing weighted means no score', () => {
+    const settings = { ...active, summary: { weight: 0 }, description: { weight: 0 }, license: { weight: 0 }, origin: { weight: 0 }, image: { weight: 0 }, topics: { weight: 0 } }
+    assert.equal(computeCompleteness({ summary: 'a' }, settings), undefined)
+  })
+})

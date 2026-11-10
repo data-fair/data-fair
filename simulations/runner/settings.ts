@@ -105,7 +105,18 @@ export async function seedSettings (assistantModelId: string, toolsModelId: stri
     ai_credits: { limit: -1, consumption: 0 }
   })
   // PATCH merges, so it preserves the owner's other settings.
-  await ownerAx.patch(`/api/v1/settings/${OWNER.type}/${OWNER.id}`, { agentChat: true })
+  await ownerAx.patch(`/api/v1/settings/${OWNER.type}/${OWNER.id}`, {
+    agentChat: true,
+    // an organization that scores its metadata and adds its own, with a summary bound unlike the agent's former 300
+    datasetsMetadata: {
+      completeness: { active: true },
+      summary: { recommendedMin: 80, recommendedMax: 180 },
+      custom: [
+        { title: 'Service producteur', description: 'Direction ou service de la collectivité qui produit et met à jour les données.' },
+        { title: 'Thème interne', enum: ['Sport', 'Culture', 'Éducation', 'Voirie'], multiple: true }
+      ]
+    }
+  })
 }
 
 /** Fail loudly and early: without the bridge every case dies as an opaque timeout. */

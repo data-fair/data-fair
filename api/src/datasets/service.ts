@@ -20,7 +20,8 @@ import { dir, filePath, fullFilePath, originalFilePath, attachmentsDir, metadata
 import { fixConcepts, getSchemaBreakingChanges, checkSchemaKeys } from './utils/data-schema.ts'
 import { checkConstraints, dateCoherenceProps, dateCoherenceViolation } from './utils/constraints.ts'
 import { getExtensionKey, prepareExtensions, prepareExtensionsSchema, checkExtensions } from './utils/extensions.ts'
-import { searchIndexPatch } from './utils/search-text.ts'
+import { indexAndCompletenessPatch } from './utils/completeness.ts'
+import { scoredFields } from '#types/metadata-completeness.ts'
 import { RESPONSE_EXCLUDED_FIELD_NAMES, assignIndexFields, mergeIndexUpdate } from '../misc/utils/text-search/index.ts'
 import { datasetsTextSearch, datasetsStats } from '../misc/utils/text-search/collections.ts'
 import assertImmutable from '../misc/utils/assert-immutable.ts'
@@ -424,7 +425,7 @@ export const createDataset = async (db: Db, es: Client, locale: string, sessionS
   }
 
   dataset._modified = computeModified(dataset)
-  assignIndexFields(dataset, searchIndexPatch(dataset))
+  assignIndexFields(dataset, await indexAndCompletenessPatch(dataset))
   const insertedDatasetFull = await datasetUtils.insertWithId(db, dataset, onClose)
   const insertedDataset = datasetUtils.mergeDraft(insertedDatasetFull)
 
@@ -514,7 +515,8 @@ export const changeDatasetOwner = async (ctx: { sessionState: SessionStateAuthen
   // were just rewritten: recompute rather than carry the old owner's terms across the transfer.
   // the stored document, not the draft-merged one (?draft=true)
   const indexedDataset = { ...datasetFull, owner: patch.owner, permissions: patch.permissions }
-  const changeOwnerUpdate: any = mergeIndexUpdate({ $set: patch }, searchIndexPatch(indexedDataset))
+  // the score follows the new owner's settings
+  const changeOwnerUpdate: any = mergeIndexUpdate({ $set: patch }, await indexAndCompletenessPatch(indexedDataset))
   const patchedDataset: any = await mongo.db.collection('datasets')
     .findOneAndUpdate({ id: dataset.id }, changeOwnerUpdate, { returnDocument: 'after' })
 
@@ -666,10 +668,12 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
   const INDEXED_TOP_LEVEL = new Set(
     Object.keys(datasetsTextSearch.definition.fields).map(path => path.split('.')[0])
   )
+  // the completeness score is recomputed with the index, so its metadata trigger it too
   const touchesIndexedContent = Object.keys(patch).some(key => INDEXED_TOP_LEVEL.has(key)) ||
+    [...scoredFields, 'customMetadata'].some(key => key in patch) ||
     !!patch.schema || !!patch.permissions
   const searchIndexUpdate = touchesIndexedContent && !dataset.draftReason && !patch.draftReason
-    ? searchIndexPatch({ ...dataset, ...patch })
+    ? await indexAndCompletenessPatch({ ...dataset, ...patch })
     : undefined
 
   Object.assign(dataset, patch)

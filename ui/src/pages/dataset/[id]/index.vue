@@ -161,6 +161,11 @@
       :svg="metadataSvg"
     >
       <template #actions>
+        <dataset-metadata-completeness
+          v-if="metadataEditFetch.data.value"
+          :dataset="metadataEditFetch.data.value"
+          :datasets-metadata="datasetsMetadata"
+        />
         <confirm-menu
           v-if="metadataEditFetch.hasDiff.value"
           :btn-props="{ color: 'warning', variant: 'tonal' }"
@@ -1350,7 +1355,7 @@ const sections = computedDeepDiff(() => {
   if (metadataEditFetch.hasDiff.value && !modifiedMetadataGroups.size) modifiedMetadataGroups.add('informations')
   const groupColor = (key: string) => modifiedMetadataGroups.has(key) ? 'accent' : undefined
   const metadataTabs: any[] = [
-    { key: 'informations', title: datasetsMetadata.value?.informationsTitle || t('generalInformations'), icon: mdiInformation, color: groupColor('informations'), agentDesc: 'Edit form for descriptive metadata. By default holds title, summary, description (markdown), license, creator, origin, topics and the custom metadata; the owner settings can move any of them except title, summary and description to another tab. Two in-form help buttons: next to the summary → the write-dataset-summary skill (a ≤300 char summary from sample data); next to the description → the write-dataset-description skill (500-2000 char markdown).' }
+    { key: 'informations', title: datasetsMetadata.value?.informationsTitle || t('generalInformations'), icon: mdiInformation, color: groupColor('informations'), agentDesc: 'Edit form for descriptive metadata. By default holds title, summary, description (markdown), license, creator, origin, topics and the custom metadata; the owner settings can move any of them except title, summary and description to another tab. Two in-form help buttons: next to the summary → the write-dataset-summary skill (a plain-text summary from sample data); next to the description → the write-dataset-description skill (markdown). Both follow the sizes given by read_dataset_metadata.' }
   ]
   // a tab holding no metadata shown on datasets is left out
   // same conditions as the metadata form, which hides these fields

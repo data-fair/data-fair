@@ -211,6 +211,20 @@ Current callers, both bulk writers that patch fields directly with `updateMany` 
   `markStale` call here, a renamed topic would never reach `_terms`, and a dataset would keep
   matching only its OLD topic name, indefinitely. (Applications carry no `topics` in their
   definition, so their branch does not call it.)
+  On delete the flag is set in the `$pull` itself, not by a separate `markStale`: the filter
+  matches `topics.id`, so a later call would match nothing, and an earlier one lets the worker
+  recompute (and clear the flag) before the topic is gone.
+
+The dataset recompute also refreshes the metadata completeness score (`completeness`, holding the `score` and its `criteria`, computed by
+`api/types/metadata-completeness.ts` from the owner's `datasetsMetadata` settings), so two more
+writers stamp the flag for it: **`api/src/settings/service.ts`, `writeSettings`** marks every
+non-fragment dataset of the owner stale when a setting the score reads changes (`scoreInputs`:
+activation, weights, recommended sizes, custom keys and the type/list changes that remove values;
+not titles, tooltips or groups), and
+**`api/src/fragments/service.ts`, `applyPartOfChange`** sets it on attach and detach, since a
+fragment has no score. Since the flag also stands for a pending rescore, dataset writers compute
+both through `indexAndCompletenessPatch` (`api/src/datasets/utils/completeness.ts`): a writer
+recomputing the index alone would clear the flag and leave the old score.
 
 If you add a new bulk writer — an upgrade script, an admin bulk action, anything using
 `updateMany`/`bulkWrite` on `datasets`/`applications` outside `applyPatch` — and it touches any

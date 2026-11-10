@@ -33,11 +33,10 @@ export const updateTopics = async (owner: AccountKeys, oldTopics: Topics, newTop
     const filter = { 'owner.type': owner.type, 'owner.id': owner.id, 'topics.id': oldTopic.id }
     const patch = { $pull: { topics: { id: oldTopic.id } } }
     // stamp BEFORE the $pull: the pull removes the very field ('topics.id') this filter matches,
-    // so stamping after would match nothing (over-stamping here is harmless, the relay dedupes) —
-    // same reasoning applies to markStale below
+    // so stamping after would match nothing (over-stamping here is harmless, the relay dedupes)
     await stampHistorizeMany(filter)
-    await markStale(mongo.datasets, filter)
-    await mongo.datasets.updateMany(filter, patch)
+    // flagged in the same write: a worker recomputing in between would clear the flag and keep the topic
+    await mongo.datasets.updateMany(filter, { ...patch, $set: { _needsSearchIndex: true } })
     await mongo.applications.updateMany(filter, patch)
   }
 }

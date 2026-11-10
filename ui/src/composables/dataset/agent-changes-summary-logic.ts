@@ -86,6 +86,11 @@ function diffMetadata (server: any, edited: any): string[] {
     if (equal(server[key], edited[key])) continue
     lines.push(`- **${label}** : ${short(server[key])} → ${short(edited[key])}`)
   }
+  // custom metadata are written by set_dataset_metadata too, listed by key: the diff has no settings to read titles from
+  for (const key of new Set([...Object.keys(server.customMetadata ?? {}), ...Object.keys(edited.customMetadata ?? {})])) {
+    if (equal(server.customMetadata?.[key], edited.customMetadata?.[key])) continue
+    lines.push(`- **métadonnée personnalisée ${key}** : ${short(server.customMetadata?.[key])} → ${short(edited.customMetadata?.[key])}`)
+  }
   return lines
 }
 

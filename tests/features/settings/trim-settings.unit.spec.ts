@@ -58,9 +58,9 @@ test.describe('trimSettings', () => {
 
 test.describe('cleanDatasetsMetadata', () => {
   test('summary and description stay in the general tab', () => {
-    const datasetsMetadata: any = { summary: { group: 'coverage', description: 'Aide' }, description: { group: 'coverage' } }
+    const datasetsMetadata: any = { summary: { group: 'coverage', weight: 2 }, description: { group: 'coverage' } }
     cleanDatasetsMetadata(datasetsMetadata)
-    assert.deepEqual(datasetsMetadata, { summary: { description: 'Aide' }, description: {} })
+    assert.deepEqual(datasetsMetadata, { summary: { weight: 2 }, description: {} })
   })
 
   test('gives a key to the categories created without one and keeps the existing keys', () => {
@@ -74,5 +74,20 @@ test.describe('cleanDatasetsMetadata', () => {
     const datasetsMetadata: any = { custom: [{ key: 'budget', title: 'Budget' }, { title: 'Budget' }, { title: 'Budget' }] }
     cleanDatasetsMetadata(datasetsMetadata)
     assert.deepEqual(datasetsMetadata.custom.map((c: any) => c.key), ['budget', 'budget-2', 'budget-3'])
+  })
+
+  test('drops the recommended size of a metadata that has none', () => {
+    const bounds = { recommendedMin: 10, recommendedMax: 50 }
+    const datasetsMetadata: any = {
+      custom: [
+        { key: 'free', title: 'Free', ...bounds },
+        { key: 'several', title: 'Several', enum: ['a', 'b'], multiple: true, ...bounds },
+        { key: 'single', title: 'Single', enum: ['a', 'b'], ...bounds },
+        { key: 'date', title: 'Date', type: 'date', ...bounds }
+      ]
+    }
+    cleanDatasetsMetadata(datasetsMetadata)
+    assert.deepEqual(datasetsMetadata.custom.map((c: any) => c.recommendedMin), [10, 10, undefined, undefined])
+    assert.deepEqual(datasetsMetadata.custom.map((c: any) => c.recommendedMax), [50, 50, undefined, undefined])
   })
 })

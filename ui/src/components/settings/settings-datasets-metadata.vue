@@ -21,6 +21,7 @@ fr:
   notOffered: Non proposée
   customHelp: Infobulle personnalisée
   category: "Catégorie : {title}"
+  weight: "Poids {weight}"
   informations: Informations générales
   coverage: Informations complémentaires
   keyPrefix: "Clé : "
@@ -32,10 +33,13 @@ fr:
   typeLink: Lien
   withEnum: ", liste de valeurs"
   withMultiple: ", plusieurs valeurs"
+  unitChars: caractères
+  unitValues: valeurs
 en:
   notOffered: Not offered
   customHelp: Custom help
   category: "Category: {title}"
+  weight: "Weight {weight}"
   informations: General information
   coverage: Additional information
   keyPrefix: "Key: "
@@ -47,10 +51,12 @@ en:
   typeLink: Link
   withEnum: ", list of values"
   withMultiple: ", multiple values"
+  unitChars: characters
+  unitValues: values
 </i18n>
 
 <script setup lang="ts">
-import { type Settings } from '#api/types'
+import { type Settings, completenessCriteria } from '#api/types'
 import equal from 'fast-deep-equal'
 import Vjsf, { type Options as VjsfOptions } from '@koumoul/vjsf'
 import { fieldGroup } from '~/utils/metadata-groups'
@@ -84,8 +90,28 @@ const labels = computed(() => ({
   category: t('categoryPrefix'),
   types: { string: t('typeString'), integer: t('typeInteger'), number: t('typeNumber'), date: t('typeDate'), link: t('typeLink') },
   enum: t('withEnum'),
-  multiple: t('withMultiple')
+  multiple: t('withMultiple'),
+  units: { chars: t('unitChars'), values: t('unitValues') }
 }))
+
+// the share of the score each metadata carries
+const shares = computed(() => {
+  const metadata = datasetsMetadata.value as Record<string, any> | undefined
+  if (!metadata?.completeness?.active) return []
+  const criteria = completenessCriteria({}, metadata)
+  const total = criteria.reduce((sum, c) => sum + c.weight, 0)
+  return criteria.map(c => ({
+    // a custom metadata can share the key of a fixed one
+    key: c.custom ? `custom.${c.key}` : c.key,
+    weight: c.weight,
+    share: c.weight / total
+  }))
+})
+
+const scoreLabel = (key: string) => {
+  const share = shares.value.find(s => s.key === key)
+  return `${t('weight', { weight: share?.weight ?? 0 })} (${Math.round((share?.share ?? 0) * 100)} %)`
+}
 
 const metadataSubtitles = computed(() => {
   const metadata = (datasetsMetadata.value ?? {}) as Record<string, any>
@@ -99,9 +125,15 @@ const metadataSubtitles = computed(() => {
     if (!active) return [m.key, t('notOffered')]
     return [m.key, [
       m.hasGroup && t('category', { title: tabTitle(fieldGroup(metadata, m.key)) }),
-      metadata[m.key]?.description && t('customHelp')
+      metadata[m.key]?.description && t('customHelp'),
+      metadata.completeness?.active && m.hasWeight && scoreLabel(m.key)
     ].filter(Boolean).join(' · ')]
   }))
+})
+
+const customScores = computed(() => {
+  if (!datasetsMetadata.value?.completeness?.active) return {}
+  return Object.fromEntries((datasetsMetadata.value.custom ?? []).filter(c => c.key).map(c => [c.key, scoreLabel(`custom.${c.key}`)]))
 })
 
 const vjsfOptions = computed<VjsfOptions>(() => ({
@@ -112,7 +144,7 @@ const vjsfOptions = computed<VjsfOptions>(() => ({
   useDefault: false,
   xI18n: true,
   locale: locale.value,
-  context: { metadata: metadataByKey.value, metadataItems: standardMetadataItems, metadataSubtitles: metadataSubtitles.value, labels: labels.value }
+  context: { metadata: metadataByKey.value, metadataItems: standardMetadataItems, metadataSubtitles: metadataSubtitles.value, customScores: customScores.value, labels: labels.value }
 }))
 
 // http://localhost:5600/data-fair/embed/settings/user/superadmin/datasetsMetadata

@@ -442,6 +442,26 @@ test.describe('settings department switch guard', () => {
   })
 })
 
+test.describe('settings metadata score', () => {
+  test.beforeEach(async () => {
+    await clean()
+  })
+
+  test('standard and custom metadata lines show their weight and share', async ({ page, goToWithAuth }) => {
+    const ax = await axiosAuth('test_user1@test.com', 'test_org1')
+    await ax.patch('/api/v1/settings/organization/test_org1', {
+      datasetsMetadata: { completeness: { active: true }, custom: [{ title: 'Service producteur', weight: 3 }, { title: 'Sans poids', weight: 0 }] }
+    })
+
+    await goToSettingsOrg(page, goToWithAuth)
+    await page.locator('#catalog').getByRole('tab', { name: 'Métadonnées' }).click()
+    const line = (title: string) => page.locator('.v-list-item').filter({ hasText: title })
+    await expect(line('Description').first()).toContainText('Poids 4 (24 %)')
+    await expect(line('Service producteur')).toContainText('Poids 3 (18 %)')
+    await expect(line('Sans poids')).toContainText('Poids 0 (0 %)')
+  })
+})
+
 test.describe('settings defaults filled by the form', () => {
   test.beforeEach(async () => {
     await clean()
@@ -480,9 +500,14 @@ test.describe('settings defaults filled by the form', () => {
     page.on('request', request => { if (request.method() === 'PATCH') patches.push(request.url()) })
 
     await goToWithAuth('/data-fair/embed/settings/user/test_user1/datasets-metadata', 'test_user1')
-    await expect(page.locator('.v-list-item').filter({ hasText: 'Licence' }).first()).toBeVisible({ timeout: 15000 })
+    const score = page.getByRole('checkbox', { name: /Activer le score/ })
+    await expect(score).toBeVisible({ timeout: 15000 })
     await page.waitForTimeout(1000)
     expect(patches).toEqual([])
+
+    await score.check()
+    await expect(page.getByText(/^Poids \d+ \(/).first()).toBeVisible()
+    await expect.poll(() => patches.length).toBe(1)
   })
 })
 
