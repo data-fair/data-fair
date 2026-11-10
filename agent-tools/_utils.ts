@@ -153,6 +153,32 @@ export function unwrapFilterQuery (query: string | undefined): string | undefine
 }
 
 /**
+ * A column the platform adds to every row (_geopoint, _geoshape, _updatedAt, _attachment_url…),
+ * as opposed to one of the producer's data. Extension outputs are `_`-prefixed too, but they
+ * are columns the owner chose to add, so they stay with the data.
+ */
+export function isPlatformColumn (col: any): boolean {
+  return !!col?.['x-calculated'] && typeof col.key === 'string' && col.key.startsWith('_') && !col['x-extension']
+}
+
+const SCHEMA_TABLE_HEADER = ['| Key | Type | Title | Notes |', '|-----|------|-------|-------|']
+
+/**
+ * The schema as markdown: the data columns, then the platform columns in a table of their
+ * own. One table mixing both had the assistant describe a dataset to its owner with
+ * `_geopoint` among its columns.
+ */
+export function formatSchemaTable (schema: any[]): string[] {
+  const rows = (cols: any[]) => formatSchemaColumns(cols) ?? []
+  const lines = [...SCHEMA_TABLE_HEADER, ...rows((schema ?? []).filter(col => !isPlatformColumn(col)))]
+  const platform = rows((schema ?? []).filter(isPlatformColumn))
+  if (platform.length) {
+    lines.push('', '### Platform columns', 'Computed by Data Fair, not part of the data: usable in queries, never presented as columns of the dataset.', ...SCHEMA_TABLE_HEADER, ...platform)
+  }
+  return lines
+}
+
+/**
  * Format schema columns into markdown table rows.
  * Filters out internal columns (_i, _id, _rand).
  */

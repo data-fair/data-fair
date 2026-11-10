@@ -146,6 +146,7 @@ Chat prose renders inside the agents iframe, which resolves a clicked link again
 - The host-reported `location` state carries the current page's absolute `url` (see [Host events](#10-host-events)); it replaced the `get_current_location` tool.
 - `list_datasets` (now surfaced in its text output) and `describe_dataset` emit a per-dataset `Link`. The shared formatters default this to the API `page` field — the public/portal page, correct for the portal and MCP consumers. **The back-office integration must not use `page`**: on a secondary domain the API rewrites `page` to the portal URL (via the publication site's `datasetUrlTemplate`) or, through the `setResourceLinks` fallback, to the *primary* back-office (`config.publicUrl`) — never the current secondary back-office the user is in. So `useAgentDatasetTools` passes a `datasetLink` option (`agent-tools/{list-datasets,describe-dataset}.ts`) that builds a current-site link (`window.location.origin + $sitePath + /data-fair/dataset/{id}`), overriding both the text `Link` and `structuredContent.page`. The `query-dataset-data` skill uses that link as the base for `/table?<filterQuery>` and `/map?<filterQuery>`. Map links also accept a `category=<column_key>` param (documented in the `query-dataset-data` skill): the map preview colors features per value of that column and shows an interactive legend, so the agent can hand out richer map links for categorical columns.
 - `navigate` accepts either an absolute URL or a bare path: `toRoutePath` reduces any input (full URL, base-prefixed path, or bare router path — even one with a wrong/hallucinated origin) back to a base-less router path for `router.push`, mirroring the host handler's logic.
+- `navigate` refuses to leave a page holding unsaved edits. The dataset and application pages register their pending edits through `useAgentLeaveGuard` (`ui/src/composables/use-agent-leave-guard.ts`: the usual `useLeaveGuard` plus the registry in `agent/unsaved-edits.ts`), and a change of path while one is dirty returns an error naming them and asking for Enregistrer + `wait_for_user_action`. A query-only change on the same page is let through. Asked to fill the topics of every dataset in a catalog, an assistant had set them on one, navigated to the next and the next, and never noticed nothing was saved: the leave guard is a `window.confirm` that only the person sees. A navigation a guard still aborts is now reported as a failure instead of `Success: true` with the old path.
 
 Pure helpers live in `ui/src/composables/agent/url-utils.ts` (`toAbsoluteUrl` / `toRoutePath`, unit-tested in `tests/features/agent-tools/url-utils.unit.spec.ts`); the back-office base is `$sitePath + '/data-fair/'` (`ui/src/main.ts`).
 
@@ -238,7 +239,7 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 | `set_dataset_metadata` | Dataset metadata (title, summary, description, keywords, searchTerms, license, topics, origin, creator, frequency, spatial, and the owner's custom metadata keyed by title, checked against their type and list of values) | **W** | `dataset/agent-metadata-tools.ts` |
 | `read_schema_for_annotation` | Schema annotation | R | `dataset/agent-schema-annotation-tools.ts` |
 | `annotate_schema` | Schema annotation | **W** | `dataset/agent-schema-annotation-tools.ts` |
-| `reorder_columns` | Schema order | **W** | `dataset/agent-schema-order-tools.ts` |
+| `reorder_columns` | Schema order (its action button, `help-reorder-columns`, presents the proposed order and calls it only after the person's go) | **W** | `dataset/agent-schema-order-tools.ts` |
 | `read_column_values` | Column labels | R | `dataset/agent-column-labels-tools.ts` |
 | `set_column_labels` | Column labels | **W** | `dataset/agent-column-labels-tools.ts` |
 | `get_application_config_schema` | Application config | R | `application/agent-tools.ts` |
@@ -285,7 +286,7 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 | **Trigger** | Action button on schema toolbar |
 | **Action ID** | `help-configure-properties` |
 | **Skill** | `optimize-column-config` — suggests type overrides and capability optimizations |
-| **Pattern** | Asks user what they need (type corrections, capability optimization, or both). Reads config and sample data, suggests changes with explanations, applies via `set_property_config`. Does NOT write expressions — directs to expression_helper. |
+| **Pattern** | Asks user what they need (type corrections, capability optimization, or both). Reads config and sample data, presents the suggested changes with explanations and stops for the person's go; applies via `set_property_config` only after it. A user found the button went straight to staging changes. Does NOT write expressions — directs to expression_helper. |
 | **Tools** | `read_property_config`, `set_property_config` |
 | **Source** | `ui/src/composables/dataset/agent-property-config-tools.ts` |
 
@@ -401,7 +402,7 @@ mentions the link to the parent and, for a dataset fragment, the "Add to the sou
 | `list_pages` | Navigation | R | `agent/navigation-tools.ts` |
 | `navigate` | Navigation | **W** | `agent/navigation-tools.ts` |
 | `list_datasets` | Dataset metadata | R | `dataset/agent-tools.ts` |
-| `describe_dataset` | Dataset metadata, incl. provenance (origin, producer) and, for an editable dataset, row history and updater tracking | R | `dataset/agent-tools.ts` |
+| `describe_dataset` | Dataset metadata, incl. provenance (origin, producer) and, for an editable dataset, row history and updater tracking. The columns the platform computes (`x-calculated` and `_`-prefixed, extension outputs excepted: `_geopoint`, `_updatedAt`…) are listed in a separate "Platform columns" table, flagged `platform: true` in the structured content, as in `get_dataset_schema` (`formatSchemaTable` in `agent-tools/_utils.ts`): one mixed table had the assistant describe `_geopoint` as a column of the dataset. The API-generated `datafair_describe_dataset` (MCP server, API-facing agents) returns the raw schema instead; there the `x-calculated` property of the `dataset` component carries an `x-agent` hint (`datasetSchemaCalculatedHint`, set in `annotateDatasetSchema` beside the column key's), which openapi-mcp renders beside each `x-calculated: true` | R | `dataset/agent-tools.ts` |
 | `read_dataset_metadata` | Dataset metadata, the owner's recommended sizes and custom metadata | R | `dataset/agent-metadata-tools.ts` |
 | `set_dataset_metadata` | Dataset metadata (title, summary, description, keywords, searchTerms, license, topics, origin, creator, frequency, spatial, and the owner's custom metadata keyed by title, checked against their type and list of values) | **W** | `dataset/agent-metadata-tools.ts` |
 | `get_dataset_schema` | Dataset data | R | `dataset/agent-data-tools.ts` |
@@ -783,6 +784,7 @@ ever starts a model turn.
 | `metadata` (keyed) | `ui/src/pages/dataset/[id]/index.vue` | `unsaved` — the metadata card holds edits (a person's or `set_dataset_metadata`'s) that Enregistrer would save |
 | `dataset-created` | `ui/src/pages/new-dataset.vue` | `id`, `title`, `type` — emitted before the redirect |
 | `dataset-structure-saved` | `ui/src/pages/dataset/[id]/index.vue` | `id`, `columns` — emitted after a save that really landed, so a declared wait resolves on it |
+| `dataset-metadata-saved` | `ui/src/pages/dataset/[id]/index.vue` | `id` — the same for the metadata card, so a wait declared after `set_dataset_metadata` resolves on the save |
 | `application-created` | `ui/src/pages/new-application.vue` | `id`, `title` — emitted before the redirect |
 
 The payload builders are pure and unit-tested in

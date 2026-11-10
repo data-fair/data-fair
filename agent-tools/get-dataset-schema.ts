@@ -1,4 +1,4 @@
-import { cleanRow, toCsv, formatSchemaColumns, datasetIdProperty } from './_utils.js'
+import { cleanRow, toCsv, formatSchemaTable, datasetIdProperty } from './_utils.js'
 
 export const annotations = {
   fr: { title: 'Obtenir le schéma du jeu de données' },
@@ -33,15 +33,12 @@ export function buildQuery (params: Params): {
 }
 
 export function formatResult (dataset: any, linesData: any): string {
-  const schema = formatSchemaColumns(dataset.schema)
   const samples = (linesData.results ?? []).map(cleanRow)
 
   return [
     `# Schema: ${dataset.title}`,
     ...(dataset.slug ? [`- **Slug:** ${dataset.slug}`, ''] : []),
-    '| Key | Type | Title | Notes |',
-    '|-----|------|-------|-------|',
-    ...(schema || []),
+    ...formatSchemaTable(dataset.schema),
     '',
     '## Sample data',
     toCsv(samples)

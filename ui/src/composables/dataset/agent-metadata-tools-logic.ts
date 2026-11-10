@@ -309,7 +309,7 @@ export function formatMetadataOutcomes (outcomes: FieldOutcome[]): string {
   const rejected = outcomes.filter(o => o.status === 'rejected')
 
   const lines: string[] = []
-  if (applied.length) lines.push(`Applied to the form (not saved yet — the user reviews and clicks Enregistrer): ${applied.join(', ')}.`)
+  if (applied.length) lines.push(`Applied to the form (not saved yet — the user reviews and clicks Enregistrer, declare wait_for_user_action to learn of the save): ${applied.join(', ')}.`)
   if (unchanged.length) lines.push(`Already had that value, left alone: ${unchanged.join(', ')}.`)
   for (const r of rejected) lines.push(`REJECTED ${r.field}: ${r.reason}`)
   if (!applied.length && !rejected.length && unchanged.length) lines.push('Nothing changed.')

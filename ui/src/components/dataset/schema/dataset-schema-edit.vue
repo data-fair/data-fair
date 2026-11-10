@@ -41,13 +41,13 @@
     <df-agent-chat-action
       action-id="help-reorder-columns"
       :visible-prompt="t('helpReorderColumns')"
-      :hidden-context="'The user wants the columns in a more logical order. Read the schema, propose a grouping (identification, then descriptive attributes, then location, then measures, enriched columns next to the ones they enrich), present it, and once approved apply it with the reorder_columns tool.'"
+      :hidden-context="'The user wants the columns in a more logical order. Read the schema and propose a grouping (identification, then descriptive attributes, then location, then measures, enriched columns next to the ones they enrich). Present the proposed order and ask for the go: call reorder_columns only after the user approves it in a reply.'"
       :title="t('helpReorderColumns')"
     />
     <df-agent-chat-action
       action-id="help-configure-properties"
       :visible-prompt="t('helpConfigureProperties')"
-      :hidden-context="'Help optimize column types and indexing capabilities, following the optimize-column-config skill. Ask the user what they need first: type corrections, capability optimization for performance, or both.'"
+      :hidden-context="'Help optimize column types and indexing capabilities, following the optimize-column-config skill. Ask the user what they need first: type corrections, capability optimization for performance, or both. Then present the proposed changes and wait for the go before calling set_property_config.'"
       :title="t('helpConfigureProperties')"
     />
   </div>

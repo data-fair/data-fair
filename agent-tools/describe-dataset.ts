@@ -1,4 +1,4 @@
-import { formatSchemaColumns, cleanRow, toCsv, datasetIdProperty, pick } from './_utils.js'
+import { formatSchemaTable, isPlatformColumn, cleanRow, toCsv, datasetIdProperty, pick } from './_utils.js'
 
 export const annotations = {
   fr: { title: 'Décrire un jeu de données' },
@@ -18,7 +18,8 @@ const schemaColumnProperty = {
     enumTruncated: { type: 'boolean' as const, description: 'Whether the enum list was truncated because it exceeded 20 values' },
     enumTotal: { type: 'number' as const, description: 'Total number of enum values before truncation' },
     labels: { type: 'object' as const, description: 'Object mapping actual data values (keys) to human-readable labels (values). Use keys for filters.' },
-    concept: { type: 'string' as const, description: 'Semantic concept associated with the column' }
+    concept: { type: 'string' as const, description: 'Semantic concept associated with the column' },
+    platform: { type: 'boolean' as const, description: 'Present and true for a column computed by the platform (_geopoint, _updatedAt…): usable in queries, not a column of the data' }
   }
 } as const
 
@@ -158,6 +159,7 @@ export function buildStructuredContent (fetchedData: any, sampleLines?: any[], l
           }
         }
         if (col['x-labels']) colResult.labels = col['x-labels']
+        if (isPlatformColumn(col)) colResult.platform = true
         return colResult
       })
   }
@@ -228,10 +230,9 @@ export function formatResult (fetchedData: any, options?: { includeOwner?: boole
     meta.push(`- **Editable:** yes. Navigate to the data-entry page, ${link}/edit-data, to get your tools that add and correct its rows; they exist only on that page.`)
   }
 
-  const schemaRows = formatSchemaColumns(fetchedData.schema)
   const sections = [...meta]
-  if (schemaRows?.length) {
-    sections.push('', '## Schema', '| Key | Type | Title | Notes |', '|-----|------|-------|-------|', ...schemaRows)
+  if (fetchedData.schema?.length) {
+    sections.push('', '## Schema', ...formatSchemaTable(fetchedData.schema))
   }
 
   if (structuredContent.sampleLines?.length) {
