@@ -68,12 +68,16 @@ const dataset = defineModel<any>({ required: true })
 // custom metadata are flat "customMetadata.<key>" properties, so they share the 2 columns grid of the fixed ones
 const prefix = 'customMetadata.'
 const flatten = (d: any) => d && { ...d, ...Object.fromEntries(Object.entries(d.customMetadata ?? {}).map(([k, v]) => [prefix + k, v])) }
+// given back as is, the last emitted value is ignored by vjsf instead of resetting the field being typed in
+let emitted: any
 // vjsf re-emits whatever it would drop (keys outside the schema, empty strings): it only gets the schema fields with a value
 const vjsfModel = computed(() => {
   const flat = flatten(dataset.value)
-  return Object.fromEntries(Object.keys(schema.value.properties).filter(key => flat?.[key] != null && flat[key] !== '').map(key => [key, flat[key]]))
+  const model = Object.fromEntries(Object.keys(schema.value.properties).filter(key => flat?.[key] != null && flat[key] !== '').map(key => [key, flat[key]]))
+  return emitted && equal(model, emitted) ? emitted : model
 })
 const onUpdate = (value: any) => {
+  emitted = value
   const changed = Object.keys(schema.value.properties).filter(key => !equal(value[key], vjsfModel.value[key]))
   // the schema depends on the dataset: vjsf re-emits after each replacement, an unchanged emit must stop there
   if (!changed.length) return
@@ -221,11 +225,11 @@ const customProperties = () => {
   return properties
 }
 
-const schema = computed(() => {
+const schema = computed((previous?: any) => {
   const properties: Record<string, any> = { ...fixedProperties(), ...(!isFragment.value && customProperties()) }
   const fullRow = (key: string) => key === 'temporal' || properties[key].layout?.cols === 12
   const secondaryKeys = Object.keys(properties).filter(key => !mainFields.includes(key))
-  return {
+  const next = {
     type: 'object',
     required: props.required.map(r => r.startsWith('custom.') ? prefix + r.slice(7) : r).filter(r => r in properties),
     properties,
@@ -237,7 +241,13 @@ const schema = computed(() => {
         ]
       : secondaryKeys.map(key => ({ key, cols: fullRow(key) ? 12 : { sm: 6 } }))
   }
+  // an equal schema (e.g. topics loaded empty) must keep its identity, or vjsf would be remounted
+  return previous && equal(previous, next) ? previous : next
 })
+
+// vjsf fields keep the state they were mounted with: remount them when the schema changes (late settings or topics)
+const schemaVersion = ref(0)
+watch(schema, () => { schemaVersion.value++ })
 
 const fetched: Record<string, Promise<any>> = {}
 // the facets feeding several suggestion lists are fetched once
