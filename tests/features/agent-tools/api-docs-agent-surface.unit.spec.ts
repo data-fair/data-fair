@@ -113,6 +113,26 @@ test.describe('agent surface of the root document', () => {
     })
   }
 
+  // Describing a dataset, an assistant listed `_geopoint` among its columns: the bare
+  // `x-calculated: true` said nothing to it. The flag now carries a hint, rendered beside it.
+  test('describe_dataset says a computed column is not part of the data', async () => {
+    const toolSet = await load(await platformDoc(), { fetch: skillFetch, files: FILES, lint: 'error' })
+    const describe = toolSet.tools.find(t => t.name === 'datafair_describe_dataset')!
+    const body = {
+      id: 'd',
+      title: 'D',
+      schema: [
+        { key: 'commune', type: 'string', title: 'Commune' },
+        { key: '_geopoint', type: 'string', title: 'Coordonnée géographique', 'x-calculated': true }
+      ]
+    }
+    const result = await describe.execute({ datasetId: 'd' }, { fetch: (async () => Response.json(body)) as typeof fetch })
+    const lines = result.text.split('\n')
+    const calculated = lines.filter(l => l.includes('x-calculated'))
+    assert.equal(calculated.length, 1, result.text)
+    assert.match(calculated[0], /computed by the platform, not part of the data/)
+  })
+
   test('an unscoped session reaches every tool', async () => {
     const toolSet = await load(await platformDoc(), { fetch: skillFetch, files: FILES, lint: 'error' })
     assert.deepEqual(toolsForScopes(toolSet, undefined).tools.map(t => t.name), toolSet.tools.map(t => t.name))

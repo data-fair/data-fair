@@ -67,6 +67,11 @@ export const root: AgentRoot = {
 
 /** On dataset.schema[].key in the dataset component. */
 export const datasetSchemaKeyHint: AgentProperty = { hint: 'use this key in filters, select, sort and field params' }
+/**
+ * On the column flag, rendered beside each `x-calculated: true`: describing a dataset, an
+ * assistant had listed `_geopoint` among its columns, the flag alone saying nothing to it.
+ */
+export const datasetSchemaCalculatedHint: AgentProperty = { hint: 'computed by the platform, not part of the data: usable in queries, never presented as a column of the dataset' }
 
 /**
  * PATCH /datasets/{id} body fields per tier: content (write) and exposure (manage — portals,
