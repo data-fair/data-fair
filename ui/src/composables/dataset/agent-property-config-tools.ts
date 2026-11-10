@@ -100,8 +100,8 @@ Tâche :
    - \`index\` et \`values\` sur les coordonnées et les colonnes géographiques : c'est ce qui permet les filtres cartographiques.
 
    À activer seulement si l'utilisateur en exprime le besoin : \`textAgg\` (nuage de mots), \`wildcard\` (filtre sur suite de caractères), \`vtPrepare\` (tuiles vectorielles).
-4. Présente tes suggestions avec de brèves explications pour chacune.
-5. Applique tes suggestions avec set_property_config. **Au-delà de 20 colonnes à régler, découpe en plusieurs appels de 20 au maximum** : un appel qui règle cent colonnes d'un coup produit un pavé de JSON que personne ne relit, et pousse à appliquer une règle uniforme au lieu de juger colonne par colonne.
+4. Présente tes suggestions avec de brèves explications pour chacune, puis demande son accord à l'utilisateur et arrête-toi là : n'appelle pas set_property_config dans le même tour.
+5. Une fois l'accord donné, applique les suggestions retenues avec set_property_config. **Au-delà de 20 colonnes à régler, découpe en plusieurs appels de 20 au maximum** : un appel qui règle cent colonnes d'un coup produit un pavé de JSON que personne ne relit, et pousse à appliquer une règle uniforme au lieu de juger colonne par colonne.
 6. Résume à l'utilisateur les changements effectués.
 
 Consignes :
@@ -130,8 +130,8 @@ Task:
    - \`index\` and \`values\` on coordinates and geographic columns: they are what makes map filters work.
 
    Enable only when the user asks for it: \`textAgg\` (word cloud), \`wildcard\` (substring filter), \`vtPrepare\` (vector tiles).
-4. Present your suggestions with brief explanations for each.
-5. Apply your suggestions with set_property_config. **Beyond 20 columns, split into several calls of at most 20**: one call configuring a hundred columns produces a wall of JSON nobody reviews, and pushes toward one blanket rule instead of judging column by column.
+4. Present your suggestions with brief explanations for each, then ask the user for the go and stop there: do not call set_property_config in the same turn.
+5. Once approved, apply the retained suggestions with set_property_config. **Beyond 20 columns, split into several calls of at most 20**: one call configuring a hundred columns produces a wall of JSON nobody reviews, and pushes toward one blanket rule instead of judging column by column.
 6. Summarize the changes made for the user.
 
 Guidelines:
