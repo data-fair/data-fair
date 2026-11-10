@@ -5,22 +5,25 @@
   >
     <template #activator="{ props }">
       <v-btn
-        icon
+        :icon="!hiddenCount"
         :color="cols.length ? 'warning' : 'default'"
         size="large"
+        :class="{ 'px-2': !!hiddenCount }"
         :title="btnTitle"
         :aria-label="btnTitle"
         v-bind="props"
       >
+        <v-icon :icon="mdiTableColumnPlusAfter" />
         <!-- the count makes the "some columns are hidden" state perceivable without the color (RGAA 3.1) -->
-        <v-badge
-          :model-value="!!hiddenCount"
-          :content="hiddenCount"
-          :label="btnTitle"
+        <v-chip
+          v-if="hiddenCount"
+          :text="`${visibleCount}/${selectableProps.length}`"
           color="warning"
-        >
-          <v-icon :icon="mdiTableColumnPlusAfter" />
-        </v-badge>
+          variant="flat"
+          size="x-small"
+          class="ml-1"
+          aria-hidden="true"
+        />
       </v-btn>
     </template>
     <v-card :subtitle="t('visibleColumns')">
@@ -101,14 +104,14 @@
 <i18n lang="yaml">
 fr:
   selectColsTitle: Choisir les colonnes visibles
-  selectColsTitleHidden: "Choisir les colonnes visibles (1 colonne masquée) | Choisir les colonnes visibles ({count} colonnes masquées)"
+  selectColsTitleHidden: "Choisir les colonnes visibles ({visible}/{total} colonne affichée) | Choisir les colonnes visibles ({visible}/{total} colonnes affichées)"
   visibleColumns: Colonnes visibles
   showAll: Tout afficher
   fold: Plier
   unfold: Déplier
 en:
-  selectColsTitle: Chose visible columns
-  selectColsTitleHidden: "Chose visible columns (1 column hidden) | Chose visible columns ({count} columns hidden)"
+  selectColsTitle: Choose visible columns
+  selectColsTitleHidden: "Choose visible columns ({visible}/{total} column shown) | Choose visible columns ({visible}/{total} columns shown)"
   visibleColumns: Visible columns
   showAll: Show all
   fold: Fold
@@ -130,8 +133,9 @@ const { dataset } = useDatasetStore()
 const selectableProps = computed(() => dataset.value?.schema?.filter(isVisibleCol) ?? [])
 // cols empty means all columns are visible
 const hiddenCount = computed(() => cols.value.length ? selectableProps.value.filter(p => !cols.value.includes(p.key)).length : 0)
-// explicit aria-label: otherwise the badge's own label becomes the button's accessible name
-const btnTitle = computed(() => hiddenCount.value ? t('selectColsTitleHidden', { count: hiddenCount.value }, hiddenCount.value) : t('selectColsTitle'))
+// explicit aria-label: the icon and the count chip are hidden from assistive technologies
+const visibleCount = computed(() => selectableProps.value.length - hiddenCount.value)
+const btnTitle = computed(() => hiddenCount.value ? t('selectColsTitleHidden', { visible: visibleCount.value, total: selectableProps.value.length }, visibleCount.value) : t('selectColsTitle'))
 
 const groups = computed(() => {
   return selectableProps.value.reduce((groups, prop) => {
