@@ -116,10 +116,10 @@
           class="ml-2"
         />
         <v-progress-circular
-          v-if="dataset.completeness != null"
-          :model-value="dataset.completeness"
-          :color="dataset.completeness >= 75 ? 'success' : dataset.completeness >= 50 ? 'warning' : 'error'"
-          :title="t('completeness', { score: dataset.completeness })"
+          v-if="dataset.completeness"
+          :model-value="dataset.completeness.score"
+          :color="dataset.completeness.score >= 75 ? 'success' : dataset.completeness.score >= 50 ? 'warning' : 'error'"
+          :title="t('completeness', { score: dataset.completeness.score })"
           size="16"
           width="3"
           class="ml-2"

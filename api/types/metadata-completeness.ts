@@ -19,6 +19,12 @@ export type CompletenessCriterion = {
   note: 0 | 0.5 | 1
 }
 
+export type Completeness = {
+  // from 0 to 100
+  score: number
+  criteria: CompletenessCriterion[]
+}
+
 const metadataSchema = settingsSchema.properties.datasetsMetadata.properties as Record<string, any>
 const customSchema = metadataSchema.custom.items.properties
 
@@ -67,12 +73,12 @@ export const completenessCriteria = (dataset: Record<string, any>, datasetsMetad
   return criteria.filter(c => c.weight > 0)
 }
 
-/** Score from 0 to 100, undefined when the owner did not activate it or weighted nothing. */
-export const computeCompleteness = (dataset: Record<string, any>, datasetsMetadata?: DatasetsMetadata | null) => {
+/** Score from 0 to 100 and its criteria, undefined when the owner did not activate it or weighted nothing. */
+export const computeCompleteness = (dataset: Record<string, any>, datasetsMetadata?: DatasetsMetadata | null): Completeness | undefined => {
   // a fragment is never published on its own, its catalog metadata are not edited
   if (!datasetsMetadata?.completeness?.active || dataset.partOf) return undefined
   const criteria = completenessCriteria(dataset, datasetsMetadata)
   const total = criteria.reduce((sum, c) => sum + c.weight, 0)
   if (!total) return undefined
-  return Math.round(100 * criteria.reduce((sum, c) => sum + c.note * c.weight, 0) / total)
+  return { score: Math.round(100 * criteria.reduce((sum, c) => sum + c.note * c.weight, 0) / total), criteria }
 }

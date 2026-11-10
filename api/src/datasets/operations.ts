@@ -75,7 +75,7 @@ export const isCachedDatasetFresh = (cachedFull: Record<string, any> | undefined
   if (cachedFull.errorRetry !== fresh.errorRetry) return false
   if (cachedFull.integrity?.lastCheck?.date !== fresh.integrity?.lastCheck?.date) return false
   if (cachedFull.integrity?.lastRevision?.date !== fresh.integrity?.lastRevision?.date) return false
-  if (cachedFull.completeness !== fresh.completeness) return false
+  if (JSON.stringify(cachedFull.completeness) !== JSON.stringify(fresh.completeness)) return false
   // draft-only changes are invisible to every field above
   if (useDraft) {
     for (const field of ['updatedAt', 'status', 'finalizedAt', 'errorStatus', 'errorRetry']) {

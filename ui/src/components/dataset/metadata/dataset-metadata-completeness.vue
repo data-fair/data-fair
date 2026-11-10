@@ -1,6 +1,6 @@
 <template>
   <v-menu
-    v-if="score !== undefined"
+    v-if="completeness"
     :close-on-content-click="false"
     location="bottom end"
   >
@@ -12,7 +12,7 @@
         :title="t('title')"
       >
         <v-progress-circular
-          :model-value="score"
+          :model-value="completeness.score"
           :color="scoreColor"
           size="24"
           width="3"
@@ -20,7 +20,7 @@
           aria-hidden="true"
           style="transform: scaleX(-1)"
         />
-        {{ score }} %
+        {{ completeness.score }} %
       </v-btn>
     </template>
     <v-card
@@ -32,7 +32,7 @@
       </v-card-text>
       <v-list density="compact">
         <v-list-item
-          v-for="criterion of criteria"
+          v-for="criterion of completeness.criteria"
           :key="(criterion.custom ? 'custom.' : '') + criterion.key"
           :title="label(criterion)"
           :subtitle="hint(criterion)"
@@ -77,7 +77,7 @@ en:
 
 <script setup lang="ts">
 import { mdiAlertCircle, mdiCheckCircle, mdiCloseCircle } from '@mdi/js'
-import { completenessCriteria, computeCompleteness, type CompletenessCriterion } from '#api/types'
+import { computeCompleteness, type CompletenessCriterion } from '#api/types'
 import { localizedMetadata } from '~/utils/settings-metadata-form'
 
 const { dataset, datasetsMetadata } = defineProps<{
@@ -88,9 +88,11 @@ const { dataset, datasetsMetadata } = defineProps<{
 const { t, locale } = useI18n()
 
 // computed on the edited dataset, so the score follows the form before it is saved
-const score = computed(() => computeCompleteness(dataset, datasetsMetadata))
-const criteria = computed(() => completenessCriteria(dataset, datasetsMetadata))
-const scoreColor = computed(() => score.value! >= 75 ? 'success' : score.value! >= 50 ? 'warning' : 'error')
+const completeness = computed(() => computeCompleteness(dataset, datasetsMetadata))
+const scoreColor = computed(() => {
+  const score = completeness.value?.score ?? 0
+  return score >= 75 ? 'success' : score >= 50 ? 'warning' : 'error'
+})
 
 const metadataByKey = computed(() => localizedMetadata(locale.value))
 const label = (criterion: CompletenessCriterion) => {

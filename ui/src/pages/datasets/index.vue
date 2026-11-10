@@ -237,11 +237,11 @@ const ownerParam = computed(() => {
 
 const datasetsQuery = computed(() => {
   const params: Record<string, any> = {
-    select: 'title,description,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,draft.file,draft.originalFile,count,finalizedAt,updatedAt,visibility,owner,draftReason,integrity,partOf,completeness',
+    select: 'title,description,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,draft.file,draft.originalFile,count,finalizedAt,updatedAt,visibility,owner,draftReason,integrity,partOf,completeness.score',
   }
   if (q.value) params.q = q.value
   // many datasets share a score: the id keeps the pages from repeating or skipping them
-  else params.sort = sort.value.startsWith('completeness:') ? `${sort.value},id:1` : sort.value
+  else params.sort = sort.value.startsWith('completeness.score:') ? `${sort.value},id:1` : sort.value
   if (ownerParam.value) params.owner = ownerParam.value
   if (facetStatus.value?.length) params.status = facetStatus.value.join(',')
   if (facetDraftStatus.value?.length) params.draftStatus = facetDraftStatus.value.join(',')
@@ -279,7 +279,7 @@ const sortItems = computed(() => [
   { title: t('sortUpdatedAt'), value: 'updatedAt' },
   { title: t('sortDataUpdatedAt'), value: 'dataUpdatedAt' },
   { title: t('sortTitle'), value: 'title' },
-  ...(datasetsMetadataFetch.data.value?.completeness?.active ? [{ title: t('sortCompleteness'), value: 'completeness' }] : [])
+  ...(datasetsMetadataFetch.data.value?.completeness?.active ? [{ title: t('sortCompleteness'), value: 'completeness.score' }] : [])
 ])
 </script>
 
