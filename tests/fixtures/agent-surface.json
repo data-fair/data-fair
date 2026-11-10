@@ -254,7 +254,7 @@
               "detailed"
             ],
             "default": "concise",
-            "description": "concise: id, slug, title, summary, description, page, count, keywords, origin, license, topics, spatial, temporal, frequency, bbox, timePeriod, schema. detailed: every field."
+            "description": "concise: id, slug, title, summary, description, page, count, keywords, origin, license, topics, spatial, temporal, frequency, bbox, timePeriod, publicationSites, schema. detailed: every field."
           }
         },
         "additionalProperties": false,
@@ -1310,6 +1310,80 @@
         {
           "oauth2": [
             "applications"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:admin"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "datafair_list_publication_sites",
+      "description": "List the portals and sites the active account publishes its datasets and applications on. Each entry is the publicationSite object catalogs_create_publication takes (copy its title, url and datasetUrlTemplate), and its key \"<type>:<id>\" is the one listed in the publicationSites of datafair_describe_dataset.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "user",
+              "organization"
+            ],
+            "description": "The type of the active account: user or organization."
+          },
+          "id": {
+            "type": "string",
+            "description": "The id of the active account; for a department \"<id>:<department>\", or \"<id>:*\" for every department of the organization."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "id"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      },
+      "security": [
+        {
+          "apiKey": []
+        },
+        {
+          "sdCookie": []
+        },
+        {
+          "oauth2": [
+            "datasets:read"
+          ]
+        },
+        {
+          "oauth2": [
+            "datasets:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "datasets:admin"
+          ]
+        },
+        {
+          "oauth2": [
+            "datasets"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:read"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:write"
           ]
         },
         {

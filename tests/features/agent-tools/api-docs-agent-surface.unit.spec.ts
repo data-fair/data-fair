@@ -57,7 +57,7 @@ const datasetFileWrites = prefixed('create_dataset_from_file', 'replace_dataset_
 /** A file store, as the MCP server is configured once the agents service has one: the upload tools exist only then. */
 const FILES = { urlPrefixes: ['https://files.example.test/agent-files/'] }
 
-const datasetsRead = [...datasetReads, ...datasetFileReads, ...prefixed('list_datasets', 'list_account_datasets')]
+const datasetsRead = [...datasetReads, ...datasetFileReads, ...prefixed('list_datasets', 'list_account_datasets', 'list_publication_sites')]
 const datasetsWrite = [...datasetsRead, ...datasetFileWrites, ...prefixed('update_dataset')]
 const datasetsAdmin = [...datasetsWrite, ...prefixed('publish_dataset', 'delete_dataset', 'get_dataset_permissions', 'set_dataset_permissions')]
 const applicationsRead = prefixed('list_account_applications', 'describe_application', 'preview_application')

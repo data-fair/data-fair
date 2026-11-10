@@ -4,7 +4,7 @@
 // Design: docs/superpowers/specs/2026-10-19-platform-api-docs-design.md
 import type { AgentSkill, Localized } from '@data-fair/openapi-mcp'
 
-export type PlatformServiceId = 'datafair' | 'sd' | 'metrics' | 'events' | 'registry' | 'portals' | 'processings'
+export type PlatformServiceId = 'datafair' | 'sd' | 'metrics' | 'events' | 'registry' | 'portals' | 'processings' | 'catalogs'
 
 export interface PlatformService {
   id: PlatformServiceId
