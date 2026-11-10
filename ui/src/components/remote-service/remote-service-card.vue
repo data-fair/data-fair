@@ -1,73 +1,52 @@
 <!-- eslint-disable vue/no-v-html -->
 <template>
-  <v-card
+  <card-shell
+    :title="remoteService.title || remoteService.id || ''"
     :to="`/remote-service/${encodeURIComponent(remoteService.id ?? '')}`"
-    class="h-100 d-flex flex-column"
   >
-    <v-card-item class="text-primary">
-      <template #title>
-        <span
-          class="font-weight-bold"
-          :title="remoteService.title || remoteService.id"
-        >{{ remoteService.title || remoteService.id }}</span>
-      </template>
-      <template
-        v-if="!remoteService.public && remoteService.privateAccess?.length"
-        #append
-      >
-        <div class="d-flex flex-wrap ga-1">
-          <owner-short
-            v-for="owner in remoteService.privateAccess"
-            :key="owner.id"
-            :owner="owner"
-          />
-        </div>
-      </template>
-    </v-card-item>
-    <v-divider />
-    <v-card-text class="pa-0 flex-grow-1">
-      <v-list
-        v-if="remoteService.description"
-        density="compact"
-        style="background-color: inherit;"
-      >
-        <v-list-item>
-          <div
-            class="card-description"
-            v-html="remoteService.description"
-          />
-        </v-list-item>
-      </v-list>
-    </v-card-text>
+    <!-- Remote service description -->
+    <div
+      v-if="remoteService.description"
+      class="df-card-desc text-body-medium"
+      v-html="remoteService.description"
+    />
 
-    <!--
-      min-height: auto => remove default v-card-actions min-height
-    -->
-    <v-card-actions
-      class="flex-column align-start text-body-small py-2"
-      style="min-height: auto"
-    >
-      <div class="d-flex align-center flex-wrap">
-        <resource-visibility
-          :visibility="remoteService.public ? 'public' : 'private'"
-          size="small"
-        />
-      </div>
-    </v-card-actions>
-  </v-card>
+    <template #footer>
+      <!-- Access, with the accounts it is shared with -->
+      <card-visibility
+        :visibility="remoteService.public ? 'public' : 'protected'"
+        :help="remoteService.public ? t('publicHelp') : t('privateHelp')"
+      >
+        <div
+          v-for="owner in remoteService.privateAccess"
+          :key="owner.type + owner.id"
+          class="d-flex align-center ga-2 mt-1"
+        >
+          <owner-avatar
+            :owner="owner"
+            :size="18"
+            :show-tooltip="false"
+          />
+          {{ owner.name || owner.id }}
+        </div>
+      </card-visibility>
+    </template>
+  </card-shell>
 </template>
 
 <script setup lang="ts">
 import { RemoteService } from '#api/types'
+import ownerAvatar from '@data-fair/lib-vuetify/owner-avatar.vue'
 
 defineProps<{ remoteService: RemoteService }>()
+const { t } = useI18n()
 </script>
 
-<style lang="css" scoped>
-.card-description {
-  display: -webkit-box;
-  -webkit-line-clamp: 4;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
-}
-</style>
+<i18n lang="yaml">
+fr:
+  publicHelp: Utilisable par tous les comptes de la plateforme.
+  privateHelp: "Utilisable seulement par :"
+en:
+  publicHelp: Usable by every account of the platform.
+  privateHelp: "Usable only by:"
+</i18n>

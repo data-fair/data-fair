@@ -19,7 +19,7 @@
     </v-list>
     <v-row
       v-else-if="remoteServicesFetch.data.value"
-      class="d-flex align-stretch"
+      class="d-flex align-stretch df-card-grid"
     >
       <v-col
         v-for="remoteService in remoteServicesFetch.data.value.results"

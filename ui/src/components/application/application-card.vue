@@ -1,85 +1,99 @@
 <template>
-  <v-card
+  <card-shell
+    :title="application.title || application.id"
     :to="`/application/${application.id}`"
-    class="h-100 d-flex flex-column"
+    :owner="showOwner ? application.owner : undefined"
+    :omit-owner-name="!showAll"
   >
-    <v-card-item class="text-primary">
-      <template #title>
-        <span
-          class="font-weight-bold"
-          :title="application.title || application.id"
-        >{{ application.title || application.id }}</span>
-      </template>
-      <template #append>
-        <owner-avatar
-          v-if="showAll || !!(application.owner?.department && !session.state.account?.department)"
-          :owner="application.owner"
-          :omit-owner-name="!showAll"
-        />
-      </template>
-    </v-card-item>
+    <!-- Application capture -->
+    <template #media>
+      <v-img
+        :src="captureUrl"
+        :aspect-ratio="1050 / 450"
+        class="mx-2 mt-3 rounded flex-grow-0"
+        cover
+      >
+        <!-- the capture failed and there is no previous one: data-fair answers an error status -->
+        <template #error>
+          <div class="d-flex align-center justify-center fill-height bg-surface-light">
+            <v-icon
+              :icon="mdiImageOffOutline"
+              size="48"
+            />
+          </div>
+        </template>
+      </v-img>
+    </template>
 
-    <v-img
-      :src="captureUrl"
-      :aspect-ratio="1050 / 450"
-      class="flex-grow-1"
+    <!-- Fragment parent -->
+    <card-meta-line
+      v-if="application.partOf"
+      :icon="mdiPuzzle"
+      :icon-color="foreign ? 'warning' : 'primary'"
+      :text="t('fragmentOf', { title: parentFetch.data.value?.title ?? application.partOf.id })"
     >
-      <!-- the capture failed and there is no previous one: data-fair answers an error status -->
-      <template #error>
-        <div class="d-flex align-center justify-center fill-height bg-surface-light">
-          <v-icon
-            :icon="mdiImageOffOutline"
-            size="48"
-            color="medium-emphasis"
-          />
-        </div>
+      <template
+        v-if="foreign"
+        #help
+      >
+        {{ t('foreign') }}
       </template>
-    </v-img>
+    </card-meta-line>
 
-    <!--
-      min-height: auto => remove default v-card-actions min-height
-    -->
-    <v-card-actions
-      class="flex-column align-start text-body-small py-2"
-      style="min-height: auto"
+    <!-- Application publications/requested sites -->
+    <card-sites
+      :sites="sites"
+      :requested="requestedSites"
+    />
+
+    <!-- Topics chips -->
+    <template
+      v-if="application.topics?.length"
+      #chips
     >
-      <!-- Topics list -->
-      <topic-chips :topics="application.topics" />
+      <v-chip
+        v-for="topic of application.topics"
+        :key="topic.id ?? topic.title"
+        :color="topic.color"
+        :text="topic.title"
+        class="font-weight-bold"
+        density="compact"
+        size="small"
+        variant="flat"
+      />
+    </template>
 
-      <!-- Visibility + Updated at -->
-      <div class="d-flex align-center flex-wrap">
-        <resource-visibility
-          v-if="application.visibility || application.partOf"
-          :visibility="application.visibility"
-          :part-of="application.partOf"
-          :foreign="foreign"
-          size="small"
-        />
-        <capability-chip
-          v-if="showCapabilityChip"
-          resource-type="applications"
-          :user-permissions="cardUserPermissions"
-          :access-sources="cardAccessSources"
-          class="ml-2"
-        />
-        <span
-          v-if="application.updatedAt"
-          class="ml-2"
-        >
-          {{ t('updatedAt', { date: formatDate(application.updatedAt) }) }}
-        </span>
-      </div>
-    </v-card-actions>
-  </v-card>
+    <template #footer>
+      <!-- a fragment gets its access from its parent, already named in the card -->
+      <card-visibility
+        v-if="application.visibility && !application.partOf"
+        :visibility="application.visibility"
+      />
+
+      <!-- Permissions of the current user -->
+      <capability-chip
+        v-if="showCapability"
+        resource-type="applications"
+        :user-permissions="cardUserPermissions"
+        :access-sources="cardAccessSources"
+      />
+
+      <!-- Modification and creation dates -->
+      <card-dates
+        v-if="application.updatedAt"
+        :updated-at="application.updatedAt"
+        :created-at="application.createdAt"
+      />
+    </template>
+  </card-shell>
 </template>
 
 <script setup lang="ts">
 import type { Application } from '#api/types'
-import { mdiImageOffOutline } from '@mdi/js'
-import ownerAvatar from '@data-fair/lib-vuetify/owner-avatar.vue'
+import { mdiImageOffOutline, mdiPuzzle } from '@mdi/js'
 import { foreignReferences, type ReferencingResource } from '~/utils/fragments'
 
-const { t, locale } = useI18n()
+const { t } = useI18n()
 const session = useSession()
 const showAll = useBooleanSearchParam('showAll')
 
@@ -90,24 +104,29 @@ const props = defineProps<{
   usedBy?: ReferencingResource
 }>()
 
+const showOwner = computed(() => showAll.value || !!(props.application.owner?.department && !session.state.account?.department))
 const cardUserPermissions = computed(() => (props.application as Application & { userPermissions?: string[] }).userPermissions)
 const cardAccessSources = computed(() => (props.application as Application & { accessSources?: AccessSources }).accessSources)
-// temporarily limited to the access audit page, hidden in the regular resource lists
-const showCapabilityChip = computed(() => props.showCapability)
 const foreign = computed(() => !!props.application.partOf && !!props.usedBy && foreignReferences(props.application.partOf, [props.usedBy]).length > 0)
 
 const captureUrl = computed(() => {
   return props.application.thumbnail || props.application.image || `${props.application.href}/capture?updatedAt=${props.application.updatedAt}`
 })
 
-const formatDate = (dateStr: string) => {
-  return new Date(dateStr).toLocaleDateString(locale.value)
-}
+// fragments are rare in a list: their parent title is fetched per card;
+// notifError: false — whoever can read the fragment does not necessarily hold readDescription on its parent
+const parentFetch = useFetch<{ title: string }>(() => props.application.partOf ? `${$apiPath}/${props.application.partOf.type}s/${props.application.partOf.id}` : null, { query: { select: 'title' }, notifError: false })
+
+const sitesById = usePublicationSitesById()
+const sites = computed(() => (props.application.publicationSites ?? []).map(id => sitesById.value[id]).filter(Boolean))
+const requestedSites = computed(() => (props.application.requestedPublicationSites ?? []).map(id => sitesById.value[id]).filter(Boolean))
 </script>
 
 <i18n lang="yaml">
 fr:
-  updatedAt: Mis à jour le {date}
+  fragmentOf: "Fragment de « {title} »"
+  foreign: "Utilisé ici en dehors de son parent : ses accès découlent du parent et il sera supprimé avec lui."
 en:
-  updatedAt: Updated on {date}
+  fragmentOf: "Fragment of \"{title}\""
+  foreign: "Used here outside of its parent: its access derives from the parent and it will be deleted with it."
 </i18n>

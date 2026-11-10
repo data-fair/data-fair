@@ -36,7 +36,7 @@
       <!-- Grid view -->
       <v-row
         v-if="viewMode === 'grid'"
-        class="d-flex align-stretch"
+        class="d-flex align-stretch df-card-grid"
       >
         <v-col
           v-for="dataset in catalog.displayedItems.value"
@@ -237,7 +237,7 @@ const ownerParam = computed(() => {
 
 const datasetsQuery = computed(() => {
   const params: Record<string, any> = {
-    select: 'title,description,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,draft.file,draft.originalFile,count,finalizedAt,updatedAt,visibility,owner,draftReason,integrity,partOf,completeness.score',
+    select: 'title,description,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,draft.file,draft.originalFile,count,finalizedAt,updatedAt,dataUpdatedAt,createdAt,visibility,owner,draftReason,integrity,partOf,publicationSites,requestedPublicationSites,completeness.score',
   }
   if (q.value) params.q = q.value
   // many datasets share a score: the id keeps the pages from repeating or skipping them

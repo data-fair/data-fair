@@ -36,7 +36,7 @@
       <!-- Grid view -->
       <v-row
         v-if="viewMode === 'grid'"
-        class="d-flex align-stretch"
+        class="d-flex align-stretch df-card-grid"
       >
         <v-col
           v-for="application in catalog.displayedItems.value"
@@ -212,7 +212,7 @@ const ownerParam = computed(() => {
 
 const applicationsQuery = computed(() => {
   const params: Record<string, any> = {
-    select: 'title,description,status,updatedAt,publicationSites,topics,visibility,owner,url,partOf',
+    select: 'title,description,status,updatedAt,createdAt,publicationSites,requestedPublicationSites,topics,visibility,owner,url,partOf',
   }
   if (q.value) params.q = q.value
   else params.sort = sort.value
