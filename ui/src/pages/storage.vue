@@ -14,9 +14,9 @@
         <template #item="{item}">
           <tr>
             <td>
-              {{ item.limits.nb_datasets.consumption.toLocaleString() }}
-              <template v-if="item.limits.nb_datasets.limit !== -1">
-                / {{ item.limits.nb_datasets.limit.toLocaleString() }} {{ t('allowed') }}
+              {{ formatBytes(item.limits.store_bytes.consumption, $i18n.locale) }}
+              <template v-if="item.limits.store_bytes.limit !== -1">
+                / {{ formatBytes(item.limits.store_bytes.limit, $i18n.locale) }} {{ t('allowed') }}
               </template>
             </td>
             <td>
@@ -26,9 +26,9 @@
               </template>
             </td>
             <td>
-              {{ formatBytes(item.limits.store_bytes.consumption, $i18n.locale) }}
-              <template v-if="item.limits.store_bytes.limit !== -1">
-                / {{ formatBytes(item.limits.store_bytes.limit, $i18n.locale) }} {{ t('allowed') }}
+              {{ item.limits.nb_datasets.consumption.toLocaleString() }}
+              <template v-if="item.limits.nb_datasets.limit !== -1">
+                / {{ item.limits.nb_datasets.limit.toLocaleString() }} {{ t('allowed') }}
               </template>
             </td>
             <td>
@@ -49,7 +49,7 @@
 
       <v-select
         v-model="storageType"
-        :items="[{value: 'indexed', title: t('indexedBytes')}, {value: 'stored', title: t('storedBytes')}]"
+        :items="[{value: 'stored', title: t('storedBytes')}, {value: 'indexed', title: t('indexedBytes')}]"
         :label="t('storageType')"
         max-width="300"
         variant="outlined"
@@ -83,8 +83,8 @@
 fr:
   storage: Stockage
   nbDatasets: Nombre de jeux de données
-  storedBytes: Données stockées
-  indexedBytes: Données indexées
+  storedBytes: Espace disque
+  indexedBytes: Volume des jeux de données
   nbApplications: Nombre d'applications
   statistics: Statistiques
   details: Détail par jeu de données
@@ -95,8 +95,8 @@ fr:
 en:
   storage: Storage
   nbDatasets: Number of datasets
-  storedBytes: Stored data
-  indexedBytes: Indexed data
+  storedBytes: Disk space
+  indexedBytes: Datasets volume
   nbApplications: Number of applications
   statistics: Statistics
   details: Details per dataset
@@ -130,9 +130,9 @@ const statsFetch = useFetch<any>($apiPath + '/stats')
 const stats = computed(() => statsFetch.data.value)
 
 const headers = computed<DataTableHeader[]>(() => ([
-  { title: t('nbDatasets'), value: 'datasets', sortable: false },
-  { title: t('indexedBytes'), value: 'indexedBytes', sortable: false },
   { title: t('storedBytes'), value: 'storedBytes', sortable: false },
+  { title: t('indexedBytes'), value: 'indexedBytes', sortable: false },
+  { title: t('nbDatasets'), value: 'datasets', sortable: false },
   { title: t('nbApplications'), value: 'applications', sortable: false }
 ]))
 
