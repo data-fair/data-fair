@@ -8,24 +8,29 @@
     :close-on-content-click="false"
   >
     <template #activator="{ props: activator }">
-      <span
-        v-bind="activator"
-        class="d-flex align-center ga-2 overflow-hidden text-body-medium"
-        :class="{ 'cursor-help align-self-start': $slots.help, [`text-${color}`]: color }"
+      <!-- with details: a text button for its native hover effect, as a span since a button cannot sit in the card link;
+           px-1 on every line, the body adds the other 4px of the card padding -->
+      <component
+        :is="$slots.help ? VBtn : 'span'"
+        v-bind="$slots.help ? { ...activator, ...button } : {}"
+        class="px-1 overflow-hidden text-body-medium"
+        :class="$slots.help ? 'df-card-shrink flex-shrink-1 align-self-start text-none font-weight-regular cursor-help' : color && `text-${color}`"
         style="max-width: 100%"
       >
-        <slot name="prepend">
-          <v-icon
-            v-if="icon"
-            :icon="icon"
-            :color="iconColor ?? color"
-            size="18"
-          />
-        </slot>
-        <span class="text-truncate">
-          <slot>{{ text }}</slot>
+        <span class="d-flex align-center ga-2 overflow-hidden">
+          <slot name="prepend">
+            <v-icon
+              v-if="icon"
+              :icon="icon"
+              :color="iconColor ?? color"
+              size="18"
+            />
+          </slot>
+          <span class="text-truncate">
+            <slot>{{ text }}</slot>
+          </span>
         </span>
-      </span>
+      </component>
     </template>
     <v-card
       elevation="2"
@@ -38,5 +43,9 @@
 </template>
 
 <script setup lang="ts">
-defineProps<{ icon?: string, text?: string, color?: string, iconColor?: string }>()
+import { computed } from 'vue'
+import { VBtn } from 'vuetify/components'
+
+const props = defineProps<{ icon?: string, text?: string, color?: string, iconColor?: string }>()
+const button = computed(() => ({ tag: 'span', variant: 'text', color: props.color, height: 'auto', minWidth: 0, ripple: false }))
 </script>

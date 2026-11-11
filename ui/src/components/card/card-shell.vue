@@ -32,7 +32,7 @@
       <slot name="media" />
       <div
         v-if="$slots.default"
-        class="d-flex flex-column ga-1 px-2 pt-3"
+        class="d-flex flex-column ga-1 px-1 pt-3"
       >
         <slot />
       </div>

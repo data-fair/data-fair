@@ -7,7 +7,7 @@
     <!-- Remote service description -->
     <div
       v-if="remoteService.description"
-      class="df-card-desc text-body-medium"
+      class="df-card-desc px-1 text-body-medium"
       v-html="remoteService.description"
     />
 
