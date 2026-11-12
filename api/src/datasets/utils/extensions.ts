@@ -32,8 +32,7 @@ import { isRestDataset } from '#types/dataset/index.ts'
 import filesStorage from '#files-storage'
 import { readAttachmentContent } from './attachment-content.ts'
 import testEvents from '../../misc/utils/test-events.ts'
-import { i18nHttpError } from '../../misc/utils/i18n-errors.ts'
-import { noRetryError } from './field-errors.ts'
+import { i18nHttpError, noRetryError } from '../../misc/utils/i18n-errors.ts'
 
 export { getExtensionKey } from '@data-fair/data-fair-shared/utils/extensions.js'
 

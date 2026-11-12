@@ -42,3 +42,15 @@ export const translateErrors = (err: any, req: Request, res: Response, next: Nex
   }
   next(err)
 }
+
+// a message in every locale, to be a parameter of another message
+export const localized = (key: string, params: I18nParams = {}) =>
+  Object.fromEntries(locales.map(locale => [locale, i18nMessage(key, params, locale)])) as { en: string, fr?: string }
+
+// an error of a worker input that must not be retried: the English message (the one a worker stores) keeps the
+// [noretry] prefix read by the worker loop, the translated message of a request does not
+export const noRetryError = (status: number, key: string, params: I18nParams = {}) => {
+  const err = i18nHttpError(status, key, params)
+  err.message = '[noretry] ' + err.message
+  return err
+}

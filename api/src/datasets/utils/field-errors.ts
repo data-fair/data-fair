@@ -1,15 +1,11 @@
 import capabilities from '../../../contract/capabilities.js'
-import { i18nHttpError, i18nMessage, locales, type I18nParams } from '../../misc/utils/i18n-errors.ts'
+import { i18nHttpError, i18nMessage, localized, locales, type I18nParams } from '../../misc/utils/i18n-errors.ts'
 import { getColumnOperations } from '../es/operations.ts'
 
 // the errors of a query on a dataset field, repeated by every query builder (es, ods compat...)
 
 // what the query tried to do with the field, filterOperator takes an { operator } parameter
 export type FieldAction = 'filter' | 'filterOperator' | 'sort' | 'group' | 'metric' | 'search' | 'select' | 'aggregate' | 'highlight' | 'collapse'
-
-// a message in every locale, to be a parameter of another message
-export const localized = (key: string, params: I18nParams = {}) =>
-  Object.fromEntries(locales.map(locale => [locale, i18nMessage(key, params, locale)])) as { en: string, fr?: string }
 
 // "cannot <action> on field <field>", the start of a message about the field (key errors.fields.action.*)
 export const fieldAction = (name: FieldAction, field: string, params: I18nParams = {}) => localized(`errors.fields.action.${name}`, { ...params, field })
@@ -45,11 +41,3 @@ export const missingCapabilityError = (name: FieldAction, field: string, capabil
     capability: capabilityTitle(capability),
     hint: prop ? columnOperationsHint(prop) : ''
   })
-
-// an error of a worker input that must not be retried: the English message (the one a worker stores) keeps the
-// [noretry] prefix read by the worker loop, the translated message of a request does not
-export const noRetryError = (status: number, key: string, params: I18nParams = {}) => {
-  const err = i18nHttpError(status, key, params)
-  err.message = '[noretry] ' + err.message
-  return err
-}

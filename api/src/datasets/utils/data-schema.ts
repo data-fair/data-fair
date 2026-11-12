@@ -1,6 +1,5 @@
 import config from '#config'
-import { i18nHttpError, i18nMessage, locales } from '../../misc/utils/i18n-errors.ts'
-import { noRetryError } from './field-errors.ts'
+import { i18nHttpError, i18nMessage, noRetryError, locales } from '../../misc/utils/i18n-errors.ts'
 import equal from 'deep-equal'
 import vocabulary from '../../../contract/vocabulary.js'
 import * as geoUtils from './geo.ts'

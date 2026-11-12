@@ -8,8 +8,7 @@ import { getPseudoSessionState } from '../../misc/utils/users.ts'
 import { filterCan } from '../../misc/utils/permissions.ts'
 import type { FindOptions } from 'mongodb'
 import type { VirtualFilter, QueryableDescendant } from '../es/operations.ts'
-import { i18nHttpError, i18nMessage, locales, type I18nParams } from '../../misc/utils/i18n-errors.ts'
-import { localized, noRetryError } from './field-errors.ts'
+import { i18nHttpError, i18nMessage, localized, noRetryError, locales, type I18nParams } from '../../misc/utils/i18n-errors.ts'
 
 // distinguish "the dataset does not exist anymore" from "it exists but is not readable by the
 // account owning the virtual dataset" — and report exactly which child is at fault

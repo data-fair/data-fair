@@ -1,4 +1,4 @@
-const capabilities = {
+export default {
   type: 'object',
   properties: {
     index: {
@@ -92,17 +92,4 @@ const capabilities = {
       'x-i18n-description': { fr: 'Désactivez cette option si vous souhaitez que les pièces jointes soient simplement téléchargeables et que l\'extraction de leur contenu textuel pour recherche de mots n\'est pas pertinente.' }
     }
   }
-}
-
-export default capabilities
-
-/**
- * the French title of a capability, for the API error messages written in French
- * @param {string} key
- * @returns {string}
- */
-export const capabilityTitleFr = (key) => {
-  /** @type {any} */
-  const prop = /** @type {Record<string, any>} */(capabilities.properties)[key]
-  return prop?.['x-i18n-title']?.fr ?? prop?.title ?? key
 }
