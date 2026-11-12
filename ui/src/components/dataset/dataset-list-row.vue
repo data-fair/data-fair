@@ -59,20 +59,14 @@
           >+{{ hiddenTopics.length }}</span>
         </div>
         <div
-          class="d-flex align-center ga-1 text-body-small"
-          style="width: 56px"
+          class="d-flex align-center text-body-small"
+          style="width: 72px"
         >
-          <template v-if="dataset.completeness">
-            <v-progress-circular
-              :model-value="dataset.completeness.score"
-              :color="dataset.completeness.score >= 75 ? 'success' : dataset.completeness.score >= 50 ? 'warning' : 'error'"
-              :title="t('completeness', { score: dataset.completeness.score })"
-              size="16"
-              width="3"
-              style="transform: scaleX(-1)"
-            />
-            {{ dataset.completeness.score }}&nbsp;%
-          </template>
+          <dataset-completeness-info
+            v-if="dataset.completeness"
+            :completeness="dataset.completeness"
+            :datasets-metadata="datasetsMetadata"
+          />
         </div>
         <!-- same hover card as the resource cards; a fragment keeps the puzzle icon naming its parent -->
         <div
@@ -120,7 +114,11 @@ const { t, locale } = useI18n()
 const session = useSession()
 const showAll = useBooleanSearchParam('showAll')
 
-const { dataset } = defineProps<{ dataset: Dataset }>()
+const { dataset } = defineProps<{
+  dataset: Dataset
+  // settings of the current account, for the labels of the completeness criteria
+  datasetsMetadata?: Record<string, any> | null
+}>()
 
 // same icons and labels as the dataset card
 const typeIcon = computed(() => dataset.isVirtual
@@ -159,7 +157,6 @@ fr:
   integrityBreach: Intégrité compromise
   lines: "0 ligne | 1 ligne | {count} lignes"
   updatedAt: Modifié le {date}
-  completeness: 'Score de complétion des métadonnées : {score} %'
 en:
   file: File
   virtual: Virtual
@@ -170,5 +167,4 @@ en:
   integrityBreach: Integrity breach
   lines: "0 line | 1 line | {count} lines"
   updatedAt: Updated on {date}
-  completeness: 'Metadata completeness score: {score} %'
 </i18n>

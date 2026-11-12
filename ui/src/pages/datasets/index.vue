@@ -75,7 +75,10 @@
           :key="dataset.id"
         >
           <v-divider v-if="i > 0" />
-          <dataset-list-row :dataset="dataset" />
+          <dataset-list-row
+            :dataset="dataset"
+            :datasets-metadata="datasetsMetadataFetch.data.value"
+          />
         </template>
         <template v-if="catalog.loading.value && catalog.initialized.value">
           <v-skeleton-loader
@@ -240,7 +243,7 @@ const ownerParam = computed(() => {
 
 const datasetsQuery = computed(() => {
   const params: Record<string, any> = {
-    select: 'title,description,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,draft.file,draft.originalFile,count,finalizedAt,updatedAt,dataUpdatedAt,createdAt,visibility,owner,draftReason,integrity,partOf,publicationSites,requestedPublicationSites,completeness.score',
+    select: 'title,description,status,topics,isVirtual,isRest,isMetaOnly,file,originalFile,draft.file,draft.originalFile,count,finalizedAt,updatedAt,dataUpdatedAt,createdAt,visibility,owner,draftReason,integrity,partOf,publicationSites,requestedPublicationSites,completeness',
   }
   if (q.value) params.q = q.value
   // many datasets share a score: the id keeps the pages from repeating or skipping them
@@ -275,7 +278,7 @@ watch(() => catalog.totalCount.value, (count) => {
 }, { immediate: true })
 
 // the score exists only once the account activated it in its settings
-const datasetsMetadataFetch = useFetch<{ completeness?: { active?: boolean } }>(() => account.value && `${$apiPath}/settings/${account.value.type}/${account.value.id}/datasets-metadata`)
+const datasetsMetadataFetch = useFetch<Record<string, any> & { completeness?: { active?: boolean } }>(() => account.value && `${$apiPath}/settings/${account.value.type}/${account.value.id}/datasets-metadata`)
 
 const sortItems = computed(() => [
   { title: t('sortCreatedAt'), value: 'createdAt' },
