@@ -352,7 +352,7 @@ test.describe('master data - Multi-level extensions, sorting, date-interval/geo-
       }]
     })
     await testUser3.post('/api/v1/datasets/slave/_bulk_lines?drop=true', [{ siret: '82898347800011' }].map(item => ({ _id: item.siret, ...item })))
-    await assert.rejects(waitForFinalize(testUser1, 'slave'), (err: any) => err.message.startsWith('permission manquante'))
+    await assert.rejects(waitForFinalize(testUser1, 'slave'), (err: any) => err.message.startsWith('missing permission'))
   })
 
   test('should support using master-data from other account if visibility is ok', async () => {

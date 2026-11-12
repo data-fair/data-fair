@@ -2,12 +2,12 @@
 import mongo from '#mongo'
 import type { Permission, WhoHint } from '#types'
 import type { AccountKeys, SessionState, SessionStateAuthenticated } from '@data-fair/lib-express'
-import { httpError } from '@data-fair/lib-utils/http-errors.js'
+import { i18nHttpError, i18nMessage } from '../misc/utils/i18n-errors.ts'
 import * as permissions from '../misc/utils/permissions.ts'
 import { clearApplicationKeysCaches } from '../misc/utils/application-key.ts'
 import { stampHistorize } from '../integrity/operations.ts'
 import {
-  type PartOf, type FragmentResourceType, type FragmentLike,
+  type PartOf, type FragmentResourceType, type FragmentLike, type FragmentRefusal,
   partOfCollectionName, resourceTypeToPartOfType, PART_OF_CHANGE_OPERATIONS,
   deriveFragmentPermissions, validatePartOf
 } from './operations.ts'
@@ -56,7 +56,7 @@ export const preparePartOf = async (resourceType: FragmentResourceType, fragment
   const parent = await getParent(partOf)
   const parentType = partOfCollectionName(partOf.type)
   if (!parent || !permissions.can(parentType, parent as any, 'readDescription', sessionState)) {
-    throw httpError(404, `Ressource parente inconnue (${partOf.type} ${partOf.id})`)
+    throw i18nHttpError(404, 'errors.fragments.unknownParent', { type: partOf.type, id: partOf.id })
   }
   // An application fragment's configuration declares the operations it grants, in application
   // context, on the parent's dataset fragments (applicationKeyPermissions, honoured by both the key
@@ -64,11 +64,11 @@ export const preparePartOf = async (resourceType: FragmentResourceType, fragment
   // whose management the dataset fragments inherit: a mere reader of the parent could otherwise
   // declare read/write on them for themselves or for every holder of the parent's key.
   if (resourceType === 'applications' && partOf.type === 'application' && !permissions.can(parentType, parent as any, 'writeConfig', sessionState)) {
-    throw httpError(403, 'Il faut pouvoir modifier la configuration de l\'application parente pour lui ajouter une sous-application')
+    throw i18nHttpError(403, 'errors.fragments.parentConfigPermission')
   }
   const nbFragments = fragment.id ? await countFragments(resourceTypeToPartOfType(resourceType), fragment.id) : 0
   const error = validatePartOf({ fragmentType: resourceType, fragment, partOf, parent: parent as any, nbFragments })
-  if (error) throw httpError(400, error)
+  if (error) throw i18nHttpError(400, error.key, error.params)
   return { parent, permissions: deriveFragmentPermissions(parent.permissions as Permission[] | undefined, parentType, resourceType, 'isMetaOnly' in parent && !!parent.isMetaOnly) }
 }
 
@@ -81,14 +81,14 @@ export type FragmentResource = { id: string, owner: { type: string, id: string, 
  */
 export const applyPartOfChange = async <T extends FragmentResource> (resourceType: FragmentResourceType, resource: T, partOf: PartOf | null, sessionState: SessionState, who?: WhoHint): Promise<T> => {
   if (!PART_OF_CHANGE_OPERATIONS[resourceType].every(op => permissions.can(resourceType, resource as any, op, sessionState))) {
-    throw httpError(403, 'Vous n\'avez pas la permission de rattacher ou détacher cette ressource')
+    throw i18nHttpError(403, 'errors.fragments.attachPermission')
   }
   const update: { $set: Record<string, any>, $unset?: Record<string, any> } = { $set: { updatedAt: new Date().toISOString() } }
   // the attach was validated against this owner and this absence of parent: pin both in the write,
   // so a concurrent owner change or attach in between makes it fail instead of landing unchecked
   const filter: Record<string, any> = { id: resource.id }
   if (partOf) {
-    if (resource.partOf) throw httpError(400, 'La ressource est déjà un fragment, détachez-la avant de la rattacher à un autre parent')
+    if (resource.partOf) throw i18nHttpError(400, 'errors.fragments.alreadyFragment')
     const prepared = await preparePartOf(resourceType, resource, partOf, sessionState)
     Object.assign(filter, { 'owner.type': resource.owner.type, 'owner.id': resource.owner.id, 'owner.department': resource.owner.department ?? null, partOf: { $exists: false } })
     update.$set.partOf = partOf
@@ -112,17 +112,17 @@ export const applyPartOfChange = async <T extends FragmentResource> (resourceTyp
   // parentage change. 404 rather than letting both call sites dereference null and 500
   if (!updated) {
     if (partOf && await collection(resourceTypeToPartOfType(resourceType)).countDocuments({ id: resource.id })) {
-      throw httpError(409, 'La ressource a été modifiée pendant son rattachement, veuillez réessayer')
+      throw i18nHttpError(409, 'errors.fragments.modifiedDuringAttach')
     }
-    throw httpError(404, 'La ressource a été supprimée pendant la modification de son rattachement')
+    throw i18nHttpError(404, 'errors.fragments.deletedDuringAttach')
   }
   if (partOf) {
     // the parent may have changed owner (or become a fragment) between preparePartOf's read and the
     // write above: re-validate against its current state and undo the attach if it no longer holds
     const parent = await getParent(partOf)
-    const error = parent
+    const error: FragmentRefusal | null = parent
       ? validatePartOf({ fragmentType: resourceType, fragment: resource, partOf, parent: parent as any, nbFragments: 0 })
-      : 'Ressource parente supprimée'
+      : { key: 'errors.fragments.parentDeleted' }
     if (error) {
       const revert = { $unset: { partOf: true }, $set: { permissions: resource.permissions ?? [], updatedAt: new Date().toISOString(), ...(resourceType === 'datasets' && { _needsSearchIndex: true }) } }
       if (resourceType === 'datasets' && resource.integrity?.active) {
@@ -130,7 +130,9 @@ export const applyPartOfChange = async <T extends FragmentResource> (resourceTyp
       }
       if (resourceType === 'datasets') await mongo.datasets.updateOne({ id: resource.id }, revert as any)
       else await mongo.applications.updateOne({ id: resource.id }, revert as any)
-      throw httpError(409, `Le parent a été modifié pendant le rattachement : ${error}`)
+      // the reason is a message of its own, rendered in both languages as a locale-dependent param
+      const reason = { en: i18nMessage(error.key, error.params ?? {}, 'en'), fr: i18nMessage(error.key, error.params ?? {}, 'fr') }
+      throw i18nHttpError(409, 'errors.fragments.parentModifiedDuringAttach', { reason })
     }
   }
   if (resourceType === 'applications') {
@@ -175,12 +177,12 @@ export const prepareFragmentsOwnerChange = async (parentType: PartOf['type'], pa
   const fragments = await findFragments(parentType, parent.id, parent.owner)
   // same refusal as on the dataset's own owner change: integrity anchors are owner-scoped
   const enrolled = fragments.datasets.find(dataset => dataset.integrity?.active)
-  if (enrolled) throw httpError(400, `Le contrôle d'intégrité du fragment « ${enrolled.title} » doit être désactivé avant un changement de propriétaire`)
+  if (enrolled) throw i18nHttpError(400, 'errors.fragments.integrityOwnerChange', { title: String(enrolled.title) })
   if (fragments.datasets.length && !permissions.canDoForOwner(newOwner, 'datasets', 'post', sessionState, true)) {
-    throw httpError(403, 'Vous ne pouvez pas créer les jeux de données fragments dans le nouveau propriétaire')
+    throw i18nHttpError(403, 'errors.fragments.ownerChangeDatasets')
   }
   if (fragments.applications.length && !permissions.canDoForOwner(newOwner, 'applications', 'post', sessionState, true)) {
-    throw httpError(403, 'Vous ne pouvez pas créer les applications fragments dans le nouveau propriétaire')
+    throw i18nHttpError(403, 'errors.fragments.ownerChangeApplications')
   }
   return fragments
 }

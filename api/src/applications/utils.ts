@@ -11,7 +11,7 @@ import { prepareMarkdownContent } from '../misc/utils/markdown.ts'
 import * as findUtils from '../misc/utils/find.ts'
 import clone from '@data-fair/lib-utils/clone.js'
 import * as datasetUtils from '../datasets/utils/index.ts'
-import { httpError } from '@data-fair/lib-utils/http-errors.js'
+import { i18nHttpError } from '../misc/utils/i18n-errors.ts'
 import { getPseudoSessionState } from '../misc/utils/users.ts'
 import resolvePath from 'resolve-path' // safe replacement for path.resolve
 import { ownerDir } from '../datasets/utils/files.ts'
@@ -106,15 +106,15 @@ export const refreshConfigDatasetsRefs = async (req: Request, application: Appli
           if (!permissions.list('datasets', freshDataset, reqSession(req)).includes('readDescription')) {
             // fail closed for a scoped session without the datasets family, but say what is missing
             if (!scopeAllowsClass(reqSession(req), 'datasets', 'read')) {
-              throw httpError(403, `Le jeu de données ${freshDataset.title ?? freshDataset.slug ?? freshDataset.id} référencé dans l'application nécessite le scope datasets:read, absent de la session.`)
+              throw i18nHttpError(403, 'errors.applications.datasetScopeMissing', { dataset: String(freshDataset.title ?? freshDataset.slug ?? freshDataset.id) })
             }
-            throw httpError(403, `Vous n'avez pas la permission de consulter les informations du jeu de données ${freshDataset.title ?? freshDataset.slug ?? freshDataset.id} référencé dans l'application.`)
+            throw i18nHttpError(403, 'errors.applications.datasetNotReadable', { dataset: String(freshDataset.title ?? freshDataset.slug ?? freshDataset.id) })
           }
         } else {
           if (!permissions.list('datasets', freshDataset, getPseudoSessionState(application.owner, 'application config', application.id, 'admin')).includes('readDescription')) {
             let ownerName = application.owner.name
             if (application.department) ownerName += `(${application.departmentName})`
-            throw httpError(403, `Le compte propriétaire de l'application (${ownerName}) n'a pas la permission de consulter les informations du jeu de données ${freshDataset.title ?? freshDataset.slug ?? freshDataset.id} référencé dans la configuration.`)
+            throw i18nHttpError(403, 'errors.applications.datasetNotReadableByOwner', { owner: String(ownerName), dataset: String(freshDataset.title ?? freshDataset.slug ?? freshDataset.id) })
           }
         }
 

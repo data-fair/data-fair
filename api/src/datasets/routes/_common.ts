@@ -11,7 +11,7 @@ export const apiKeyMiddlewareAdmin = apiKeyUtils.middleware(['datasets', 'datase
 export const isRest: RequestHandler = (req, res, next) => {
   if (!reqDataset(req).isRest) {
     return res.status(501)
-      .send('Les opérations de modifications sur les lignes sont uniquement accessibles pour les jeux de données éditables.')
+      .send(req.__('errors.rest.notRest'))
   }
   next()
 }

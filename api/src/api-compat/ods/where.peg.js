@@ -5,10 +5,14 @@
 
 
 
+import { invalidGeometryError } from './errors.ts'
+
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { requiredCapability } from '../../datasets/es/operations.ts'
 import { wktToGeoJSON } from '@terraformer/wkt'
 import dayjs from 'dayjs'
+import { unknownFieldError } from '../../datasets/utils/field-errors.ts'
+import { valueTooLongError } from './errors.ts'
 
 const LBRACE='{';
 const RBRACE='}';
@@ -438,24 +442,24 @@ function peg$parse(input, options) {
   var peg$f0 = function(filter) { return filter };
   var peg$f1 = function(key, value) {
     const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+    if (!prop) throw unknownFieldError('filter', key)
     requiredCapability(prop, 'equal')
     const formatted = formatValue(prop, value.value, options.timezone)
     // resolveExactKeywordTarget is injected by parseWhere (operations.ts); fall back to the plain
     // keyword field when it is absent (e.g. parser unit tests), like the other optional options.
     const target = options.resolveExactKeywordTarget ? options.resolveExactKeywordTarget(prop, [String(formatted)]) : { field: key }
-    if (target.impossible) throw httpError(400, `Impossible de filtrer exactement sur le champ ${key} : la valeur dépasse 200 caractères.`)
+    if (target.impossible) throw valueTooLongError(key)
     return { term: { [target.field]: formatted } }
   };
   var peg$f2 = function(key, value) {
     const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+    if (!prop) throw unknownFieldError('filter', key)
     requiredCapability(prop, 'equal')
     return { range: { [key]: { gte: value.value + "||/y",  lte: value.value + "||/y", format: "yyyy", time_zone: options.timezone } } }
   };
   var peg$f3 = function(key, values) {
     const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+    if (!prop) throw unknownFieldError('filter', key)
     requiredCapability(prop, 'IN')
     return { terms: {[key]: values.map(v => formatValue(prop, v, options.timezone)) }}
   };
@@ -467,7 +471,7 @@ function peg$parse(input, options) {
   };
   var peg$f6 = function(key, startOperator, start, end, endOperator) {
     const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+    if (!prop) throw unknownFieldError('filter', key)
     requiredCapability(prop, 'range')
     return { range: { [key]: { [startOperator]: formatValue(prop, start.value, options.timezone), [endOperator]: formatValue(prop, end.value, options.timezone), time_zone: options.timezone } } }
   };
@@ -477,20 +481,20 @@ function peg$parse(input, options) {
   var peg$f10 = function() { return "lte" };
   var peg$f11 = function(value, key) {
     const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+    if (!prop) throw unknownFieldError('filter', key)
     requiredCapability(prop, 'IN')
     return { term: {[key]: formatValue(prop, value.value, options.timezone)} }
   };
   var peg$f12 = function(key, operator, value) {
     const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+    if (!prop) throw unknownFieldError('filter', key)
     const esOperator = esOperators[operator]
     requiredCapability(prop, 'comparison')
     return { range: { [key]: { [esOperator]: formatValue(prop, value.value, options.timezone), time_zone: options.timezone } } }
   };
   var peg$f13 = function(key, operator, value) {
     const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+    if (!prop) throw unknownFieldError('filter', key)
     const esOperator = esOperators[operator]
     requiredCapability(prop, 'comparison')
     return { range: { [key]: { [esOperator]: value.value + "||/y", format: 'yyyy', time_zone: options.timezone } } }
@@ -505,13 +509,13 @@ function peg$parse(input, options) {
   };
   var peg$f15 = function(key) {
     const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+    if (!prop) throw unknownFieldError('filter', key)
     requiredCapability(prop, 'IS NULL', 'values')
     return { bool: { must_not: [{ exists: {field: key} }] } }
   };
   var peg$f16 = function(key) {
     const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+    if (!prop) throw unknownFieldError('filter', key)
     requiredCapability(prop, 'IS NOT NULL', 'values')
     return { exists: {field: key} }
   };
@@ -533,7 +537,7 @@ function peg$parse(input, options) {
   var peg$f22 = function(fieldNames) {
     for (const key of fieldNames) {
       const prop = options.dataset.schema.find(p => p.key === key)
-      if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+      if (!prop) throw unknownFieldError('filter', key)
       requiredCapability(prop, 'startswith')
     }
     return fieldNames
@@ -656,7 +660,7 @@ function peg$parse(input, options) {
       try {
         return JSON.parse(str)
       } catch (err) {
-        throw httpError(400, `Impossible de parser la géométrie ${str}, erreur: ${err.message}`)
+        throw invalidGeometryError(str, err)
       }
     } else {
       return str

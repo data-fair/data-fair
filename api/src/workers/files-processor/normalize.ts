@@ -95,7 +95,7 @@ export default async function (dataset: FileDataset) {
         }
       } else {
         if (await filesStorage.pathExists(datasetUtils.attachmentsDir(dataset))) {
-          throw httpError(400, '[noretry] Vous avez chargé un fichier zip comme fichier de données principal, mais il y a également des pièces jointes chargées.')
+          throw httpError(400, '[noretry] You uploaded a zip file as the main data file, but attachments were also uploaded.')
         }
         // await filesStorage.moveDirFromFs(tmpDir, datasetUtils.attachmentsDir(dataset))
         await unzipIntoStorage(originalFilePath, datasetUtils.attachmentsDir(dataset))
@@ -163,7 +163,7 @@ export default async function (dataset: FileDataset) {
     } else if (datasetUtils.calendarTypes.has(dataset.originalFile.mimetype)) {
       // TODO : store these file size limits in config file ?
       if (dataset.originalFile.size > config.defaultLimits.maxSpreadsheetSize) {
-        throw httpError(400, `[noretry] Un fichier de ce format ne peut pas excéder ${displayBytes(config.defaultLimits.maxSpreadsheetSize)}. Vous pouvez par contre le convertir en CSV avec un outil externe et le charger de nouveau.`)
+        throw httpError(400, `[noretry] A file in this format cannot exceed ${displayBytes(config.defaultLimits.maxSpreadsheetSize)}. You can however convert it to CSV with an external tool and upload it again.`)
       }
       const icalendar = await import('../../misc/utils/icalendar.ts')
       const { stringify: csvStrStream } = await import('csv-stringify')
@@ -185,7 +185,7 @@ export default async function (dataset: FileDataset) {
       dataset.analysis = { escapeKeyAlgorithm: 'legacy' }
     } else if (datasetUtils.tabularTypes.has(dataset.originalFile.mimetype)) {
       if (dataset.originalFile.size > config.defaultLimits.maxSpreadsheetSize) {
-        throw httpError(400, `[noretry] Un fichier de ce format ne peut pas excéder ${displayBytes(config.defaultLimits.maxSpreadsheetSize)}. Vous pouvez par contre le convertir en CSV avec un outil externe et le charger de nouveau.`)
+        throw httpError(400, `[noretry] A file in this format cannot exceed ${displayBytes(config.defaultLimits.maxSpreadsheetSize)}. You can however convert it to CSV with an external tool and upload it again.`)
       }
       const xlsx = await import('../../misc/utils/xlsx.ts')
       const tmpFile = await tmp.file({ tmpdir: tmpDir })
@@ -208,12 +208,12 @@ export default async function (dataset: FileDataset) {
       await tmpFile.cleanup()
     } else if (shapefile || mapinfo || datasetUtils.geographicalTypes.has(dataset.originalFile.mimetype)) {
       if (config.ogr2ogr.skip) {
-        throw httpError(400, '[noretry] Les fichiers de type shapefile ne sont pas supportés sur ce service.')
+        throw httpError(400, '[noretry] Shapefile files are not supported on this service.')
       }
       if (dataset.originalFile.size > config.defaultLimits.maxSpreadsheetSize) {
         // this rule is deactivated as ogr2ogr actually seems to take a negligible amount of RAM
         // for the transformation we use it for
-        // throw httpError(400, `[noretry] Un fichier de ce format ne peut pas excéder ${displayBytes(config.defaultLimits.maxSpreadsheetSize)}. Vous pouvez par contre le convertir en CSV avec un outil externe et le charger de nouveau.`)
+        // throw httpError(400, `[noretry] A file in this format cannot exceed ${displayBytes(config.defaultLimits.maxSpreadsheetSize)}. You can however convert it to CSV with an external tool and upload it again.`)
       }
       const ogrOptions = ['-lco', 'RFC7946=YES', '-t_srs', 'EPSG:4326', ...getOgrInputOptions({ shapefile, mapinfo, mimetype: dataset.originalFile.mimetype })]
       if (dataset.originalFile.mimetype === 'application/gpx+xml') {
@@ -254,7 +254,7 @@ export default async function (dataset: FileDataset) {
   }
 
   if (!dataset.file) {
-    throw httpError(400, `[noretry] Le format de ce fichier n'est pas supporté (${dataset.originalFile.mimetype}).`)
+    throw httpError(400, `[noretry] The format of this file is not supported (${dataset.originalFile.mimetype}).`)
   }
 
   dataset.status = 'normalized'

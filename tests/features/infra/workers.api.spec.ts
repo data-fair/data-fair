@@ -55,7 +55,7 @@ test.describe('workers', () => {
     assert.equal(res.status, 200)
     assert.equal(res.data[0].type, 'error')
     // Check that there is an error message in the journal
-    assert.ok(res.data[0].data.startsWith('100% des lignes sont en erreur'))
+    assert.ok(res.data[0].data.startsWith('100% of the lines have an error'))
   })
 
   test('Process multiple datasets in parallel worker threads', async () => {
@@ -87,7 +87,7 @@ test.describe('workers', () => {
     res = await ax.get('/api/v1/datasets/' + dataset.id + '/journal')
     assert.equal(res.status, 200)
     assert.equal(res.data[0].type, 'error')
-    assert.ok(res.data[0].data.includes('100% des lignes sont en erreur'))
+    assert.ok(res.data[0].data.includes('100% of the lines have an error'))
   })
 
   test('Manage bad input in children processes', async () => {

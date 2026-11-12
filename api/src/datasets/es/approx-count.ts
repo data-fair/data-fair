@@ -1,8 +1,7 @@
 import config from '#config'
-import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { aliasName, prepareQuery } from './commons.ts'
-import { tooLongError, type ApproxCountMode, extrapolateApproxTotal, estimateMarginPct } from './operations.ts'
-import { type Client } from '@elastic/elasticsearch'
+import { tooLongError, extractedHttpError, type ApproxCountMode, extrapolateApproxTotal, estimateMarginPct } from './operations.ts'
+import type { Client } from '@elastic/elasticsearch'
 import { type EsAbortContext, timedEsCall } from './abort.ts'
 
 // Estimate the total that the capped ranked request declined to compute exactly: count the
@@ -31,7 +30,7 @@ export const esSearchBody = async (client: Client, dataset: any, body: any, abor
     }
   }, { ...abortContext, meta: true }))
   const esResponse: any = (res as any).body
-  if (esResponse.timed_out) throw httpError(tooLongError.status, tooLongError.message)
+  if (esResponse.timed_out) throw extractedHttpError(tooLongError)
   return esResponse
 }
 

@@ -3,15 +3,14 @@ import moment from 'moment-timezone'
 import config from '#config'
 import { prepareQuery, aliasName } from './commons.ts'
 import { type EsAbortContext, timedEsCall } from './abort.ts'
-import capabilities from '../../../contract/capabilities.js'
 import {
-  columnOperationsHint,
   assertMetricAccepted,
   defaultMetricAggsByType,
   getMetricType,
   getSimpleMetricsFields
 } from './operations.ts'
-import { type Client } from '@elastic/elasticsearch'
+import type { Client } from '@elastic/elasticsearch'
+import { unknownFieldError, missingCapabilityError } from '../utils/field-errors.ts'
 
 const cleanValue = (field: any, metric: string, value: any) => {
   if (['min', 'max', 'percentiles'].includes(metric)) {
@@ -32,9 +31,9 @@ export const agg = async (client: Client, dataset: any, query: Record<string, an
   const metricField = query.field || query.metric_field
   if (!metricField) throw httpError(400, '"field" parameter is required')
   const field = dataset.schema.find((f: any) => f.key === metricField)
-  if (!field) throw httpError(400, `Impossible de calculer une métrique sur le champ ${metricField}, il n'existe pas dans le jeu de données.`)
+  if (!field) throw unknownFieldError('metric', metricField)
   if (field['x-capabilities'] && field['x-capabilities'].values === false) {
-    throw httpError(400, `Impossible de calculer une métrique sur le champ ${metricField}. La fonctionnalité "${capabilities.properties.values.title}" n'est pas activée dans la configuration technique du champ. ${columnOperationsHint(field)}`)
+    throw missingCapabilityError('metric', metricField, 'values', field)
   }
   assertMetricAccepted(field, query.metric)
 

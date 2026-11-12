@@ -396,7 +396,7 @@ test.describe('master data - Define/use master-data as remote-service, extend ge
     })
     let res = await ax.post('/api/v1/datasets/slave/_bulk_lines', [{ siret: 'test " failure' }].map(item => ({ _id: item.siret, ...item })))
     assert.equal(res.data.nbErrors, 1)
-    assert.ok(res.data.errors[0].error.includes('Impossible d\'effectuer cette recherche'))
+    assert.ok(res.data.errors[0].error.includes('Cannot run this search'))
 
     // in drop mode the lines are not commited immediately
     res = await ax.post('/api/v1/datasets/slave/_bulk_lines?drop=true', [{ siret: 'test " failure' }].map(item => ({ _id: item.siret, ...item })))
@@ -405,7 +405,7 @@ test.describe('master data - Define/use master-data as remote-service, extend ge
     await waitForDatasetError(ax, 'slave')
 
     const journal = (await ax.get('/api/v1/datasets/slave/journal')).data
-    assert.ok(journal[0].data.includes('Impossible d\'effectuer cette recherche'))
+    assert.ok(journal[0].data.includes('Cannot run this search'))
   })
 
   test('should extend a geojson file from a master-data dataset', async () => {

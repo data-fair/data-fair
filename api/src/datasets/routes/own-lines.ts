@@ -24,7 +24,7 @@ export const registerOwnLinesRoutes = (router: Router) => {
     const sessionState = reqSessionAuthenticated(req)
     if (!reqDataset(req).rest?.lineOwnership) {
       return res.status(501)
-        .send('Les opérations de gestion des lignes par propriétaires ne sont pas supportées pour ce jeu de données.')
+        .send(req.__('errors.rest.ownLinesUnsupported'))
     }
     const [type, id, department] = (req.params.owner as string).split(':')
     const linesOwner: any = { type, id, department }

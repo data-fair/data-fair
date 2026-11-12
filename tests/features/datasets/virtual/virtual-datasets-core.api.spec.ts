@@ -599,7 +599,7 @@ test.describe('virtual datasets core', () => {
     await waitForDatasetError(ax, virtualDataset.id)
     const journal = (await ax.get('/api/v1/datasets/' + virtualDataset.id + '/journal')).data
     const errorEvent = journal.find((e: any) => e.type === 'error')
-    assert.ok(errorEvent.data.includes('Le champ "some_date" a des formats contradictoires (non défini, date).'))
+    assert.ok(errorEvent.data.includes('The field "some_date" has conflicting formats (not defined, date).'))
     virtualDataset = (await ax.get('/api/v1/datasets/' + virtualDataset.id)).data
     assert.equal(virtualDataset.status, 'error')
     assert.ok(!virtualDataset.errorRetry)

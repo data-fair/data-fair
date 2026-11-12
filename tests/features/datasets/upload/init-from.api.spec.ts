@@ -253,7 +253,7 @@ test.describe('Datasets with auto-initialization from another one', () => {
     event = journal.pop()
     assert.equal(event.draft, true)
     assert.equal(event.type, 'validation-error')
-    assert.ok(event.data.startsWith('La structure du fichier contient des ruptures de compatibilité :'))
+    assert.ok(event.data.startsWith('The structure of the file contains breaking changes:'))
     event = journal.pop()
     assert.equal(event.draft, true)
     assert.equal(event.type, 'finalize-end')
@@ -341,7 +341,7 @@ test.describe('Datasets with auto-initialization from another one', () => {
     const journal = (await ax.get(`/api/v1/datasets/${res.data.id}/journal`)).data
     const errorEvent = journal.find((e: any) => e.type === 'error')
     assert.ok(errorEvent)
-    assert.ok(errorEvent.data.includes('permission manquante'))
+    assert.ok(errorEvent.data.includes('missing permission'))
   })
 
   test('Initialize dataset in a department from dataset in orga', async () => {
@@ -489,7 +489,7 @@ test.describe('Datasets with auto-initialization from another one', () => {
     const res = await ax.post('/api/v1/datasets', { isRest: true, title: 'rest from meta', initFrom: { dataset: metaOnly.id, parts: ['data'] } })
     await waitForDatasetError(ax, res.data.id)
     const journal = (await ax.get(`/api/v1/datasets/${res.data.id}/journal`)).data
-    assert.ok(journal.find((e: any) => e.type === 'error').data.includes('ne contient que des métadonnées'))
+    assert.ok(journal.find((e: any) => e.type === 'error').data.includes('only contains metadata'))
   })
 
   test('Inherit conformsTo from a public reference dataset across accounts', async () => {

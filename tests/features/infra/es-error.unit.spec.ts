@@ -24,6 +24,6 @@ test.describe('ES error extraction', () => {
   test('Map an elasticsearch client TimeoutError to a 504 with the "too long" message', () => {
     const { message, status } = extractError({ name: 'TimeoutError', message: 'Request timed out' })
     assert.equal(status, 504)
-    assert.ok(message.includes('trop longue'))
+    assert.ok(message.includes('too long'))
   })
 })

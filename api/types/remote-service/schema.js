@@ -11,7 +11,7 @@ export default {
   properties: {
     id: {
       type: 'string',
-      description: 'Identifier of the configuration for an remote service'
+      description: 'Identifier of the configuration of a remote service'
     },
     href: {
       type: 'string',
@@ -23,11 +23,11 @@ export default {
     },
     title: {
       type: 'string',
-      description: 'Short title of the configuration for an remote service'
+      description: 'Short title of the configuration of a remote service'
     },
     description: {
       type: 'string',
-      description: 'Detailed description of the configuration for an remote service'
+      description: 'Detailed description of the configuration of a remote service'
     },
     apiDoc: { type: 'object', tsType: 'any' },
     url: {
@@ -46,7 +46,7 @@ export default {
         },
         name: {
           type: 'string',
-          description: 'Identifier of the owner of this configuration for an remote service'
+          description: 'Identifier of the owner of this configuration of a remote service'
         },
         value: {
           type: 'string',
@@ -110,7 +110,7 @@ export default {
       properties: {
         active: {
           type: 'boolean',
-          title: 'Proposer la création de jeux virtuels'
+          title: 'Virtual dataset creation enabled'
         },
         parent: {
           type: 'object',
@@ -136,7 +136,7 @@ export default {
       properties: {
         active: {
           type: 'boolean',
-          title: 'Proposer la création de jeux virtuels'
+          title: 'Standard schema dataset creation enabled'
         },
         parent: {
           type: 'object',

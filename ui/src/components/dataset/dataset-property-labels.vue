@@ -91,7 +91,7 @@ import type { SchemaProperty } from '#api/types'
 import { mdiClose, mdiTagTextOutline } from '@mdi/js'
 import Vjsf, { type Options as VjsfOptions } from '@koumoul/vjsf'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 const props = defineProps<{
   property: SchemaProperty
@@ -130,7 +130,7 @@ const schema = computed(() => {
   }
 })
 
-const vjsfOptions: VjsfOptions = { density: 'comfortable' }
+const vjsfOptions = computed<VjsfOptions>(() => ({ density: 'comfortable', locale: locale.value, xI18n: true }))
 
 watch(dialog, (show) => {
   if (show) {

@@ -2,16 +2,16 @@
 {{
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { requiredCapability } from '../../datasets/es/operations.ts'
-import capabilities from '../../../contract/capabilities.js'
 import dayjs from 'dayjs'
+import { unknownFieldError, missingCapabilityError } from '../../datasets/utils/field-errors.ts'
 
 const assertGroupable = (groupByKey, dataset) => {
   const prop = dataset.schema.find(p => p.key === groupByKey)
   if (!prop) {
-    throw httpError(400, `Impossible de grouper par le champ ${groupByKey}, il n'existe pas dans le jeu de données.`)
+    throw unknownFieldError('group', groupByKey)
   }
   if (prop['x-capabilities'] && prop['x-capabilities'].values === false) {
-    throw httpError(400, `Impossible de grouper sur le champ ${groupByKey}. La fonctionnalité "${capabilities.properties.values.title}" n'est pas activée dans la configuration technique du champ.`)
+    throw missingCapabilityError('group', groupByKey, 'values')
   }
   return prop
 }

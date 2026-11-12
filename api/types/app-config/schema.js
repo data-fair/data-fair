@@ -24,7 +24,7 @@ export default {
           },
           applicationKeyPermissions: {
             type: 'object',
-            description: 'The permissions that should be applied to users accessing this dataset through a protecte application key of this application',
+            description: 'The permissions that should be applied to users accessing this dataset through a protected application key of this application',
             default: { classes: ['read'] },
             properties: {
               operations: {

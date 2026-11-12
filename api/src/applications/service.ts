@@ -4,7 +4,7 @@ import moment from 'moment'
 import slug from 'slugify'
 import { nanoid } from 'nanoid'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import { type AccountKeys, type SessionState, type SessionStateAuthenticated } from '@data-fair/lib-express'
+import type { AccountKeys, SessionState, SessionStateAuthenticated } from '@data-fair/lib-express'
 import * as fragmentsService from '../fragments/service.ts'
 import { partOfListFilter } from '../fragments/operations.ts'
 import log from '@data-fair/lib-node/log.js'
@@ -200,11 +200,11 @@ export const createApplication = async (ctx: ApplicationWriteContext, applicatio
 
   if (application.initFrom) {
     const parentApplication = await mongo.applications.findOne({ id: application.initFrom.application })
-    if (!parentApplication) throw new Error('[noretry] application d\'initialisation inconnue ' + application.initFrom.application)
+    if (!parentApplication) throw new Error('[noretry] unknown initialization application ' + application.initFrom.application)
     // mongo findOne returns WithId<Application>, not Resource — cast bridges the gap
     const parentApplicationPermissions = permissions.list('applications', parentApplication as any, ctx.sessionState)
     if (!parentApplicationPermissions.includes('readDescription')) {
-      throw new Error(`[noretry] permission manquante sur l'application d'initialisation "${parentApplication.slug}" (${parentApplication.id})`)
+      throw new Error(`[noretry] missing permission on the initialization application "${parentApplication.slug}" (${parentApplication.id})`)
     }
     if (parentApplication.url !== application.url) throw httpError(400, 'application.url and initFrom application do not match')
     application.configuration = parentApplication.configuration

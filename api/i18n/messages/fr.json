@@ -20,7 +20,250 @@
 		"requireAnonymousToken": "Un jeton d'action anonyme est requis.",
 		"noCrossDomain": "Appel depuis un domaine extérieur non supporté.",
 		"urlFriendly": "\"{{{value}}}\" n'est pas assez lisible pour être utilisé dans une URL, peut-être pourriez vous utiliser \"{{{slug}}}\" ?",
-		"dupSlug": "Ce slug est déjà utilisé"
+		"dupSlug": "Ce slug est déjà utilisé",
+		"fields": {
+			"action": {
+				"filter": "Impossible d'appliquer un filtre sur le champ {{{field}}}",
+				"sort": "Impossible de trier sur le champ {{{field}}}",
+				"group": "Impossible de grouper sur le champ {{{field}}}",
+				"metric": "Impossible de calculer une métrique sur le champ {{{field}}}",
+				"search": "Impossible de rechercher sur le champ {{{field}}}",
+				"select": "Impossible de sélectionner le champ {{{field}}}",
+				"aggregate": "Impossible d'agréger sur le champ {{{field}}}",
+				"highlight": "Impossible de demander un \"highlight\" sur le champ {{{field}}}",
+				"collapse": "Impossible d'utiliser \"collapse\" sur le champ {{{field}}}",
+				"filterOperator": "Impossible d'appliquer un filtre {{{operator}}} sur le champ {{{field}}}"
+			},
+			"unknown": "{{{action}}}, il n'existe pas dans le jeu de données.",
+			"missingCapability": "{{{action}}}. La fonctionnalité \"{{{capability}}}\" n'est pas activée dans la configuration technique du champ. {{{hint}}}",
+			"operationsHint": "Opérations disponibles sur ce champ — filtres : {{{filters}}} ; tri : {{{sortable}}} ; groupement : {{{groupable}}}.",
+			"yes": "oui",
+			"no": "non",
+			"none": "aucun",
+			"notSearchable": "{{{action}}}. Aucune fonctionnalité de recherche n'est activée dans la configuration technique du champ. {{{hint}}}",
+			"noFullTextSearch": "{{{action}}}. La fonctionnalité de recherche plein texte n'est pas activée dans la configuration technique du champ. {{{hint}}}",
+			"valuesTooLong": "Filtre {{{filter}}} : une valeur dépasse {{{max}}} caractères et ne peut pas être filtrée exactement sur ce champ. {{{hint}}}",
+			"valueTooLong": "Filtre {{{filter}}} : la valeur dépasse {{{max}}} caractères et ne peut pas être filtrée exactement sur ce champ. {{{hint}}}",
+			"noExistsIndex": "{{{action}}}. Aucune indexation de ce champ ne permet de tester la présence d'une valeur. {{{hint}}}",
+			"multivalued": "{{{action}}}, il est multivalué.",
+			"metricNotSupported": "{{{action}}}. La métrique \"{{{metric}}}\" n'est pas supportée pour ce type de champ.",
+			"noMetricAgg": "{{{action}}}. Ce champ ne supporte pas les agrégations de métriques."
+		},
+		"permissions": {
+			"missingOperation": "Permission manquante pour l'opération.",
+			"missingOperationOrClass": "Permission manquante pour l'opération \"{{{operation}}}\" ou la catégorie \"{{{operationClass}}}\".",
+			"missingNamedOperation": "Permission manquante pour l'opération \"{{{operation}}}\".",
+			"notPublic": "{{{resource}}} n'est pas accessible publiquement. Veuillez vous connecter.",
+			"otherActiveAccount": "{{{resource}}} {{{title}}} est accessible depuis l'organisation {{{org}}} ({{{orgId}}}) dont vous êtes membre mais vous ne l'avez pas sélectionnée comme compte actif. Changez de compte pour visualiser les informations.",
+			"restricted": "{{{resource}}} est accessible uniquement aux utilisateurs autorisés par le propriétaire. Vous n'avez pas les permissions nécessaires pour visualiser les informations.",
+			"fragment": "Les permissions d'un fragment sont dérivées de celles de son parent et ne peuvent pas être modifiées directement",
+			"readLinesForSchemaFilter": "Permission manquante pour l'opération \"readLines\", nécessaire pour filtrer le schéma par des filtres sur les données."
+		},
+		"ods": {
+			"notNumeric": "{{{action}}}, il n'est pas de type numérique.",
+			"metricAction": {
+				"select": "Impossible de calculer {{{metric}}} du champ {{{field}}}",
+				"sort": "Impossible de trier sur {{{metric}}} du champ {{{field}}}"
+			},
+			"metric": {
+				"avg": "la moyenne",
+				"sum": "la somme",
+				"median": "la médiane",
+				"percentile": "les percentiles"
+			},
+			"notDate": "Impossible de calculer {{{operation}}}, la colonne n'est pas de type date.",
+			"valueTooLong": "Impossible de filtrer exactement sur le champ {{{field}}} : la valeur dépasse {{{max}}} caractères.",
+			"invalidGeometry": "Impossible de parser la géométrie {{{geometry}}}, erreur : {{{error}}}",
+			"invalidParam": "le paramètre \"{{{param}}}\" est invalide : {{{error}}}",
+			"invalidLimit": "le paramètre \"limit\" doit être un entier positif ou -1",
+			"invalidOffset": "le paramètre \"offset\" doit être un entier positif",
+			"unsupportedFormat": "le format \"{{{format}}}\" n'est pas supporté par l'export de données de cette couche de compatibilité pour la version d'API précédente.",
+			"unsupportedRequest": "Cette couche de compatibilité pour la version d'API précédente ne supporte pas cette requête."
+		},
+		"fragments": {
+			"badPartOfParam": "Le paramètre partOf doit être de la forme \"dataset:{id}\" ou \"application:{id}\"",
+			"self": "Une ressource ne peut pas être un fragment d'elle-même",
+			"parentIsFragment": "Le parent est lui-même un fragment, un fragment ne peut pas avoir de fragments",
+			"sameOwner": "Un fragment doit avoir le même propriétaire que son parent",
+			"applicationParent": "Une application ne peut être un fragment que d'une application",
+			"datasetParent": "Un jeu de données ne peut être un fragment que d'un jeu de données virtuel, d'un jeu de métadonnées seules ou d'une application",
+			"hasFragments": "Une ressource qui a des fragments ne peut pas devenir un fragment",
+			"publishedOnPortal": "La ressource est publiée sur un portail, retirez la publication avant de la rattacher",
+			"publishedOnCatalog": "La ressource est publiée sur un catalogue, retirez la publication avant de la rattacher",
+			"masterData": "Un jeu de données de référence ne peut pas être rattaché à un parent, retirez la configuration de données de référence avant de le rattacher",
+			"partOfOnlyByPatch": "partOf ne peut être modifié que par PATCH",
+			"notPublishable": "Un fragment ne peut pas être publié (propriété {{{property}}})",
+			"notMasterData": "Un fragment ne peut pas être défini comme donnée de référence",
+			"unknownParent": "Ressource parente inconnue ({{{type}}} {{{id}}})",
+			"parentConfigPermission": "Il faut pouvoir modifier la configuration de l'application parente pour lui ajouter une sous-application",
+			"attachPermission": "Vous n'avez pas la permission de rattacher ou détacher cette ressource",
+			"alreadyFragment": "La ressource est déjà un fragment, détachez-la avant de la rattacher à un autre parent",
+			"modifiedDuringAttach": "La ressource a été modifiée pendant son rattachement, veuillez réessayer",
+			"deletedDuringAttach": "La ressource a été supprimée pendant la modification de son rattachement",
+			"parentDeleted": "Ressource parente supprimée",
+			"parentModifiedDuringAttach": "Le parent a été modifié pendant le rattachement : {{{reason}}}",
+			"integrityOwnerChange": "Le contrôle d'intégrité du fragment « {{{title}}} » doit être désactivé avant un changement de propriétaire",
+			"ownerChangeDatasets": "Vous ne pouvez pas créer les jeux de données fragments dans le nouveau propriétaire",
+			"ownerChangeApplications": "Vous ne pouvez pas créer les applications fragments dans le nouveau propriétaire",
+			"noOwnerChange": "Un fragment ne peut pas changer de propriétaire, détachez-le d'abord"
+		},
+		"applications": {
+			"datasetScopeMissing": "Le jeu de données {{{dataset}}} référencé dans l'application nécessite le scope datasets:read, absent de la session.",
+			"datasetNotReadable": "Vous n'avez pas la permission de consulter les informations du jeu de données {{{dataset}}} référencé dans l'application.",
+			"datasetNotReadableByOwner": "Le compte propriétaire de l'application ({{{owner}}}) n'a pas la permission de consulter les informations du jeu de données {{{dataset}}} référencé dans la configuration.",
+			"ownerChangeCreate": "Vous ne pouvez pas créer d'application dans le nouveau propriétaire",
+			"errorMessageRequired": "Attribut \"message\" obligatoire"
+		},
+		"apiKeys": {
+			"unknown": "Cette clé d'API est inconnue.",
+			"expired": "Cette clé d'API est expirée.",
+			"missingScope": "Cette clé d'API n'a pas la portée nécessaire (attendu={{{expected}}} - reçu={{{received}}}).",
+			"asAccountRequired": "Cette clé d'API requiert de spécifier le compte à incarner",
+			"asAccountUnsupported": "Cette clé d'API ne supporte pas de spécifier le compte à incarner"
+		},
+		"asVisitor": {
+			"invalid": "paramètre asVisitor invalide \"{{{value}}}\"",
+			"apiKey": "le paramètre asVisitor n'est pas utilisable avec une clé d'API",
+			"organizationRequired": "le paramètre asVisitor requiert un compte organisation actif",
+			"adminOnly": "le paramètre asVisitor est réservé aux administrateurs de l'organisation",
+			"adminScope": "le paramètre asVisitor requiert le scope d'administration de la famille de ressources"
+		},
+		"settings": {
+			"duplicateTopicId": "Les thématiques \"{{{first}}}\" et \"{{{second}}}\" ont le même identifiant",
+			"reservedGroupKey": "La catégorie \"{{{title}}}\" utilise un identifiant réservé",
+			"duplicateGroupKey": "Les catégories \"{{{first}}}\" et \"{{{second}}}\" ont le même identifiant"
+		},
+		"remoteServices": {
+			"onlyGet": "Seules les opérations de type GET sont autorisées sur cette exposition de service",
+			"unknown": "service distant inconnu"
+		},
+		"query": {
+			"qsSyntax": "Impossible d'effectuer cette recherche, la syntaxe du paramètre \"qs\" n'est pas respectée : requête = \"{{{query}}}\", erreur = \"{{{error}}}\"",
+			"noAccountConcept": "Impossible de filtrer sur le concept compte, il n'est pas défini sur le jeu de données.",
+			"qTooLong": "Les paramètres q et q_ignored sont limités à {{{max}}} caractères.",
+			"filterValueRequired": "Filtre {{{filter}}} nécessite une valeur.",
+			"dateMatchUnavailable": "\"date_match\" ne peut pas être utilisé sur ce jeu de données.",
+			"tooLong": "Cette requête est trop longue, son traitement a été interrompu.",
+			"invalidQMode": "q_mode invalide \"{{{value}}}\" — valeurs acceptées : simple (ou or), complete, and, adapt",
+			"qIgnoredNotInQ": "Le paramètre q_ignored contient \"{{{word}}}\" qui n'est pas un mot de la recherche q.",
+			"qIgnoredAll": "Le paramètre q_ignored ne peut pas couvrir tous les mots de la recherche q."
+		},
+		"aggs": {
+			"sortGroups": "Impossible de trier les groupes de la colonne {{{field}}} par {{{key}}}",
+			"fieldRequired": "Le paramètre \"field\" est obligatoire",
+			"unknownField": "Le paramètre \"field\" référence un champ inconnu {{{field}}}",
+			"intervalType": "Grouper par intervalle est seulement compatible avec les nombres et dates. {{{field}}} n'est pas du bon type.",
+			"tooManyBuckets": "Résultats d'agrégation trop nombreux. Abandon.",
+			"tooManyWords": "Cette agrégation ne peut pas retourner plus de 200 mots.",
+			"unknownMetric": "La métrique \"{{{metric}}}\" n'existe pas.",
+			"mixedShapes": "Cette agrégation est indisponible tant que les jeux enfants ne sont pas tous ré-indexés dans un format homogène.",
+			"analysisStandardRetired": "Le paramètre analysis=standard n'est plus disponible sur ce jeu de données, l'analyse suit la langue de la colonne."
+		},
+		"datasets": {
+			"blockingOperation": "Une opération bloquante est déjà en cours sur le jeu de données {{{id}}}.",
+			"badState": "Le jeu de données n'est pas dans un état permettant l'opération demandée. État courant : {{{status}}}.",
+			"multipleTypes": "Un jeu de données ne peut pas être de plusieurs types à la fois",
+			"virtualTitleRequired": "Un jeu de données virtuel doit être créé avec un titre",
+			"restTitleRequired": "Un jeu de données éditable doit être créé avec un titre",
+			"metaOnlyTitleRequired": "Un jeu de données métadonnées doit être créé avec un titre",
+			"virtualNoAttachments": "Un jeu de données virtuel ne peut pas avoir de pièces jointes",
+			"restNoAttachments": "Un jeu de données éditable ne peut pas être créé avec des pièces jointes",
+			"initRequired": "Un jeu de données doit être initialisé avec un fichier ou déclaré \"virtuel\" ou \"éditable\" ou \"métadonnées\"",
+			"dateCoherenceExistingLines": "La contrainte de cohérence des dates ne peut pas être appliquée : au moins une ligne existante ne la respecte pas. {{{detail}}}",
+			"notDraft": "Le jeu de données n'est pas en état brouillon",
+			"cancelInitialDraft": "Impossible d'annuler un brouillon si aucune version du jeu de données n'a été validée.",
+			"integrityOwnerChange": "Le contrôle d'intégrité doit être désactivé avant un changement de propriétaire",
+			"datasetStorageLimit": "Vous avez atteint la limite d'espace disque pour ce jeu de données.",
+			"datasetIndexedLimit": "Vous dépassez le volume autorisé pour ce jeu de données."
+		},
+		"virtual": {
+			"childDeleted": "le jeu de données \"{{{id}}}\" n'existe plus",
+			"childNotReadable": "le jeu de données \"{{{title}}}\" ({{{id}}}, propriété de {{{owner}}}) n'est pas accessible en lecture par le compte propriétaire du jeu de données virtuel",
+			"ownerUser": "utilisateur \"{{{name}}}\"",
+			"ownerOrganization": "organisation \"{{{name}}}\"",
+			"ownerDepartment": "{{{owner}}} / département \"{{{department}}}\"",
+			"schemaUnavailable": "Le schéma du jeu de données virtuel ne peut pas être établi : {{{details}}}.",
+			"protectedField": "Le champ \"{{{field}}}\" est interdit. Il est présent dans un jeu de données enfant mais est protégé.",
+			"conflictingTypes": "Le champ \"{{{field}}}\" a des types contradictoires ({{{value1}}}, {{{value2}}}).",
+			"conflictingNumberTypes": "Le champ \"{{{field}}}\" a des types contradictoires ({{{value1}}}, {{{value2}}}). Vous pouvez corriger cette incohérence en forçant le traitement des colonnes comme des nombres flottants dans tous les jeux enfants.",
+			"conflictingSeparators": "Le champ \"{{{field}}}\" a des séparateurs contradictoires ({{{value1}}}, {{{value2}}}).",
+			"conflictingFormats": "Le champ \"{{{field}}}\" a des formats contradictoires ({{{value1}}}, {{{value2}}}).",
+			"conflictingConcepts": "Le champ \"{{{field}}}\" a des concepts contradictoires ({{{value1}}}, {{{value2}}}).",
+			"notDefined": "non défini",
+			"conceptReused": "Le concept \"{{{concept}}}\" est référencé par plusieurs champs ({{{field1}}}, {{{field2}}}).",
+			"cannotQuery": "Le jeu de données virtuel \"{{{id}}}\" ne peut pas être requêté : {{{details}}}.",
+			"activeAccountChild": "Le jeu de données virtuel \"{{{id}}}\" ne peut pas être requêté : il utilise le jeu de données virtuel enfant \"{{{child}}}\" qui définit un filtre sur le compte actif, ce qui n'est pas supporté.",
+			"noQueryableChild": "Le jeu de données virtuel ne peut pas être requêté, il n'utilise aucun jeu de données requêtable."
+		},
+		"constraints": {
+			"unsupportedDataset": "Les contraintes ne sont pas prises en charge sur les jeux de données virtuels ou sans données (isMetaOnly).",
+			"onlyOneDateCoherence": "Une seule contrainte de cohérence des dates peut être déclarée.",
+			"dateCoherenceConcepts": "La contrainte de cohérence des dates nécessite une colonne portant le concept \"Date de début\" (https://schema.org/startDate) et une colonne portant le concept \"Date de fin\" (https://schema.org/endDate).",
+			"dateCoherenceCalculated": "La colonne \"{{{key}}}\" est calculée ou issue d'un enrichissement et ne peut pas porter la contrainte de cohérence des dates.",
+			"dateCoherenceType": "La colonne \"{{{key}}}\" doit être une date ou une date-heure pour porter la contrainte de cohérence des dates.",
+			"dateCoherenceMultivalued": "La colonne \"{{{key}}}\" est multivaluée et ne peut pas porter la contrainte de cohérence des dates.",
+			"uniqueEmpty": "Une contrainte d'unicité doit porter sur au moins une colonne.",
+			"uniqueUnknownColumn": "La colonne \"{{{key}}}\" d'une contrainte d'unicité n'existe pas dans le schéma.",
+			"uniqueCalculated": "La colonne \"{{{key}}}\" est calculée ou issue d'un enrichissement et ne peut pas porter une contrainte d'unicité.",
+			"uniqueNotGroupable": "La colonne \"{{{key}}}\" doit avoir la capacité \"Triable et groupable\" activée pour porter une contrainte d'unicité.",
+			"uniqueGeometry": "La colonne \"{{{key}}}\" est une géométrie et ne peut pas porter une contrainte d'unicité.",
+			"uniqueObject": "La colonne \"{{{key}}}\" est un objet et ne peut pas porter une contrainte d'unicité.",
+			"uniqueMultivalued": "La colonne \"{{{key}}}\" est multivaluée et ne peut pas porter une contrainte d'unicité.",
+			"uniqueExistingViolation": "Les données existantes du jeu de données violent la contrainte d'unicité sur ({{{columns}}})."
+		},
+		"rest": {
+			"notRest": "Les opérations de modifications sur les lignes sont uniquement accessibles pour les jeux de données éditables.",
+			"ownLinesUnsupported": "Les opérations de gestion des lignes par propriétaires ne sont pas supportées pour ce jeu de données.",
+			"invalidAttachmentLineId": "identifiant de ligne invalide pour une pièce jointe",
+			"noAttachmentField": "Le schéma ne prévoit pas d'associer une pièce jointe",
+			"indexRejected": "la ligne est enregistrée mais son indexation a été refusée par elasticsearch pour {{{count}}} ligne(s) : {{{reason}}}",
+			"unsupportedAction": "action \"{{{action}}}\" non supportée sur cette route, utilisez POST /lines",
+			"deleteAllIntegrity": "suppression de toutes les lignes refusée tant que le suivi d'intégrité est actif",
+			"dropIntegrity": "le mode drop est refusé tant que le suivi d'intégrité est actif",
+			"dropOwnLines": "le mode drop est refusé sur les routes de gestion de ses propres lignes",
+			"attachmentsOwnLines": "Une archive de pièces jointes ne peut pas être envoyée sur les routes de gestion de ses propres lignes",
+			"mandatoryExtensionInMemory": "Une extension obligatoire est configurée sur ce jeu de données. La requête doit être traitée en mémoire et ne peut donc pas dépasser {{{max}}} caractères ni utiliser le mode \"async\". Découpez la requête en plus petits lots.",
+			"transactionsUnreadable": "Le fichier de transactions n'a pas pu être lu, merci de réessayer.",
+			"syncNoAttachment": "Le schéma ne prévoit pas de pièce jointe",
+			"syncAttachmentNotPrimaryKey": "Le schéma ne définit pas le chemin de la pièce jointe comme clé primaire",
+			"historyDisabled": "L'historisation des lignes n'est pas activée pour ce jeu de données.",
+			"unknownLine": "Identifiant de ligne inconnu"
+		},
+		"files": {
+			"attachmentDownloadFailed": "Échec de téléchargement du fichier : {{{message}}}",
+			"noDataFile": "Ce jeu de données ne contient pas de fichier de données",
+			"noDiagnostic": "Aucun fichier de diagnostic disponible"
+		},
+		"patch": {
+			"attachmentNoExtension": "Le nom de fichier de la pièce jointe {{{name}}} ne contient pas d'extension.",
+			"attachmentNoTarget": "Impossible de créer la pièce jointe {{{name}}} sans URL cible",
+			"ownershipInPrimaryKey": "Impossible de désactiver la propriété des lignes tant que les colonnes de propriété font partie de la clé primaire",
+			"ownershipInConstraint": "Impossible de désactiver la propriété des lignes tant qu'une contrainte d'unicité porte sur les colonnes de propriété",
+			"primaryKeyModeChange": "Impossible de changer le mode de clé primaire"
+		},
+		"schema": {
+			"extensionKeyConflict": "Une extension essaie de créer la colonne \"{{{key}}}\" mais cette clé est déjà utilisée.",
+			"unsafeKeys": "Les clés de colonnes suivantes ne peuvent pas contenir de point ni commencer par \"_\" : {{{details}}}.",
+			"unsafeKeyDetail": "\"{{{key}}}\" (utilisez plutôt \"{{{normalized}}}\")"
+		},
+		"upload": {
+			"attachmentsNotZip": "Les fichiers joints doivent être embarqués dans une archive zip",
+			"unsupportedField": "Fichier dans un champ non supporté : \"{{{field}}}\""
+		},
+		"extensions": {
+			"unknownRemoteService": "source de données de référence inconnue \"{{{id}}}\"",
+			"unknownAction": "opération de récupération de données de référence inconnue \"{{{action}}}\"",
+			"missingConcept": "erreur de validation de l'extension \"{{{summary}}}\", un concept nécessaire à l'utilisation de la donnée de référence n'est pas présent dans le jeu de données ({{{concepts}}})",
+			"invalidCalculatedColumn": "erreur de validation de la colonne calculée \"{{{key}}}\", {{{error}}}"
+		},
+		"masterData": {
+			"inputRequired": "la propriété en entrée {{{property}}} est obligatoire",
+			"unknownBulkSearch": "Recherche en masse \"{{{id}}}\" inconnue",
+			"unknownSingleSearch": "Recherche unitaire \"{{{id}}}\" inconnue"
+		},
+		"customMetadata": {
+			"unknown": "métadonnée personnalisée inconnue : {{{key}}}"
+		}
 	},
 	"appRequire": {
 		"noDataset": "N'utilise pas de jeu de données comme source.",

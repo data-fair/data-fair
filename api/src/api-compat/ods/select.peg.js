@@ -5,8 +5,12 @@
 
 
 
+import { invalidGeometryError } from './errors.ts'
+
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { requiredCapability } from '../../datasets/es/operations.ts'
+import { unknownFieldError } from '../../datasets/utils/field-errors.ts'
+import { notNumericError, notDateError } from './errors.ts'
 
 const LBRACE='{';
 const RBRACE='}';
@@ -15,8 +19,8 @@ const RBRACE='}';
 
 const assertDate = (dataset, key, operation) => {
   const prop = dataset.schema.find(p => p.key === key)
-  if (!prop) throw httpError(400, `Impossible de sélectionner le champ ${key}, il n'existe pas dans le jeu de données.`)
-  if (prop.type !== 'string' || (prop.format !== 'date' && prop.format !== 'date-time')) throw httpError(400, `Impossible de calculer ${operation}, la colonne n'est pas de type date.`)
+  if (!prop) throw unknownFieldError('select', key)
+  if (prop.type !== 'string' || (prop.format !== 'date' && prop.format !== 'date-time')) throw notDateError(operation)
   return prop
 }
 
@@ -400,13 +404,13 @@ function peg$parse(input, options) {
   var peg$f2 = function(selectItem) { return selectItem };
   var peg$f3 = function(key) {
     const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop) throw httpError(400, `Impossible de sélectionner le champ ${key}, il n'existe pas dans le jeu de données.`)
+    if (!prop) throw unknownFieldError('select', key)
     return { source: key }
   };
   var peg$f4 = function(key) {
     const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop) throw httpError(400, `Impossible de sélectionner le champ ${key}, il n'existe pas dans le jeu de données.`)
-    if (prop.type !== 'number' && prop.type !== 'integer') throw httpError(400, `Impossible de calculer la moyenne du champ ${key}, il n'est pas de type numérique.`)
+    if (!prop) throw unknownFieldError('select', key)
+    if (prop.type !== 'number' && prop.type !== 'integer') throw notNumericError('select', 'avg', key)
     return { aggregation: { [text()]: { avg: {field: key} } } }
   };
   var peg$f5 = function() {
@@ -415,12 +419,12 @@ function peg$parse(input, options) {
   };
   var peg$f6 = function(key) {
     const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop) throw httpError(400, `Impossible de sélectionner le champ ${key}, il n'existe pas dans le jeu de données.`)
+    if (!prop) throw unknownFieldError('select', key)
     return { aggregation: { [text()]: { value_count: {field: key} } } }
   };
   var peg$f7 = function(key) {
     const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop) throw httpError(400, `Impossible de sélectionner le champ ${key}, il n'existe pas dans le jeu de données.`)
+    if (!prop) throw unknownFieldError('select', key)
     return { aggregation: { [text()]: { cardinality: {field: key} } } }
   };
   var peg$f8 = function(key) {
@@ -431,30 +435,30 @@ function peg$parse(input, options) {
   };
   var peg$f9 = function(key) {
     const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop) throw httpError(400, `Impossible de sélectionner le champ ${key}, il n'existe pas dans le jeu de données.`)
+    if (!prop) throw unknownFieldError('select', key)
     return { aggregation: { [text()]: { max: {field: key} } } }
   };
   var peg$f10 = function(key) {
     const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop) throw httpError(400, `Impossible de sélectionner le champ ${key}, il n'existe pas dans le jeu de données.`)
+    if (!prop) throw unknownFieldError('select', key)
     return { aggregation: { [text()]: { min: {field: key} } } }
   };
   var peg$f11 = function(key) {
     const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop) throw httpError(400, `Impossible de sélectionner le champ ${key}, il n'existe pas dans le jeu de données.`)
-    if (prop.type !== 'number' && prop.type !== 'integer') throw httpError(400, `Impossible de calculer la somme du champ ${key}, il n'est pas de type numérique.`)
+    if (!prop) throw unknownFieldError('select', key)
+    if (prop.type !== 'number' && prop.type !== 'integer') throw notNumericError('select', 'sum', key)
     return { aggregation: { [text()]: { sum: {field: key} } } }
   };
   var peg$f12 = function(key, percent) {
     const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop) throw httpError(400, `Impossible de sélectionner le champ ${key}, il n'existe pas dans le jeu de données.`)
-    if (prop.type !== 'number' && prop.type !== 'integer') throw httpError(400, `Impossible de calculer les percentiles du champ ${key}, il n'est pas de type numérique.`)
+    if (!prop) throw unknownFieldError('select', key)
+    if (prop.type !== 'number' && prop.type !== 'integer') throw notNumericError('select', 'percentile', key)
     return { aggregation: { [text()]: { percentiles: {field: key, percents: [percent], keyed: false} } } }
   };
   var peg$f13 = function(key) {
     const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop) throw httpError(400, `Impossible de sélectionner le champ ${key}, il n'existe pas dans le jeu de données.`)
-    if (prop.type !== 'number' && prop.type !== 'integer') throw httpError(400, `Impossible de calculer la médiane du champ ${key}, il n'est pas de type numérique.`)
+    if (!prop) throw unknownFieldError('select', key)
+    if (prop.type !== 'number' && prop.type !== 'integer') throw notNumericError('select', 'median', key)
     return { aggregation: { [text()]: { percentiles: {field: key, percents: [50], keyed: false} } } }
   };
   var peg$f14 = function(part, key) {
@@ -491,7 +495,7 @@ function peg$parse(input, options) {
       try {
         return JSON.parse(str)
       } catch (err) {
-        throw httpError(400, `Impossible de parser la géométrie ${str}, erreur: ${err.message}`)
+        throw invalidGeometryError(str, err)
       }
     } else {
       return str

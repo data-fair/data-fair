@@ -28,6 +28,35 @@ const metadataGroup = (defaultGroup, toggleable = false, cols = 4) => ({
   }
 })
 
+/** @typedef {{ title: string, description: string, 'x-i18n-title': { fr: string }, 'x-i18n-description': { fr: string } }} MetadataTexts */
+/**
+ * title and description of a metadata switch, English in the base keywords and French in the x-i18n overrides
+ * @param {string} title
+ * @param {string} description
+ * @param {string} titleFr
+ * @param {string} descriptionFr
+ * @returns {MetadataTexts}
+ */
+const metadataTexts = (title, description, titleFr, descriptionFr) => ({
+  title,
+  description,
+  'x-i18n-title': { fr: titleFr },
+  'x-i18n-description': { fr: descriptionFr }
+})
+
+// the custom label of an optional metadata, its default label as placeholder
+/** @param {MetadataTexts} texts */
+const metadataCustomTitle = (texts) => ({
+  title: 'Custom label',
+  'x-i18n-title': { fr: 'Libellé personnalisé' },
+  type: 'string',
+  layout: {
+    if: 'parent.data.active',
+    cols: 4,
+    props: { variant: 'outlined', placeholder: texts.title, 'x-i18n-placeholder': texts['x-i18n-title'] }
+  }
+})
+
 const scoreActive = 'rootData.completeness?.active'
 const weightTitles = { title: 'Weight', 'x-i18n-title': { fr: 'Poids' } }
 /**
@@ -91,26 +120,35 @@ const metadataHelp = (toggleable = false) => ({
 
 // a metadata always shown on a dataset: its tab can be chosen, except for summary and description, and its help
 /**
- * @param {string} title
+ * @param {MetadataTexts} texts
  * @param {{ key: string }} defaultGroup
- * @param {string} description
- * @param {string} titleEn
- * @param {string} descriptionEn
  * @param {number} weight
  * @param {Bounds} [bounds]
  * @param {boolean} [fixedGroup]
  */
-const fixedMetadata = (title, defaultGroup, description, titleEn, descriptionEn, weight, bounds, fixedGroup = false) => ({
+const fixedMetadata = (texts, defaultGroup, weight, bounds, fixedGroup = false) => ({
   type: 'object',
   // an empty middle column, where the other rows have their custom label, keeps the help next to the switch
   layout: { children: ['active', { text: '\u00a0', cols: 4 }, 'group', 'description'] },
   properties: {
-    active: { title, description, 'x-i18n-title': { en: titleEn }, 'x-i18n-description': { en: descriptionEn }, type: 'boolean', readOnly: true, default: true, layout: { comp: 'switch', cols: 4 } },
+    active: { ...texts, type: 'boolean', readOnly: true, default: true, layout: { comp: 'switch', cols: 4 } },
     group: fixedGroup ? { ...metadataGroup(defaultGroup), readOnly: true } : metadataGroup(defaultGroup),
     description: metadataHelp(),
     ...scoreProperties(weight, bounds)
   }
 })
+
+// texts of the optional metadata, shared by their switch and the placeholder of their custom label
+const optionalTexts = {
+  creator: metadataTexts('Producer', 'Organization or person who produced the data, when it is not the owner of the dataset.', 'Producteur', "Organisation ou personne qui a produit les données, quand ce n'est pas le propriétaire du jeu de données."),
+  spatial: metadataTexts('Geographic coverage', 'Geographic area covered by the data, for example a municipality or a region.', 'Couverture géographique', 'Zone géographique couverte par les données, par exemple une commune ou une région.'),
+  temporal: metadataTexts('Temporal coverage', 'Period covered by the data.', 'Couverture temporelle', 'Période couverte par les données.'),
+  frequency: metadataTexts('Update frequency', 'How often the data is updated.', 'Fréquence de mise à jour', 'Fréquence à laquelle les données sont mises à jour.'),
+  modified: metadataTexts('Source modification date', 'Date the data was modified at its source, when it differs from the date it was loaded into Data Fair. It is used to sort datasets by update date, on portals in particular: left empty, the date of the last data update is used.', 'Date de modification de la source', "Date à laquelle les données ont été modifiées à leur source, quand elle diffère de leur date de chargement dans Data Fair. Elle sert au tri des jeux de données par date de mise à jour, notamment sur les portails : laissée vide, c'est la date de la dernière mise à jour des données qui est utilisée."),
+  keywords: metadataTexts('Keywords', 'Free words describing the dataset, used by the search and filters of portals.', 'Mots-clés', 'Mots libres qui décrivent le jeu de données, utilisés par la recherche et les filtres des portails.'),
+  searchTerms: metadataTexts('Associated search terms', 'Free text used only by the catalog search, never displayed: synonyms, acronyms with their expansion, everyday wording. This field is shown nowhere but remains in the public API response of the dataset: do not put anything confidential in it.', 'Termes de recherche associés', "Texte libre utilisé uniquement par la recherche du catalogue, jamais affiché : synonymes, sigles et leur développement, formulations courantes. Ce champ n'est affiché nulle part mais reste présent dans la réponse API publique du jeu de données : n'y mettez rien de confidentiel."),
+  conformsTo: metadataTexts('Schema', 'Data schema the dataset conforms to, for example a schema published on schema.data.gouv.fr. It is set in the Structure section of the dataset.', 'Schéma', 'Schéma de données auquel le jeu de données est conforme, par exemple un schéma publié sur schema.data.gouv.fr. Il se renseigne dans la section Structure du jeu de données.')
+}
 
 export default {
   $id: 'https://github.com/data-fair/data-fair/settings',
@@ -146,15 +184,18 @@ export default {
           properties: {
             name: {
               type: 'string',
-              title: 'Nom'
+              title: 'Name',
+              'x-i18n-title': { fr: 'Nom' }
             },
             url: {
               type: 'string',
-              title: 'URL'
+              title: 'URL',
+              'x-i18n-title': { fr: 'URL' }
             },
             email: {
               type: 'string',
-              title: 'Email'
+              title: 'Email',
+              'x-i18n-title': { fr: 'Email' }
             }
           }
         }
@@ -163,6 +204,7 @@ export default {
     webhooks: {
       type: 'array',
       title: 'Webhooks',
+      'x-i18n-title': { fr: 'Webhooks' },
       layout: {
         title: '',
         messages: {
@@ -230,10 +272,12 @@ export default {
                 'x-i18n-title': { fr: 'Un jeu de données a été finalisé' }
               }, {
                 const: 'dataset-integrity-breach',
-                title: 'L\'intégrité d\'un jeu de données est rompue'
+                title: 'The integrity of a dataset is breached',
+                'x-i18n-title': { fr: 'L\'intégrité d\'un jeu de données est rompue' }
               }, {
                 const: 'dataset-integrity-trail-altered',
-                title: 'L\'historique de révisions d\'un jeu de données est altéré'
+                title: 'The revision history of a dataset has been altered',
+                'x-i18n-title': { fr: 'L\'historique de révisions d\'un jeu de données est altéré' }
               }, {
                 const: 'application-application-created',
                 title: 'A new visualization has been created',
@@ -249,11 +293,13 @@ export default {
             type: 'object',
             required: ['type'],
             oneOf: [{
-              title: 'Appel HTTP simple (compatible avec Slack et Mattermost)',
+              title: 'HTTP call',
+              'x-i18n-title': { fr: 'Appel HTTP simple (compatible avec Slack et Mattermost)', en: 'Simple HTTP call (compatible with Slack and Mattermost)' },
               properties: {
                 type: {
                   const: 'http',
-                  title: 'Type de cible'
+                  title: 'Target type',
+                  'x-i18n-title': { fr: 'Type de cible' }
                 },
                 params: {
                   type: 'object',
@@ -261,7 +307,8 @@ export default {
                   properties: {
                     url: {
                       type: 'string',
-                      title: 'URL du serveur HTTP cible'
+                      title: 'Target HTTP server URL',
+                      'x-i18n-title': { fr: 'URL du serveur HTTP cible' }
                     }
                   }
                 }
@@ -427,7 +474,8 @@ export default {
         properties: {
           id: {
             type: 'string',
-            title: 'Identifiant',
+            title: 'Identifier',
+            'x-i18n-title': { fr: 'Identifiant' },
             readOnly: true,
             layout: {
               if: { type: 'js-eval', expr: 'parent.data.id', pure: false }
@@ -438,21 +486,21 @@ export default {
             layout: 'none',
             items: {
               type: 'string',
-              title: 'Identifiant vocabulaire extérieur',
-              description: 'Renseignez idéalement une URI issue d\'un vocabulaire standardisé comme schema.org, c\'est à dire un identifiant mondialement unique pour ce concept. Si ce n\'est pas possible vous pouvez laisser cette information vide.'
+              title: 'External vocabulary identifier',
+              description: 'Ideally a URI from a standard vocabulary such as schema.org, i.e. a globally unique identifier of this concept. Can be left empty.'
             }
           },
-          title: { type: 'string', title: 'Titre', minLength: 3 },
-          description: { type: 'string', title: 'Description' },
-          tag: { type: 'string', title: 'Catégorie' },
+          title: { type: 'string', title: 'Title', 'x-i18n-title': { fr: 'Titre' }, minLength: 3 },
+          description: { type: 'string', title: 'Description', 'x-i18n-title': { fr: 'Description' } },
+          tag: { type: 'string', title: 'Category', 'x-i18n-title': { fr: 'Catégorie' } },
           // the default is a fallback read by the code, never written: the placeholder shows it
-          type: { type: 'string', title: 'Type', default: 'string', layout: { props: { placeholder: 'Chaîne de caractère', persistentPlaceholder: true } }, oneOf: [{ title: 'Chaîne de caractère', const: 'string' }, { title: 'Nombre', const: 'number' }] }
+          type: { type: 'string', title: 'Type', 'x-i18n-title': { fr: 'Type' }, default: 'string', layout: { props: { placeholder: 'String', 'x-i18n-placeholder': { fr: 'Chaîne de caractères' }, persistentPlaceholder: true } }, oneOf: [{ title: 'String', 'x-i18n-title': { fr: 'Chaîne de caractères' }, const: 'string' }, { title: 'Number', 'x-i18n-title': { fr: 'Nombre' }, const: 'number' }] }
         }
       }
     },
     datasetsMetadata: {
       type: 'object',
-      title: 'Options des métadonnées de jeux de données',
+      title: 'Datasets metadata options',
       layout: {
         title: null
       },
@@ -520,35 +568,24 @@ export default {
             }
           }
         },
-        summary: fixedMetadata('Résumé', informationsGroup, 'Courte présentation du jeu de données, affichée dans les listes et sur les vignettes des portails.', 'Summary', 'Short presentation of the dataset, shown in lists and on portal thumbnails.', 3, { unit: chars, min: 100, max: 300 }, true),
+        summary: fixedMetadata(metadataTexts('Summary', 'Short presentation of the dataset, shown in lists and on portal thumbnails.', 'Résumé', 'Courte présentation du jeu de données, affichée dans les listes et sur les vignettes des portails.'), informationsGroup, 3, { unit: chars, min: 100, max: 300 }, true),
         // Google Dataset rich results expect a description of 50 to 5000 characters
-        description: fixedMetadata('Description', informationsGroup, 'Présentation détaillée du jeu de données, rédigée en markdown.', 'Description', 'Detailed presentation of the dataset, written in markdown.', 4, { unit: chars, min: 300, max: 5000 }, true),
-        license: fixedMetadata('Licence', informationsGroup, "Conditions de réutilisation des données. La liste des licences proposées se règle dans l'onglet Licences.", 'License', 'Terms for reusing the data. The list of offered licenses is set in the Licenses tab.', 3),
-        origin: fixedMetadata('Provenance', informationsGroup, "Adresse de la page où les données d'origine sont publiées, par exemple sur le site du producteur.", 'Origin', "Address of the page where the original data is published, for example on the producer's website.", 1),
-        image: fixedMetadata('Vignette', coverageGroup, "Adresse d'une image utilisée comme vignette du jeu de données, dans les listes et sur les portails.", 'Thumbnail', 'Address of an image used as the dataset thumbnail, in lists and on portals.', 1),
-        topics: fixedMetadata('Thématiques', informationsGroup, 'Thématiques définies dans la section Thématiques des paramètres. Elles servent à classer et à filtrer les jeux de données sur les portails.', 'Topics', 'Topics defined in the Topics section of the settings. They classify and filter datasets on portals.', 2, { unit: values }),
-        relatedDatasets: fixedMetadata('Jeux de données liés', coverageGroup, "Sélectionnez d'autres jeux de données proches (même thématique, structure similaire, ou autre critère) pour les proposer aux utilisateurs de portails.", 'Related datasets', 'Select other similar datasets (same topic, similar structure or any other criterion) to suggest them to portal users.', 0, { unit: values }),
+        description: fixedMetadata(metadataTexts('Description', 'Detailed presentation of the dataset, written in markdown.', 'Description', 'Présentation détaillée du jeu de données, rédigée en markdown.'), informationsGroup, 4, { unit: chars, min: 300, max: 5000 }, true),
+        license: fixedMetadata(metadataTexts('License', 'Terms for reusing the data. The list of offered licenses is set in the Licenses tab.', 'Licence', "Conditions de réutilisation des données. La liste des licences proposées se règle dans l'onglet Licences."), informationsGroup, 3),
+        origin: fixedMetadata(metadataTexts('Origin', "Address of the page where the original data is published, for example on the producer's website.", 'Provenance', "Adresse de la page où les données d'origine sont publiées, par exemple sur le site du producteur."), informationsGroup, 1),
+        image: fixedMetadata(metadataTexts('Thumbnail', 'Address of an image used as the dataset thumbnail, in lists and on portals.', 'Vignette', "Adresse d'une image utilisée comme vignette du jeu de données, dans les listes et sur les portails."), coverageGroup, 1),
+        topics: fixedMetadata(metadataTexts('Topics', 'Topics defined in the Topics section of the settings. They classify and filter datasets on portals.', 'Thématiques', 'Thématiques définies dans la section Thématiques des paramètres. Elles servent à classer et à filtrer les jeux de données sur les portails.'), informationsGroup, 2, { unit: values }),
+        relatedDatasets: fixedMetadata(metadataTexts('Related datasets', 'Select other similar datasets (same topic, similar structure or any other criterion) to suggest them to portal users.', 'Jeux de données liés', "Sélectionnez d'autres jeux de données proches (même thématique, structure similaire, ou autre critère) pour les proposer aux utilisateurs de portails."), coverageGroup, 0, { unit: values }),
         creator: {
           type: 'object',
           properties: {
             active: {
-              title: 'Producteur',
-              description: "Organisation ou personne qui a produit les données, quand ce n'est pas le propriétaire du jeu de données.",
-              'x-i18n-title': { en: 'Producer' },
-              'x-i18n-description': { en: 'Organization or person who produced the data, when it is not the owner of the dataset.' },
+              ...optionalTexts.creator,
               type: 'boolean',
               default: false,
               layout: { comp: 'switch', cols: 4 }
             },
-            title: {
-              title: 'Libellé personnalisé',
-              type: 'string',
-              layout: {
-                if: 'parent.data.active',
-                cols: 4,
-                props: { variant: 'outlined', placeholder: 'Producteur' }
-              }
-            },
+            title: metadataCustomTitle(optionalTexts.creator),
             group: metadataGroup(informationsGroup, true),
             description: metadataHelp(true),
             ...scoreProperties(2)
@@ -559,23 +596,12 @@ export default {
           type: 'object',
           properties: {
             active: {
-              title: 'Couverture géographique',
-              description: 'Zone géographique couverte par les données, par exemple une commune ou une région.',
-              'x-i18n-title': { en: 'Geographic coverage' },
-              'x-i18n-description': { en: 'Geographic area covered by the data, for example a municipality or a region.' },
+              ...optionalTexts.spatial,
               type: 'boolean',
               default: false,
               layout: { comp: 'switch', cols: 4 }
             },
-            title: {
-              title: 'Libellé personnalisé',
-              type: 'string',
-              layout: {
-                if: 'parent.data.active',
-                cols: 4,
-                props: { variant: 'outlined', placeholder: 'Couverture géographique' }
-              }
-            },
+            title: metadataCustomTitle(optionalTexts.spatial),
             group: metadataGroup(coverageGroup, true),
             description: metadataHelp(true),
             ...scoreProperties(1)
@@ -586,23 +612,12 @@ export default {
           type: 'object',
           properties: {
             active: {
-              title: 'Couverture temporelle',
-              description: 'Période couverte par les données.',
-              'x-i18n-title': { en: 'Temporal coverage' },
-              'x-i18n-description': { en: 'Period covered by the data.' },
+              ...optionalTexts.temporal,
               type: 'boolean',
               default: false,
               layout: { comp: 'switch', cols: 4 }
             },
-            title: {
-              title: 'Libellé personnalisé',
-              type: 'string',
-              layout: {
-                if: 'parent.data.active',
-                cols: 4,
-                props: { variant: 'outlined', placeholder: 'Couverture temporelle' }
-              }
-            },
+            title: metadataCustomTitle(optionalTexts.temporal),
             group: metadataGroup(coverageGroup, true),
             description: metadataHelp(true),
             ...scoreProperties(1)
@@ -613,23 +628,12 @@ export default {
           type: 'object',
           properties: {
             active: {
-              title: 'Fréquence de mise à jour',
-              description: 'Fréquence à laquelle les données sont mises à jour.',
-              'x-i18n-title': { en: 'Update frequency' },
-              'x-i18n-description': { en: 'How often the data is updated.' },
+              ...optionalTexts.frequency,
               type: 'boolean',
               default: false,
               layout: { comp: 'switch', cols: 4 }
             },
-            title: {
-              title: 'Libellé personnalisé',
-              type: 'string',
-              layout: {
-                if: 'parent.data.active',
-                cols: 4,
-                props: { variant: 'outlined', placeholder: 'Fréquence de mise à jour' }
-              }
-            },
+            title: metadataCustomTitle(optionalTexts.frequency),
             group: metadataGroup(coverageGroup, true),
             description: metadataHelp(true),
             ...scoreProperties(2)
@@ -639,23 +643,12 @@ export default {
           type: 'object',
           properties: {
             active: {
-              title: 'Date de modification de la source',
-              description: "Date à laquelle les données ont été modifiées à leur source, quand elle diffère de leur date de chargement dans Data Fair. Elle sert au tri des jeux de données par date de mise à jour, notamment sur les portails : laissée vide, c'est la date de la dernière mise à jour des données qui est utilisée.",
-              'x-i18n-title': { en: 'Source modification date' },
-              'x-i18n-description': { en: 'Date the data was modified at its source, when it differs from the date it was loaded into Data Fair.' },
+              ...optionalTexts.modified,
               type: 'boolean',
               default: false,
               layout: { comp: 'switch', cols: 4 }
             },
-            title: {
-              title: 'Libellé personnalisé',
-              type: 'string',
-              layout: {
-                if: 'parent.data.active',
-                cols: 4,
-                props: { variant: 'outlined', placeholder: 'Date de modification de la source' }
-              }
-            },
+            title: metadataCustomTitle(optionalTexts.modified),
             group: metadataGroup(coverageGroup, true),
             description: metadataHelp(true),
             ...scoreProperties(0)
@@ -665,23 +658,12 @@ export default {
           type: 'object',
           properties: {
             active: {
-              title: 'Mots-clés',
-              description: 'Mots libres qui décrivent le jeu de données, utilisés par la recherche et les filtres des portails.',
-              'x-i18n-title': { en: 'Keywords' },
-              'x-i18n-description': { en: 'Free words describing the dataset, used by the search and filters of portals.' },
+              ...optionalTexts.keywords,
               type: 'boolean',
               default: false,
               layout: { comp: 'switch', cols: 4 }
             },
-            title: {
-              title: 'Libellé personnalisé',
-              type: 'string',
-              layout: {
-                if: 'parent.data.active',
-                cols: 4,
-                props: { variant: 'outlined', placeholder: 'Mots-clés' }
-              }
-            },
+            title: metadataCustomTitle(optionalTexts.keywords),
             group: metadataGroup(coverageGroup, true),
             description: metadataHelp(true),
             ...scoreProperties(2, { unit: values })
@@ -691,23 +673,12 @@ export default {
           type: 'object',
           properties: {
             active: {
-              title: 'Termes de recherche associés',
-              description: "Texte libre utilisé uniquement par la recherche du catalogue, jamais affiché : synonymes, sigles et leur développement, formulations courantes. Ce champ n'est affiché nulle part mais reste présent dans la réponse API publique du jeu de données : n'y mettez rien de confidentiel.",
-              'x-i18n-title': { en: 'Associated search terms' },
-              'x-i18n-description': { en: 'Free text used only by the catalog search, never displayed: synonyms, acronyms with their expansion, everyday wording.' },
+              ...optionalTexts.searchTerms,
               type: 'boolean',
               default: true,
               layout: { comp: 'switch', cols: 4 }
             },
-            title: {
-              title: 'Libellé personnalisé',
-              type: 'string',
-              layout: {
-                if: 'parent.data.active',
-                cols: 4,
-                props: { variant: 'outlined', placeholder: 'Termes de recherche associés' }
-              }
-            },
+            title: metadataCustomTitle(optionalTexts.searchTerms),
             group: metadataGroup(coverageGroup, true),
             description: metadataHelp(true),
             ...scoreProperties(0)
@@ -717,23 +688,12 @@ export default {
           type: 'object',
           properties: {
             active: {
-              title: 'Schéma',
-              description: 'Schéma de données auquel le jeu de données est conforme, par exemple un schéma publié sur schema.data.gouv.fr. Il se renseigne dans la section Structure du jeu de données.',
-              'x-i18n-title': { en: 'Schema' },
-              'x-i18n-description': { en: 'Data schema the dataset conforms to, for example a schema published on schema.data.gouv.fr. It is set in the Structure section of the dataset.' },
+              ...optionalTexts.conformsTo,
               type: 'boolean',
               default: false,
               layout: { comp: 'switch', cols: 4 }
             },
-            title: {
-              title: 'Libellé personnalisé',
-              type: 'string',
-              layout: {
-                if: 'parent.data.active',
-                cols: 4,
-                props: { variant: 'outlined', placeholder: 'Schéma' }
-              }
-            }
+            title: metadataCustomTitle(optionalTexts.conformsTo)
           }
         },
         custom: {
@@ -835,20 +795,20 @@ export default {
     },
     compatODS: {
       type: 'boolean',
-      title: 'Compatibilité ODS',
-      description: 'Active la compatibilité avec l\'API ODS',
+      title: 'ODS compatibility',
+      description: 'Enables the compatibility with the ODS API',
       default: false
     },
     agentChat: {
       type: 'boolean',
       title: 'AI assistant',
-      description: 'Active l\'assistant IA',
+      description: 'Enables the AI assistant',
       default: false
     },
     agentChatAudience: {
       type: 'array',
       title: 'AI assistant audience',
-      description: 'Restreint l\'assistant IA aux membres correspondant à l\'une de ces règles. Vide : tous les membres.',
+      description: 'Restricts the AI assistant to the members matching one of these rules. Empty: all members.',
       items: {
         type: 'object',
         additionalProperties: false,
@@ -856,11 +816,11 @@ export default {
         properties: {
           department: {
             type: 'string',
-            description: 'Identifiant du département, "*" pour tous les départements ou "-" pour l\'organisation principale seulement'
+            description: 'Department identifier, "*" for all departments or "-" for the main organization only'
           },
           roles: {
             type: 'array',
-            description: 'Rôles concernés, tous si vide',
+            description: 'Concerned roles, all if empty',
             items: { type: 'string' }
           }
         }

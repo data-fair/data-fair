@@ -5,6 +5,7 @@ import { readDataset, reqDataset } from '../../datasets/middlewares.ts'
 import * as cacheHeaders from '../../misc/utils/cache-headers.ts'
 import * as esUtils from '../../datasets/es/index.ts'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
+import { i18nHttpError, i18nMessage } from '../../misc/utils/i18n-errors.ts'
 import { getFlatten } from '../../datasets/utils/flatten.ts'
 import config from '#config'
 import datasetsRouter from '../../datasets/router.ts'
@@ -19,6 +20,12 @@ import JSONStream from 'JSONStream'
 import { queryAdvice } from '../../misc/utils/query-advice.ts'
 import { compatReqCounter, logCompatODSError, prepareEsQuery, prepareResult, applyAliases, sortBuckets, prepareBucketResult } from './operations.ts'
 import { rootSettingsFilter } from '../../settings/operations.ts'
+
+// the message of an elasticsearch error in the language of the request, the advice appended to it is too
+const localizedESError = (err: any, req: any) => {
+  const { message, status, i18n } = esUtils.extractError(err)
+  return { status, message: i18n ? i18nMessage(i18n.key, i18n.params, req.getLocale()) : message }
+}
 
 const router = express.Router()
 
@@ -74,7 +81,7 @@ const getRecords = (version: '2.0' | '2.1') => async (req, res, next) => {
       allow_partial_search_results: false
     }, esAbortContext)
   } catch (err) {
-    const { message, status } = esUtils.extractError(err)
+    const { message, status } = localizedESError(err, req)
     // 499 = the http client gave up, the query was aborted: nothing to log or report
     if (status !== 499) logCompatODSError(message, req.url, 'records', 'es-error', dataset.id)
     throw httpError(status, (status === 504 || status === 429) ? message + queryAdvice(req) : message)
@@ -246,7 +253,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
       await workbookWriter.commit()
       // compatReqCounter.inc({ route: 'exports', status: 'ok' })
     } catch (err) {
-      const { message, status } = esUtils.extractError(err)
+      const { message, status } = localizedESError(err, req)
       // 499 = the http client gave up, the search was aborted: nothing to log or report
       if (status !== 499) logCompatODSError(err, req.url, 'exports', 'xlsx-error', dataset.id)
       throw httpError(status, (status === 504 || status === 429) ? message + queryAdvice(req) : message)
@@ -328,7 +335,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
     ]
   } else {
     compatReqCounter.inc({ route: 'exports', status: 'unsupported' })
-    throw httpError(400, `le format "${req.params.format}" n'est pas supporté par l'export de données de cette couche de compatibilité pour la version d'API précédente.`)
+    throw i18nHttpError(400, 'errors.ods.unsupportedFormat', { format: req.params.format })
   }
   try {
     await pump(
@@ -350,7 +357,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
       res
     )
   } catch (err) {
-    const { message, status } = esUtils.extractError(err)
+    const { message, status } = localizedESError(err, req)
     // 499 = the http client gave up, the search was aborted: nothing to log or report
     if (status !== 499) logCompatODSError(err, req.url, 'exports', 'stream-error', dataset.id)
     throw httpError(status, (status === 504 || status === 429) ? message + queryAdvice(req) : message)
@@ -426,7 +433,7 @@ datasetsRouter.get(
 
 router.use('/', (req, res, next) => {
   compatReqCounter.inc({ route: 'unknown', status: 'unsupported' })
-  throw httpError(410, 'Cette couche de compatibilité pour la version d\'API précédente ne supporte pas cette requête.')
+  throw i18nHttpError(410, 'errors.ods.unsupportedRequest')
 })
 
 export default router

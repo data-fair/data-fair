@@ -1,6 +1,8 @@
 import equal from 'fast-deep-equal'
 import memoize from 'memoizee'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
+import { i18nHttpError } from '../../misc/utils/i18n-errors.ts'
+import { resolveXI18n } from '@data-fair/lib-utils/json-schema.js'
 import { ajv } from '@data-fair/data-fair-shared/ajv.js'
 import mongo from '#mongo'
 import { customMetadataSchema, trimCustomMetadata, type CustomMetadataDefinition } from '#types/custom-metadata.ts'
@@ -14,6 +16,8 @@ const getCustomMetadataDefinitions = async (owner: { type: string, id: string })
 // keyed on the definitions themselves, no maxAge: ajv keeps every compiled schema, so an evicted one must leave its cache
 export const compileCustomMetadata = memoize((definitions: CustomMetadataDefinition[]) => {
   const schema = customMetadataSchema(definitions)
+  // the API error messages are written in French, so are the error messages of the schema
+  resolveXI18n(schema, 'fr')
   return Object.assign(ajv.compile(schema), { schema })
 }, {
   profileName: 'compileCustomMetadata',
@@ -31,7 +35,7 @@ export const prepareCustomMetadata = async (owner: { type: string, id: string },
   const validate = compileCustomMetadata(definitions)
   if (validate(changed)) return
   const error = validate.errors![0]
-  if (error.keyword === 'additionalProperties') throw httpError(400, `métadonnée personnalisée inconnue : ${error.params.additionalProperty}`)
+  if (error.keyword === 'additionalProperties') throw i18nHttpError(400, 'errors.customMetadata.unknown', { key: String(error.params.additionalProperty) })
   const key = error.instancePath.split('/')[1]
   throw httpError(400, `${definitions.find(d => d.key === key)?.title ?? key} : ${error.message}`)
 }

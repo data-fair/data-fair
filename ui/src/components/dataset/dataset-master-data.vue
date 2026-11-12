@@ -46,7 +46,7 @@ en:
 
 <script setup lang="ts">
 import Vjsf from '@koumoul/vjsf/webmcp'
-import { type Options as VjsfOptions } from '@koumoul/vjsf'
+import type { Options as VjsfOptions } from '@koumoul/vjsf'
 import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import { schema as masterDataSchema } from '../../../../api/contract/master-data.js'
 import { $sitePath } from '../../context.js'
@@ -105,6 +105,7 @@ const configureContext = computed(() => {
 
 const vjsfOptions = computed<VjsfOptions>(() => ({
   locale: locale.value,
+  xI18n: true,
   readOnly: !canManage.value,
   context: context.value,
   density: 'comfortable'

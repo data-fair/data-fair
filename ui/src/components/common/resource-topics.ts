@@ -1,4 +1,5 @@
 import settingsSchema from '../../../../api/types/settings/schema.js'
+import { schemaText } from '../../utils/schema-i18n.ts'
 
 export type TopicResource = {
   id: string,
@@ -62,7 +63,7 @@ export const getResourceTopics = (
     .map((item: any) => ({
       // subscribe by stable id (not slug — slugs change on rename); the portal app does the same.
       key: `data-fair:${item.const}:${resource.id}`,
-      title: resourceTitles[locale]?.[item.const] ?? resourceTitles.fr[item.const] ?? item.title
+      title: resourceTitles[locale]?.[item.const] ?? schemaText(item, 'title', locale) ?? item.const
     }))
 }
 
