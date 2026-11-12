@@ -222,8 +222,7 @@ const updateDatasetRoute = async (req: DfRequest, res: Response) => {
 
       const draft = !!dataset.draftReason
       await notifications.send({
-        title: `Propriétés modifiées sur un ${draft ? 'brouillon de ' : ''}jeu de données`,
-        body: `${draft ? 'brouillon ' : ''}${dataset.title} (${dataset.slug}), ${Object.keys(patch)?.join(', ')}`,
+        ...notifications.eventTexts(`datasets.${draft ? 'draft-' : ''}patched-properties`, { title: dataset.title, full: `${dataset.title} (${dataset.slug})` }, { keys: Object.keys(patch).join(', ') }),
         topic: {
           key: `data-fair:dataset${draft ? '-draft' : ''}-patched-properties:${dataset.id}`
         },

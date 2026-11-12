@@ -293,8 +293,7 @@ export const replaceApplication = async (ctx: ApplicationWriteContext, existingA
     log.info(`updated application ${newApplication.slug} (${newApplication.id})`, { code: 'df.applications.update', ...resourceLogFields('applications', newApplication) })
     const sessionState = ctx.sessionState
     await notifications.send({
-      title: 'Application entièrement modifiée',
-      body: `${newApplication.title} (${newApplication.slug})`,
+      ...notifications.eventTexts('applications.updated', { title: newApplication.title, full: `${newApplication.title} (${newApplication.slug})` }),
       topic: {
         key: `data-fair:application-updated:${newApplication.id}`
       },
@@ -346,8 +345,7 @@ export const patchApplication = async (ctx: ApplicationWriteContext, application
 
   const sessionState = ctx.sessionState
   await notifications.send({
-    title: 'Propriétés modifiées sur une application',
-    body: `${application.title} (${application.slug}), ${Object.keys(patch)?.join(', ')}`,
+    ...notifications.eventTexts('applications.patched-properties', { title: application.title, full: `${application.title} (${application.slug})` }, { keys: Object.keys(patch).join(', ') }),
     topic: {
       key: `data-fair:application-patched-properties:${application.id}`
     },
@@ -402,8 +400,10 @@ export const changeApplicationOwner = async (ctx: ApplicationWriteContext, appli
   log.info(eventLogMessage, { code: 'df.applications.changeOwnerTo', ...resourceLogFields('applications', application), ...ownerLogFields(newOwner) })
 
   const event = {
-    title: 'Changement de propriétaire d\'une application',
-    body: `${application.title} (${application.slug}), ${arrowStr}`,
+    ...notifications.eventTexts('applications.change-owner', { title: application.title, full: `${application.title} (${application.slug})` }, {
+      from: `${application.owner.name} (${application.owner.type}:${application.owner.id})`,
+      to: `${patch.owner.name} (${patch.owner.type}:${patch.owner.id})`
+    }),
     topic: {
       key: `data-fair:application-change-owner:${application.id}`
     },
@@ -438,8 +438,7 @@ export const deleteApplication = async (ctx: ApplicationWriteContext, applicatio
 
   const sessionState = ctx.sessionState
   await notifications.send({
-    title: "Suppression d'une application",
-    body: `${application.title} (${application.slug})`,
+    ...notifications.eventTexts('applications.delete', { title: application.title, full: `${application.title} (${application.slug})` }),
     topic: {
       key: `data-fair:application-delete:${application.id}`
     },
@@ -558,8 +557,7 @@ export const writeApplicationKeys = async (ctx: ApplicationWriteContext, applica
 
   const sessionState = ctx.sessionState
   await notifications.send({
-    title: "Définition d'une clé de protection d'application",
-    body: `${application.title} (${application.slug})`,
+    ...notifications.eventTexts('applications.write-keys', { title: application.title, full: `${application.title} (${application.slug})` }),
     topic: {
       key: `data-fair:application-write-keys:${application.id}`
     },

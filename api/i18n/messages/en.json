@@ -434,6 +434,18 @@
 			"integrity-trail-altered": {
 				"title": "Integrity trail altered",
 				"body": "The revision trail of dataset {{{label}}} shows signs of alteration (shadowed or hidden revisions). The original locked revisions are intact; review the anomalies in the integrity panel."
+			},
+			"patched-properties": {
+				"title": "Properties updated on the dataset {{{label}}}",
+				"body": "The properties {{{keys}}} of the dataset {{{label}}} were updated."
+			},
+			"draft-patched-properties": {
+				"title": "Properties updated on the draft of the dataset {{{label}}}",
+				"body": "The properties {{{keys}}} of the draft of the dataset {{{label}}} were updated."
+			},
+			"delete": {
+				"title": "Dataset {{{label}}} deleted",
+				"body": "The dataset {{{label}}} was deleted."
 			}
 		},
 		"applications": {
@@ -456,7 +468,39 @@
 			"published-topic": {
 				"title": "Publication of {{{label}}} in {{{topic}}}",
 				"body": "The application {{{label}}} has been published on {{{publicationSite}}} in the topic {{{topic}}}."
+			},
+			"updated": {
+				"title": "Application {{{label}}} entirely updated",
+				"body": "The application {{{label}}} was entirely updated."
+			},
+			"patched-properties": {
+				"title": "Properties updated on the application {{{label}}}",
+				"body": "The properties {{{keys}}} of the application {{{label}}} were updated."
+			},
+			"change-owner": {
+				"title": "Owner of the application {{{label}}} changed",
+				"body": "The application {{{label}}} changed owner: {{{from}}} -> {{{to}}}."
+			},
+			"delete": {
+				"title": "Application {{{label}}} deleted",
+				"body": "The application {{{label}}} was deleted."
+			},
+			"write-keys": {
+				"title": "Protection key of the application {{{label}}} defined",
+				"body": "A protection key was defined on the application {{{label}}}."
 			}
+		},
+		"settings": {
+			"api-key-created": {
+				"title": "API key {{{label}}} created",
+				"body": "The API key {{{label}}} was created, {{{scopes}}}."
+			},
+			"api-key-deleted": {
+				"title": "API key {{{label}}} deleted",
+				"body": "The API key {{{label}}} was deleted, {{{scopes}}}."
+			},
+			"no-scope": "no scope",
+			"scopes": "scopes: {{{scopes}}}"
 		}
 	},
 	"mails": {

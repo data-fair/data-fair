@@ -89,6 +89,32 @@ export const sendResourceEvent = async (resourceType: ResourceType, resource: Re
   }
 }
 
+/**
+ * Title and body of notifications.<key> in every language, for an event built outside of
+ * sendResourceEvent. The title gets the label alone, the body the label with its id or slug.
+ */
+export const eventTexts = (
+  key: string,
+  label: { title: string, full: string },
+  params: Record<string, string> = {},
+  localizedParams?: Record<Locale, Record<string, string>>
+) => {
+  const titleKey = `notifications.${key}.title`
+  const bodyKey = `notifications.${key}.body`
+  if (i18n.__(titleKey) === titleKey) throw new Error('missing i18n for event key ' + titleKey)
+  const text = (phrase: string, labelValue: string) => ({
+    en: i18n.__({ phrase, locale: 'en' }, { label: labelValue, ...params, ...localizedParams?.en }),
+    fr: i18n.__({ phrase, locale: 'fr' }, { label: labelValue, ...params, ...localizedParams?.fr })
+  })
+  return { title: text(titleKey, label.title), body: text(bodyKey, label.full) }
+}
+
+/** A message of the i18n files in every language, to build a localized param of eventTexts. */
+export const localizedParam = (phrase: string, params: Record<string, string> = {}): Record<Locale, string> => ({
+  en: i18n.__({ phrase, locale: 'en' }, params),
+  fr: i18n.__({ phrase, locale: 'fr' }, params)
+})
+
 // Mirror a child dataset's data-updated emission on every parent virtual dataset
 // referencing it via `virtual.children`. Same i18nKey/localizedParams are passed
 // through so portal-side subscribers see a uniform body, with no leakage of child
