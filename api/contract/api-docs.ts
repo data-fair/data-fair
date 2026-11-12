@@ -11,7 +11,7 @@ import privateDatasetAPIDocs from './dataset-private-api-docs.ts'
 import * as utils from './utils.js'
 import { oauth2Scheme, applyOauth2Security } from './scopes-security.ts'
 import pJson from './p-json.js'
-import { root as xAgentRoot, operations as xAgent, datasetSchemaKeyHint, datasetSchemaCalculatedHint } from './x-agent.ts'
+import { root as xAgentRoot, operations as xAgent, datasetSchemaKeyHint, datasetSchemaCalculatedHint, withDatasetLabels } from './x-agent.ts'
 
 const datasetIdParam = {
   in: 'path',
@@ -624,6 +624,9 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
         const existingTags: string[] = Array.isArray(existing.tags) ? existing.tags : []
         const incomingTags: string[] = Array.isArray(operation.tags) ? operation.tags : []
         existing.tags = Array.from(new Set([...existingTags, ...incomingTags]))
+      } else if (operation?.['x-agent']) {
+        // under /datasets/{id} the dataset is an input: its writes carry its checked title
+        api.paths[fullPath][method] = { ...operation, 'x-agent': withDatasetLabels(operation['x-agent'], method) }
       } else {
         api.paths[fullPath][method] = operation
       }
