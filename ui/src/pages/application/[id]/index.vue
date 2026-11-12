@@ -317,7 +317,10 @@
           :model-value="tab"
           class="pa-4"
         >
-          <v-tabs-window-item value="traceability">
+          <v-tabs-window-item
+            v-if="$uiConfig.eventsIntegration"
+            value="traceability"
+          >
             <event-traceability
               resource-type="application"
               :resource-id="application.id"
@@ -895,6 +898,12 @@ const sections = computedDeepDiff(() => {
 
   return result
 })
+
+// v-tabs highlights the first tab when the default one is missing (traceability without the events
+// integration, journal of a metadata-only dataset) but leaves the window on the missing one
+watch(() => sections.value.activity?.tabs, (tabs) => {
+  if (tabs?.length && !tabs.some((tab: any) => tab.key === activityTab.value)) activityTab.value = tabs[0].key
+}, { immediate: true })
 
 const tocSections = computed(() => {
   return Object.entries(sections.value).map(([id, s]) => ({
