@@ -62,6 +62,7 @@ import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import { fieldGroup, customGroup } from '~/utils/metadata-groups'
 import { customMetadataSchema, isCustomMetadataEmpty } from '#api/types'
 import datasetSchema from '~/../../api/types/dataset/schema.js'
+import { schemaText } from '~/utils/schema-i18n'
 import { useShowAgentChat } from '~/composables/agent/use-show-chat'
 
 const dataset = defineModel<any>({ required: true })
@@ -127,7 +128,7 @@ const mainFields = ['title', 'summary', 'description']
 const showAgentChat = useShowAgentChat()
 // an empty slot would still reserve its room next to the field
 const appendSlot = (name: string) => canWrite.value && showAgentChat.value ? { slots: { append: { name } } } : {}
-const localized = (prop: any) => prop['x-i18n-title']?.[locale.value] ?? prop.title
+const localized = (prop: any) => schemaText(prop, 'title', locale.value) ?? ''
 
 // titles, help texts and static layout come from the dataset schema, this adds the owner's choices and the page's actions
 const fixedProperties = () => {

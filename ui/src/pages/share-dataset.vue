@@ -253,6 +253,7 @@ import { mdiCancel, mdiCheckAll, mdiDatabase, mdiFileDocument, mdiLock, mdiPubli
 import equal from 'fast-deep-equal'
 import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
 import { $fetch, $apiPath } from '~/context'
+import { schemaText } from '~/utils/schema-i18n'
 
 // TODO: departmentName n'est pas peuplé par GET /settings/:type/:id/publication-sites,
 // fallback sur l'ID en attendant la correction côté back.
@@ -362,7 +363,7 @@ const missingMetadata = computed(() => {
 const metadataTitle = (field: string) => {
   if (field === 'summary' || field === 'description') return t(field)
   if (field.startsWith('custom.')) return datasetsMetadataFetch.data.value?.custom?.find((c: any) => c.key === field.replace('custom.', ''))?.title ?? field
-  return (settingsSchema.properties.datasetsMetadata.properties as Record<string, any>)[field]?.properties?.active?.title ?? field
+  return schemaText((settingsSchema.properties.datasetsMetadata.properties as Record<string, any>)[field]?.properties?.active, 'title', locale.value) ?? field
 }
 
 function truncate (str: string | undefined, len: number): string {
