@@ -28,6 +28,22 @@ const metadataGroup = (defaultGroup, toggleable = false, cols = 4) => ({
   }
 })
 
+/**
+ * title and description of a metadata switch, French in the base keywords (read as is by
+ * share-dataset and metadata-groups) and in both locales of the x-i18n overrides: an override
+ * without fr would resolve to its en value for a French user (value[locale] ?? value.en)
+ * @param {string} title
+ * @param {string} description
+ * @param {string} titleEn
+ * @param {string} descriptionEn
+ */
+const metadataTexts = (title, description, titleEn, descriptionEn) => ({
+  title,
+  description,
+  'x-i18n-title': { fr: title, en: titleEn },
+  'x-i18n-description': { fr: description, en: descriptionEn }
+})
+
 const scoreActive = 'rootData.completeness?.active'
 const weightTitles = { title: 'Weight', 'x-i18n-title': { fr: 'Poids' } }
 /**
@@ -105,7 +121,7 @@ const fixedMetadata = (title, defaultGroup, description, titleEn, descriptionEn,
   // an empty middle column, where the other rows have their custom label, keeps the help next to the switch
   layout: { children: ['active', { text: '\u00a0', cols: 4 }, 'group', 'description'] },
   properties: {
-    active: { title, description, 'x-i18n-title': { en: titleEn }, 'x-i18n-description': { en: descriptionEn }, type: 'boolean', readOnly: true, default: true, layout: { comp: 'switch', cols: 4 } },
+    active: { ...metadataTexts(title, description, titleEn, descriptionEn), type: 'boolean', readOnly: true, default: true, layout: { comp: 'switch', cols: 4 } },
     group: fixedGroup ? { ...metadataGroup(defaultGroup), readOnly: true } : metadataGroup(defaultGroup),
     description: metadataHelp(),
     ...scoreProperties(weight, bounds)
@@ -532,10 +548,7 @@ export default {
           type: 'object',
           properties: {
             active: {
-              title: 'Producteur',
-              description: "Organisation ou personne qui a produit les données, quand ce n'est pas le propriétaire du jeu de données.",
-              'x-i18n-title': { en: 'Producer' },
-              'x-i18n-description': { en: 'Organization or person who produced the data, when it is not the owner of the dataset.' },
+              ...metadataTexts('Producteur', "Organisation ou personne qui a produit les données, quand ce n'est pas le propriétaire du jeu de données.", 'Producer', 'Organization or person who produced the data, when it is not the owner of the dataset.'),
               type: 'boolean',
               default: false,
               layout: { comp: 'switch', cols: 4 }
@@ -559,10 +572,7 @@ export default {
           type: 'object',
           properties: {
             active: {
-              title: 'Couverture géographique',
-              description: 'Zone géographique couverte par les données, par exemple une commune ou une région.',
-              'x-i18n-title': { en: 'Geographic coverage' },
-              'x-i18n-description': { en: 'Geographic area covered by the data, for example a municipality or a region.' },
+              ...metadataTexts('Couverture géographique', 'Zone géographique couverte par les données, par exemple une commune ou une région.', 'Geographic coverage', 'Geographic area covered by the data, for example a municipality or a region.'),
               type: 'boolean',
               default: false,
               layout: { comp: 'switch', cols: 4 }
@@ -586,10 +596,7 @@ export default {
           type: 'object',
           properties: {
             active: {
-              title: 'Couverture temporelle',
-              description: 'Période couverte par les données.',
-              'x-i18n-title': { en: 'Temporal coverage' },
-              'x-i18n-description': { en: 'Period covered by the data.' },
+              ...metadataTexts('Couverture temporelle', 'Période couverte par les données.', 'Temporal coverage', 'Period covered by the data.'),
               type: 'boolean',
               default: false,
               layout: { comp: 'switch', cols: 4 }
@@ -613,10 +620,7 @@ export default {
           type: 'object',
           properties: {
             active: {
-              title: 'Fréquence de mise à jour',
-              description: 'Fréquence à laquelle les données sont mises à jour.',
-              'x-i18n-title': { en: 'Update frequency' },
-              'x-i18n-description': { en: 'How often the data is updated.' },
+              ...metadataTexts('Fréquence de mise à jour', 'Fréquence à laquelle les données sont mises à jour.', 'Update frequency', 'How often the data is updated.'),
               type: 'boolean',
               default: false,
               layout: { comp: 'switch', cols: 4 }
@@ -639,10 +643,7 @@ export default {
           type: 'object',
           properties: {
             active: {
-              title: 'Date de modification de la source',
-              description: "Date à laquelle les données ont été modifiées à leur source, quand elle diffère de leur date de chargement dans Data Fair. Elle sert au tri des jeux de données par date de mise à jour, notamment sur les portails : laissée vide, c'est la date de la dernière mise à jour des données qui est utilisée.",
-              'x-i18n-title': { en: 'Source modification date' },
-              'x-i18n-description': { en: 'Date the data was modified at its source, when it differs from the date it was loaded into Data Fair.' },
+              ...metadataTexts('Date de modification de la source', "Date à laquelle les données ont été modifiées à leur source, quand elle diffère de leur date de chargement dans Data Fair. Elle sert au tri des jeux de données par date de mise à jour, notamment sur les portails : laissée vide, c'est la date de la dernière mise à jour des données qui est utilisée.", 'Source modification date', 'Date the data was modified at its source, when it differs from the date it was loaded into Data Fair.'),
               type: 'boolean',
               default: false,
               layout: { comp: 'switch', cols: 4 }
@@ -665,10 +666,7 @@ export default {
           type: 'object',
           properties: {
             active: {
-              title: 'Mots-clés',
-              description: 'Mots libres qui décrivent le jeu de données, utilisés par la recherche et les filtres des portails.',
-              'x-i18n-title': { en: 'Keywords' },
-              'x-i18n-description': { en: 'Free words describing the dataset, used by the search and filters of portals.' },
+              ...metadataTexts('Mots-clés', 'Mots libres qui décrivent le jeu de données, utilisés par la recherche et les filtres des portails.', 'Keywords', 'Free words describing the dataset, used by the search and filters of portals.'),
               type: 'boolean',
               default: false,
               layout: { comp: 'switch', cols: 4 }
@@ -691,10 +689,7 @@ export default {
           type: 'object',
           properties: {
             active: {
-              title: 'Termes de recherche associés',
-              description: "Texte libre utilisé uniquement par la recherche du catalogue, jamais affiché : synonymes, sigles et leur développement, formulations courantes. Ce champ n'est affiché nulle part mais reste présent dans la réponse API publique du jeu de données : n'y mettez rien de confidentiel.",
-              'x-i18n-title': { en: 'Associated search terms' },
-              'x-i18n-description': { en: 'Free text used only by the catalog search, never displayed: synonyms, acronyms with their expansion, everyday wording.' },
+              ...metadataTexts('Termes de recherche associés', "Texte libre utilisé uniquement par la recherche du catalogue, jamais affiché : synonymes, sigles et leur développement, formulations courantes. Ce champ n'est affiché nulle part mais reste présent dans la réponse API publique du jeu de données : n'y mettez rien de confidentiel.", 'Associated search terms', 'Free text used only by the catalog search, never displayed: synonyms, acronyms with their expansion, everyday wording.'),
               type: 'boolean',
               default: true,
               layout: { comp: 'switch', cols: 4 }
@@ -717,10 +712,7 @@ export default {
           type: 'object',
           properties: {
             active: {
-              title: 'Schéma',
-              description: 'Schéma de données auquel le jeu de données est conforme, par exemple un schéma publié sur schema.data.gouv.fr. Il se renseigne dans la section Structure du jeu de données.',
-              'x-i18n-title': { en: 'Schema' },
-              'x-i18n-description': { en: 'Data schema the dataset conforms to, for example a schema published on schema.data.gouv.fr. It is set in the Structure section of the dataset.' },
+              ...metadataTexts('Schéma', 'Schéma de données auquel le jeu de données est conforme, par exemple un schéma publié sur schema.data.gouv.fr. Il se renseigne dans la section Structure du jeu de données.', 'Schema', 'Data schema the dataset conforms to, for example a schema published on schema.data.gouv.fr. It is set in the Structure section of the dataset.'),
               type: 'boolean',
               default: false,
               layout: { comp: 'switch', cols: 4 }

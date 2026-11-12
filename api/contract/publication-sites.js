@@ -7,6 +7,7 @@ export default (admin = false) => ({
     messages: {
       addItem: 'Ajouter un portail',
       'x-i18n-addItem': {
+        fr: 'Ajouter un portail',
         en: 'Add a portal'
       }
     },
