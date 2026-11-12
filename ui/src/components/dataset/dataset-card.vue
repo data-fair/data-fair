@@ -102,21 +102,12 @@
 
       <!-- Completeness score, on the right -->
       <v-spacer />
-      <span
+      <dataset-completeness-info
         v-if="dataset.completeness"
-        class="d-inline-flex align-center ga-1 px-1"
-        :title="t('completeness', { score: dataset.completeness.score })"
-      >
-        <!-- mirrored so it fills counter-clockwise -->
-        <v-progress-circular
-          :model-value="dataset.completeness.score"
-          :color="dataset.completeness.score >= 75 ? 'success' : dataset.completeness.score >= 50 ? 'warning' : 'error'"
-          size="18"
-          width="3"
-          style="transform: scaleX(-1)"
-        />
-        <span class="font-weight-bold">{{ dataset.completeness.score }}&nbsp;%</span>
-      </span>
+        :completeness="dataset.completeness"
+        :datasets-metadata="datasetsMetadata"
+        card
+      />
     </template>
   </card-shell>
 </template>
@@ -145,6 +136,8 @@ const props = withDefaults(defineProps<{
   showCapability?: boolean
   // the resource whose page lists this card as one of its users: flags a fragment used outside of its parent
   usedBy?: ReferencingResource
+  // settings of the current account, for the labels of the completeness criteria
+  datasetsMetadata?: Record<string, any> | null
 }>(), {
   noLink: false,
   showCapability: false

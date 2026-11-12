@@ -1,5 +1,5 @@
 <template>
-  <!-- the score of a list row, with the metadata to fill first in a hover card; the full detail is in the metadata section -->
+  <!-- the score of a card or a list row, with the metadata to fill first in a hover card; the full detail is in the metadata section -->
   <card-hover-info
     :title="t('title', { score: completeness.score })"
     end
@@ -8,11 +8,11 @@
     <v-progress-circular
       :model-value="completeness.score"
       :color="completeness.score >= 75 ? 'success' : completeness.score >= 50 ? 'warning' : 'error'"
-      size="16"
+      :size="card ? 18 : 16"
       width="3"
       style="transform: scaleX(-1)"
     />
-    <span>{{ completeness.score }}&nbsp;%</span>
+    <span :class="{ 'font-weight-bold': card }">{{ completeness.score }}&nbsp;%</span>
     <template #help>
       <template v-if="todo.length">
         <div>{{ t('todo') }}</div>
@@ -52,10 +52,12 @@ import type { Completeness, CompletenessCriterion } from '#api/types'
 import { mdiAlertCircle, mdiCloseCircle } from '@mdi/js'
 import { localizedMetadata } from '~/utils/settings-metadata-form'
 
-const { completeness, datasetsMetadata } = defineProps<{
+const { completeness, datasetsMetadata, card = false } = defineProps<{
   completeness: Pick<Completeness, 'score'> & Partial<Pick<Completeness, 'criteria'>>
   // settings of the current account, for the titles it gave to its metadata; another owner's custom keys stay raw
   datasetsMetadata?: Record<string, any> | null
+  // in a card footer: larger ring, bold score
+  card?: boolean
 }>()
 
 const { t, locale } = useI18n()

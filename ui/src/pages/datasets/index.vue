@@ -45,7 +45,10 @@
           sm="6"
           md="4"
         >
-          <dataset-card :dataset="dataset" />
+          <dataset-card
+            :dataset="dataset"
+            :datasets-metadata="datasetsMetadataFetch.data.value"
+          />
         </v-col>
         <template v-if="catalog.loading.value && catalog.initialized.value">
           <v-col
