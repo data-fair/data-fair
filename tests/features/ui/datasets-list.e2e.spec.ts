@@ -142,7 +142,7 @@ test.describe('datasets list page', () => {
     await page.waitForURL(/sort=title(%3A|:)1/, { timeout: 5000 })
 
     // Wait for results to re-render
-    await expect(page.locator('.v-container .v-card .v-card-title').first()).toHaveText('Alpha Dataset', { timeout: 5000 })
+    await expect(page.locator('.v-container .v-card .df-card-title').first()).toHaveText('Alpha Dataset', { timeout: 5000 })
   })
 
   test('results count updates after search', async ({ page, goToWithAuth }) => {
