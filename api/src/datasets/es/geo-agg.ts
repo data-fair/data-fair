@@ -3,7 +3,7 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import geohash from '../../misc/utils/geohash.ts'
 import { prepareQuery, getQueryBBOX, aliasName, prepareResultItem, prepareResultContext } from './commons.ts'
 import { type EsAbortContext, timedEsCall } from './abort.ts'
-import capabilities from '../../../contract/capabilities.js'
+import { capabilityTitleFr } from '../../../contract/capabilities.js'
 import { columnOperationsHint, assertMetricAccepted } from './operations.ts'
 import { type Client } from '@elastic/elasticsearch'
 
@@ -37,7 +37,7 @@ export default async (client: Client, dataset: any, query: Record<string, any>, 
     const metricField = dataset.schema.find(f => f.key === query.metric_field)
     if (!metricField) throw httpError(400, `Impossible de calculer une métrique sur le champ ${query.metric_field}, il n'existe pas dans le jeu de données.`)
     if (metricField['x-capabilities'] && metricField['x-capabilities'].values === false) {
-      throw httpError(400, `Impossible de calculer une métrique sur le champ ${query.metric_field}. La fonctionnalité "${capabilities.properties.values.title}" n'est pas activée dans la configuration technique du champ. ${columnOperationsHint(metricField)}`)
+      throw httpError(400, `Impossible de calculer une métrique sur le champ ${query.metric_field}. La fonctionnalité "${capabilityTitleFr('values')}" n'est pas activée dans la configuration technique du champ. ${columnOperationsHint(metricField)}`)
     }
     assertMetricAccepted(metricField, query.metric)
     esQuery.aggs.geo.aggs.metric = {

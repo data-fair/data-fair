@@ -44,7 +44,7 @@ import { whoFromReq } from '../../integrity/who.ts'
 import type { NextFunction, Response, RequestHandler } from 'express'
 import { reqSession, reqSessionAuthenticated, reqUserAuthenticated, type Account, type SessionStateAuthenticated } from '@data-fair/lib-express'
 import { type ValidateFunction } from 'ajv'
-import { type RequestWithRestDataset, type Unicite } from '#types/dataset/index.ts'
+import { type RequestWithRestDataset, type UniqueConstraint } from '#types/dataset/index.ts'
 import type { AnyBulkWriteOperation, Collection, Filter, UpdateFilter } from 'mongodb'
 import iterHits from '../es/iter-hits.ts'
 import { pipeline } from 'node:stream/promises'
@@ -225,7 +225,7 @@ const constraintIndexName = (constraint: any) =>
 
 export const configureConstraintIndexes = async (dataset: RestDataset) => {
   const c = collection(dataset)
-  const constraints = (dataset.constraints ?? []).filter((ct): ct is Unicite => ct.type === 'unique')
+  const constraints = (dataset.constraints ?? []).filter((ct): ct is UniqueConstraint => ct.type === 'unique')
   const wantedNames = new Set(constraints.map((ct: any) => constraintIndexName(ct)))
 
   // create the wanted indexes first (idempotent: createIndex is a no-op if identical).
@@ -831,7 +831,7 @@ export const applyTransactions = async (dataset: RestDataset, sessionState: Sess
             operation._status = 409
             // the errmsg names the violated index (constraint_unique_<hash>), map it back to
             // the constraint so the message can name the columns
-            const failedConstraint = (dataset.constraints ?? []).find((ct): ct is Unicite => ct.type === 'unique' && writeError.err.errmsg.includes(constraintIndexName(ct)))
+            const failedConstraint = (dataset.constraints ?? []).find((ct): ct is UniqueConstraint => ct.type === 'unique' && writeError.err.errmsg.includes(constraintIndexName(ct)))
             operation._error = failedConstraint
               ? unicityViolationMessage(failedConstraint.properties, dataset.schema)
               : "valeur en double sur une contrainte d'unicité"

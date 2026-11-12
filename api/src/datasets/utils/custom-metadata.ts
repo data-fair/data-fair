@@ -1,6 +1,7 @@
 import equal from 'fast-deep-equal'
 import memoize from 'memoizee'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
+import { resolveXI18n } from '@data-fair/lib-utils/json-schema.js'
 import { ajv } from '@data-fair/data-fair-shared/ajv.js'
 import mongo from '#mongo'
 import { customMetadataSchema, trimCustomMetadata, type CustomMetadataDefinition } from '#types/custom-metadata.ts'
@@ -14,6 +15,8 @@ const getCustomMetadataDefinitions = async (owner: { type: string, id: string })
 // keyed on the definitions themselves, no maxAge: ajv keeps every compiled schema, so an evicted one must leave its cache
 export const compileCustomMetadata = memoize((definitions: CustomMetadataDefinition[]) => {
   const schema = customMetadataSchema(definitions)
+  // the API error messages are written in French, so are the error messages of the schema
+  resolveXI18n(schema, 'fr')
   return Object.assign(ajv.compile(schema), { schema })
 }, {
   profileName: 'compileCustomMetadata',

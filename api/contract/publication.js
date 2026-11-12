@@ -8,16 +8,16 @@ export default {
     },
     catalog: {
       type: 'string',
-      description: 'L\'identifiant du catalogue de destination de cette publication.'
+      description: 'Identifier of the target catalog of this publication.'
     },
     status: {
       type: 'string',
-      description: 'Statut indiquant clairement si la publication a réussi. Si "published", la propriété targetUrl doit être renseignée. Si "error", la propriété error doit être renseignée.',
+      description: 'Status telling whether the publication succeeded. If "published", the targetUrl property must be set. If "error", the error property must be set.',
       enum: ['waiting', 'published', 'error', 'deleted']
     },
     publishedAt: {
       type: 'string',
-      description: 'Date de la dernière mise à jour de cette publication.',
+      description: 'Date of the last update of this publication.',
       format: 'date-time'
     },
     error: {
@@ -28,7 +28,7 @@ export default {
     },
     result: {
       type: 'object',
-      description: 'Résultat de la publication. La structure de cet objet est libre et dépend du type de catalogue.'
+      description: 'Result of the publication. The structure of this object is free and depends on the catalog type.'
     }
   }
 }

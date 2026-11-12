@@ -2,7 +2,7 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import memoize from 'memoizee'
 import { getCsvSerializer } from '../utils/csv-jit.ts'
 import { getFlattenNoCache, isFlattenIdentity } from '../utils/flatten.ts'
-import capabilities from '../../../contract/capabilities.js'
+import { capabilityTitleFr } from '../../../contract/capabilities.js'
 
 export interface ExtractedError {
   message: string
@@ -99,7 +99,7 @@ export const resolveRangeOrPrefixField = (prop: any, flagged: boolean): { field:
  */
 export const requiredCapability = (prop: any, filterName: string, capability: string = 'index'): void => {
   if (!hasCapability(prop, capability)) {
-    throw httpError(400, `Impossible d'appliquer un filtre ${filterName} sur le champ ${prop.key}. La fonctionnalité "${capabilities.properties[capability]?.title}" n'est pas activée dans la configuration technique du champ. ${columnOperationsHint(prop)}`)
+    throw httpError(400, `Impossible d'appliquer un filtre ${filterName} sur le champ ${prop.key}. La fonctionnalité "${capabilityTitleFr(capability)}" n'est pas activée dans la configuration technique du champ. ${columnOperationsHint(prop)}`)
   }
 }
 
@@ -437,7 +437,7 @@ export const getSimpleMetricsFields = (dataset: any, query: Record<string, any>)
       const field = dataset.schema.find((f: any) => f.key === key)
       if (!field) throw httpError(400, `Impossible de calculer des métriques sur le champ ${key}, il n'existe pas dans le jeu de données.`)
       if (!hasCapability(field, 'values')) {
-        throw httpError(400, `Impossible de calculer une métrique sur le champ ${key}. La fonctionnalité "${capabilities.properties.values.title}" n'est pas activée dans la configuration technique du champ. ${columnOperationsHint(field)}`)
+        throw httpError(400, `Impossible de calculer une métrique sur le champ ${key}. La fonctionnalité "${capabilityTitleFr('values')}" n'est pas activée dans la configuration technique du champ. ${columnOperationsHint(field)}`)
       }
       if (!isMetricAggregatable(field)) {
         throw httpError(400, `Impossible de calculer des métriques sur le champ ${key}. Ce champ ne supporte pas les agrégations de métriques.`)

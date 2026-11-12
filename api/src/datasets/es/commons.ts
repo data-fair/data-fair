@@ -13,7 +13,7 @@ import { prepareThumbnailUrl } from '../../misc/utils/thumbnails.ts'
 import * as tiles from '../utils/tiles.ts'
 import * as geo from '../utils/geo.ts'
 import { geojsonToWKT } from '@terraformer/wkt'
-import capabilities from '../../../contract/capabilities.js'
+import { capabilityTitleFr } from '../../../contract/capabilities.js'
 import turfDistance from '@turf/distance'
 import { defaultMarked, vuetifyMarked } from '../../misc/utils/markdown.ts'
 import {
@@ -156,7 +156,7 @@ function checkQuery (query: any, schema: any[], esFields: string[], currentField
       throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}, il n'existe pas dans le jeu de données.`)
     }
     if (field !== '<implicit>' && !esFields.includes(field)) {
-      throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}. La fonctionnalité "${capabilities.properties.index.title}" n'est pas activée dans la configuration technique du champ.`)
+      throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}. La fonctionnalité "${capabilityTitleFr('index')}" n'est pas activée dans la configuration technique du champ.`)
     }
   } else if (query.field && query.field !== '<implicit>' && !esFields.includes(query.field)) {
     const suffix = capabilitiesSuffixes.find(cs => query.field.endsWith(cs[0]))
@@ -164,12 +164,12 @@ function checkQuery (query: any, schema: any[], esFields: string[], currentField
       if (!schema.find(p => p.key + suffix[0] === query.field)) {
         throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}, il n'existe pas dans le jeu de données.`)
       }
-      throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}. La fonctionnalité "${(capabilities.properties as Record<string, any>)[suffix[1]]?.title}" n'est pas activée dans la configuration technique du champ.`)
+      throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}. La fonctionnalité "${capabilityTitleFr(suffix[1])}" n'est pas activée dans la configuration technique du champ.`)
     } else {
       if (!schema.find(p => p.key === query.field)) {
         throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}, il n'existe pas dans le jeu de données.`)
       }
-      throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}. La fonctionnalité "${capabilities.properties.index.title}" n'est pas activée dans la configuration technique du champ.`)
+      throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}. La fonctionnalité "${capabilityTitleFr('index')}" n'est pas activée dans la configuration technique du champ.`)
     }
   }
   if (query.term && (query.term.startsWith('*') || query.term.startsWith('?')) && (!query.field || !query.field.endsWith('.wildcard'))) {

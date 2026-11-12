@@ -13,7 +13,10 @@ const typeOf = (definition: CustomMetadataDefinition) => definition.type ?? 'str
 const isList = (definition: CustomMetadataDefinition) => typeOf(definition) === 'string' && !!definition.enum?.length
 const isMultiple = (definition: CustomMetadataDefinition) => typeOf(definition) === 'string' && !!definition.multiple
 
-const expected = { string: 'texte attendu', integer: 'nombre entier attendu', number: 'nombre attendu', date: 'date attendue (AAAA-MM-JJ)', link: 'adresse web attendue (http:// ou https://)' }
+const expected = { string: 'text expected', integer: 'integer expected', number: 'number expected', date: 'date expected (YYYY-MM-DD)', link: 'web address expected (http:// or https://)' }
+const expectedFr = { string: 'texte attendu', integer: 'nombre entier attendu', number: 'nombre attendu', date: 'date attendue (AAAA-MM-JJ)', link: 'adresse web attendue (http:// ou https://)' }
+const notInList = 'value not in the list'
+const notInListFr = 'valeur absente de la liste'
 
 const itemSchema = (definition: CustomMetadataDefinition): Record<string, any> => {
   switch (typeOf(definition)) {
@@ -24,7 +27,7 @@ const itemSchema = (definition: CustomMetadataDefinition): Record<string, any> =
       type: 'object',
       required: ['url'],
       additionalProperties: false,
-      properties: { url: { type: 'string', pattern: '^https?://\\S+$', errorMessage: expected.link }, title: { type: 'string' } }
+      properties: { url: { type: 'string', pattern: '^https?://\\S+$', errorMessage: expected.link, 'x-i18n-errorMessage': { fr: expectedFr.link } }, title: { type: 'string' } }
     }
     default: return isList(definition) ? { type: 'string', enum: definition.enum } : { type: 'string' }
   }
@@ -41,7 +44,12 @@ export const customMetadataSchema = (definitions: CustomMetadataDefinition[]) =>
     // object form: json-layout adds its own per-property required messages to it
     errorMessage: typeOf(definition) === 'link'
       ? { type: expected.link, required: { url: expected.link }, additionalProperties: expected.link }
-      : isList(definition) ? 'valeur absente de la liste' : expected[typeOf(definition)]
+      : isList(definition) ? notInList : expected[typeOf(definition)],
+    'x-i18n-errorMessage': {
+      fr: typeOf(definition) === 'link'
+        ? { type: expectedFr.link, required: { url: expectedFr.link }, additionalProperties: expectedFr.link }
+        : isList(definition) ? notInListFr : expectedFr[typeOf(definition)]
+    }
   }]))
 } as Record<string, any>)
 

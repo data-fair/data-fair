@@ -7,7 +7,7 @@
 
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { requiredCapability } from '../../datasets/es/operations.ts'
-import capabilities from '../../../contract/capabilities.js'
+import { capabilityTitleFr } from '../../../contract/capabilities.js'
 import dayjs from 'dayjs'
 
 const LBRACE='{';
@@ -21,7 +21,7 @@ const assertGroupable = (groupByKey, dataset) => {
     throw httpError(400, `Impossible de grouper par le champ ${groupByKey}, il n'existe pas dans le jeu de données.`)
   }
   if (prop['x-capabilities'] && prop['x-capabilities'].values === false) {
-    throw httpError(400, `Impossible de grouper sur le champ ${groupByKey}. La fonctionnalité "${capabilities.properties.values.title}" n'est pas activée dans la configuration technique du champ.`)
+    throw httpError(400, `Impossible de grouper sur le champ ${groupByKey}. La fonctionnalité "${capabilityTitleFr('values')}" n'est pas activée dans la configuration technique du champ.`)
   }
   return prop
 }

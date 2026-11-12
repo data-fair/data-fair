@@ -46,7 +46,7 @@ const fileSchema = {
       timeZone: { type: ['string', 'null'] },
       codeLike: {
         type: 'boolean',
-        title: 'Colonne de codes détectée à l\'analyse (pas de recherche linguistique ni de tri insensible par défaut)'
+        title: 'Code column detected at analysis (no linguistic search nor insensitive sort by default)'
       }
     }
   }
@@ -280,7 +280,8 @@ const datasetProperties = {
       properties: {
         title: {
           type: 'string',
-          title: 'Titre',
+          title: 'Title',
+          'x-i18n-title': { fr: 'Titre' },
           layout: { props: { outlined: true, dense: true } }
         },
         description: {
@@ -290,16 +291,19 @@ const datasetProperties = {
         },
         includeInCatalogPublications: {
           type: 'boolean',
-          title: 'Inclure dans les publications sur catalogue',
+          title: 'Include in catalog publications',
+          'x-i18n-title': { fr: 'Inclure dans les publications sur catalogue' },
           default: false
         }
       },
       oneOf: [{
-        title: 'Fichier',
+        title: 'File attachment',
+        'x-i18n-title': { fr: 'Fichier', en: 'File' },
         required: ['name'],
         properties: {
           type: {
-            title: 'Type de pièce jointe',
+            title: 'Attachment type',
+            'x-i18n-title': { fr: 'Type de pièce jointe' },
             const: 'file'
           },
           name: {
@@ -331,11 +335,13 @@ const datasetProperties = {
           }
         }
       }, {
-        title: 'Lien',
+        title: 'Link attachment',
+        'x-i18n-title': { fr: 'Lien', en: 'Link' },
         required: ['url'],
         properties: {
           type: {
-            title: 'Type de pièce jointe',
+            title: 'Attachment type',
+            'x-i18n-title': { fr: 'Type de pièce jointe' },
             const: 'url'
           },
           url: {
@@ -344,23 +350,29 @@ const datasetProperties = {
           }
         }
       }, {
-        title: 'Fichier récupéré depuis une URL',
+        title: 'Remote file attachment',
+        'x-i18n-title': { fr: 'Fichier récupéré depuis une URL', en: 'File retrieved from a URL' },
         required: ['name'],
         properties: {
           type: {
-            title: 'Type de pièce jointe',
+            title: 'Attachment type',
+            'x-i18n-title': { fr: 'Type de pièce jointe' },
             const: 'remoteFile'
           },
           name: {
             type: 'string',
-            title: 'Nom du fichier',
-            description: 'Ce nom doit contenir l\'extension qui doit correspondre au format du fichier téléchargé.',
+            title: 'File name',
+            'x-i18n-title': { fr: 'Nom du fichier' },
+            description: 'This name must contain the extension, which must match the format of the downloaded file.',
+            'x-i18n-description': { fr: 'Ce nom doit contenir l\'extension qui doit correspondre au format du fichier téléchargé.' },
             layout: { rules: ['hasExtension'] }
           },
           targetUrl: {
             type: 'string',
-            title: 'URL de téléchargement',
-            description: 'Cette URL n\'est pas consultable après écriture. Elle est utilisée pour télécharger le fichier depuis un service distant et peut contenir un secret. Vous pouvez la laisser vide quand vous modifiez les autres informations, mais vous devez la renseigner de nouveau si vous changez le nom de fichier.'
+            title: 'Download URL',
+            'x-i18n-title': { fr: 'URL de téléchargement' },
+            description: 'This URL cannot be read back after it is written. It is used to download the file from a remote service and may contain a secret. You can leave it empty when you edit the other information, but you must fill it in again if you change the file name.',
+            'x-i18n-description': { fr: 'Cette URL n\'est pas consultable après écriture. Elle est utilisée pour télécharger le fichier depuis un service distant et peut contenir un secret. Vous pouvez la laisser vide quand vous modifiez les autres informations, mais vous devez la renseigner de nouveau si vous changez le nom de fichier.' }
           }
         }
       }]
@@ -421,7 +433,7 @@ const datasetProperties = {
       },
       dataFiles: {
         type: 'array',
-        description: 'Le tableau de résultats.',
+        description: 'The list of the data files.',
         items: {
           type: 'object',
           properties: {
@@ -754,14 +766,18 @@ const datasetProperties = {
   },
   constraints: {
     type: 'array',
-    title: 'Contraintes',
-    description: "Contraintes de validation à l'échelle du jeu de données, au delà des validations par colonne.",
+    title: 'Constraints',
+    'x-i18n-title': { fr: 'Contraintes' },
+    description: 'Validation constraints at the dataset level, beyond the validations of each column.',
+    'x-i18n-description': { fr: 'Contraintes de validation à l\'échelle du jeu de données, au-delà des validations par colonne.' },
     items: {
       type: 'object',
-      title: 'Contrainte',
+      title: 'Constraint',
+      'x-i18n-title': { fr: 'Contrainte' },
       oneOf: [{
         required: ['type', 'properties'],
-        title: 'Unicité',
+        title: 'Unique constraint',
+        'x-i18n-title': { fr: 'Unicité', en: 'Uniqueness' },
         properties: {
           type: {
             type: 'string',
@@ -769,15 +785,19 @@ const datasetProperties = {
           },
           properties: {
             type: 'array',
-            title: 'Colonnes',
-            description: 'La combinaison des valeurs de ces colonnes doit être unique sur chaque ligne du jeu de données.',
+            title: 'Columns',
+            'x-i18n-title': { fr: 'Colonnes' },
+            description: 'The combination of the values of these columns must be unique on each line of the dataset.',
+            'x-i18n-description': { fr: 'La combinaison des valeurs de ces colonnes doit être unique sur chaque ligne du jeu de données.' },
             items: { type: 'string' }
           }
         }
       }, {
         required: ['type'],
-        title: 'Cohérence des dates',
-        description: 'La colonne portant le concept "Date de fin" doit contenir, sur chaque ligne, une date supérieure ou égale à la colonne portant le concept "Date de début".',
+        title: 'Date consistency',
+        'x-i18n-title': { fr: 'Cohérence des dates' },
+        description: 'On each line, the column carrying the "End date" concept must contain a date greater than or equal to the column carrying the "Start date" concept.',
+        'x-i18n-description': { fr: 'La colonne portant le concept "Date de fin" doit contenir, sur chaque ligne, une date supérieure ou égale à la colonne portant le concept "Date de début".' },
         properties: {
           type: {
             type: 'string',
@@ -789,7 +809,7 @@ const datasetProperties = {
   },
   extensions: {
     type: 'array',
-    description: 'Définition des enrichissements appliqués à ce jeu de données',
+    description: 'Definition of the extensions applied to this dataset',
     items: {
       type: 'object',
       properties: {
@@ -840,22 +860,22 @@ const datasetProperties = {
           },
           remoteService: {
             type: 'string',
-            description: "L'identifiant du service distant utilisé pour l'enrichissement"
+            description: 'The id of the remote service used for the extension'
           },
           action: {
             type: 'string',
-            description: "L'identifiant de l'action du service distant à utiliser pour l'enrichissement"
+            description: 'The id of the remote service action to use for the extension'
           },
           select: {
             type: 'array',
-            description: 'La liste des colonnes à sélectionner dans le retour du service distant. Toutes les colonnes si absent ou vide.',
+            description: 'The list of columns to select in the response of the remote service. All columns if absent or empty.',
             items: {
               type: 'string'
             }
           },
           overwrite: {
             type: 'object',
-            description: 'Les attributs à surcharger sur les proprités résultats de l\'enrichissement',
+            description: 'The attributes to overwrite on the result properties of the extension',
             additionalProperties: {
               type: 'object',
               properties: {
@@ -870,16 +890,16 @@ const datasetProperties = {
           },
           shortId: {
             type: 'string',
-            description: 'Id court (déprécié)',
+            description: 'Short id (deprecated)',
             readOnly: true
           },
           propertyPrefix: {
             type: 'string',
-            description: 'Chaine à utiliser comme préfixe des clés de champs issus de cette extension'
+            description: 'String used as a prefix of the keys of the fields coming from this extension'
           },
           mandatory: {
             type: 'boolean',
-            description: 'Si vrai, un échec d\'enrichissement sur une ligne est traité comme une erreur de validation bloquante.'
+            description: 'If true, an extension failure on a line is treated as a blocking validation error.'
           }
         }
       }]
@@ -1096,7 +1116,7 @@ const datasetProperties = {
   permissions: { $ref: 'https://github.com/data-fair/data-fair/permissions' },
   previews: {
     type: 'array',
-    title: 'Prévisualisations',
+    title: 'Previews',
     items: {
       type: 'object',
       properties: {
@@ -1110,8 +1130,8 @@ const datasetProperties = {
     type: 'object',
     additionalProperties: false,
     properties: {
-      active: { type: 'boolean', title: 'Activer l\'accès par clé d\'API' },
-      interval: { type: 'string', title: 'Durée de validité des clés', oneOf: [{ const: 'P1W', title: '1 semaine' }, { const: 'P1M', title: '1 mois' }, { const: 'P1Y', title: '1 année' }] },
+      active: { type: 'boolean', title: 'Enable API key access' },
+      interval: { type: 'string', title: 'Keys validity duration', oneOf: [{ const: 'P1W', title: 'One week' }, { const: 'P1M', title: 'One month' }, { const: 'P1Y', title: 'One year' }] },
       expiresAt: { type: 'string', format: 'date-time', readOnly: true, layout: 'none' },
       renewAt: { type: 'string', format: 'date-time', readOnly: true, layout: 'none' }
     }
@@ -1285,11 +1305,11 @@ const dataset = {
             },
             remoteService: {
               type: 'string',
-              description: "L'identifiant du service distant utilisé pour l'enrichissement"
+              description: 'The id of the remote service used for the extension'
             },
             action: {
               type: 'string',
-              description: "L'identifiant de l'action du service distant à utiliser pour l'enrichissement"
+              description: 'The id of the remote service action to use for the extension'
             }
           }
         },

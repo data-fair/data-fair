@@ -3,7 +3,7 @@ import moment from 'moment-timezone'
 import config from '#config'
 import { prepareQuery, aliasName } from './commons.ts'
 import { type EsAbortContext, timedEsCall } from './abort.ts'
-import capabilities from '../../../contract/capabilities.js'
+import { capabilityTitleFr } from '../../../contract/capabilities.js'
 import {
   columnOperationsHint,
   assertMetricAccepted,
@@ -34,7 +34,7 @@ export const agg = async (client: Client, dataset: any, query: Record<string, an
   const field = dataset.schema.find((f: any) => f.key === metricField)
   if (!field) throw httpError(400, `Impossible de calculer une métrique sur le champ ${metricField}, il n'existe pas dans le jeu de données.`)
   if (field['x-capabilities'] && field['x-capabilities'].values === false) {
-    throw httpError(400, `Impossible de calculer une métrique sur le champ ${metricField}. La fonctionnalité "${capabilities.properties.values.title}" n'est pas activée dans la configuration technique du champ. ${columnOperationsHint(field)}`)
+    throw httpError(400, `Impossible de calculer une métrique sur le champ ${metricField}. La fonctionnalité "${capabilityTitleFr('values')}" n'est pas activée dans la configuration technique du champ. ${columnOperationsHint(field)}`)
   }
   assertMetricAccepted(field, query.metric)
 

@@ -2,7 +2,7 @@ import config from '#config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { prepareQuery, aliasName } from './commons.ts'
 import { type EsAbortContext, timedEsCall } from './abort.ts'
-import capabilities from '../../../contract/capabilities.js'
+import { capabilityTitleFr } from '../../../contract/capabilities.js'
 import { columnOperationsHint, buildWordsAggs, resolveWordsAggField } from './operations.ts'
 import { type Client } from '@elastic/elasticsearch'
 
@@ -16,7 +16,7 @@ export default async (client: Client, dataset: any, query: Record<string, any>, 
   // columns and aggregating an unmapped field returns nothing instead of erroring. Hence no
   // `x-capabilities &&` guard: never declaring the capability is refused like disabling it.
   if (!prop['x-capabilities']?.textAgg) {
-    throw httpError(400, `Impossible d'agréger sur le champ ${prop.key}. La fonctionnalité "${capabilities.properties.textAgg.title}" n'est pas activée dans la configuration technique du champ. ${columnOperationsHint(prop)}`)
+    throw httpError(400, `Impossible d'agréger sur le champ ${prop.key}. La fonctionnalité "${capabilityTitleFr('textAgg')}" n'est pas activée dans la configuration technique du champ. ${columnOperationsHint(prop)}`)
   }
 
   const field = resolveWordsAggField(dataset, query)

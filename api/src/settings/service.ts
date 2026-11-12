@@ -4,7 +4,7 @@ import slug from 'slugify'
 import dayjs from 'dayjs'
 import equal from 'fast-deep-equal'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import { type OptionsDesMetadonneesDeJeuxDeDonnees, type Settings } from '#types/settings/index.js'
+import { type DatasetsMetadataOptions, type Settings } from '#types/settings/index.js'
 import { type DepartmentSettings } from '#types/department-settings/index.js'
 import * as topicsUtils from '../misc/utils/topics.ts'
 import config from '#config'
@@ -213,7 +213,7 @@ const writeSettings = async (ctx: SettingsWriteContext, existingSettings: Settin
   return cleanSettings({ ...settings, apiKeys: returnedApiKeys })
 }
 
-const updateDatasetsMetadata = async (owner: AccountKeys, oldDatasetsMetadata: OptionsDesMetadonneesDeJeuxDeDonnees, newDatasetsMetadata: OptionsDesMetadonneesDeJeuxDeDonnees) => {
+const updateDatasetsMetadata = async (owner: AccountKeys, oldDatasetsMetadata: DatasetsMetadataOptions, newDatasetsMetadata: DatasetsMetadataOptions) => {
   if (equal(oldDatasetsMetadata, newDatasetsMetadata)) return
   for (const oldMeta of oldDatasetsMetadata.custom ?? []) {
     // clean up the metadata off datasets when its definition was removed, or its values changed shape
