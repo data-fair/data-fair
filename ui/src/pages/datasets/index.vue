@@ -68,6 +68,7 @@
       <v-list
         v-else
         lines="two"
+        class="border rounded py-0"
       >
         <template
           v-for="(dataset, i) in catalog.displayedItems.value"
