@@ -158,7 +158,7 @@ const debug = Debug('application-config')
 
 const theme = useTheme()
 const { sendUiNotif } = useUiNotif()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const { height: windowHeight } = useWindowSize()
 
 const { roDataset } = defineProps({
@@ -289,7 +289,9 @@ const vjsfOptions = computed<VjsfOptions | null>(() => {
   return {
     titleDepth: 4,
     density: 'comfortable',
-    locale: 'fr',
+    // the config schemas of the applications may carry x-i18n-* translations, resolved for the user's language
+    locale: locale.value,
+    xI18n: true,
     fetchBaseURL: $sitePath + '/data-fair/',
     context: { owner: application.value?.owner, ownerFilter, datasetFilter, remoteServiceFilter, attachments: application.value?.attachments },
     readOnly: !canWriteConfig.value,
