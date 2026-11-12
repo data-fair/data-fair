@@ -75,7 +75,10 @@
           :key="application.id"
         >
           <v-divider v-if="i > 0" />
-          <application-list-row :application="application" />
+          <application-list-row
+            :application="application"
+            :columns="listColumns"
+          />
         </template>
         <template v-if="catalog.loading.value && catalog.initialized.value">
           <v-skeleton-loader
@@ -241,6 +244,15 @@ const catalog = useCatalogList<Application>({
 watch(() => catalog.totalCount.value, (count) => {
   breadcrumbs.receive({ breadcrumbs: [{ text: t('applications', { count }) }] })
 }, { immediate: true })
+
+// optional columns of the list mode, left out when empty on every displayed row (same owner rule as the rows)
+const listColumns = computed(() => {
+  const items = catalog.displayedItems.value
+  return {
+    topics: items.some(a => a.topics?.length),
+    owner: showAll.value === 'true' || (!session.state.account?.department && items.some(a => a.owner?.department))
+  }
+})
 
 const sortItems = computed(() => [
   { title: t('sortCreatedAt'), value: 'createdAt' },

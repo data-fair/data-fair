@@ -2,29 +2,36 @@
   <v-btn-toggle
     v-model="viewMode"
     class="flex-shrink-0"
+    variant="outlined"
+    color="primary"
     density="compact"
+    divided
     mandatory
   >
     <v-btn
       value="grid"
-      :icon="mdiViewGrid"
-      :title="t('grid')"
-    />
+      :prepend-icon="mdiViewGrid"
+      class="text-none"
+    >
+      {{ t('grid') }}
+    </v-btn>
     <v-btn
       value="list"
-      :icon="mdiViewList"
-      :title="t('list')"
-    />
+      :prepend-icon="mdiViewList"
+      class="text-none"
+    >
+      {{ t('list') }}
+    </v-btn>
   </v-btn-toggle>
 </template>
 
 <i18n lang="yaml">
 fr:
-  grid: Vue en cartes
-  list: Vue en liste
+  grid: Vignettes
+  list: Liste
 en:
-  grid: Cards view
-  list: List view
+  grid: Cards
+  list: List
 </i18n>
 
 <script setup lang="ts">

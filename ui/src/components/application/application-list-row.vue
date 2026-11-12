@@ -3,7 +3,8 @@
   <v-list-item
     :to="`/application/${application.id}`"
     lines="two"
-    class="py-2 application-list-row"
+    density="compact"
+    class="application-list-row"
   >
     <template #prepend>
       <v-img
@@ -52,10 +53,11 @@
       </template>
     </v-list-item-subtitle>
 
-    <!-- columns of fixed width, aligned from one row to the next -->
+    <!-- columns of fixed width, aligned from one row to the next; a column empty on every row is left out -->
     <template #append>
       <div class="d-none d-md-flex align-center ga-4">
         <div
+          v-if="columns.topics"
           class="d-flex align-center justify-end ga-1"
           style="width: 240px"
         >
@@ -70,7 +72,10 @@
             class="text-label-medium"
           >+{{ hiddenTopics.length }}</span>
         </div>
-        <div style="min-width: 28px">
+        <div
+          v-if="columns.owner"
+          style="min-width: 28px"
+        >
           <owner-avatar
             v-if="showOwner"
             :owner="application.owner"
@@ -107,8 +112,10 @@ const { t, locale } = useI18n()
 const session = useSession()
 const showAll = useBooleanSearchParam('showAll')
 
-const { application } = defineProps<{
+const { application, columns = { topics: true, owner: true } } = defineProps<{
   application: Partial<Application> & Pick<Application, 'id' | 'title' | 'updatedAt' | 'owner'> & { visibility?: 'public' | 'private' | 'protected', thumbnail?: string }
+  // the optional columns, decided by the page from all the displayed rows
+  columns?: { topics: boolean, owner: boolean }
 }>()
 
 // same capture as the application card, so the browser cache serves both view modes

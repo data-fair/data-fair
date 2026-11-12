@@ -3,7 +3,8 @@
   <v-list-item
     :to="`/dataset/${dataset.id}`"
     lines="two"
-    class="py-2 dataset-list-row"
+    density="compact"
+    class="dataset-list-row"
   >
     <template #prepend>
       <v-icon
@@ -40,10 +41,11 @@
       </template>
     </v-list-item-subtitle>
 
-    <!-- columns of fixed width, aligned from one row to the next -->
+    <!-- columns of fixed width, aligned from one row to the next; a column empty on every row is left out -->
     <template #append>
       <div class="d-none d-md-flex align-center ga-4">
         <div
+          v-if="columns.topics"
           class="d-flex align-center justify-end ga-1"
           style="width: 240px"
         >
@@ -59,6 +61,7 @@
           >+{{ hiddenTopics.length }}</span>
         </div>
         <div
+          v-if="columns.completeness"
           class="d-flex align-center text-body-small"
           style="width: 72px"
         >
@@ -68,7 +71,10 @@
             :datasets-metadata="datasetsMetadata"
           />
         </div>
-        <div style="min-width: 28px">
+        <div
+          v-if="columns.owner"
+          style="min-width: 28px"
+        >
           <owner-avatar
             v-if="showOwner"
             :owner="dataset.owner"
@@ -114,8 +120,10 @@ const { t, locale } = useI18n()
 const session = useSession()
 const showAll = useBooleanSearchParam('showAll')
 
-const { dataset } = defineProps<{
+const { dataset, columns = { topics: true, completeness: true, owner: true } } = defineProps<{
   dataset: Dataset
+  // the optional columns, decided by the page from all the displayed rows
+  columns?: { topics: boolean, completeness: boolean, owner: boolean }
   // settings of the current account, for the labels of the completeness criteria
   datasetsMetadata?: Record<string, any> | null
 }>()

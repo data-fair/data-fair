@@ -194,7 +194,7 @@ test.describe('fragments UI', () => {
     await fragmentsTab.click()
     await expect(structure.locator('.v-card', { hasText: 'dataset1' })).toBeVisible({ timeout: 15000 })
 
-    await structure.getByRole('button', { name: 'Vue en liste' }).click()
+    await structure.getByRole('button', { name: 'Liste', exact: true }).click()
     const item = structure.locator('.v-list-item', { hasText: 'dataset1' })
     await expect(item).toBeVisible()
     await expect(structure.locator('.v-card', { hasText: 'dataset1' })).toHaveCount(0)

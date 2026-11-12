@@ -80,6 +80,7 @@
           <v-divider v-if="i > 0" />
           <dataset-list-row
             :dataset="dataset"
+            :columns="listColumns"
             :datasets-metadata="datasetsMetadataFetch.data.value"
           />
         </template>
@@ -282,6 +283,16 @@ watch(() => catalog.totalCount.value, (count) => {
 
 // the score exists only once the account activated it in its settings
 const datasetsMetadataFetch = useFetch<Record<string, any> & { completeness?: { active?: boolean } }>(() => account.value && `${$apiPath}/settings/${account.value.type}/${account.value.id}/datasets-metadata`)
+
+// optional columns of the list mode, left out when empty on every displayed row (same owner rule as the rows)
+const listColumns = computed(() => {
+  const items = catalog.displayedItems.value
+  return {
+    topics: items.some(d => d.topics?.length),
+    completeness: items.some(d => d.completeness),
+    owner: showAll.value === 'true' || (!session.state.account?.department && items.some(d => d.owner?.department))
+  }
+})
 
 const sortItems = computed(() => [
   { title: t('sortCreatedAt'), value: 'createdAt' },
