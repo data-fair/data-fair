@@ -37,11 +37,11 @@ test.describe('checkConstraints', () => {
   })
 
   test('rejects a geometry column', () => {
-    assert.throws(() => checkConstraints(schema, [{ type: 'unique', properties: ['geom'] }]), /géométrie/i)
+    assert.throws(() => checkConstraints(schema, [{ type: 'unique', properties: ['geom'] }]), /geometry/i)
   })
 
   test('rejects an object column', () => {
-    assert.throws(() => checkConstraints(schema, [{ type: 'unique', properties: ['obj'] }]), /objet/i)
+    assert.throws(() => checkConstraints(schema, [{ type: 'unique', properties: ['obj'] }]), /object/i)
   })
 
   test('rejects a multi-valued (separator) column', () => {
@@ -49,7 +49,7 @@ test.describe('checkConstraints', () => {
   })
 
   test('rejects an empty properties list', () => {
-    assert.throws(() => checkConstraints(schema, [{ type: 'unique', properties: [] }]), /au moins une colonne/i)
+    assert.throws(() => checkConstraints(schema, [{ type: 'unique', properties: [] }]), /at least one column/i)
   })
 
   test('is a no-op for empty/absent constraints', () => {
@@ -57,7 +57,7 @@ test.describe('checkConstraints', () => {
   })
 
   test('rejects any unique constraint on a virtual dataset', () => {
-    assert.throws(() => checkConstraints(schema, [{ type: 'unique', properties: ['a'] }], { isVirtual: true }), /virtuel/i)
+    assert.throws(() => checkConstraints(schema, [{ type: 'unique', properties: ['a'] }], { isVirtual: true }), /virtual/i)
   })
 
   test('rejects any unique constraint on a metaOnly dataset', () => {
@@ -152,10 +152,10 @@ test.describe('checkConstraints dateCoherence', () => {
   })
 
   test('rejects a duplicate dateCoherence constraint', () => {
-    assert.throws(() => checkConstraints(okSchema, [{ type: 'dateCoherence' }, { type: 'dateCoherence' }]), /seule/i)
+    assert.throws(() => checkConstraints(okSchema, [{ type: 'dateCoherence' }, { type: 'dateCoherence' }]), /only one/i)
   })
 
   test('rejects on virtual datasets with the generalized message', () => {
-    assert.throws(() => checkConstraints(okSchema, [{ type: 'dateCoherence' }], { isVirtual: true }), /virtuels/i)
+    assert.throws(() => checkConstraints(okSchema, [{ type: 'dateCoherence' }], { isVirtual: true }), /virtual datasets/i)
   })
 })

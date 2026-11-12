@@ -1,5 +1,6 @@
-import { type RequestHandler } from 'express'
+import type { RequestHandler } from 'express'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
+import { i18nHttpError } from '../misc/utils/i18n-errors.ts'
 import { type AccountKeys, type SessionStateAuthenticated, reqSessionAuthenticated, reqUserAuthenticated } from '@data-fair/lib-express'
 import mongo from '#mongo'
 import { withLogContext } from '@data-fair/lib-node/log.js'
@@ -102,7 +103,7 @@ export const readBaseApp: RequestHandler = async (req, res, next) => {
  */
 export const assertCreateBodyPermissions = async (owner: AccountKeys, body: Record<string, any>, sessionState: SessionStateAuthenticated) => {
   if (body.publications?.length && !permissions.canDoForOwner(owner, 'applications', classByOperation.applications.writePublications, sessionState)) {
-    throw httpError(403, 'Permission manquante pour l\'opération "writePublications".')
+    throw i18nHttpError(403, 'errors.permissions.missingNamedOperation', { operation: 'writePublications' })
   }
   if (body.publicationSites?.length) await assertCanPublishAtCreation(owner, body.publicationSites, sessionState, 'applications')
 }

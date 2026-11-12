@@ -145,11 +145,11 @@ test.describe('Attachments', () => {
     assert.equal(dataset.status, 'finalized')
     const journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
     const errorEvent = journal.find((e: any) => e.type === 'error')
-    assert.ok(errorEvent.data.includes('aucune colonne n\'a pu être associée automatiquement'))
-    assert.ok(errorEvent.data.includes('Document Numérique Attaché'))
+    assert.ok(errorEvent.data.includes('no column could be automatically matched'))
+    assert.ok(errorEvent.data.includes('"Attachment" concept'))
     assert.ok(errorEvent.data.includes('test.odt'))
     // the warning must guide recovery: designate the column, then reload the attachments
-    assert.ok(errorEvent.data.includes('rechargez les pièces jointes'))
+    assert.ok(errorEvent.data.includes('upload the attachments again'))
     // unmatched attachments are not kept (they are dropped at finalize)
     const attachments = await lsAttachments(dataset.id)
     assert.equal(attachments.length, 0)
@@ -157,7 +157,7 @@ test.describe('Attachments', () => {
 
   test('Do not warn again once the attachment column is designated manually', async () => {
     const ax = testUser3
-    const warnCount = (journal: any[]) => journal.filter((e: any) => e.type === 'error' && typeof e.data === 'string' && e.data.includes('aucune colonne n\'a pu être associée')).length
+    const warnCount = (journal: any[]) => journal.filter((e: any) => e.type === 'error' && typeof e.data === 'string' && e.data.includes('no column could be automatically matched')).length
 
     const form = new FormData()
     form.append('dataset', fs.readFileSync('./tests/resources/datasets/attachments-no-paths.csv'), 'attachments-no-paths.csv')

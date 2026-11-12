@@ -1,4 +1,4 @@
-import { httpError } from '@data-fair/lib-utils/http-errors.js'
+import { i18nHttpError } from '../../misc/utils/i18n-errors.ts'
 import moment from 'moment-timezone'
 
 export const CONSTRAINT_INDEX_PREFIX = 'constraint_unique_'
@@ -97,7 +97,7 @@ export const dateCoherenceViolation = (startValue: any, endValue: any, startProp
 export const checkConstraints = (schema: any[], constraints: any[] | undefined, dataset?: { isVirtual?: boolean, isMetaOnly?: boolean }): void => {
   if (!constraints || !constraints.length) return
   if (dataset?.isVirtual || dataset?.isMetaOnly) {
-    throw httpError(400, 'Les contraintes ne sont pas prises en charge sur les jeux de données virtuels ou sans données (isMetaOnly).')
+    throw i18nHttpError(400, 'errors.constraints.unsupportedDataset')
   }
   const byKey = new Map((schema || []).map(p => [p.key, p]))
   let nbDateCoherence = 0
@@ -105,21 +105,21 @@ export const checkConstraints = (schema: any[], constraints: any[] | undefined, 
     if (constraint.type === 'dateCoherence') {
       nbDateCoherence++
       if (nbDateCoherence > 1) {
-        throw httpError(400, 'Une seule contrainte de cohérence des dates peut être déclarée.')
+        throw i18nHttpError(400, 'errors.constraints.onlyOneDateCoherence')
       }
       const props = dateCoherenceProps(schema || [])
       if (!props) {
-        throw httpError(400, 'La contrainte de cohérence des dates nécessite une colonne portant le concept "Date de début" (https://schema.org/startDate) et une colonne portant le concept "Date de fin" (https://schema.org/endDate).')
+        throw i18nHttpError(400, 'errors.constraints.dateCoherenceConcepts')
       }
       for (const prop of [props.startProp, props.endProp]) {
         if (prop['x-calculated'] || prop['x-extension']) {
-          throw httpError(400, `La colonne "${prop.key}" est calculée ou issue d'un enrichissement et ne peut pas porter la contrainte de cohérence des dates.`)
+          throw i18nHttpError(400, 'errors.constraints.dateCoherenceCalculated', { key: prop.key })
         }
         if (prop.format !== 'date' && prop.format !== 'date-time') {
-          throw httpError(400, `La colonne "${prop.key}" doit être une date ou une date-heure pour porter la contrainte de cohérence des dates.`)
+          throw i18nHttpError(400, 'errors.constraints.dateCoherenceType', { key: prop.key })
         }
         if (prop.separator) {
-          throw httpError(400, `La colonne "${prop.key}" est multivaluée et ne peut pas porter la contrainte de cohérence des dates.`)
+          throw i18nHttpError(400, 'errors.constraints.dateCoherenceMultivalued', { key: prop.key })
         }
       }
       continue
@@ -127,30 +127,30 @@ export const checkConstraints = (schema: any[], constraints: any[] | undefined, 
     if (constraint.type !== 'unique') continue
     const props: string[] = constraint.properties || []
     if (!props.length) {
-      throw httpError(400, "Une contrainte d'unicité doit porter sur au moins une colonne.")
+      throw i18nHttpError(400, 'errors.constraints.uniqueEmpty')
     }
     for (const key of props) {
       const prop = byKey.get(key)
       if (!prop) {
-        throw httpError(400, `La colonne "${key}" d'une contrainte d'unicité n'existe pas dans le schéma.`)
+        throw i18nHttpError(400, 'errors.constraints.uniqueUnknownColumn', { key })
       }
       // the ownership columns are calculated but stamped once per line by the own/ routes, and the
       // primary key already accepts them: "one contribution per account" is a legitimate constraint
       const ownershipCol = key === '_owner' || key === '_ownerName'
       if ((prop['x-calculated'] && !ownershipCol) || prop['x-extension']) {
-        throw httpError(400, `La colonne "${key}" est calculée ou issue d'un enrichissement et ne peut pas porter une contrainte d'unicité.`)
+        throw i18nHttpError(400, 'errors.constraints.uniqueCalculated', { key })
       }
       if (prop['x-capabilities'] && prop['x-capabilities'].values === false) {
-        throw httpError(400, `La colonne "${key}" doit avoir la capacité "Triable et groupable" activée pour porter une contrainte d'unicité.`)
+        throw i18nHttpError(400, 'errors.constraints.uniqueNotGroupable', { key })
       }
       if (prop['x-refersTo'] === 'https://purl.org/geojson/vocab#geometry') {
-        throw httpError(400, `La colonne "${key}" est une géométrie et ne peut pas porter une contrainte d'unicité.`)
+        throw i18nHttpError(400, 'errors.constraints.uniqueGeometry', { key })
       }
       if (prop.type === 'object') {
-        throw httpError(400, `La colonne "${key}" est un objet et ne peut pas porter une contrainte d'unicité.`)
+        throw i18nHttpError(400, 'errors.constraints.uniqueObject', { key })
       }
       if (prop.separator) {
-        throw httpError(400, `La colonne "${key}" est multivaluée et ne peut pas porter une contrainte d'unicité.`)
+        throw i18nHttpError(400, 'errors.constraints.uniqueMultivalued', { key })
       }
     }
   }

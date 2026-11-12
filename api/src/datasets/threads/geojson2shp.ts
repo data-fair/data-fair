@@ -22,7 +22,7 @@ export const wkt = ({ rawBuffer }: { rawBuffer: Uint8Array }) => rawEsBuffer2wkt
 
 export default async (params: Params) => {
   if (config.ogr2ogr.skip) {
-    throw httpError(400, '[noretry] Les fichiers de type shapefile ne sont pas supportés sur ce service.')
+    throw httpError(400, '[noretry] Shapefile files are not supported on this service.')
   }
 
   // Zero-copy raw-buffer path (mirror of geojson2pbf's rawBuffer branch): the main thread transferred the

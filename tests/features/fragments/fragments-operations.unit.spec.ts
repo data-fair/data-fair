@@ -6,6 +6,11 @@ import {
   fragmentForbiddenPatchKey, fragmentWriteBodyError, PART_OF_CHANGE_OPERATIONS,
   partOfCollectionName, resourceTypeToPartOfType
 } from '../../../api/src/fragments/operations.ts'
+import type { FragmentRefusal } from '../../../api/src/fragments/operations.ts'
+import { i18nMessage } from '../../../api/src/misc/utils/i18n-errors.ts'
+
+// a refusal rendered in French, the language of the default locale
+const fr = (refusal: FragmentRefusal | null) => refusal ? i18nMessage(refusal.key, refusal.params ?? {}, 'fr') : ''
 
 const orgOwner = { type: 'organization', id: 'test_org1', name: 'Test Org 1' }
 const contribWrite: Permission = { type: 'organization', id: 'test_org1', name: 'Test Org 1', department: '-', roles: ['contrib'], classes: ['write'], operations: ['delete'] }
@@ -98,19 +103,19 @@ test.describe('validatePartOf', () => {
   })
   test('accepts an application under an application only', () => {
     assert.equal(validatePartOf({ ...base, fragmentType: 'applications', partOf: { type: 'application', id: 'a' }, parent: appParent }), null)
-    assert.match(validatePartOf({ ...base, fragmentType: 'applications', partOf: { type: 'dataset', id: 'v' }, parent: virtualParent })!, /application/)
+    assert.match(fr(validatePartOf({ ...base, fragmentType: 'applications', partOf: { type: 'dataset', id: 'v' }, parent: virtualParent })), /application/)
   })
   test('refuses a non virtual dataset parent', () => {
-    assert.match(validatePartOf({ ...base, partOf: { type: 'dataset', id: 'f' }, parent: { id: 'f', owner: orgOwner } })!, /virtuel/)
+    assert.match(fr(validatePartOf({ ...base, partOf: { type: 'dataset', id: 'f' }, parent: { id: 'f', owner: orgOwner } })), /virtuel/)
   })
   test('refuses self, a fragment parent, a different owner, a resource that has fragments, a published resource', () => {
-    assert.match(validatePartOf({ ...base, fragment: { id: 'v', owner: orgOwner }, partOf: { type: 'dataset', id: 'v' }, parent: virtualParent })!, /elle-même/)
-    assert.match(validatePartOf({ ...base, partOf: { type: 'dataset', id: 'v' }, parent: { ...virtualParent, partOf: { type: 'application', id: 'a' } } })!, /lui-même un fragment/)
-    assert.match(validatePartOf({ ...base, fragment: { owner: { type: 'organization', id: 'test_org1', department: 'dep1' } }, partOf: { type: 'dataset', id: 'v' }, parent: virtualParent })!, /propriétaire/)
-    assert.match(validatePartOf({ ...base, partOf: { type: 'dataset', id: 'v' }, parent: virtualParent, nbFragments: 2 })!, /fragments/)
-    assert.match(validatePartOf({ ...base, fragment: { owner: orgOwner, publicationSites: ['data-fair-portals:p'] }, partOf: { type: 'dataset', id: 'v' }, parent: virtualParent })!, /portail/)
-    assert.match(validatePartOf({ ...base, fragment: { owner: orgOwner, publications: [{ catalog: 'c' }] }, partOf: { type: 'dataset', id: 'v' }, parent: virtualParent })!, /catalogue/)
-    assert.match(validatePartOf({ ...base, fragment: { owner: orgOwner, masterData: { singleSearchs: [{ id: 's' }] } }, partOf: { type: 'dataset', id: 'v' }, parent: virtualParent })!, /référence/)
+    assert.match(fr(validatePartOf({ ...base, fragment: { id: 'v', owner: orgOwner }, partOf: { type: 'dataset', id: 'v' }, parent: virtualParent })), /elle-même/)
+    assert.match(fr(validatePartOf({ ...base, partOf: { type: 'dataset', id: 'v' }, parent: { ...virtualParent, partOf: { type: 'application', id: 'a' } } })), /lui-même un fragment/)
+    assert.match(fr(validatePartOf({ ...base, fragment: { owner: { type: 'organization', id: 'test_org1', department: 'dep1' } }, partOf: { type: 'dataset', id: 'v' }, parent: virtualParent })), /propriétaire/)
+    assert.match(fr(validatePartOf({ ...base, partOf: { type: 'dataset', id: 'v' }, parent: virtualParent, nbFragments: 2 })), /fragments/)
+    assert.match(fr(validatePartOf({ ...base, fragment: { owner: orgOwner, publicationSites: ['data-fair-portals:p'] }, partOf: { type: 'dataset', id: 'v' }, parent: virtualParent })), /portail/)
+    assert.match(fr(validatePartOf({ ...base, fragment: { owner: orgOwner, publications: [{ catalog: 'c' }] }, partOf: { type: 'dataset', id: 'v' }, parent: virtualParent })), /catalogue/)
+    assert.match(fr(validatePartOf({ ...base, fragment: { owner: orgOwner, masterData: { singleSearchs: [{ id: 's' }] } }, partOf: { type: 'dataset', id: 'v' }, parent: virtualParent })), /référence/)
     // an empty master-data sub-object is not reference data
     assert.equal(validatePartOf({ ...base, fragment: { owner: orgOwner, masterData: {} }, partOf: { type: 'dataset', id: 'v' }, parent: virtualParent }), null)
   })
@@ -159,25 +164,25 @@ test.describe('helpers', () => {
     const parent = { type: 'dataset' as const, id: 'v' }
     const fragment = { partOf: parent }
     // partOf may not be changed on a route that persists its body raw
-    assert.match(fragmentWriteBodyError({ partOf: parent }, undefined, { allowPartOfChange: false })!, /PATCH/)
-    assert.match(fragmentWriteBodyError({ partOf: null }, fragment, { allowPartOfChange: false })!, /PATCH/)
-    assert.match(fragmentWriteBodyError({ partOf: { type: 'dataset', id: 'other' } }, fragment, { allowPartOfChange: false })!, /PATCH/)
+    assert.match(fr(fragmentWriteBodyError({ partOf: parent }, undefined, { allowPartOfChange: false })), /PATCH/)
+    assert.match(fr(fragmentWriteBodyError({ partOf: null }, fragment, { allowPartOfChange: false })), /PATCH/)
+    assert.match(fr(fragmentWriteBodyError({ partOf: { type: 'dataset', id: 'other' } }, fragment, { allowPartOfChange: false })), /PATCH/)
     // an identical value is a no-op, a read-then-write round trip must still work
     assert.equal(fragmentWriteBodyError({ partOf: parent, title: 't' }, fragment, { allowPartOfChange: false }), null)
     assert.equal(fragmentWriteBodyError({ partOf: null }, {}, { allowPartOfChange: false }), null)
     // the PATCH routes route partOf through applyPartOfChange instead
     assert.equal(fragmentWriteBodyError({ partOf: parent }, undefined, { allowPartOfChange: true }), null)
     // a fragment is never publishable, on any route
-    assert.match(fragmentWriteBodyError({ publicationSites: [] }, fragment, { allowPartOfChange: true })!, /publié/)
-    assert.match(fragmentWriteBodyError({ publications: [] }, fragment, { allowPartOfChange: false })!, /publié/)
+    assert.match(fr(fragmentWriteBodyError({ publicationSites: [] }, fragment, { allowPartOfChange: true })), /publié/)
+    assert.match(fr(fragmentWriteBodyError({ publications: [] }, fragment, { allowPartOfChange: false })), /publié/)
     // attaching and publishing in one body is refused too
-    assert.match(fragmentWriteBodyError({ partOf: parent, requestedPublicationSites: [] }, undefined, { allowPartOfChange: true })!, /publié/)
+    assert.match(fr(fragmentWriteBodyError({ partOf: parent, requestedPublicationSites: [] }, undefined, { allowPartOfChange: true })), /publié/)
     // a standalone resource may be published
     assert.equal(fragmentWriteBodyError({ publicationSites: [] }, {}, { allowPartOfChange: false }), null)
     assert.equal(fragmentWriteBodyError(undefined, fragment, { allowPartOfChange: false }), null)
     // a fragment is never reference data either, and attaching + declaring it in one body is refused
-    assert.match(fragmentWriteBodyError({ masterData: { bulkSearchs: [{ id: 'b' }] } }, fragment, { allowPartOfChange: true })!, /référence/)
-    assert.match(fragmentWriteBodyError({ partOf: parent, masterData: { virtualDatasets: { active: true } } }, undefined, { allowPartOfChange: true })!, /référence/)
+    assert.match(fr(fragmentWriteBodyError({ masterData: { bulkSearchs: [{ id: 'b' }] } }, fragment, { allowPartOfChange: true })), /référence/)
+    assert.match(fr(fragmentWriteBodyError({ partOf: parent, masterData: { virtualDatasets: { active: true } } }, undefined, { allowPartOfChange: true })), /référence/)
     // presence of the key is not the signal: clearing it, or an empty sub-object, must keep working
     assert.equal(fragmentWriteBodyError({ masterData: {} }, fragment, { allowPartOfChange: true }), null)
     assert.equal(fragmentWriteBodyError({ masterData: null }, fragment, { allowPartOfChange: true }), null)

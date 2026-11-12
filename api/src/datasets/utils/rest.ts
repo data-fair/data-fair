@@ -43,8 +43,8 @@ import type { DatasetLineAction, DatasetLine, RestDataset, DatasetInternal, Data
 import { whoFromReq } from '../../integrity/who.ts'
 import type { NextFunction, Response, RequestHandler } from 'express'
 import { reqSession, reqSessionAuthenticated, reqUserAuthenticated, type Account, type SessionStateAuthenticated } from '@data-fair/lib-express'
-import { type ValidateFunction } from 'ajv'
-import { type RequestWithRestDataset, type UniqueConstraint } from '#types/dataset/index.ts'
+import type { ValidateFunction } from 'ajv'
+import type { RequestWithRestDataset, UniqueConstraint } from '#types/dataset/index.ts'
 import type { AnyBulkWriteOperation, Collection, Filter, UpdateFilter } from 'mongodb'
 import iterHits from '../es/iter-hits.ts'
 import { pipeline } from 'node:stream/promises'
@@ -54,6 +54,7 @@ import { defineReqContext, reqRestDataset, reqLinesOwnerOptional, reqResource, r
 import { can } from '../../misc/utils/permissions.ts'
 import * as journals from '../../misc/utils/journals.ts'
 import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
+import { i18nHttpError } from '../../misc/utils/i18n-errors.ts'
 
 type Operation = {
   _id: string,
@@ -247,7 +248,7 @@ export const configureConstraintIndexes = async (dataset: RestDataset) => {
       })
     } catch (err: any) {
       if (err.code === 11000) {
-        throw httpError(400, `Les données existantes du jeu de données violent la contrainte d'unicité sur (${constraint.properties.join(', ')}).`)
+        throw i18nHttpError(400, 'errors.constraints.uniqueExistingViolation', { columns: constraint.properties.join(', ') })
       }
       throw err
     }
@@ -1116,7 +1117,7 @@ async function manageAttachment (ctx: ManageAttachmentContext, keepExisting: boo
   if (!ctx.file && (keepExisting || !pathField)) return { rawBody }
   if (!isSafeLineAttachmentId(lineId)) {
     // such a line cannot have an attachment folder of its own, there is nothing to clean up
-    if (ctx.file) throw httpError(400, 'identifiant de ligne invalide pour une pièce jointe')
+    if (ctx.file) throw i18nHttpError(400, 'errors.rest.invalidAttachmentLineId')
     return { rawBody }
   }
   const dir = attachmentPath(ctx.dataset, lineId)
@@ -1126,7 +1127,7 @@ async function manageAttachment (ctx: ManageAttachmentContext, keepExisting: boo
   if (ctx.file) {
     // An attachment was uploaded
     if (!pathField) {
-      throw httpError(400, 'Le schéma ne prévoit pas d\'associer une pièce jointe')
+      throw i18nHttpError(400, 'errors.rest.noAttachmentField')
     }
     const fileMd5 = await md5File(ctx.file.path)
     const relativePath = path.join(lineId, fileMd5, ctx.file.originalname)
@@ -1186,10 +1187,10 @@ async function commitLines (dataset: RestDataset, lineIds: string[]) {
     // map): it kept its _needsIndexing flag so the next worker pass over the dataset retries it.
     // Report it (journal + owner notification, like the worker does) and do not answer 200 to a
     // client expecting read-after-write.
-    const message = `indexation refusée par elasticsearch pour ${stream.nbRejectedItems} ligne(s) : ${stream.firstRejectionReason}`
+    const message = `indexing rejected by elasticsearch for ${stream.nbRejectedItems} line(s): ${stream.firstRejectionReason}`
     await journals.log('datasets', dataset, { type: 'error', data: message } as any)
     log.error(message, { code: 'rest-line-index-rejected', ...resourceLogFields('datasets', dataset) })
-    throw httpError(500, `la ligne est enregistrée mais son ${message}`)
+    throw i18nHttpError(500, 'errors.rest.indexRejected', { count: stream.nbRejectedItems, reason: String(stream.firstRejectionReason) })
   }
 
   await mongo.datasets.updateOne({ id: dataset.id, _partialRestStatus: { $exists: false } }, {
@@ -1237,8 +1238,8 @@ export const readLine = async (req: RequestWithRestDataset, res: Response, next:
   const linesOwner = reqLinesOwnerOptional(req)
   if (linesOwner) Object.assign(filter, linesOwnerFilter(linesOwner))
   const line = await c.findOne(filter)
-  if (!line) return res.status(404).send('Identifiant de ligne inconnu')
-  if (line._deleted) return res.status(404).send('Identifiant de ligne inconnu')
+  if (!line) return res.status(404).send(req.__('errors.rest.unknownLine'))
+  if (line._deleted) return res.status(404).send(req.__('errors.rest.unknownLine'))
   cleanLine(line)
   const updatedAt = line._updatedAt && (new Date(line._updatedAt)).toUTCString()
   if (updatedAt) {
@@ -1286,7 +1287,7 @@ const checkAlternateActionPermission = (req: RequestWithRestDataset, _action: st
   if (req.params.lineId) return // PUT: replace-shaped actions are covered by the route's updateLine gate
   if (!alternateActionOperations[_action]) return // create / createOrUpdate are covered by the route's createLine / postLine gate
   if (!canAlternateAction(req, _action)) {
-    throw httpError(403, `Permission manquante pour l'opération "${alternateActionOperationId(req, _action)}".`)
+    throw i18nHttpError(403, 'errors.permissions.missingNamedOperation', { operation: alternateActionOperationId(req, _action) })
   }
 }
 
@@ -1310,7 +1311,7 @@ export const createOrUpdateLine = async (req: RequestWithRestDataset, res: Respo
   if (!actions.includes(_action)) throw httpError(400, `action "${_action}" is unknown, use one of ${JSON.stringify(actions)}`)
   // PUT .../lines/:lineId means "replace the line at this id", patch/delete only make sense through POST .../lines
   if (req.params.lineId && (_action === 'patch' || _action === 'delete')) {
-    throw httpError(400, `action "${_action}" non supportée sur cette route, utilisez POST /lines`)
+    throw i18nHttpError(400, 'errors.rest.unsupportedAction', { action: _action })
   }
   checkAlternateActionPermission(req, _action)
   // createOrUpdate replaces an existing line, which the createLine gate does not cover: without the
@@ -1363,7 +1364,7 @@ export const createOrUpdateLine = async (req: RequestWithRestDataset, res: Respo
 export const patchLine = async (req: RequestWithRestDataset, res: Response, next: NextFunction) => {
   const dataset = reqRestDataset(req)
   if (req.body._action != null && req.body._action !== 'patch') {
-    throw httpError(400, `action "${req.body._action}" non supportée sur cette route, utilisez POST /lines`)
+    throw i18nHttpError(400, 'errors.rest.unsupportedAction', { action: String(req.body._action) })
   }
   const { rawBody, uploadedAttachmentPath, staleAttachments } = await manageAttachment({ dataset, body: req.body, file: req.file, isMultipart: !!req.is('multipart/form-data'), fixedFormBody: !!reqFixedFormBodyOptional(req), lineId: req.params.lineId }, true)
   const fullLine = { _action: 'patch', _id: req.params.lineId, ...req.body }
@@ -1388,7 +1389,7 @@ export const deleteAllLines = async (req: RequestWithRestDataset, res: Response,
   const dataset = reqRestDataset(req)
   // integrity (target 3): dropping the collection would silently destroy the lines the locked
   // anchors still vouch for — deletions must go through the transaction path (tombstones)
-  if (dataset.integrity?.active) throw httpError(400, 'suppression de toutes les lignes refusée tant que le suivi d\'intégrité est actif')
+  if (dataset.integrity?.active) throw i18nHttpError(400, 'errors.rest.deleteAllIntegrity')
   await initDataset(dataset)
   const indexName = await initDatasetIndex(dataset)
   await switchAlias(dataset, indexName)
@@ -1416,10 +1417,10 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
     const drop = req.query.drop === 'true'
     // integrity (target 3): the drop tmp-collection swap would silently destroy the lines the
     // locked anchors still vouch for — bulk deletions must go through the transaction path
-    if (drop && dataset.integrity?.active) throw httpError(400, 'le mode drop est refusé tant que le suivi d\'intégrité est actif')
+    if (drop && dataset.integrity?.active) throw i18nHttpError(400, 'errors.rest.dropIntegrity')
     // drop swaps the whole collection for one holding only this request's lines: on the own-lines
     // routes that would delete every other user's lines
-    if (drop && reqLinesOwnerOptional(req)) throw httpError(400, 'le mode drop est refusé sur les routes de gestion de ses propres lignes')
+    if (drop && reqLinesOwnerOptional(req)) throw i18nHttpError(400, 'errors.rest.dropOwnLines')
 
     // no buffering of this response in the reverse proxy
     res.setHeader('X-Accel-Buffering', 'no')
@@ -1429,7 +1430,7 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
     // one of its file names is reindexed, whoever owns it: a contributor limited to their own lines
     // would overwrite other users' files. Their attachments go through the single-line routes.
     if (attachmentsFile && reqLinesOwnerOptional(req)) {
-      throw httpError(400, 'Une archive de pièces jointes ne peut pas être envoyée sur les routes de gestion de ses propres lignes')
+      throw i18nHttpError(400, 'errors.rest.attachmentsOwnLines')
     }
     if (attachmentsFile) {
       await mongo.datasets.updateOne({ id: dataset.id }, { $push: { _newRestAttachments: (drop ? 'drop:' : '') + attachmentsFile.filename } })
@@ -1509,9 +1510,7 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
     const hasMandatoryExtension = !!(dataset.extensions ?? []).find((e: any) => e.active && e.mandatory)
     const willGoAsync = req.query.async === 'true' || (!isNaN(contentLength) && contentLength > config.elasticsearch.maxBulkChars)
     if (hasMandatoryExtension && willGoAsync) {
-      return res.status(400).type('text/plain').send(
-        `Une extension obligatoire est configurée sur ce jeu de données. La requête doit être traitée en mémoire et ne peut donc pas dépasser ${config.elasticsearch.maxBulkChars} caractères ni utiliser le mode "async". Découpez la requête en plus petits lots.`
-      )
+      return res.status(400).type('text/plain').send(req.__('errors.rest.mandatoryExtensionInMemory', { max: String(config.elasticsearch.maxBulkChars) }))
     }
 
     const parseStreams = transformFileStreams(mimeType, transactionSchema, null, fileProps, raw, true, null, skipDecoding, dataset, true, false)
@@ -1565,7 +1564,7 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
       // problem: surface it as a 400 rather than logging an internal error
       if (status === 500 && typeof err.code === 'string' && ['ENOENT', 'EACCES', 'EISDIR', 'EBADF', 'EPERM'].includes(err.code)) {
         status = 400
-        message = 'Le fichier de transactions n\'a pas pu être lu, merci de réessayer.'
+        message = req.__('errors.rest.transactionsUnreadable')
       }
       if (status === 500) log.error('bulk lines operation failed', { code: 'bulk-lines', err })
       if (firstBatch) {
@@ -1614,10 +1613,10 @@ export const syncAttachmentsLines = async (req: RequestWithRestDataset, res: Res
 
   const pathField = dataset.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
   if (!pathField) {
-    throw httpError(400, 'Le schéma ne prévoit pas de pièce jointe')
+    throw i18nHttpError(400, 'errors.rest.syncNoAttachment')
   }
   if (!dataset.primaryKey || dataset.primaryKey.length !== 1 || dataset.primaryKey[0] !== pathField.key) {
-    throw httpError(400, 'Le schéma ne définit par le chemin de la pièce jointe comme clé primaire')
+    throw i18nHttpError(400, 'errors.rest.syncAttachmentNotPrimaryKey')
   }
 
   const files = await lsAttachments(dataset)
@@ -1647,7 +1646,7 @@ export const syncAttachmentsLines = async (req: RequestWithRestDataset, res: Res
 export const readRevisions = async (req: RequestWithRestDataset, res: Response, next: NextFunction) => {
   const dataset = reqRestDataset(req)
   if (!dataset.rest.history) {
-    return res.status(400).type('text/plain').send('L\'historisation des lignes n\'est pas activée pour ce jeu de données.')
+    return res.status(400).type('text/plain').send(req.__('errors.rest.historyDisabled'))
   }
   const rc = revisionsCollection(dataset)
   const filter: Filter<DatasetLineRevision> = req.params.lineId ? { _lineId: req.params.lineId } : {}

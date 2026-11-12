@@ -2,7 +2,7 @@ import log from '@data-fair/lib-node/log.js'
 import { stringify as csvStr } from 'csv-stringify/sync'
 import dayjs from 'dayjs'
 import utc from 'dayjs/plugin/utc.js'
-import { type WorkSheet } from '@e965/xlsx'
+import type { WorkSheet } from '@e965/xlsx'
 
 dayjs.extend(utc)
 
@@ -248,7 +248,7 @@ const iterCsvOld = async function * (filePath: string, normalizeOptions: Normali
     range = `${startCol}${startRow}:${end}`
   }
   const json: any[] = XLSX.utils.sheet_to_json(worksheet, { header: 1, raw: true, range })
-  if (!json || json.length < 2) throw new Error(`La feuille ${worksheetIndex} du classeur dans le fichier ne contient pas de table.`)
+  if (!json || json.length < 2) throw new Error(`The sheet ${worksheetIndex} of the workbook in the file does not contain a table.`)
 
   const hasTime: Record<number, boolean> = {}
 

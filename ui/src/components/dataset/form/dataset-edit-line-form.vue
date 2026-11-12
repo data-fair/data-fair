@@ -68,7 +68,7 @@
 import { emitAgentEvent } from '@data-fair/lib-vue-agents'
 import useDatasetEdition from '~/components/dataset/table/use-dataset-edition'
 import Vjsf from '@koumoul/vjsf/webmcp'
-import { type Options as VjsfOptions } from '@koumoul/vjsf'
+import type { Options as VjsfOptions } from '@koumoul/vjsf'
 import VjsfMarkdown from '@koumoul/vjsf-markdown'
 import { v2compat } from '@koumoul/vjsf/compat/v2'
 

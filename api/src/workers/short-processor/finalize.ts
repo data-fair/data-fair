@@ -182,7 +182,7 @@ export default async function (_dataset: DatasetInternal) {
   if (actionable.length && isNew) {
     await journals.log('datasets', dataset, {
       type: 'ignored-keyword-values',
-      data: `Colonnes concernées : ${actionable.join(', ')}. Elles contiennent des valeurs de plus de 200 caractères, silencieusement exclues du filtrage exact, du tri et du regroupement. Vérifiez la configuration technique (capacités) de ces colonnes.`
+      data: `Affected columns: ${actionable.join(', ')}. They contain values longer than 200 characters, silently excluded from exact filtering, sorting and grouping. Check the technical configuration (capabilities) of these columns.`
     } as Event).catch(() => {})
   }
 

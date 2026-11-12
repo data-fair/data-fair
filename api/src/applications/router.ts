@@ -31,6 +31,7 @@ import * as attachments from '../misc/utils/metadata-attachments.ts'
 import * as clamav from '../misc/utils/clamav.ts'
 import { getThumbnail } from '../misc/utils/thumbnails.ts'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
+import { i18nHttpError } from '../misc/utils/i18n-errors.ts'
 import { type AccountKeys, reqSession, reqSessionAuthenticated, reqUserAuthenticated } from '@data-fair/lib-express'
 import { getAsVisitorContext } from '../misc/utils/as-visitor.ts'
 import { downloadFileFromStorage } from '../files-storage/utils.ts'
@@ -175,11 +176,11 @@ router.put('/:applicationId/owner', readApplication, permissionMiddleware('delet
 
   const application = reqApplication(req)
   usersUtils.normalizeOwner(req.body)
-  if (application.partOf) throw httpError(403, 'Un fragment ne peut pas changer de propriétaire, détachez-le d\'abord')
+  if (application.partOf) throw i18nHttpError(403, 'errors.fragments.noOwnerChange')
 
   // Must be able to delete the current application, and to create a new one for the new owner to proceed
   // (checked against all the user's memberships, the new owner is rarely the active account)
-  if (!permissions.canDoForOwner(req.body, 'applications', 'post', sessionState, true)) return res.status(403).type('text/plain').send('Vous ne pouvez pas créer d\'application dans le nouveau propriétaire')
+  if (!permissions.canDoForOwner(req.body, 'applications', 'post', sessionState, true)) return res.status(403).type('text/plain').send(req.__('errors.applications.ownerChangeCreate'))
 
   // fragments have their parent's owner: they follow it, like they follow its deletion
   const fragments = await fragmentsService.prepareFragmentsOwnerChange('application', application, req.body, sessionState)
@@ -269,7 +270,7 @@ router.get('/:applicationId/journal', readApplication, permissionMiddleware('rea
 
 // Used by applications to declare an error
 router.post('/:applicationId/error', readApplication, permissionMiddleware('writeConfig', 'write'), cacheHeaders.noCache, async (req, res) => {
-  if (!req.body.message) return res.status(400).type('text/plain').send('Attribut "message" obligatoire')
+  if (!req.body.message) return res.status(400).type('text/plain').send(req.__('errors.applications.errorMessageRequired'))
 
   const referer = req.headers.referer || req.headers.referrer
   const draftMode = !!(referer && referer.includes('draft=true'))

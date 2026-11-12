@@ -1,7 +1,7 @@
 import slug from 'slugify'
 import { type DatasetsMetadataOptions, type AIAssistantAudience, type Settings, assertValid as assertValidSettings } from '#types/settings/index.js'
 import { type DepartmentSettings, assertValid as validateDepartmentSettings } from '#types/department-settings/index.js'
-import { type AccountKeys, type User, type SessionStateAuthenticated } from '@data-fair/lib-express'
+import type { AccountKeys, User, SessionStateAuthenticated } from '@data-fair/lib-express'
 import trimFields from '../misc/utils/trim-fields.ts'
 import nanoid from '../misc/utils/nanoid.ts'
 

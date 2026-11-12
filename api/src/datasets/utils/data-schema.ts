@@ -1,5 +1,6 @@
 import config from '#config'
-import { httpError } from '@data-fair/lib-utils/http-errors.js'
+import { i18nHttpError, i18nMessage, locales } from '../../misc/utils/i18n-errors.ts'
+import { noRetryError } from './field-errors.ts'
 import equal from 'deep-equal'
 import vocabulary from '../../../contract/vocabulary.js'
 import * as geoUtils from './geo.ts'
@@ -85,7 +86,7 @@ export const mergeFileSchema = (dataset: FileDataset) => {
   // keep extension fields
   const extensionFields = dataset.schema.filter(field => field['x-extension'])
   for (const field of extensionFields) {
-    if (fileFields.find(f => f.key === field.key)) throw httpError(400, `[noretry] Une extension essaie de créer la colonne "${field.key}" mais cette clé est déjà utilisée.`)
+    if (fileFields.find(f => f.key === field.key)) throw noRetryError(400, 'errors.schema.extensionKeyConflict', { key: field.key })
   }
   let schema: SchemaProperty[] = []
   for (const prop of dataset.schema) {
@@ -110,8 +111,8 @@ export const mergeFileSchema = (dataset: FileDataset) => {
 export const checkSchemaKeys = (schema: any[] | null | undefined, existingSchema: any[] | null | undefined, algorithm?: string) => {
   const unsafe = unsafeKeys(schema, (existingSchema ?? []).map(p => p.key), algorithm)
   if (!unsafe.length) return
-  const details = unsafe.map(({ key, normalized }) => `"${key}" (utilisez plutôt "${normalized}")`).join(', ')
-  throw httpError(400, `Les clés de colonnes suivantes ne peuvent pas contenir de point ni commencer par "_" : ${details}.`)
+  const details = Object.fromEntries(locales.map(locale => [locale, unsafe.map(({ key, normalized }) => i18nMessage('errors.schema.unsafeKeyDetail', { key, normalized }, locale)).join(', ')])) as { en: string, fr?: string }
+  throw i18nHttpError(400, 'errors.schema.unsafeKeys', { details })
 }
 
 export const cleanSchema = (dataset) => {

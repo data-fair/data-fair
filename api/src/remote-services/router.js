@@ -236,7 +236,7 @@ router.use('/:remoteServiceId/proxy/*proxyPath', allowAnyScope, rateLimiting.rem
 
   // preventing POST is a simple way to prevent exposing bulk methods through this public proxy
   if (req.method.toUpperCase() !== 'GET') {
-    return res.status(405).send('Seules les opérations de type GET sont autorisées sur cette exposition de service')
+    return res.status(405).send(req.__('errors.remoteServices.onlyGet'))
   }
 
   // for perf, do not use the middleware readService, we want to read only absolutely necessary info
@@ -246,7 +246,7 @@ router.use('/:remoteServiceId/proxy/*proxyPath', allowAnyScope, rateLimiting.rem
   const remoteService = await mongo.remoteServices
     .findOne({ id: req.params.remoteServiceId, $or: accessFilter }, { projection: { _id: 0, id: 1, server: 1, apiKey: 1 } })
 
-  if (!remoteService) return res.status(404).send('service distant inconnu')
+  if (!remoteService) return res.status(404).send(req.__('errors.remoteServices.unknown'))
 
   const headers = {
     'x-forwarded-url': `${reqPublicBaseUrl(req)}/api/v1/remote-services/${remoteService.id}/proxy/`

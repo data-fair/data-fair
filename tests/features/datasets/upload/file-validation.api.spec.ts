@@ -72,7 +72,7 @@ test.describe('file datasets with validation rules', () => {
     const journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
     const errorEvent = journal.find((e: any) => e.type === 'validation-error')
     assert.ok(errorEvent)
-    assert.ok(errorEvent.data.includes('ont une erreur de validation'))
+    assert.ok(errorEvent.data.includes('have a validation error'))
 
     // umbrella `dataset-error` fans out from the specific `dataset-validation-error`
     // emission (notifications.ts §13) with a shared _id for events-service dedup.
@@ -121,7 +121,7 @@ test.describe('file datasets with validation rules', () => {
     const journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
     const errorEvent = journal.find((e: any) => e.type === 'validation-error')
     assert.ok(errorEvent)
-    assert.ok(errorEvent.data.includes('ont une erreur de validation'))
+    assert.ok(errorEvent.data.includes('have a validation error'))
 
     // apply a transformation to fix the issue
     patched = (await ax.patch('/api/v1/datasets/' + dataset.id, { schema: schemaWithFix })).data

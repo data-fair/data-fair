@@ -1,12 +1,13 @@
 import config from '#config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { parseSort, prepareQuery, aliasName, prepareResultItem, prepareResultContext } from './commons.ts'
-import { capabilityTitleFr } from '../../../contract/capabilities.js'
-import { columnOperationsHint, assertMetricAccepted } from './operations.ts'
+import { assertMetricAccepted } from './operations.ts'
 import { type EsAbortContext, timedEsCall } from './abort.ts'
 import es from '#es'
 import log from '@data-fair/lib-node/log.js'
 import { resourceLogFields } from '../../misc/utils/log-fields.ts'
+import { unknownFieldError, missingCapabilityError } from '../utils/field-errors.ts'
+import { i18nHttpError } from '../../misc/utils/i18n-errors.ts'
 
 // we used to split by ; but using , is more standard in open api
 const splitRetroCompat = (str: any): any[] => {
@@ -22,7 +23,7 @@ const parseOrder = (sortStr: string, fields: string[], dataset: any, valuesField
   if (hasMetric) knownKeys.push('metric')
   return sort.map((s: any) => {
     const key = Object.keys(s)[0]
-    if (!knownKeys.includes(key)) throw httpError(400, `Impossible de trier les groupes de la colonne ${valuesField} par ${key.split('.')[0]}`)
+    if (!knownKeys.includes(key)) throw i18nHttpError(400, 'errors.aggs.sortGroups', { field: valuesField, key: key.split('.')[0] })
     return { [key]: s[key].order }
   })
 }
@@ -30,7 +31,7 @@ const parseOrder = (sortStr: string, fields: string[], dataset: any, valuesField
 export default async (dataset: any, query: Record<string, any>, addGeoData: any, publicBaseUrl: string, explain: any, flatten: any, allowPartialResults = false, timeout: string | number = config.elasticsearch.searchTimeout, abortContext?: EsAbortContext) => {
   const fields = dataset.schema.map((f: any) => f.key)
   // nested grouping by a serie of fields
-  if (!query.field) throw httpError(400, 'Le paramètre "field" est obligatoire')
+  if (!query.field) throw i18nHttpError(400, 'errors.aggs.fieldRequired')
   const valuesFields = splitRetroCompat(query.field)
   // matching properties from the schema
   const props = valuesFields.map((f: any) => dataset.schema.find((p: any) => p.key === f))
@@ -45,9 +46,9 @@ export default async (dataset: any, query: Record<string, any>, addGeoData: any,
   let combinedMaxSize = 1
   const aggTypes: any[] = []
   for (let i = 0; i < valuesFields.length; i++) {
-    if (!props[i]) throw httpError(400, `Le paramètre "field" référence un champ inconnu ${valuesFields[i]}`)
+    if (!props[i]) throw i18nHttpError(400, 'errors.aggs.unknownField', { field: valuesFields[i] })
     if (props[i]['x-capabilities'] && props[i]['x-capabilities'].values === false) {
-      throw httpError(400, `Impossible de grouper sur le champ ${props[i].key}. La fonctionnalité "${capabilityTitleFr('values')}" n'est pas activée dans la configuration technique du champ. ${columnOperationsHint(props[i])}`)
+      throw missingCapabilityError('group', props[i].key, 'values', props[i])
     }
 
     intervals[i] = intervals[i] || 'value' // default is to group by strict value (simple terms aggregation)
@@ -59,7 +60,7 @@ export default async (dataset: any, query: Record<string, any>, addGeoData: any,
         aggTypes[i] = 'histogram'
         intervals[i] = Number(intervals[i])
       } else {
-        throw httpError(400, `Grouper pas interval est seulement compatible avec les nombres et dates. ${props[i].key} n'est pas du bon type.`)
+        throw i18nHttpError(400, 'errors.aggs.intervalType', { field: props[i].key })
       }
     }
 
@@ -159,7 +160,7 @@ export default async (dataset: any, query: Record<string, any>, addGeoData: any,
       if (hasMetric) {
         const metricField = dataset.schema.find((p: any) => p.key === query.metric_field)
         if (!metricField) {
-          throw httpError(400, `Impossible de calculer une métrique sur le champ ${query.metric_field}, il n'existe pas dans le jeu de données.`)
+          throw unknownFieldError('metric', query.metric_field)
         }
         assertMetricAccepted(metricField, query.metric)
 
@@ -176,7 +177,7 @@ export default async (dataset: any, query: Record<string, any>, addGeoData: any,
           const [field, metric] = extraMetric.split(':')
           const metricField = dataset.schema.find((p: any) => p.key === field)
           if (!metricField) {
-            throw httpError(400, `Impossible de calculer une métrique sur le champ ${field}, il n'existe pas dans le jeu de données.`)
+            throw unknownFieldError('metric', field)
           }
           assertMetricAccepted(metricField, metric)
           currentAggLevel.values.aggs = currentAggLevel.values.aggs ?? {}
@@ -244,7 +245,7 @@ const recurseAggResponse = (response: any, aggRes: any, dataset: any, query: Rec
   if (!aggRes.values) return response
   response.total_other = aggRes.values.sum_other_doc_count
   if (aggRes.values.buckets.length > 10000) {
-    throw httpError(400, 'Résultats d\'aggrégation trop nombreux. Abandon.')
+    throw i18nHttpError(400, 'errors.aggs.tooManyBuckets')
   }
   const valuesField = dataset.schema.find((p: any) => p.key === valuesFields[i])
   response.aggs = aggRes.values.buckets.map((b: any) => {

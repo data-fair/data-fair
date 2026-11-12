@@ -1,6 +1,7 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { FILTER_CAPABILITIES, getColumnFilters, getColumnOperations, columnOperationsHint, requiredCapability } from '../../../../api/src/datasets/es/operations.ts'
+import { FILTER_CAPABILITIES, getColumnFilters, getColumnOperations, requiredCapability } from '../../../../api/src/datasets/es/operations.ts'
+import { columnOperationsHint } from '../../../../api/src/datasets/utils/field-errors.ts'
 
 const DEFAULT_FILTERS = ['_eq', '_neq', '_in', '_nin', '_lt', '_lte', '_gt', '_gte', '_starts', '_exists', '_nexists', '_search']
 
@@ -65,15 +66,18 @@ test.describe('getColumnOperations', () => {
 
 test.describe('columnOperationsHint', () => {
   test('lists filters and sort/group flags for a default column', () => {
-    const hint = columnOperationsHint({ key: 'name', type: 'string' })
-    assert.ok(hint.includes('_eq'))
-    assert.ok(hint.includes('_search'))
-    assert.ok(/tri\s*:\s*oui/.test(hint))
-    assert.ok(/groupement\s*:\s*oui/.test(hint))
+    const { en, fr } = columnOperationsHint({ key: 'name', type: 'string' })
+    assert.ok(en.includes('_eq'))
+    assert.ok(en.includes('_search'))
+    assert.ok(/sort:\s*yes/.test(en))
+    assert.ok(/grouping:\s*yes/.test(en))
+    assert.ok(/tri\s*:\s*oui/.test(fr ?? ''))
+    assert.ok(/groupement\s*:\s*oui/.test(fr ?? ''))
   })
-  test('says "aucun" when no filters are available', () => {
+  test('says "none" when no filters are available', () => {
     const hint = columnOperationsHint({ key: 'bio', type: 'string', 'x-capabilities': { index: false, values: false, insensitive: false, text: false, textStandard: false } })
-    assert.ok(hint.includes('aucun'))
+    assert.ok(hint.en.includes('none'))
+    assert.ok(hint.fr?.includes('aucun'))
   })
 })
 

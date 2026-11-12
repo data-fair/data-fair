@@ -264,7 +264,7 @@ export const registerWriteRoutes = (router: Router) => {
     const sessionState = reqSession(req)
 
     if (!reqDatasetFull(req).draft) {
-      return res.status(409).send('Le jeu de données n\'est pas en état brouillon')
+      return res.status(409).send(req.__('errors.datasets.notDraft'))
     }
 
     const patch = { status: 'validated', validateDraft: true }
@@ -283,10 +283,10 @@ export const registerWriteRoutes = (router: Router) => {
     const datasetFull: any = clone(reqDatasetFull(req))
 
     if (datasetFull.status === 'draft') {
-      return res.status(409).send('Impossible d\'annuler un brouillon si aucune version du jeu de données n\'a été validée.')
+      return res.status(409).send(req.__('errors.datasets.cancelInitialDraft'))
     }
     if (!datasetFull.draft) {
-      return res.status(409).send('Le jeu de données n\'est pas en état brouillon')
+      return res.status(409).send(req.__('errors.datasets.notDraft'))
     }
     const patch = { draft: null }
     await cancelDraft(dataset)

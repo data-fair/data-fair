@@ -1,6 +1,7 @@
 import equal from 'fast-deep-equal'
 import memoize from 'memoizee'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
+import { i18nHttpError } from '../../misc/utils/i18n-errors.ts'
 import { resolveXI18n } from '@data-fair/lib-utils/json-schema.js'
 import { ajv } from '@data-fair/data-fair-shared/ajv.js'
 import mongo from '#mongo'
@@ -34,7 +35,7 @@ export const prepareCustomMetadata = async (owner: { type: string, id: string },
   const validate = compileCustomMetadata(definitions)
   if (validate(changed)) return
   const error = validate.errors![0]
-  if (error.keyword === 'additionalProperties') throw httpError(400, `métadonnée personnalisée inconnue : ${error.params.additionalProperty}`)
+  if (error.keyword === 'additionalProperties') throw i18nHttpError(400, 'errors.customMetadata.unknown', { key: String(error.params.additionalProperty) })
   const key = error.instancePath.split('/')[1]
   throw httpError(400, `${definitions.find(d => d.key === key)?.title ?? key} : ${error.message}`)
 }

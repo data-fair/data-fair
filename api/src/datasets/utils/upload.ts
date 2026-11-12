@@ -2,6 +2,7 @@ import fs from 'fs-extra'
 import path from 'node:path'
 import multer from 'multer'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
+import { i18nHttpError } from '../../misc/utils/i18n-errors.ts'
 import mime from 'mime-types'
 import { resolvedSchema as datasetSchema } from '#types/dataset/index.ts'
 import * as datasetUtils from './index.ts'
@@ -117,9 +118,9 @@ const middleware = multer({
           }
         }
       } else if (file.fieldname === 'attachments') {
-        if (file.mimetype !== 'application/zip') throw httpError(400, 'Les fichiers joints doivent être embarqués dans une archive zip')
+        if (file.mimetype !== 'application/zip') throw i18nHttpError(400, 'errors.upload.attachmentsNotZip')
       } else {
-        throw httpError(400, `Fichier dans un champ non supporté: "${file.fieldname}"`)
+        throw i18nHttpError(400, 'errors.upload.unsupportedField', { field: file.fieldname })
       }
       debug('File accepted', file.originalname)
       cb(null, true)

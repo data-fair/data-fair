@@ -44,7 +44,7 @@ export default async function (dataset: DatasetInternal) {
     throw httpError(400, '[noretry] This is a test 400 error')
   }
 
-  if (dataset.isVirtual) throw new Error('Un jeu de données virtuel ne devrait pas passer par l\'étape indexation.')
+  if (dataset.isVirtual) throw new Error('A virtual dataset should not go through the indexing step.')
 
   const partialUpdate = dataset._partialRestStatus === 'updated' || dataset._partialRestStatus === 'extended'
 
@@ -174,7 +174,7 @@ export default async function (dataset: DatasetInternal) {
       }
       if (unicityErrorCount > 0) {
         const fileResult = await writer.finalize()
-        const summary = `${unicityErrorCount} ligne${unicityErrorCount > 1 ? 's' : ''} en double sur une contrainte d'unicité`
+        const summary = `${unicityErrorCount} duplicate line${unicityErrorCount > 1 ? 's' : ''} on a unicity constraint`
         const diagnosticEventData = {
           hasDiagnosticFile: true,
           diagnosticErrorCount: fileResult.count,
@@ -194,7 +194,7 @@ export default async function (dataset: DatasetInternal) {
           }
           await journals.log('datasets', dataset, {
             type: 'draft-cancelled',
-            data: `annulation automatique : ${summary}`,
+            data: `automatic cancellation: ${summary}`,
             ...diagnosticEventData
           } as Event)
           await datasetsService.cancelDraft(dataset)

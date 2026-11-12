@@ -5,8 +5,11 @@
 
 
 
-import { httpError } from '@data-fair/lib-utils/http-errors.js'
+import { invalidGeometryError } from './errors.ts'
+
 import { requiredCapability } from '../../datasets/es/operations.ts'
+import { unknownFieldError, missingCapabilityError } from '../../datasets/utils/field-errors.ts'
+import { notNumericError } from './errors.ts'
 
 const LBRACE='{';
 const RBRACE='}';
@@ -386,12 +389,12 @@ function peg$parse(input, options) {
     const propKey = aliasOf ?? key
     const prop = options.dataset.schema.find(p => p.key === propKey)
     if (!prop && !aliasOf) {
-      throw httpError(400, `Impossible de trier sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+      throw unknownFieldError('sort', key)
     }
     if (prop) {
       const capabilities = prop['x-capabilities'] || {}
       if (capabilities.values === false && capabilities.insensitive === false) {
-        throw httpError(400, `Impossible de trier sur le champ ${prop.key}. La fonctionnalité "Triable et groupable" n'est pas activée dans la configuration technique du champ.`)
+        throw missingCapabilityError('sort', prop.key, 'values')
       }
       if (capabilities.insensitive !== false && prop.type === 'string' && (prop.format === 'uri-reference' || !prop.format)) {
         return { key: prop.key, insensitive: true }
@@ -406,41 +409,41 @@ function peg$parse(input, options) {
   };
   var peg$f7 = function(key) {
     const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop) throw httpError(400, `Impossible de trier sur le champ ${key}, il n'existe pas dans le jeu de données.`)
-    if (prop.type !== 'number' && prop.type !== 'integer') throw httpError(400, `Impossible de trier sur la moyenne du champ ${key}, il n'est pas de type numérique.`)
+    if (!prop) throw unknownFieldError('sort', key)
+    if (prop.type !== 'number' && prop.type !== 'integer') throw notNumericError('sort', 'avg', key)
     const aggName = '___order_by_avg_' + key
     return { key: aggName, aggregation: { avg: {field: key} } }
   };
   var peg$f8 = function(key) {
     const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop) throw httpError(400, `Impossible de trier sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+    if (!prop) throw unknownFieldError('sort', key)
     const aggName = '___order_by_max_' + key
     return { key: aggName, aggregation: { max: {field: key} } }
   };
   var peg$f9 = function(key) {
     const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop) throw httpError(400, `Impossible de trier sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+    if (!prop) throw unknownFieldError('sort', key)
     const aggName = '___order_by_min_' + key
     return { key: aggName, aggregation: { min: {field: key} } }
   };
   var peg$f10 = function(key) {
     const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop) throw httpError(400, `Impossible de trier sur le champ ${key}, il n'existe pas dans le jeu de données.`)
-    if (prop.type !== 'number' && prop.type !== 'integer') throw httpError(400, `Impossible de trier sur la somme du champ ${key}, il n'est pas de type numérique.`)
+    if (!prop) throw unknownFieldError('sort', key)
+    if (prop.type !== 'number' && prop.type !== 'integer') throw notNumericError('sort', 'sum', key)
     const aggName = '___order_by_sum_' + key
     return { key: aggName, aggregation: { sum: {field: key} } }
   };
   var peg$f11 = function(key) {
     const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop) throw httpError(400, `Impossible de trier sur le champ ${key}, il n'existe pas dans le jeu de données.`)
-    if (prop.type !== 'number' && prop.type !== 'integer') throw httpError(400, `Impossible de trier sur la médiane du champ ${key}, il n'est pas de type numérique.`)
+    if (!prop) throw unknownFieldError('sort', key)
+    if (prop.type !== 'number' && prop.type !== 'integer') throw notNumericError('sort', 'median', key)
     const aggName = '___order_by_median_' + key
     return { key: aggName, aggregation: { percentiles: {field: key, percents: [50], keyed: false} } }
   };
   var peg$f12 = function(key, percent) {
     const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop) throw httpError(400, `Impossible de trier sur le champ ${key}, il n'existe pas dans le jeu de données.`)
-    if (prop.type !== 'number' && prop.type !== 'integer') throw httpError(400, `Impossible de trier sur un pourcentile du champ ${key}, il n'est pas de type numérique.`)
+    if (!prop) throw unknownFieldError('sort', key)
+    if (prop.type !== 'number' && prop.type !== 'integer') throw notNumericError('sort', 'percentile', key)
     const aggName = '___order_by_percentile_' + key
     return { key: aggName, aggregation: { percentiles: {field: key, percents: [percent], keyed: false} } }
   };
@@ -449,13 +452,13 @@ function peg$parse(input, options) {
   };
   var peg$f14 = function(key) {
     const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop) throw httpError(400, `Impossible de trier sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+    if (!prop) throw unknownFieldError('sort', key)
     const aggName = '___order_by_count_' + key
     return { key: aggName, aggregation: { value_count: {field: key} } }
   };
   var peg$f15 = function(key) {
     const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop) throw httpError(400, `Impossible de trier sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+    if (!prop) throw unknownFieldError('sort', key)
     const aggName = '___order_by_cardinality_' + key
     return { key: aggName, aggregation: { cardinality: {field: key} } }
   };
@@ -484,7 +487,7 @@ function peg$parse(input, options) {
       try {
         return JSON.parse(str)
       } catch (err) {
-        throw httpError(400, `Impossible de parser la géométrie ${str}, erreur: ${err.message}`)
+        throw invalidGeometryError(str, err)
       }
     } else {
       return str

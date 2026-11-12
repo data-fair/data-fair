@@ -232,7 +232,7 @@ test.describe('geo files support', () => {
     res = await ax.get('/api/v1/datasets/' + dataset.id + '/journal')
     assert.equal(res.status, 200)
     assert.equal(res.data[0].type, 'error')
-    assert.ok(res.data[0].data.startsWith('100% des lignes sont en erreur'))
+    assert.ok(res.data[0].data.startsWith('100% of the lines have an error'))
   })
 
   test('Fix some polygons', async () => {

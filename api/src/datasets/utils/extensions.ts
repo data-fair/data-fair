@@ -32,6 +32,8 @@ import { isRestDataset } from '#types/dataset/index.ts'
 import filesStorage from '#files-storage'
 import { readAttachmentContent } from './attachment-content.ts'
 import testEvents from '../../misc/utils/test-events.ts'
+import { i18nHttpError } from '../../misc/utils/i18n-errors.ts'
+import { noRetryError } from './field-errors.ts'
 
 export { getExtensionKey } from '@data-fair/data-fair-shared/utils/extensions.js'
 
@@ -124,7 +126,7 @@ const buildDetailedExtensions = async (dataset: Dataset, extensions: any[]) => {
           evaluate
         })
       } catch (err: any) {
-        throw new Error(`[noretry] échec de l'analyse de l'expression "${extension.expr}" : ${err.message}`)
+        throw new Error(`[noretry] failed to parse the expression "${extension.expr}": ${err.message}`)
       }
     }
   }
@@ -402,9 +404,9 @@ class ExtensionsStream extends Transform {
           const masterDatasetId = extension.remoteService.server.replace(`${config.publicUrl}/api/v1/datasets/`, '')
           const pseudoSessionState = getPseudoSessionState(this.dataset.owner, 'extension', '_master-data', 'admin')
           const masterDataset = await mongo.datasets.findOne({ id: masterDatasetId })
-          if (!masterDataset) throw new Error('jeu de données de référence inconnu ' + masterDatasetId)
+          if (!masterDataset) throw new Error('unknown master dataset ' + masterDatasetId)
           if (!(permissionsUtils.list('datasets', masterDataset, pseudoSessionState) as string[]).includes('readLines')) {
-            throw new Error(`[noretry] permission manquante sur le jeu de données de référence "${masterDataset.slug}" (${masterDataset.id})`)
+            throw new Error(`[noretry] missing permission on the master dataset "${masterDataset.slug}" (${masterDataset.id})`)
           }
           const bulkSearchId = extension.action.id.replace('masterData_bulkSearch_', '')
           data = await bulkSearchPromise(
@@ -607,7 +609,7 @@ export const prepareExtensionsSchema = async (schema: any, extensions: any[]) =>
       // types, plus a migration for existing datasets. Likely best done alongside the upcoming refactor that moves
       // calculated column editing directly into the Schema section.
       const existingProperty = schema.find((p: any) => p.key === extension.property.key)
-      if (existingProperty && !existingProperty['x-extension']) throw httpError(400, `Une extension essaie de créer la colonne "${extension.property.key}" mais cette clé est déjà utilisée.`)
+      if (existingProperty && !existingProperty['x-extension']) throw i18nHttpError(400, 'errors.schema.extensionKeyConflict', { key: extension.property.key })
       const fullProperty = existingProperty ? { ...existingProperty } : { ...extension.property }
       fullProperty['x-extension'] = extension.property.key
       extensionsFields.push(fullProperty)
@@ -646,19 +648,20 @@ export const checkExtensions = async (schema: any[], extensions: any[] = []) => 
 
     if (extension.type === 'remoteService') {
       const remoteService = await mongo.remoteServices.findOne({ id: extension.remoteService })
-      if (!remoteService) throw httpError(400, `[noretry] source de données de référénce inconnue "${extension.remoteService}"`)
+      if (!remoteService) throw noRetryError(400, 'errors.extensions.unknownRemoteService', { id: extension.remoteService })
       const action = findAction(remoteService, extension.action)
-      if (!action) throw httpError(400, `[noretry] opération de récupération de données de référénce inconnue "${extension.remoteService} / ${extension.action?.replace('masterData_bulkSearch_', '')}"`)
-      const errorPrefix = `[noretry] erreur de validation de l'extension "${action.summary}", `
+      if (!action) throw noRetryError(400, 'errors.extensions.unknownAction', { action: `${extension.remoteService} / ${extension.action?.replace('masterData_bulkSearch_', '')}` })
       if (!action.input.find((i: any) => i.concept && availableConcepts.has(i.concept))) {
-        throw httpError(400, `${errorPrefix}un concept nécessaire à l'utilisation de la donnée de référence n'est pas présent dans le jeu de données (${action.input.filter(i => i.concept && i.concept !== 'http://schema.org/identifier').map(i => i.concept).join(', ')})`)
+        throw noRetryError(400, 'errors.extensions.missingConcept', {
+          summary: action.summary ?? '',
+          concepts: action.input.filter(i => i.concept && i.concept !== 'http://schema.org/identifier').map(i => i.concept).join(', ')
+        })
       }
       for (const concept of action.output.map((i: any) => i.concept).filter(Boolean)) availableConcepts.add(concept)
     } else if (extension.property) {
-      const errorPrefix = `[noretry] erreur de validation de la colonne calculée "${extension.property.key}", `
       const availableSchema = await prepareExtensionsSchema(schema, previousExtensions)
       const exprError = exprEval(config.defaultTimeZone).check(extension.expr, availableSchema, fullSchema)
-      if (exprError) throw httpError(400, `${errorPrefix}${exprError}`)
+      if (exprError) throw noRetryError(400, 'errors.extensions.invalidCalculatedColumn', { key: extension.property.key, error: exprError })
       const property = schema.find(p => p.key === extension.property.key)
       if (property?.['x-refersTo']) availableConcepts.add(property?.['x-refersTo'])
     }

@@ -5,10 +5,12 @@
 
 
 
+import { invalidGeometryError } from './errors.ts'
+
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { requiredCapability } from '../../datasets/es/operations.ts'
-import { capabilityTitleFr } from '../../../contract/capabilities.js'
 import dayjs from 'dayjs'
+import { unknownFieldError, missingCapabilityError } from '../../datasets/utils/field-errors.ts'
 
 const LBRACE='{';
 const RBRACE='}';
@@ -18,10 +20,10 @@ const RBRACE='}';
 const assertGroupable = (groupByKey, dataset) => {
   const prop = dataset.schema.find(p => p.key === groupByKey)
   if (!prop) {
-    throw httpError(400, `Impossible de grouper par le champ ${groupByKey}, il n'existe pas dans le jeu de données.`)
+    throw unknownFieldError('group', groupByKey)
   }
   if (prop['x-capabilities'] && prop['x-capabilities'].values === false) {
-    throw httpError(400, `Impossible de grouper sur le champ ${groupByKey}. La fonctionnalité "${capabilityTitleFr('values')}" n'est pas activée dans la configuration technique du champ.`)
+    throw missingCapabilityError('group', groupByKey, 'values')
   }
   return prop
 }
@@ -675,7 +677,7 @@ function peg$parse(input, options) {
       try {
         return JSON.parse(str)
       } catch (err) {
-        throw httpError(400, `Impossible de parser la géométrie ${str}, erreur: ${err.message}`)
+        throw invalidGeometryError(str, err)
       }
     } else {
       return str

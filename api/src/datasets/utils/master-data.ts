@@ -8,6 +8,8 @@ import * as esUtils from '../es/index.ts'
 import pump from '../../misc/utils/pipe.ts'
 import log from '@data-fair/lib-node/log.js'
 import type { Dataset, VirtualDataset } from '#types'
+import { unknownFieldError } from './field-errors.ts'
+import { i18nHttpError } from '../../misc/utils/i18n-errors.ts'
 
 export const bulkSearchPromise = async (streams: any[], data: string): Promise<string> => {
   const buffers: Buffer[] = []
@@ -26,7 +28,7 @@ export const bulkSearchPromise = async (streams: any[], data: string): Promise<s
 
 export const bulkSearchStreams = async (dataset: Dataset, contentType: string, bulkSearchId: string, select: string, flatten: (line: Record<string, any>) => Record<string, any>): Promise<any[]> => {
   const bulkSearch = dataset.masterData && dataset.masterData.bulkSearchs && dataset.masterData.bulkSearchs.find((bs: any) => bs.id === bulkSearchId)
-  if (!bulkSearch) throw httpError(404, `Recherche en masse "${bulkSearchId}" inconnue`)
+  if (!bulkSearch) throw i18nHttpError(404, 'errors.masterData.unknownBulkSearch', { id: bulkSearchId })
 
   if (dataset.isVirtual) {
     const virtualDataset = dataset as VirtualDataset
@@ -35,7 +37,7 @@ export const bulkSearchStreams = async (dataset: Dataset, contentType: string, b
   const schema = dataset.schema ?? []
   const _source = (select && select !== '*') ? select.split(',') : schema.filter(prop => !prop['x-calculated']).map(prop => prop.key)
   const unknownField = _source.find(s => !schema.find(p => p.key === s))
-  if (unknownField) throw httpError(400, `Impossible de sélectionner le champ ${unknownField}, il n'existe pas dans le jeu de données.`)
+  if (unknownField) throw unknownFieldError('select', unknownField)
 
   const finalizeResponseLine = (responseLine: Record<string, any>, lineKey: string | number, error?: string): Record<string, any> => {
     responseLine = flatten(responseLine)
@@ -66,14 +68,14 @@ export const bulkSearchStreams = async (dataset: Dataset, contentType: string, b
     }
     for (const input of bulkSearch.input) {
       if ([null, undefined].includes(line[input.property.key])) {
-        throw httpError(400, `la propriété en entrée ${input.property.key} est obligatoire`)
+        throw i18nHttpError(400, 'errors.masterData.inputRequired', { property: input.property.key })
       }
       if (input.type === 'equals') {
         qs.push(`${esUtils.escapeFilter(input.property.key)}:"${esUtils.escapeFilter(line[input.property.key])}"`)
       } else if (input.type === 'date-in-interval') {
         const startDate = schema.find(p => p['x-refersTo'] === 'https://schema.org/startDate')
         const endDate = schema.find(p => p['x-refersTo'] === 'https://schema.org/endDate')
-        if (!startDate || !endDate) throw new Error('cet enrichissement sur interval de date requiert les concepts "date de début" et "date de fin"')
+        if (!startDate || !endDate) throw new Error('this extension on a date interval requires the concepts "start date" and "end date"')
         const date = line[input.property.key].replace(/:/g, '\\:')
         qs.push(`${endDate.key}:[${date} TO *]`)
         qs.push(`${startDate.key}:[* TO ${date}]`)
@@ -111,8 +113,7 @@ export const bulkSearchStreams = async (dataset: Dataset, contentType: string, b
             esResponse = await esUtils.multiSearch(es.client, dataset, queries)
           } catch (err) {
             log.warn('master data multi query failed', { code: 'masterdata-multi-query', err })
-            const { message, status } = esUtils.extractError(err)
-            throw httpError(status, message)
+            throw esUtils.extractedHttpError(esUtils.extractError(err))
           }
           for (const i in esResponse.responses) {
             const line = lines[Number(i)]

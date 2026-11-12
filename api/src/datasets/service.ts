@@ -4,7 +4,6 @@ import debugLib from 'debug'
 import moment from 'moment'
 import log from '@data-fair/lib-node/log.js'
 import { ownerLogFields, resourceLogFields } from '../misc/utils/log-fields.ts'
-import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import memoize from 'memoizee'
 import equal from 'deep-equal'
 import * as findUtils from '../misc/utils/find.ts'
@@ -41,7 +40,8 @@ import type { Client } from '@elastic/elasticsearch'
 import type { SessionState, SessionStateAuthenticated } from '@data-fair/lib-express'
 import type { VirtualDataset, Permission } from '#types'
 import { isRestDataset } from '#types/dataset/index.ts'
-import { type Locale } from '../../i18n/utils.ts'
+import type { Locale } from '../../i18n/utils.ts'
+import { i18nHttpError } from '../misc/utils/i18n-errors.ts'
 
 // thin re-export: fragments/service.ts targets this module rather than datasets/utils/index.ts
 // directly (cross-module imports target service.ts/operations.ts/types.ts, see code-conventions.md §2)
@@ -266,7 +266,7 @@ export const getDataset = async (datasetId: string, publicationSite: string, mai
     // dataset found but not in proper state.. wait a little while
     await new Promise(resolve => setTimeout(resolve, config.datasetStateRetries.interval))
   }
-  throw httpError(409, `Le jeu de données n'est pas dans un état permettant l'opération demandée. État courant : ${dataset?.status}.`)
+  throw i18nHttpError(409, 'errors.datasets.badState', { status: String(dataset?.status) })
 }
 
 export const memoizedGetDataset = memoize(getDataset, {
@@ -313,7 +313,7 @@ export const createDataset = async (db: Db, es: Client, locale: string, sessionS
   const attachmentsFile = files?.find(f => f.fieldname === 'attachments')
 
   if ([!!datasetFile, body.isVirtual, body.isRest, body.isMetaOnly].filter(b => b).length > 1) {
-    throw httpError(400, 'Un jeu de données ne peut pas être de plusieurs types à la fois')
+    throw i18nHttpError(400, 'errors.datasets.multipleTypes')
   }
 
   const dataset = { ...body }
@@ -377,8 +377,8 @@ export const createDataset = async (db: Db, es: Client, locale: string, sessionS
       Object.assign(dataset, filePatch)
     }
   } else if (body.isVirtual) {
-    if (!body.title) throw httpError(400, 'Un jeu de données virtuel doit être créé avec un titre')
-    if (attachmentsFile) throw httpError(400, 'Un jeu de données virtuel ne peut pas avoir de pièces jointes')
+    if (!body.title) throw i18nHttpError(400, 'errors.datasets.virtualTitleRequired')
+    if (attachmentsFile) throw i18nHttpError(400, 'errors.datasets.virtualNoAttachments')
     dataset.virtual = dataset.virtual || { children: [] }
     const virtualPatch = await virtualDatasetsUtils.prepareVirtualDatasetPatch(dataset)
     dataset.schema = virtualPatch.schema
@@ -390,8 +390,8 @@ export const createDataset = async (db: Db, es: Client, locale: string, sessionS
       dataset.status = 'indexed'
     }
   } else if (body.isRest) {
-    if (!body.title) throw httpError(400, 'Un jeu de données éditable doit être créé avec un titre')
-    if (attachmentsFile) throw httpError(400, 'Un jeu de données éditable ne peut pas être créé avec des pièces jointes')
+    if (!body.title) throw i18nHttpError(400, 'errors.datasets.restTitleRequired')
+    if (attachmentsFile) throw i18nHttpError(400, 'errors.datasets.restNoAttachments')
     dataset.rest = dataset.rest || {}
     dataset.rest.primaryKeyMode = dataset.rest.primaryKeyMode || 'sha256'
     dataset.rest.indiceMode = dataset.rest.indiceMode || 'timestamp3'
@@ -407,8 +407,8 @@ export const createDataset = async (db: Db, es: Client, locale: string, sessionS
       dataset.status = 'finalized'
     }
   } else if (body.isMetaOnly) {
-    if (!body.title) throw httpError(400, 'Un jeu de données métadonnées doit être créé avec un titre')
-    if (attachmentsFile) throw httpError(400, 'Un jeu de données virtuel ne peut pas avoir de pièces jointes')
+    if (!body.title) throw i18nHttpError(400, 'errors.datasets.metaOnlyTitleRequired')
+    if (attachmentsFile) throw i18nHttpError(400, 'errors.datasets.virtualNoAttachments')
   } else if (dataset.initFrom && dataset.initFrom.parts.includes('data')) {
     // case of a file dataset initialized from master data
     if (draft) {
@@ -421,7 +421,7 @@ export const createDataset = async (db: Db, es: Client, locale: string, sessionS
       dataset.status = 'created'
     }
   } else {
-    throw httpError(400, 'Un jeu de données doit être initialisé avec un fichier ou déclaré "virtuel" ou "éditable" ou "métadonnées"')
+    throw i18nHttpError(400, 'errors.datasets.initRequired')
   }
 
   dataset._modified = computeModified(dataset)
@@ -581,7 +581,7 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
           if (++n % 100 === 0) await new Promise(resolve => setImmediate(resolve))
           const coherenceError = dateCoherenceViolation(line[startProp.key], line[endProp.key], startProp, endProp, config.defaultTimeZone)
           if (coherenceError) {
-            throw httpError(400, `La contrainte de cohérence des dates ne peut pas être appliquée : au moins une ligne existante ne la respecte pas. ${coherenceError}`)
+            throw i18nHttpError(400, 'errors.datasets.dateCoherenceExistingLines', { detail: coherenceError })
           }
         }
       }

@@ -6,7 +6,8 @@
 import log from '@data-fair/lib-node/log.js'
 import { truncateLogValue } from '../../misc/utils/log-fields.ts'
 import { getFilterableFields, resolveExactKeywordTarget, virtualFilterClauses, descendantsFilterClause } from '../../datasets/es/operations.ts'
-import { httpError } from '@data-fair/lib-utils/http-errors.js'
+import { i18nHttpError } from '../../misc/utils/i18n-errors.ts'
+import { invalidParamError } from './errors.ts'
 import { Counter } from 'prom-client'
 import { parse as parseWhere } from './where.peg.js'
 import { parse as parseSelect } from './select.peg.js'
@@ -85,7 +86,7 @@ export const parseFilters = (dataset, query, route) => {
       must.push(parseWhere(query.where, { searchFields, wildcardFields, dataset, timezone: query.timezone, resolveExactKeywordTarget }))
     } catch (err: any) {
       logCompatODSError(err, query.where, route, 'invalid-where', dataset.id)
-      throw httpError(400, 'le paramètre "where" est invalide : ' + err.message)
+      throw invalidParamError('where', err)
     }
   }
 
@@ -100,7 +101,7 @@ export const parseFilters = (dataset, query, route) => {
       }
     } catch (err: any) {
       logCompatODSError(err, query.refine, route, 'invalid-refine', dataset.id)
-      throw httpError(400, 'le paramètre "refine" est invalide : ' + err.message)
+      throw invalidParamError('refine', err)
     }
   }
 
@@ -315,12 +316,12 @@ export const prepareEsQuery = (dataset: any, query: Record<string, string>, rout
 
   const esQuery: any = {}
   esQuery.size = (query.limit ?? query.rows) ? Number(query.limit ?? query.rows) : 10
-  if (!Number.isInteger(esQuery.size) || esQuery.size < -1) throw httpError(400, 'le paramètre "limit" doit être un entier positif ou -1')
+  if (!Number.isInteger(esQuery.size) || esQuery.size < -1) throw i18nHttpError(400, 'errors.ods.invalidLimit')
   if (esQuery.size === -1) esQuery.size = 100 // -1 is interpreted as 100
 
   const size = esQuery.size
   const from = esQuery.from = query.offset ? Number(query.offset) : 0
-  if (!Number.isInteger(from) || from < 0) throw httpError(400, 'le paramètre "offset" doit être un entier positif')
+  if (!Number.isInteger(from) || from < 0) throw i18nHttpError(400, 'errors.ods.invalidOffset')
 
   const fields = dataset.schema.map(f => f.key)
 
@@ -331,7 +332,7 @@ export const prepareEsQuery = (dataset: any, query: Record<string, string>, rout
       Object.assign(simpleAliases, parseAliases(query[param]))
     } catch (err: any) {
       logCompatODSError(err, query[param], route, `invalid-${param.replace('_', '-')}`, dataset.id)
-      throw httpError(400, `le paramètre "${param}" est invalide : ` + err.message)
+      throw invalidParamError(param, err)
     }
   }
 
@@ -348,7 +349,7 @@ export const prepareEsQuery = (dataset: any, query: Record<string, string>, rout
       select = parseSelect(query.select, { dataset, grouped })
     } catch (err: any) {
       logCompatODSError(err, query.select, route, 'invalid-select', dataset.id)
-      throw httpError(400, 'le paramètre "select" est invalide : ' + err.message)
+      throw invalidParamError('select', err)
     }
     selectSource = esQuery._source = select.sources
     selectFinalKeys = select.finalKeys
@@ -367,7 +368,7 @@ export const prepareEsQuery = (dataset: any, query: Record<string, string>, rout
       orderBy = parseOrderBy(query.order_by, { dataset, aliases, simpleAliases, grouped })
     } catch (err: any) {
       logCompatODSError(err, query.order_by, route, 'invalid-order-by', dataset.id)
-      throw httpError(400, 'le paramètre "order_by" est invalide : ' + err.message)
+      throw invalidParamError('order_by', err)
     }
     esQuery.aggs = { ...esQuery.aggs, ...orderBy.aggregations }
     esQuery.sort = sort = orderBy.sort
@@ -383,7 +384,7 @@ export const prepareEsQuery = (dataset: any, query: Record<string, string>, rout
       groupBy = parseGroupBy(query.group_by, { dataset, aggs: esQuery.aggs, sort: esQuery.sort, aliases, transforms: selectTransforms, timezone: query.timezone })
     } catch (err: any) {
       logCompatODSError(err, query.group_by, route, 'invalid-group-by', dataset.id)
-      throw httpError(400, 'le paramètre "group_by" est invalide : ' + err.message)
+      throw invalidParamError('group_by', err)
     }
     esQuery.aggs = { ___group_by: groupBy.agg }
     esQuery.size = 0

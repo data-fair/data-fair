@@ -4,14 +4,15 @@ import slug from 'slugify'
 import dayjs from 'dayjs'
 import equal from 'fast-deep-equal'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import { type DatasetsMetadataOptions, type Settings } from '#types/settings/index.js'
-import { type DepartmentSettings } from '#types/department-settings/index.js'
+import { i18nHttpError } from '../misc/utils/i18n-errors.ts'
+import type { DatasetsMetadataOptions, Settings } from '#types/settings/index.js'
+import type { DepartmentSettings } from '#types/department-settings/index.js'
 import * as topicsUtils from '../misc/utils/topics.ts'
 import config from '#config'
 import mongo from '#mongo'
 import standardLicenses from '../../contract/licenses.js'
 import debugLib from 'debug'
-import { type AccountKeys, type SessionStateAuthenticated } from '@data-fair/lib-express'
+import type { AccountKeys, SessionStateAuthenticated } from '@data-fair/lib-express'
 import log from '@data-fair/lib-node/log.js'
 import { ownerLogFields } from '../misc/utils/log-fields.ts'
 import clone from '@data-fair/lib-utils/clone.js'
@@ -172,7 +173,7 @@ const writeSettings = async (ctx: SettingsWriteContext, existingSettings: Settin
     for (const topic of settings.topics) {
       if (!topic.id) topic.id = nanoid()
       const existing = seenIds.get(topic.id)
-      if (existing) throw httpError(400, `Les thématiques "${existing}" et "${topic.title}" ont le même identifiant`)
+      if (existing) throw i18nHttpError(400, 'errors.settings.duplicateTopicId', { first: existing, second: String(topic.title) })
       seenIds.set(topic.id, topic.title)
     }
   }
@@ -182,9 +183,9 @@ const writeSettings = async (ctx: SettingsWriteContext, existingSettings: Settin
     // category keys are tab values on the dataset page, next to the fixed tabs
     const seenKeys = new Map<string, string>()
     for (const group of settings.datasetsMetadata.groups ?? []) {
-      if (['informations', 'coverage', 'attachments'].includes(group.key!)) throw httpError(400, `La catégorie "${group.title}" utilise un identifiant réservé`)
+      if (['informations', 'coverage', 'attachments'].includes(group.key!)) throw i18nHttpError(400, 'errors.settings.reservedGroupKey', { title: String(group.title) })
       const existing = seenKeys.get(group.key!)
-      if (existing) throw httpError(400, `Les catégories "${existing}" et "${group.title}" ont le même identifiant`)
+      if (existing) throw i18nHttpError(400, 'errors.settings.duplicateGroupKey', { first: existing, second: String(group.title) })
       seenKeys.set(group.key!, group.title)
     }
   }
