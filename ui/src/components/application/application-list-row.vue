@@ -70,12 +70,20 @@
             class="text-label-medium"
           >+{{ hiddenTopics.length }}</span>
         </div>
-        <div style="width: 24px">
+        <!-- same hover card as the resource cards; a fragment keeps the puzzle icon naming its parent -->
+        <div
+          class="d-flex justify-center"
+          style="width: 32px"
+        >
           <resource-visibility
-            v-if="application.visibility || application.partOf"
+            v-if="application.partOf"
             :visibility="application.visibility"
             :part-of="application.partOf"
             size="small"
+          />
+          <card-visibility
+            v-else-if="application.visibility"
+            :visibility="application.visibility"
           />
         </div>
         <div style="min-width: 28px">

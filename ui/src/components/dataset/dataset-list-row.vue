@@ -74,12 +74,20 @@
             {{ dataset.completeness.score }}&nbsp;%
           </template>
         </div>
-        <div style="width: 24px">
+        <!-- same hover card as the resource cards; a fragment keeps the puzzle icon naming its parent -->
+        <div
+          class="d-flex justify-center"
+          style="width: 32px"
+        >
           <resource-visibility
-            v-if="dataset.visibility || dataset.partOf"
+            v-if="dataset.partOf"
             :visibility="dataset.visibility"
             :part-of="dataset.partOf"
             size="small"
+          />
+          <card-visibility
+            v-else-if="dataset.visibility"
+            :visibility="dataset.visibility"
           />
         </div>
         <div style="min-width: 28px">

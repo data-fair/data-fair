@@ -177,8 +177,9 @@ test.describe('datasets list page', () => {
     await expect(alpha).toContainText('dataset1.csv')
     await expect(alpha).toContainText(/\d+ lignes?/)
     await expect(alpha).toContainText(/Modifié le/)
-    // the visibility column (private by default)
-    await expect(alpha.locator('.v-list-item__append .v-icon').first()).toBeVisible()
+    // the visibility column (private by default), detailed in a hover card
+    await alpha.locator('.v-list-item__append .cursor-help').hover()
+    await expect(page.locator('.v-overlay__content').filter({ hasText: 'Privé' })).toContainText('Visible seulement par les membres')
   })
 })
 
