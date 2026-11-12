@@ -70,6 +70,13 @@
             class="text-label-medium"
           >+{{ hiddenTopics.length }}</span>
         </div>
+        <div style="min-width: 28px">
+          <owner-avatar
+            v-if="showOwner"
+            :owner="application.owner"
+            :omit-owner-name="!showAll"
+          />
+        </div>
         <!-- same hover card as the resource cards; a fragment keeps the puzzle icon naming its parent -->
         <div
           class="d-flex justify-center"
@@ -84,13 +91,6 @@
           <card-visibility
             v-else-if="application.visibility"
             :visibility="application.visibility"
-          />
-        </div>
-        <div style="min-width: 28px">
-          <owner-avatar
-            v-if="showOwner"
-            :owner="application.owner"
-            :omit-owner-name="!showAll"
           />
         </div>
       </div>

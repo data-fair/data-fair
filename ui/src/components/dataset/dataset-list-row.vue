@@ -68,6 +68,13 @@
             :datasets-metadata="datasetsMetadata"
           />
         </div>
+        <div style="min-width: 28px">
+          <owner-avatar
+            v-if="showOwner"
+            :owner="dataset.owner"
+            :omit-owner-name="!showAll"
+          />
+        </div>
         <!-- same hover card as the resource cards; a fragment keeps the puzzle icon naming its parent -->
         <div
           class="d-flex justify-center"
@@ -82,13 +89,6 @@
           <card-visibility
             v-else-if="dataset.visibility"
             :visibility="dataset.visibility"
-          />
-        </div>
-        <div style="min-width: 28px">
-          <owner-avatar
-            v-if="showOwner"
-            :owner="dataset.owner"
-            :omit-owner-name="!showAll"
           />
         </div>
       </div>
