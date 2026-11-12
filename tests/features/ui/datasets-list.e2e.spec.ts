@@ -164,16 +164,21 @@ test.describe('datasets list page', () => {
     await expect(page.getByText(/Vous n'avez pas encore créé/)).toBeVisible({ timeout: 10000 })
   })
 
-  test('visibility icon is displayed in list view', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/datasets', 'test_user1')
+  test('list view rows show the file, the line count, the date and the visibility', async ({ page, goToWithAuth }) => {
+    await goToWithAuth('/data-fair/datasets?sort=title:1', 'test_user1')
     await expect(page.locator('.v-container .v-card').first()).toBeVisible({ timeout: 10000 })
 
     // Switch to list view
     await page.locator('#navigation-right-local button[value="list"]').click()
-    await expect(page.locator('.v-container .v-list .v-list-item').first()).toBeVisible({ timeout: 5000 })
+    const rows = page.locator('.v-container .v-list .dataset-list-row')
+    await expect(rows).toHaveCount(3, { timeout: 5000 })
 
-    // Visibility icon should be present in list items
-    await expect(page.locator('.v-container .v-list .v-list-item .v-icon').first()).toBeVisible({ timeout: 5000 })
+    const alpha = rows.filter({ hasText: 'Alpha Dataset' })
+    await expect(alpha).toContainText('dataset1.csv')
+    await expect(alpha).toContainText(/\d+ lignes?/)
+    await expect(alpha).toContainText(/Modifié le/)
+    // the visibility column (private by default)
+    await expect(alpha.locator('.v-list-item__append .v-icon').first()).toBeVisible()
   })
 })
 

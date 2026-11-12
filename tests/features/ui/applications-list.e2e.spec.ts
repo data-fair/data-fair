@@ -76,6 +76,17 @@ test.describe('applications list page', () => {
     await expect(page).toHaveURL(/sort=title/)
   })
 
+  test('list view rows show the capture, the title and the date', async ({ page, goToWithAuth }) => {
+    await goToWithAuth('/data-fair/applications', 'test_user1')
+    await expect(page.locator('.v-container .v-card').first()).toBeVisible({ timeout: 10000 })
+
+    await page.locator('#navigation-right-local button[value="list"]').click()
+    const row = page.locator('.v-container .v-list .application-list-row').first()
+    await expect(row).toBeVisible({ timeout: 5000 })
+    await expect(row.locator('.v-img')).toBeVisible()
+    await expect(row).toContainText(/Modifiée le/)
+  })
+
   test('"Nouvelle application" button navigates to new-application page', async ({ page, goToWithAuth }) => {
     await goToWithAuth('/data-fair/applications', 'test_user1')
     await page.getByRole('link', { name: /nouvelle application/i }).first().click()

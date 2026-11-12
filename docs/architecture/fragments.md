@@ -505,7 +505,9 @@ permission model on the client, it is purely presentational.
   imply `readDescription` on the parent, so a 403/404 there is an ordinary case, not something to
   toast on every page load.
 - **Cards and list items** (`dataset-card`, `application-card`, `dataset-list-item`,
-  `application-list-item`): wherever a fragment is still listed — a dataset's Applications tab (the
+  `application-list-item`, and the `dataset-list-row` / `application-list-row` of the list mode of
+  the datasets and applications pages, where fragments appear with the super admin "show fragments"
+  switch): wherever a fragment is still listed — a dataset's Applications tab (the
   `dataset=` query pins resources, §6), an application's datasets and sub-applications tabs, the
   virtual children, the Fragments tab, the pickers — `resource-visibility.vue` shows the same
   puzzle icon instead of the visibility lock, given `partOf`. Its tooltip names the parent ("Fragment

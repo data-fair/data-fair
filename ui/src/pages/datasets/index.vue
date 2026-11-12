@@ -69,11 +69,13 @@
         v-else
         lines="two"
       >
-        <dataset-list-item
-          v-for="dataset in catalog.displayedItems.value"
+        <template
+          v-for="(dataset, i) in catalog.displayedItems.value"
           :key="dataset.id"
-          :dataset="dataset"
-        />
+        >
+          <v-divider v-if="i > 0" />
+          <dataset-list-row :dataset="dataset" />
+        </template>
         <template v-if="catalog.loading.value && catalog.initialized.value">
           <v-skeleton-loader
             v-for="i in 12"

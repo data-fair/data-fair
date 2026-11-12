@@ -69,11 +69,13 @@
         v-else
         lines="two"
       >
-        <application-list-item
-          v-for="application in catalog.displayedItems.value"
+        <template
+          v-for="(application, i) in catalog.displayedItems.value"
           :key="application.id"
-          :application="application"
-        />
+        >
+          <v-divider v-if="i > 0" />
+          <application-list-row :application="application" />
+        </template>
         <template v-if="catalog.loading.value && catalog.initialized.value">
           <v-skeleton-loader
             v-for="i in 12"
