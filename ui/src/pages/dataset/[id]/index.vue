@@ -392,6 +392,15 @@
             />
           </v-tabs-window-item>
           <v-tabs-window-item
+            v-if="$uiConfig.metricsIntegration"
+            value="audience"
+          >
+            <metrics-audience
+              resource-type="dataset"
+              :resource-id="dataset.id"
+            />
+          </v-tabs-window-item>
+          <v-tabs-window-item
             v-if="$uiConfig.eventsIntegration"
             value="notifications"
           >
@@ -746,6 +755,7 @@ fr:
   tracking: Suivi
   journal: Journal
   traceability: Traçabilité
+  audience: Audience
   notifications: Notifications
   webhooks: Webhooks
   integrity: Intégrité
@@ -821,6 +831,7 @@ en:
   tracking: Tracking
   journal: Journal
   traceability: Traceability
+  audience: Audience
   notifications: Notifications
   webhooks: Webhooks
   integrity: Integrity
@@ -866,7 +877,7 @@ import dataMaintenanceSvg from '~/assets/svg/data-maintenance-two-color.svg?raw'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import ConfirmMenu from '~/components/confirm-menu.vue'
 import DatasetRestConfig from '~/components/dataset/rest/dataset-rest-config.vue'
-import { mdiAccountSwitch, mdiAlertCircle, mdiAllInclusive, mdiAttachment, mdiBell, mdiCalendarText, mdiCancel, mdiClipboardTextClock, mdiCodeJson, mdiCodeTags, mdiContentCopy, mdiDatabaseSearch, mdiDelete, mdiDeleteSweep, mdiEarth, mdiFingerprint, mdiHistory, mdiImage, mdiImageMultiple, mdiInformation, mdiKey, mdiLock, mdiMap, mdiPictureInPictureBottomRightOutline, mdiPlus, mdiPresentation, mdiPuzzle, mdiRefresh, mdiSecurity, mdiShapeOutline, mdiShieldKey, mdiStarFourPoints, mdiTable, mdiTableCog, mdiTableColumnPlusAfter, mdiTransitConnection, mdiWebhook } from '@mdi/js'
+import { mdiAccountSwitch, mdiAlertCircle, mdiAllInclusive, mdiAttachment, mdiBell, mdiCalendarText, mdiCancel, mdiChartBar, mdiClipboardTextClock, mdiCodeJson, mdiCodeTags, mdiContentCopy, mdiDatabaseSearch, mdiDelete, mdiDeleteSweep, mdiEarth, mdiFingerprint, mdiHistory, mdiImage, mdiImageMultiple, mdiInformation, mdiKey, mdiLock, mdiMap, mdiPictureInPictureBottomRightOutline, mdiPlus, mdiPresentation, mdiPuzzle, mdiRefresh, mdiSecurity, mdiShapeOutline, mdiShieldKey, mdiStarFourPoints, mdiTable, mdiTableCog, mdiTableColumnPlusAfter, mdiTransitConnection, mdiWebhook } from '@mdi/js'
 import equal from 'fast-deep-equal'
 import { useWindowSize } from '@vueuse/core'
 import { useAgentLeaveGuard } from '~/composables/use-agent-leave-guard'
@@ -1433,10 +1444,13 @@ const sections = computedDeepDiff(() => {
   if (can('readJournal').value && !d.isMetaOnly) {
     activityTabs.push({ key: 'journal', title: t('journal'), icon: mdiCalendarText, agentDesc: 'Chronological processing journal: ingestion, indexing, extension execution, errors. The natural first place to look when investigating why a dataset is stuck or in error state.' })
   }
+  if ($uiConfig.eventsIntegration && can('readJournal').value) {
+    activityTabs.push({ key: 'traceability', title: t('traceability'), icon: mdiClipboardTextClock, agentDesc: 'Audit trail of user actions on this dataset (who did what, when).' })
+  }
+  if ($uiConfig.metricsIntegration && can('readJournal').value) {
+    activityTabs.push({ key: 'audience', title: t('audience'), icon: mdiChartBar, agentDesc: 'Audience of this dataset over a period, from the metrics service: downloads, downloaded volume, API calls, their history, and the requests by visualization, calling site, user category and consumer.' })
+  }
   if ($uiConfig.eventsIntegration) {
-    if (can('readJournal').value) {
-      activityTabs.push({ key: 'traceability', title: t('traceability'), icon: mdiClipboardTextClock, agentDesc: 'Audit trail of user actions on this dataset (who did what, when).' })
-    }
     if (!d.isMetaOnly) {
       activityTabs.push({ key: 'notifications', title: t('notifications'), icon: mdiBell, agentDesc: 'Subscribe the current user to in-app / email notifications for events on this dataset (errors, publication, etc.).' })
     }
@@ -1446,7 +1460,7 @@ const sections = computedDeepDiff(() => {
   }
   // the journal is data-fair's own: the section must not depend on the events integration
   if (activityTabs.length) {
-    result.activity = { title: t('tracking'), tabs: activityTabs, agentDesc: 'Logs, audit trail, notifications and webhooks for this dataset.' }
+    result.activity = { title: t('tracking'), tabs: activityTabs, agentDesc: 'Logs, audit trail, audience, notifications and webhooks for this dataset.' }
   }
   // Integrity tab — appended to the activity section, creating it if eventsIntegration is off.
   // Reads (status + revision history) are visible to the owner's admins; the enable/disable and
@@ -1459,7 +1473,7 @@ const sections = computedDeepDiff(() => {
     // readers without readIntegrity) — no extra request needed to color the tab
     const integrityBreach = d.integrity?.lastCheck?.status === 'breach'
     activityTabs.push({ key: 'integrity', title: t('integrity'), icon: mdiShieldKey, color: integrityBreach ? 'error' : undefined, agentDesc: 'Data-integrity panel: tamper-detection status, last check and revision history — readable by the owner account admins. The enable/disable and reconcile (fix) actions are superadmin-only.' })
-    result.activity = result.activity || { title: t('tracking'), tabs: activityTabs, agentDesc: 'Logs, audit trail, notifications and webhooks for this dataset.' }
+    result.activity = result.activity || { title: t('tracking'), tabs: activityTabs, agentDesc: 'Logs, audit trail, audience, notifications and webhooks for this dataset.' }
   }
 
   // Diagnose section (superadmin only)
