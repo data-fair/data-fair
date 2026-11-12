@@ -105,6 +105,7 @@ const configureContext = computed(() => {
 
 const vjsfOptions = computed<VjsfOptions>(() => ({
   locale: locale.value,
+  xI18n: true,
   readOnly: !canManage.value,
   context: context.value,
   density: 'comfortable'

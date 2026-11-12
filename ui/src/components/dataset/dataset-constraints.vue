@@ -88,7 +88,8 @@ const schema = computed(() => {
   return { type: 'object', properties: { constraints: constraintsSchema } }
 })
 
-const vjsfOptions = computed<VjsfOptions>(() => ({ disableAll: !props.editable, density: 'compact' }))
+const { locale } = useI18n()
+const vjsfOptions = computed<VjsfOptions>(() => ({ disableAll: !props.editable, density: 'compact', locale: locale.value, xI18n: true }))
 
 function apply () {
   emit('update:modelValue', editConstraints.value?.constraints ?? [])
