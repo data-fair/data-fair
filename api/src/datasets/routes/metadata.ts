@@ -290,8 +290,7 @@ export const registerMetadataRoutes = (router: Router) => {
 
         const draft = !!dataset.draftReason
         await notifications.send({
-          title: `Propriétés modifiées sur un ${draft ? 'brouillon de ' : ''}jeu de données`,
-          body: `${draft ? 'brouillon ' : ''}${dataset.title} (${dataset.slug}), ${Object.keys(patch)?.join(', ')}`,
+          ...notifications.eventTexts(`datasets.${draft ? 'draft-' : ''}patched-properties`, { title: dataset.title, full: `${dataset.title} (${dataset.slug})` }, { keys: Object.keys(patch).join(', ') }),
           topic: {
             key: `data-fair:dataset${draft ? '-draft' : ''}-patched-properties:${dataset.id}`
           },
@@ -357,8 +356,7 @@ export const registerMetadataRoutes = (router: Router) => {
     log.info(`dataset deleted ${dataset.slug} (${dataset.id})`, { code: 'df.datasets.delete', ...resourceLogFields('datasets', dataset) })
     const sessionState = await session.req(req)
     await notifications.send({
-      title: 'Jeu de données supprimé',
-      body: `${dataset.title} (${dataset.slug})`,
+      ...notifications.eventTexts('datasets.delete', { title: dataset.title, full: `${dataset.title} (${dataset.slug})` }),
       topic: {
         key: `data-fair:dataset-delete:${dataset.id}`
       },

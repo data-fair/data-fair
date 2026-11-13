@@ -436,6 +436,18 @@
 			"integrity-trail-altered": {
 				"title": "Historique de révisions altéré",
 				"body": "L'historique de révisions du jeu de données {{{label}}} présente des signes d'altération (révisions masquées ou réécrites). Les révisions verrouillées d'origine sont intactes ; consultez les anomalies dans le panneau d'intégrité."
+			},
+			"patched-properties": {
+				"title": "Propriétés modifiées sur le jeu de données {{{label}}}",
+				"body": "Les propriétés {{{keys}}} du jeu de données {{{label}}} ont été modifiées."
+			},
+			"draft-patched-properties": {
+				"title": "Propriétés modifiées sur le brouillon du jeu de données {{{label}}}",
+				"body": "Les propriétés {{{keys}}} du brouillon du jeu de données {{{label}}} ont été modifiées."
+			},
+			"delete": {
+				"title": "Jeu de données {{{label}}} supprimé",
+				"body": "Le jeu de données {{{label}}} a été supprimé."
 			}
 		},
 		"applications": {
@@ -458,7 +470,39 @@
 			"published-topic": {
 				"title": "Publication de {{{label}}} dans {{{topic}}}",
 				"body": "L'application {{{label}}} a été publiée sur {{{publicationSite}}} dans la thématique {{{topic}}}."
+			},
+			"updated": {
+				"title": "Application {{{label}}} entièrement modifiée",
+				"body": "L'application {{{label}}} a été entièrement modifiée."
+			},
+			"patched-properties": {
+				"title": "Propriétés modifiées sur l'application {{{label}}}",
+				"body": "Les propriétés {{{keys}}} de l'application {{{label}}} ont été modifiées."
+			},
+			"change-owner": {
+				"title": "Changement de propriétaire de l'application {{{label}}}",
+				"body": "L'application {{{label}}} a changé de propriétaire : {{{from}}} -> {{{to}}}."
+			},
+			"delete": {
+				"title": "Application {{{label}}} supprimée",
+				"body": "L'application {{{label}}} a été supprimée."
+			},
+			"write-keys": {
+				"title": "Clé de protection de l'application {{{label}}} définie",
+				"body": "Une clé de protection a été définie sur l'application {{{label}}}."
 			}
+		},
+		"settings": {
+			"api-key-created": {
+				"title": "Clé d'API {{{label}}} créée",
+				"body": "La clé d'API {{{label}}} a été créée, {{{scopes}}}."
+			},
+			"api-key-deleted": {
+				"title": "Clé d'API {{{label}}} supprimée",
+				"body": "La clé d'API {{{label}}} a été supprimée, {{{scopes}}}."
+			},
+			"no-scope": "aucun scope",
+			"scopes": "scopes : {{{scopes}}}"
 		}
 	},
 	"mails": {

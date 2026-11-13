@@ -25,6 +25,14 @@ import { stampHistorizeMany } from '../integrity/outbox.ts'
 
 const debugPublicationSites = debugLib('publication-sites')
 
+/** The scopes of an api key, in the body of its notifications. */
+const apiKeyScopesParam = (scopes: string[]) => {
+  const text = scopes.length
+    ? notifications.localizedParam('notifications.settings.scopes', { scopes: scopes.join(', ') })
+    : notifications.localizedParam('notifications.settings.no-scope')
+  return { en: { scopes: text.en }, fr: { scopes: text.fr } }
+}
+
 export type SettingsWriteContext = SettingsParams & {
   sessionState: SessionStateAuthenticated
   host: string
@@ -107,8 +115,7 @@ const writeSettings = async (ctx: SettingsWriteContext, existingSettings: Settin
 
       log.info(`a user created an api key ${apiKey.title} (${apiKey.id}), scopes=${apiKey.scopes.join(', ')}`, { code: 'df.apikeys.create', ...ownerLogFields(owner) })
       await notifications.send({
-        title: 'Création d\'une clé d\'API',
-        body: `${apiKey.title} (${apiKey.id}), ${apiKey.scopes.length ? `scopes=${apiKey.scopes.join(', ')}` : 'aucun scope'}`,
+        ...notifications.eventTexts('settings.api-key-created', { title: apiKey.title, full: `${apiKey.title} (${apiKey.id})` }, {}, apiKeyScopesParam(apiKey.scopes)),
         topic: {
           key: 'data-fair:settings:api-key-created'
         },
@@ -151,8 +158,7 @@ const writeSettings = async (ctx: SettingsWriteContext, existingSettings: Settin
         throw httpError(403, 'Only superadmin can delete api keys with adminMode=true')
       }
       await notifications.send({
-        title: 'Suppression d\'une clé d\'API',
-        body: `${existingApiKey.title} (${existingApiKey.id}), ${existingApiKey.scopes.length ? `scopes=${existingApiKey.scopes.join(', ')}` : 'aucun scope'}`,
+        ...notifications.eventTexts('settings.api-key-deleted', { title: existingApiKey.title, full: `${existingApiKey.title} (${existingApiKey.id})` }, {}, apiKeyScopesParam(existingApiKey.scopes)),
         topic: {
           key: 'data-fair:settings:api-key-deleted'
         },

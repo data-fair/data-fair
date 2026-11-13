@@ -40,18 +40,12 @@ export const sendResourceEvent = async (resourceType: ResourceType, resource: Re
   delete sender.role
   const fullLabel = `${resource.title} (${resource.slug || resource.id})`
   const draftPrefix = (resource as Dataset).draftReason ? 'draft-' : ''
-  const titleI18nKey = `notifications.${resourceType}.${draftPrefix}${options.i18nKey ?? key}.title`
-  const bodyI18nKey = `notifications.${resourceType}.${draftPrefix}${options.i18nKey ?? key}.body`
-  if (i18n.__(titleI18nKey) === titleI18nKey) throw new Error('missing i18n for event key ' + titleI18nKey)
-  const title = {
-    // TODO: truncate title ?
-    fr: i18n.__({ phrase: titleI18nKey, locale: 'fr' }, { label: resource.title ?? '', ...options.params, ...options.localizedParams?.fr }),
-    en: i18n.__({ phrase: titleI18nKey, locale: 'en' }, { label: resource.title ?? '', ...options.params, ...options.localizedParams?.en })
-  }
-  const body = {
-    fr: i18n.__({ phrase: bodyI18nKey, locale: 'fr' }, { label: fullLabel, ...options.params, ...options.localizedParams?.fr }),
-    en: i18n.__({ phrase: bodyI18nKey, locale: 'en' }, { label: fullLabel, ...options.params, ...options.localizedParams?.en })
-  }
+  const { title, body } = eventTexts(
+    `${resourceType}.${draftPrefix}${options.i18nKey ?? key}`,
+    { title: resource.title ?? '', full: fullLabel },
+    options.params,
+    options.localizedParams
+  )
   const fullKey = (resource as Dataset).draftReason ? `${singularResourceType}-draft-${key}` : `${singularResourceType}-${key}`
   // see notifications.md §3 (error umbrella) and §12 (dual slug/id emission)
   const umbrellaKey = `${singularResourceType}-error`
@@ -88,6 +82,32 @@ export const sendResourceEvent = async (resourceType: ResourceType, resource: Re
     }
   }
 }
+
+/**
+ * Title and body of notifications.<key> in every language, for sendResourceEvent and the events
+ * built outside of it. The title gets the label alone, the body the label with its id or slug.
+ */
+export const eventTexts = (
+  key: string,
+  label: { title: string, full: string },
+  params: Record<string, string> = {},
+  localizedParams?: Record<Locale, Record<string, string>>
+) => {
+  const titleKey = `notifications.${key}.title`
+  const bodyKey = `notifications.${key}.body`
+  if (i18n.__(titleKey) === titleKey) throw new Error('missing i18n for event key ' + titleKey)
+  const text = (phrase: string, labelValue: string) => ({
+    en: i18n.__({ phrase, locale: 'en' }, { label: labelValue, ...params, ...localizedParams?.en }),
+    fr: i18n.__({ phrase, locale: 'fr' }, { label: labelValue, ...params, ...localizedParams?.fr })
+  })
+  return { title: text(titleKey, label.title), body: text(bodyKey, label.full) }
+}
+
+/** A message of the i18n files in every language, to build a localized param of eventTexts. */
+export const localizedParam = (phrase: string, params: Record<string, string> = {}): Record<Locale, string> => ({
+  en: i18n.__({ phrase, locale: 'en' }, params),
+  fr: i18n.__({ phrase, locale: 'fr' }, params)
+})
 
 // Mirror a child dataset's data-updated emission on every parent virtual dataset
 // referencing it via `virtual.children`. Same i18nKey/localizedParams are passed
