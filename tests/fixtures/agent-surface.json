@@ -327,12 +327,21 @@
             "x-mcp-file": {
               "maxSize": 104857600
             }
+          },
+          "datasetTitle": {
+            "type": "string",
+            "description": "The title of what `datasetId` names, as the API gives it. Checked before the call: it is refused, and nothing sent, unless it is that title. It shows whoever reads the call what it acts on.",
+            "x-checked": {
+              "against": "datasetId",
+              "field": "/title"
+            }
           }
         },
         "additionalProperties": false,
         "required": [
           "datasetId",
-          "file"
+          "file",
+          "datasetTitle"
         ]
       },
       "annotations": {
@@ -382,11 +391,20 @@
           "datasetId": {
             "type": "string",
             "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
+          },
+          "datasetTitle": {
+            "type": "string",
+            "description": "The title of what `datasetId` names, as the API gives it. Checked before the call: it is refused, and nothing sent, unless it is that title. It shows whoever reads the call what it acts on.",
+            "x-checked": {
+              "against": "datasetId",
+              "field": "/title"
+            }
           }
         },
         "additionalProperties": false,
         "required": [
-          "datasetId"
+          "datasetId",
+          "datasetTitle"
         ]
       },
       "annotations": {
@@ -431,12 +449,21 @@
           "body": {
             "type": "object",
             "description": "The request body. Properties (`?` marks optional):\n\nslug?: string | null — Identifier of the dataset, usually a slug for URL readability (unique inside the…\ntitle?: string — Short title of the dataset\nsummary?: string | null — Short description of the dataset\ndescription?: string | null — Detailed description of the dataset\nimage?: string | null — URL of an image used as thumbnail\nspatial?: string | null — Geographic coverage\ntemporal?: object | null — Temporal coverage\nkeywords?: string[] | null — Keywords\nsearchTerms?: string | null — Free text used only by the catalog search, never displayed: synonyms, acronyms w…\nfrequency?: \"\"|\"irregular\"|\"continuous\"|\"daily\"|\"threeTimesAWeek\"|\"semiweekly\"|\"weekly\"|\"threeTimesAMonth\"|… (18 values) | null — Update frequency\ncreator?: string | null — Producer\nmodified?: string | null — Date the data was modified at its source, when it differs from the date it was l…\nattachments?: object[] | null\nprimaryKey?: string[] | null — List of properties of the schema used as unique primary key for each line\nschema?: object[] | null — JSON schema properties of the fields\nprojection?: object | null — The cartographic projection of this dataset. Refers to the list of supported pro…\nconformsTo?: object | null — Reference to an external schema or standard the dataset conforms to.\nlicense?: object | null — License\norigin?: string | null — Address of the page where the original data is published, for example on the pro…\nconstraints?: object | object[] | null — Validation constraints at the dataset level, beyond the validations of each colu…\nextensions?: object[] | null — Definition of the extensions applied to this dataset\nrequestedPublicationSites?: string[] | null — References to all sites the dataset would be exposed in if validated by an admin…\nattachmentsAsImage?: boolean | null — Set to true to use attached files as illustrations of the line\nvirtual?: object | null — A configuration object dedicated to virtual datasets.\nrest?: object | null — A configuration object dedicated to REST datasets.\ntopics?: object[] | null — Topics\nrelatedDatasets?: object[] | null — Other related datasets (same topic, similar structure, or other criteria) sugges…\nthumbnails?: object | null\nextras?: object | null — An object for extra content from client services of data-fair\ncustomMetadata?: object | null — Values of the custom metadata defined in the owner settings (datasetsMetadata.cu…\nanalysis?: object | null\nnonBlockingValidation?: boolean | null"
+          },
+          "datasetTitle": {
+            "type": "string",
+            "description": "The title of what `datasetId` names, as the API gives it. Checked before the call: it is refused, and nothing sent, unless it is that title. It shows whoever reads the call what it acts on.",
+            "x-checked": {
+              "against": "datasetId",
+              "field": "/title"
+            }
           }
         },
         "additionalProperties": false,
         "required": [
           "datasetId",
-          "body"
+          "body",
+          "datasetTitle"
         ]
       },
       "annotations": {
@@ -490,12 +517,21 @@
           "body": {
             "type": "object",
             "description": "The request body. Properties (`?` marks optional):\n\npublications?: object[] | null — References to all the catalogs the dataset metadata is published too\npublicationSites?: string[] | null — References to all sites the dataset is exposed in.\nreadApiKey?: object | null\nmasterData?: object | null — Master data\npartOf?: object | null — Declares this dataset as a fragment of another resource (a virtual dataset, a me…"
+          },
+          "datasetTitle": {
+            "type": "string",
+            "description": "The title of what `datasetId` names, as the API gives it. Checked before the call: it is refused, and nothing sent, unless it is that title. It shows whoever reads the call what it acts on.",
+            "x-checked": {
+              "against": "datasetId",
+              "field": "/title"
+            }
           }
         },
         "additionalProperties": false,
         "required": [
           "datasetId",
-          "body"
+          "body",
+          "datasetTitle"
         ]
       },
       "annotations": {
@@ -773,11 +809,20 @@
           "applicationId": {
             "type": "string",
             "description": "The exact application ID from the \"id\" field in datafair_list_account_applications results."
+          },
+          "applicationTitle": {
+            "type": "string",
+            "description": "The title of what `applicationId` names, as the API gives it. Checked before the call: it is refused, and nothing sent, unless it is that title. It shows whoever reads the call what it acts on.",
+            "x-checked": {
+              "against": "applicationId",
+              "field": "/title"
+            }
           }
         },
         "additionalProperties": false,
         "required": [
-          "applicationId"
+          "applicationId",
+          "applicationTitle"
         ]
       },
       "annotations": {
@@ -1133,11 +1178,20 @@
                 "type": "null"
               }
             ]
+          },
+          "applicationTitle": {
+            "type": "string",
+            "description": "The title of what `applicationId` names, as the API gives it. Checked before the call: it is refused, and nothing sent, unless it is that title. It shows whoever reads the call what it acts on.",
+            "x-checked": {
+              "against": "applicationId",
+              "field": "/title"
+            }
           }
         },
         "additionalProperties": false,
         "required": [
-          "applicationId"
+          "applicationId",
+          "applicationTitle"
         ]
       },
       "annotations": {
@@ -1283,11 +1337,20 @@
                 "type": "null"
               }
             ]
+          },
+          "applicationTitle": {
+            "type": "string",
+            "description": "The title of what `applicationId` names, as the API gives it. Checked before the call: it is refused, and nothing sent, unless it is that title. It shows whoever reads the call what it acts on.",
+            "x-checked": {
+              "against": "applicationId",
+              "field": "/title"
+            }
           }
         },
         "additionalProperties": false,
         "required": [
-          "applicationId"
+          "applicationId",
+          "applicationTitle"
         ]
       },
       "annotations": {
@@ -2348,12 +2411,21 @@
                 }
               }
             }
+          },
+          "datasetTitle": {
+            "type": "string",
+            "description": "The title of what `datasetId` names, as the API gives it. Checked before the call: it is refused, and nothing sent, unless it is that title. It shows whoever reads the call what it acts on.",
+            "x-checked": {
+              "against": "datasetId",
+              "field": "/title"
+            }
           }
         },
         "additionalProperties": false,
         "required": [
           "datasetId",
-          "body"
+          "body",
+          "datasetTitle"
         ]
       },
       "annotations": {

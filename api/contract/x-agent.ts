@@ -14,7 +14,7 @@
  * metadata, data and files stay open: they can come from uploaded files, remote sources or
  * harvested catalogs.
  */
-import type { AgentRoot, AgentOperationAnnotation, AgentProperty, AgentParamOverride } from '@data-fair/openapi-mcp'
+import type { AgentRoot, AgentOperation, AgentOperationAnnotation, AgentProperty, AgentParamOverride } from '@data-fair/openapi-mcp'
 import { agentSecurity } from './scopes-security.ts'
 
 export const filtersDescription = 'Column filters as key-value pairs: column_key + suffix, all values strings. Example: { "ville_eq": "Paris", "age_lte": "30", "nom_search": "Jean" }. Suffixes: _eq, _neq, _in, _nin, _gt, _gte, _lt, _lte, _starts, _exists, _nexists, _search (free-text word search, default choice for text), _contains (only when enabled). If a suffix is rejected the 400 error lists what the column supports — read it and adapt. Never prefix with _c_.'
@@ -91,6 +91,26 @@ export const applicationPatchFields = {
 }
 
 const applicationId: AgentParamOverride = { name: 'applicationId', description: 'The exact application ID from the "id" field in datafair_list_account_applications results.' }
+
+/**
+ * Checked labels (openapi-mcp docs/x-agent.md, "Checked labels"): a write naming its target by id also
+ * carries the target's title, checked before the call. A person approving the call, or the agents
+ * service's automatic reviewer, then reads which dataset or application it changes instead of an opaque
+ * id. Every higher scope tier covers the read tier, so a token that may write may read the title.
+ */
+const applicationLabels = { applicationId: { name: 'applicationTitle', operation: 'getApplication', field: '/title' } }
+const datasetLabels = { datasetId: { name: 'datasetTitle', operation: 'readDescription', field: '/title' } }
+
+/**
+ * A per-dataset operation's annotation as the root document mounts it, under /datasets/{id}: every view
+ * that writes gets the dataset's checked title. Only there: a dataset's own document has no id input.
+ */
+export const withDatasetLabels = (annotation: AgentOperationAnnotation | undefined, method: string): AgentOperationAnnotation | undefined => {
+  if (!annotation || method === 'get' || method === 'head') return annotation
+  const label = (view: AgentOperation): AgentOperation =>
+    view.annotations?.readOnlyHint === true || view.editor !== undefined || view.params?.id?.name !== 'datasetId' ? view : { ...view, labels: { ...datasetLabels, ...view.labels } }
+  return Array.isArray(annotation) ? annotation.map(label) : label(annotation)
+}
 
 export const operations = {
   listPublicationSites: {
@@ -338,6 +358,7 @@ export const operations = {
       title: { fr: 'Modifier une application', en: 'Update an application' },
       description: 'Update the metadata or configuration of an application: title, description, topics, configuration… Send only the fields to change. Array and object fields (topics, keywords, attachments, schema, configuration…) replace the current value entirely: read it first with datafair_describe_application and send the complete new value. Publishing on portals, publications to remote catalogs and attaching to a parent (partOf) are done with datafair_publish_application. Do not change configuration.datasets[].applicationKeyPermissions unless explicitly asked: it decides what anyone holding the application key can do on that dataset; send it back as you read it.',
       params: { id: applicationId },
+      labels: applicationLabels,
       bodyFields: applicationPatchFields.write
     },
     {
@@ -348,6 +369,7 @@ export const operations = {
       title: { fr: 'Publier une application', en: 'Publish an application' },
       description: 'Change where an application is exposed: the portals it is published on (publicationSites), its publications to remote catalogs, and its parent resource (partOf, which replaces its permissions with those of the parent). Send only the fields to change.',
       params: { id: applicationId },
+      labels: applicationLabels,
       bodyFields: applicationPatchFields.manage
     }
   ],
@@ -364,6 +386,7 @@ export const operations = {
     annotations: { openWorldHint: false },
     title: { fr: 'Supprimer une application', en: 'Delete an application' },
     description: 'Delete an application permanently. The datasets and applications attached to it (partOf) are deleted too. Irreversible.',
-    params: { id: applicationId }
+    params: { id: applicationId },
+    labels: applicationLabels
   }
 } satisfies Record<string, AgentOperationAnnotation>

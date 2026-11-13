@@ -156,6 +156,19 @@ test.describe('platform api docs', () => {
     assert.deepEqual(fragment.warnings, ['POST /u: x-agent editor.schemaOperation names nope, which is not an operationId of this service'])
   })
 
+  test('checked labels are kept, their operations prefixed like the operationIds they name', () => {
+    const fragment = prepared(sd, {
+      openapi: '3.1.0',
+      paths: {
+        '/r/{id}': { get: { operationId: 'readThing', responses: ok200 } },
+        '/w/{id}': { post: { operationId: 'attachThing', 'x-agent': { name: 'attach_thing', labels: { id: { name: 'thingTitle', operation: 'readThing', field: '/title' } } }, responses: ok200 } },
+        '/u/{id}': { post: { operationId: 'lostThing', 'x-agent': { name: 'lost_thing', labels: { id: { name: 'thingTitle', operation: 'nope', field: '/title' } } }, responses: ok200 } }
+      }
+    })
+    assert.deepEqual(fragment.paths['/simple-directory/w/{id}'].post['x-agent'].labels, { id: { name: 'thingTitle', operation: 'sd_readThing', field: '/title' } })
+    assert.deepEqual(fragment.warnings, ['POST /u/{id}: x-agent labels.id.operation names nope, which is not an operationId of this service'])
+  })
+
   test('x-agent keys outside the vocabulary are removed, never passed to openapi-mcp', () => {
     const fragment = prepared(metrics, {
       openapi: '3.1.0',

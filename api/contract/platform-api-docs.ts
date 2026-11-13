@@ -77,7 +77,7 @@ const agentEntries = (op: any): Record<string, any>[] => {
 // a skill) or, under lint 'error', the whole tool set (an entry): the merge drops it with a
 // warning, so that version skew in one service costs only that annotation detail. The values
 // themselves are not checked here (openapi-mcp is not a runtime dependency).
-export const agentEntryKeys = ['name', 'title', 'description', 'examples', 'annotations', 'params', 'fixed', 'body', 'bodyFields', 'bodyRequired', 'response', 'editor', 'security']
+export const agentEntryKeys = ['name', 'title', 'description', 'examples', 'annotations', 'params', 'fixed', 'body', 'bodyFields', 'bodyRequired', 'response', 'labels', 'editor', 'security']
 export const agentTagKeys = ['guide']
 export const agentSkillKeys = ['name', 'description', 'href', 'body', 'tools']
 
@@ -349,6 +349,14 @@ export function prepareFragment (service: PlatformService, sourceDoc: any): { fr
           if (typeof ref !== 'string') continue
           if (!byId.has(ref)) warnings.push(`${at}: x-agent editor.${key} names ${ref}, which is not an operationId of this service`)
           entry.editor[key] = `${ns}_${ref}`
+        }
+      }
+      // a checked label names the operation its label is read with (openapi-mcp's labels): prefixed the same way
+      if (isObject(entry.labels)) {
+        for (const [input, label] of Object.entries<any>(entry.labels)) {
+          if (!isObject(label) || typeof label.operation !== 'string') continue
+          if (!byId.has(label.operation)) warnings.push(`${at}: x-agent labels.${input}.operation names ${label.operation}, which is not an operationId of this service`)
+          label.operation = `${ns}_${label.operation}`
         }
       }
     }
