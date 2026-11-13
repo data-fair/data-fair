@@ -1,7 +1,7 @@
 import slug from 'slugify'
-import { type OptionsDesMetadonneesDeJeuxDeDonnees, type AIAssistantAudience, type Settings, assertValid as assertValidSettings } from '#types/settings/index.js'
+import { type DatasetsMetadataOptions, type AIAssistantAudience, type Settings, assertValid as assertValidSettings } from '#types/settings/index.js'
 import { type DepartmentSettings, assertValid as validateDepartmentSettings } from '#types/department-settings/index.js'
-import { type AccountKeys, type User, type SessionStateAuthenticated } from '@data-fair/lib-express'
+import type { AccountKeys, User, SessionStateAuthenticated } from '@data-fair/lib-express'
 import trimFields from '../misc/utils/trim-fields.ts'
 import nanoid from '../misc/utils/nanoid.ts'
 
@@ -76,7 +76,7 @@ export const fillSettings = (owner: AccountKeys, user: User, settings: any): Set
   return settings
 }
 
-export const cleanDatasetsMetadata = (datasetsMetadata: OptionsDesMetadonneesDeJeuxDeDonnees) => {
+export const cleanDatasetsMetadata = (datasetsMetadata: DatasetsMetadataOptions) => {
   // summary and description stay in the general tab, the dataset form has no other place for them
   for (const main of [datasetsMetadata.summary, datasetsMetadata.description] as any[]) delete main?.group
   for (const group of datasetsMetadata.groups ?? []) {

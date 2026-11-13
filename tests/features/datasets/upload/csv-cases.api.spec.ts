@@ -106,7 +106,7 @@ test.describe('CSV cases', () => {
     assert.equal(errorDataset.status, 'error')
     const journal = (await ax.get(`/api/v1/datasets/${res.data.id}/journal`)).data
     const errorEvent = journal.find((e: any) => e.type === 'error')
-    assert.ok(errorEvent.data.includes('format est probablement invalide'))
+    assert.ok(errorEvent.data.includes('format is probably invalid'))
   })
 
   test('A CSV with lots of empty values', async () => {

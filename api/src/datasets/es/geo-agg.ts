@@ -3,9 +3,9 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import geohash from '../../misc/utils/geohash.ts'
 import { prepareQuery, getQueryBBOX, aliasName, prepareResultItem, prepareResultContext } from './commons.ts'
 import { type EsAbortContext, timedEsCall } from './abort.ts'
-import capabilities from '../../../contract/capabilities.js'
-import { columnOperationsHint, assertMetricAccepted } from './operations.ts'
-import { type Client } from '@elastic/elasticsearch'
+import { assertMetricAccepted } from './operations.ts'
+import type { Client } from '@elastic/elasticsearch'
+import { unknownFieldError, missingCapabilityError } from '../utils/field-errors.ts'
 
 export default async (client: Client, dataset: any, query: Record<string, any>, publicBaseUrl: string, flatten: any, abortContext?: EsAbortContext) => {
   if (!dataset.bbox) throw httpError(400, 'geo aggregation cannot be used on this dataset. It is not geolocalized.')
@@ -35,9 +35,9 @@ export default async (client: Client, dataset: any, query: Record<string, any>, 
   }
   if (query.metric && query.metric_field) {
     const metricField = dataset.schema.find(f => f.key === query.metric_field)
-    if (!metricField) throw httpError(400, `Impossible de calculer une métrique sur le champ ${query.metric_field}, il n'existe pas dans le jeu de données.`)
+    if (!metricField) throw unknownFieldError('metric', query.metric_field)
     if (metricField['x-capabilities'] && metricField['x-capabilities'].values === false) {
-      throw httpError(400, `Impossible de calculer une métrique sur le champ ${query.metric_field}. La fonctionnalité "${capabilities.properties.values.title}" n'est pas activée dans la configuration technique du champ. ${columnOperationsHint(metricField)}`)
+      throw missingCapabilityError('metric', query.metric_field, 'values', metricField)
     }
     assertMetricAccepted(metricField, query.metric)
     esQuery.aggs.geo.aggs.metric = {

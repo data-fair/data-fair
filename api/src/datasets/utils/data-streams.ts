@@ -111,7 +111,7 @@ export const transformFileStreams = (mimeType: string, schema: SchemaProperty[],
               }))
 
             if (unknownKey) {
-              return callback(new Error(`Échec du traitement de la ligne ${(chunk._i + 1).toLocaleString()} du fichier. Le format est probablement invalide.`))
+              return callback(new Error(`Failed to process the line ${(chunk._i + 1).toLocaleString()} of the file. The format is probably invalid.`))
             }
 
             // this should not be necessary, but csv-parser does not return all trailing empty values
@@ -242,7 +242,7 @@ export const getTransformStream = (schema: SchemaProperty[], fileSchema?: Schema
               const value = typeof item[prop.key] === 'string' ? item[prop.key].trim() : item[prop.key]
               item[prop.key] = compiledExpressions[prop.key]({ value })
             } catch (err) {
-              const message = `[noretry] échec de l'évaluation de l'expression "${prop['x-transform']?.expr}" : ${(err as Error).message}`
+              const message = `[noretry] failed to evaluate the expression "${prop['x-transform']?.expr}": ${(err as Error).message}`
               return callback(new Error(message))
             }
           }
@@ -408,6 +408,6 @@ export const sampleValues = async (dataset: Dataset, ignoreKeys?: string[], onDe
       }
     }
   }))
-  if (currentLine === 0) throw new Error('[noretry] Aucune ligne n\'a pu être lue dans le fichier (fichier vide, encodage incorrect,...)')
+  if (currentLine === 0) throw new Error('[noretry] No line could be read from the file (empty file, wrong encoding,...)')
   return sampleValues
 }

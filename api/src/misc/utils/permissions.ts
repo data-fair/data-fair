@@ -5,7 +5,7 @@ import type { RequestWithResource, ResourceType, Permission, Resource, BypassPer
 import config from '#config'
 import mongo from '#mongo'
 import { Router } from 'express'
-import { httpError } from '@data-fair/lib-utils/http-errors.js'
+import { i18nHttpError, i18nMessage } from './i18n-errors.ts'
 import { validate, resolvedSchema as permissionsSchema } from '#types/permissions/index.js'
 import * as permissionsClasses from '@data-fair/data-fair-shared/permissions/operations.ts'
 import * as visibilityUtils from './visibility.ts'
@@ -30,10 +30,10 @@ const operationCtx = defineReqContext<ReqOperation>('operation')
 export const setReqOperation = operationCtx.set
 export const reqOperation = operationCtx.get
 
-const resourceTypesLabels: Record<ResourceType, string> = {
-  datasets: 'Le jeu de données',
-  applications: 'L\'application',
-  'remote-services': 'Le service distant'
+const resourceTypesLabels: Record<ResourceType, { en: string, fr: string }> = {
+  datasets: { en: 'The dataset', fr: 'Le jeu de données' },
+  applications: { en: 'The application', fr: 'L\'application' },
+  'remote-services': { en: 'The remote service', fr: 'Le service distant' }
 }
 
 /** Express middleware that gates a route by an operationId/class, and exposes x-operation/x-resource/x-owner headers downstream. */
@@ -59,33 +59,34 @@ export const middleware = function (operationIds: string | string[], operationCl
       // nothing to do, user can proceed
     } else {
       res.status(403).type('text/plain')
-      const denomination = resourceTypesLabels[reqResourceType(req)] || 'La ressource'
+      const resource = resourceTypesLabels[reqResourceType(req)] || { en: 'The resource', fr: 'La ressource' }
+      const locale = req.getLocale()
       if (operationIdsList.includes('readDescription')) {
-        const resource = reqResource(req)
+        const reqRes = reqResource(req)
         if (!sessionState.user) {
-          res.send(`${denomination} n'est pas accessible publiquement. Veuillez vous connecter.`)
+          res.send(i18nMessage('errors.permissions.notPublic', { resource }, locale))
           return
         }
         for (const org of sessionState.user.organizations || []) {
           let name = org.name || org.id
           if (org.department) name += ' / ' + (org.departmentName || org.department)
           const altSessionState: SessionState = { ...sessionState, account: { type: 'organization', ...org }, accountRole: org.role }
-          if (canAny(reqResourceType(req), resource, altSessionState, reqBypassPermissions(req))) {
+          if (canAny(reqResourceType(req), reqRes, altSessionState, reqBypassPermissions(req))) {
             // expose x-owner so the UI can offer a "switch active account" action without parsing the error body
-            if (resource.owner) {
-              const ownerKey = resource.owner.department
-                ? { type: resource.owner.type, id: resource.owner.id, department: resource.owner.department } as AccountKeys
-                : { type: resource.owner.type, id: resource.owner.id } as AccountKeys
+            if (reqRes.owner) {
+              const ownerKey = reqRes.owner.department
+                ? { type: reqRes.owner.type, id: reqRes.owner.id, department: reqRes.owner.department } as AccountKeys
+                : { type: reqRes.owner.type, id: reqRes.owner.id } as AccountKeys
               res.setHeader('x-owner', JSON.stringify(ownerKey))
             }
-            res.send(`${denomination} ${resource.title} est accessible depuis l'organisation ${name} (${org.id}) dont vous êtes membre mais vous ne l'avez pas sélectionné comme compte actif. Changez de compte pour visualiser les informations.`)
+            res.send(i18nMessage('errors.permissions.otherActiveAccount', { resource, title: String(reqRes.title), org: name, orgId: org.id }, locale))
             return
           }
         }
-        res.send(`${denomination} est accessible uniquement aux utilisateurs autorisés par le propriétaire. Vous n'avez pas les permissions nécessaires pour visualiser les informations.`)
+        res.send(i18nMessage('errors.permissions.restricted', { resource }, locale))
         return
       }
-      res.send(`Permission manquante pour l'opération "${operationId}" ou la catégorie "${operationClass}".`)
+      res.send(i18nMessage('errors.permissions.missingOperationOrClass', { operation: operationId, operationClass }, locale))
       return
     }
 
@@ -114,7 +115,7 @@ export const canDoForOwnerMiddleware = function (operationClass: string, ignoreD
   return function (req: Request, res: Response, next: NextFunction) {
     const owner: AccountKeys = ignoreDepartment ? { ...reqResource(req).owner, department: undefined } : reqResource(req).owner
     if (!canDoForOwner(owner, reqResourceType(req), operationClass, reqSession(req))) {
-      return res.status(403).type('text/plain').send('Permission manquante pour l\'opération.')
+      return res.status(403).type('text/plain').send(req.__('errors.permissions.missingOperation'))
     }
     next()
   }
@@ -452,7 +453,7 @@ export const router = (resourceType: ResourceType, resourceName: string, onPubli
     const resources = mongo.db.collection(resourceType)
     try {
       const resource = await reqResource(req)
-      if (resource.partOf) throw httpError(403, 'Les permissions d\'un fragment sont dérivées de celles de son parent et ne peuvent pas être modifiées directement')
+      if (resource.partOf) throw i18nHttpError(403, 'errors.permissions.fragment')
       const wasPublic = isPublic(resourceType, resource)
       const willBePublic = isPublic(resourceType, { ...resource, permissions })
 
@@ -503,14 +504,14 @@ export const router = (resourceType: ResourceType, resourceName: string, onPubli
 
 export const apiDoc = {
   get: {
-    summary: 'Liste des permissions',
-    description: 'Récupérer la liste des permissions.',
+    summary: 'List permissions',
+    description: 'Get the list of permissions.',
     operationId: 'getPermissions',
     'x-permissionClass': 'admin',
     tags: ['Permissions'],
     responses: {
       200: {
-        description: 'Liste des permissions.',
+        description: 'List of permissions.',
         content: {
           'application/json': {
             schema: permissionsSchema
@@ -520,13 +521,13 @@ export const apiDoc = {
     }
   },
   put: {
-    summary: 'Définir les permissions',
-    description: 'Définir la liste des permissions.',
+    summary: 'Set permissions',
+    description: 'Set the list of permissions.',
     operationId: 'setPermissions',
     'x-permissionClass': 'admin',
     tags: ['Permissions'],
     requestBody: {
-      description: 'Liste des permissions.',
+      description: 'List of permissions.',
       required: true,
       content: {
         'application/json': {
@@ -536,7 +537,7 @@ export const apiDoc = {
     },
     responses: {
       200: {
-        description: 'Liste des permissions.',
+        description: 'List of permissions.',
         content: {
           'application/json': {
             schema: permissionsSchema

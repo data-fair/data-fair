@@ -52,7 +52,7 @@ export default async function (dataset: FileDataset) {
     if (field.type === 'empty') continue
     const collidingName = originalNamesByKey.get(key)
     if (collidingName !== undefined) {
-      throw httpError(400, `[noretry] Échec de l'analyse du fichier, les colonnes "${collidingName}" et "${property}" correspondent à la même clé "${key}".`)
+      throw httpError(400, `[noretry] Failed to analyze the file, the columns "${collidingName}" and "${property}" map to the same key "${key}".`)
     }
     originalNamesByKey.set(key, property)
     schema.push(field)
@@ -64,7 +64,7 @@ export default async function (dataset: FileDataset) {
   if (crs && crs.properties && crs.properties.name) {
     const code = crs.properties.name.replace('urn:ogc:def:crs:', '').replace('::', ':')
     const projection = projections.find(p => p.code === code || p.aliases.includes(code))
-    if (!projection) throw httpError(400, `[noretry] La projection ${code} dans la propriété "crs" du geojson n'est pas supportée.`)
+    if (!projection) throw httpError(400, `[noretry] The projection ${code} in the "crs" property of the geojson is not supported.`)
     dataset.projection = { code: projection.code, title: projection.title }
     dataset.file.schema[0]['x-refersTo'] = 'http://data.ign.fr/def/geometrie#Geometry'
   }

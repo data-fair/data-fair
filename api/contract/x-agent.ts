@@ -113,6 +113,16 @@ export const withDatasetLabels = (annotation: AgentOperationAnnotation | undefin
 }
 
 export const operations = {
+  listPublicationSites: {
+    name: 'list_publication_sites',
+    title: { fr: 'Lister les sites de publication', en: 'List the publication sites' },
+    description: 'List the portals and sites the active account publishes its datasets and applications on. Each entry is the publicationSite object catalogs_create_publication takes (copy its title, url and datasetUrlTemplate), and its key "<type>:<id>" is the one listed in the publicationSites of datafair_describe_dataset.',
+    annotations: { readOnlyHint: true, openWorldHint: false },
+    params: {
+      type: { description: 'The type of the active account: user or organization.' },
+      id: { description: 'The id of the active account; for a department "<id>:<department>", or "<id>:*" for every department of the organization.' }
+    }
+  },
   listDatasets: {
     name: 'list_account_datasets',
     title: { fr: 'Lister les jeux de données du compte', en: 'List the account\'s datasets' },
@@ -160,7 +170,7 @@ export const operations = {
     description: 'Get detailed metadata and column schema for a dataset: title, description, license, topics, row count, geo/temporal coverage and every column with its type, concept and enum values. Call datafair_search_data with size=3 afterwards to see sample rows.',
     params: { id: datasetId },
     response: {
-      concise: ['id', 'slug', 'title', 'summary', 'description', 'page', 'count', 'keywords', 'origin', 'license', 'topics', 'spatial', 'temporal', 'frequency', 'bbox', 'timePeriod', 'schema'],
+      concise: ['id', 'slug', 'title', 'summary', 'description', 'page', 'count', 'keywords', 'origin', 'license', 'topics', 'spatial', 'temporal', 'frequency', 'bbox', 'timePeriod', 'publicationSites', 'schema'],
       detailed: true
     }
   },

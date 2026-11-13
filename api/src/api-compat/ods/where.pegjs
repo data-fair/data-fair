@@ -4,6 +4,8 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { requiredCapability } from '../../datasets/es/operations.ts'
 import { wktToGeoJSON } from '@terraformer/wkt'
 import dayjs from 'dayjs'
+import { unknownFieldError } from '../../datasets/utils/field-errors.ts'
+import { valueTooLongError } from './errors.ts'
 
 const esOperators = {
   '<': 'lt',
@@ -73,20 +75,20 @@ PrimaryFilter
 EqualityFilter
   = key:FieldName _ EqualOperator _ value:Literal {
     const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+    if (!prop) throw unknownFieldError('filter', key)
     requiredCapability(prop, 'equal')
     const formatted = formatValue(prop, value.value, options.timezone)
     // resolveExactKeywordTarget is injected by parseWhere (operations.ts); fall back to the plain
     // keyword field when it is absent (e.g. parser unit tests), like the other optional options.
     const target = options.resolveExactKeywordTarget ? options.resolveExactKeywordTarget(prop, [String(formatted)]) : { field: key }
-    if (target.impossible) throw httpError(400, `Impossible de filtrer exactement sur le champ ${key} : la valeur dépasse 200 caractères.`)
+    if (target.impossible) throw valueTooLongError(key)
     return { term: { [target.field]: formatted } }
   }
 
 YearEqualityFilter
   = "year("i _ key:FieldName _ ")" _ EqualOperator _ value:NumericLiteral {
     const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+    if (!prop) throw unknownFieldError('filter', key)
     requiredCapability(prop, 'equal')
     return { range: { [key]: { gte: value.value + "||/y",  lte: value.value + "||/y", format: "yyyy", time_zone: options.timezone } } }
   }
@@ -99,7 +101,7 @@ EqualOperator
 InLiteralsFilter
   = key:FieldName __ In _ "(" values:LiteralsList ")" {
     const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+    if (!prop) throw unknownFieldError('filter', key)
     requiredCapability(prop, 'IN')
     return { terms: {[key]: values.map(v => formatValue(prop, v, options.timezone)) }}
   }
@@ -119,7 +121,7 @@ LiteralAfterListSeparator
 InRangeFilter
   = key:FieldName __ In _ startOperator:RangeStart start:Literal RangeSeparator end:Literal endOperator:RangeEnd {
     const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+    if (!prop) throw unknownFieldError('filter', key)
     requiredCapability(prop, 'range')
     return { range: { [key]: { [startOperator]: formatValue(prop, start.value, options.timezone), [endOperator]: formatValue(prop, end.value, options.timezone), time_zone: options.timezone } } }
   }
@@ -139,7 +141,7 @@ RangeSeparator
 InMultiValued
   = value:Literal __ In __ key:FieldName {
     const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+    if (!prop) throw unknownFieldError('filter', key)
     requiredCapability(prop, 'IN')
     return { term: {[key]: formatValue(prop, value.value, options.timezone)} }
   }
@@ -149,7 +151,7 @@ To = "to"i
 ComparisonFilter
   = key:FieldName _ operator:ComparisonOperator _ value:Literal {
     const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+    if (!prop) throw unknownFieldError('filter', key)
     const esOperator = esOperators[operator]
     requiredCapability(prop, 'comparison')
     return { range: { [key]: { [esOperator]: formatValue(prop, value.value, options.timezone), time_zone: options.timezone } } }
@@ -158,7 +160,7 @@ ComparisonFilter
 YearComparisonFilter
   = "year("i _ key:FieldName _ ")"  _ operator:ComparisonOperator _ value:Literal {
     const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+    if (!prop) throw unknownFieldError('filter', key)
     const esOperator = esOperators[operator]
     requiredCapability(prop, 'comparison')
     return { range: { [key]: { [esOperator]: value.value + "||/y", format: 'yyyy', time_zone: options.timezone } } }
@@ -185,7 +187,7 @@ IsNull = "is null"i
 IsNullFilter
   = key:FieldName __ IsNull {
     const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+    if (!prop) throw unknownFieldError('filter', key)
     requiredCapability(prop, 'IS NULL', 'values')
     return { bool: { must_not: [{ exists: {field: key} }] } }
   }
@@ -194,7 +196,7 @@ IsNotNull = "is not null"i
 IsNotNullFilter
   = key:FieldName __ IsNotNull {
     const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+    if (!prop) throw unknownFieldError('filter', key)
     requiredCapability(prop, 'IS NOT NULL', 'values')
     return { exists: {field: key} }
   }
@@ -226,7 +228,7 @@ StringFieldNames
   = fieldNames:FieldNamesList {
     for (const key of fieldNames) {
       const prop = options.dataset.schema.find(p => p.key === key)
-      if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+      if (!prop) throw unknownFieldError('filter', key)
       requiredCapability(prop, 'startswith')
     }
     return fieldNames

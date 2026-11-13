@@ -14,14 +14,14 @@
             "type": "integer",
             "default": 1,
             "minimum": 1,
-            "description": "Numéro de page"
+            "description": "Page number"
           },
           "size": {
             "type": "integer",
             "default": 10,
             "minimum": 0,
             "maximum": 50,
-            "description": "Taille de la page. La somme de la taille et du décalage (page - 1) × taille ne peut pas dépasser 10000."
+            "description": "Page size. The sum of the size and of the offset (page - 1) × size cannot exceed 10000."
           },
           "response_format": {
             "type": "string",
@@ -168,14 +168,14 @@
             "type": "integer",
             "default": 1,
             "minimum": 1,
-            "description": "Numéro de page"
+            "description": "Page number"
           },
           "size": {
             "type": "integer",
             "default": 10,
             "minimum": 0,
             "maximum": 50,
-            "description": "Taille de la page. La somme de la taille et du décalage (page - 1) × taille ne peut pas dépasser 10000."
+            "description": "Page size. The sum of the size and of the offset (page - 1) × size cannot exceed 10000."
           },
           "response_format": {
             "type": "string",
@@ -254,7 +254,7 @@
               "detailed"
             ],
             "default": "concise",
-            "description": "concise: id, slug, title, summary, description, page, count, keywords, origin, license, topics, spatial, temporal, frequency, bbox, timePeriod, schema. detailed: every field."
+            "description": "concise: id, slug, title, summary, description, page, count, keywords, origin, license, topics, spatial, temporal, frequency, bbox, timePeriod, publicationSites, schema. detailed: every field."
           }
         },
         "additionalProperties": false,
@@ -448,7 +448,7 @@
           },
           "body": {
             "type": "object",
-            "description": "The request body. Properties (`?` marks optional):\n\nslug?: string | null — Identifier of the dataset, usually a slug for URL readability (unique inside the…\ntitle?: string — Short title of the dataset\nsummary?: string | null — Short description of the dataset\ndescription?: string | null — Detailed description of the dataset\nimage?: string | null — URL of an image used as thumbnail\nspatial?: string | null — Geographic coverage\ntemporal?: object | null — Temporal coverage\nkeywords?: string[] | null — Keywords\nsearchTerms?: string | null — Free text used only by the catalog search, never displayed: synonyms, acronyms w…\nfrequency?: \"\"|\"irregular\"|\"continuous\"|\"daily\"|\"threeTimesAWeek\"|\"semiweekly\"|\"weekly\"|\"threeTimesAMonth\"|… (18 values) | null — Update frequency\ncreator?: string | null — Producer\nmodified?: string | null — Date the data was modified at its source, when it differs from the date it was l…\nattachments?: object[] | null\nprimaryKey?: string[] | null — List of properties of the schema used as unique primary key for each line\nschema?: object[] | null — JSON schema properties of the fields\nprojection?: object | null — The cartographic projection of this dataset. Refers to the list of supported pro…\nconformsTo?: object | null — Reference to an external schema or standard the dataset conforms to.\nlicense?: object | null — License\norigin?: string | null — Address of the page where the original data is published, for example on the pro…\nconstraints?: object | object[] | null — Contraintes de validation à l'échelle du jeu de données, au delà des validations…\nextensions?: object[] | null — Définition des enrichissements appliqués à ce jeu de données\nrequestedPublicationSites?: string[] | null — References to all sites the dataset would be exposed in if validated by an admin…\nattachmentsAsImage?: boolean | null — Set to true to use attached files as illustrations of the line\nvirtual?: object | null — A configuration object dedicated to virtual datasets.\nrest?: object | null — A configuration object dedicated to REST datasets.\ntopics?: object[] | null — Topics\nrelatedDatasets?: object[] | null — Other related datasets (same topic, similar structure, or other criteria) sugges…\nthumbnails?: object | null\nextras?: object | null — An object for extra content from client services of data-fair\ncustomMetadata?: object | null — Values of the custom metadata defined in the owner settings (datasetsMetadata.cu…\nanalysis?: object | null\nnonBlockingValidation?: boolean | null"
+            "description": "The request body. Properties (`?` marks optional):\n\nslug?: string | null — Identifier of the dataset, usually a slug for URL readability (unique inside the…\ntitle?: string — Short title of the dataset\nsummary?: string | null — Short description of the dataset\ndescription?: string | null — Detailed description of the dataset\nimage?: string | null — URL of an image used as thumbnail\nspatial?: string | null — Geographic coverage\ntemporal?: object | null — Temporal coverage\nkeywords?: string[] | null — Keywords\nsearchTerms?: string | null — Free text used only by the catalog search, never displayed: synonyms, acronyms w…\nfrequency?: \"\"|\"irregular\"|\"continuous\"|\"daily\"|\"threeTimesAWeek\"|\"semiweekly\"|\"weekly\"|\"threeTimesAMonth\"|… (18 values) | null — Update frequency\ncreator?: string | null — Producer\nmodified?: string | null — Date the data was modified at its source, when it differs from the date it was l…\nattachments?: object[] | null\nprimaryKey?: string[] | null — List of properties of the schema used as unique primary key for each line\nschema?: object[] | null — JSON schema properties of the fields\nprojection?: object | null — The cartographic projection of this dataset. Refers to the list of supported pro…\nconformsTo?: object | null — Reference to an external schema or standard the dataset conforms to.\nlicense?: object | null — License\norigin?: string | null — Address of the page where the original data is published, for example on the pro…\nconstraints?: object | object[] | null — Validation constraints at the dataset level, beyond the validations of each colu…\nextensions?: object[] | null — Definition of the extensions applied to this dataset\nrequestedPublicationSites?: string[] | null — References to all sites the dataset would be exposed in if validated by an admin…\nattachmentsAsImage?: boolean | null — Set to true to use attached files as illustrations of the line\nvirtual?: object | null — A configuration object dedicated to virtual datasets.\nrest?: object | null — A configuration object dedicated to REST datasets.\ntopics?: object[] | null — Topics\nrelatedDatasets?: object[] | null — Other related datasets (same topic, similar structure, or other criteria) sugges…\nthumbnails?: object | null\nextras?: object | null — An object for extra content from client services of data-fair\ncustomMetadata?: object | null — Values of the custom metadata defined in the owner settings (datasetsMetadata.cu…\nanalysis?: object | null\nnonBlockingValidation?: boolean | null"
           },
           "datasetTitle": {
             "type": "string",
@@ -516,7 +516,7 @@
           },
           "body": {
             "type": "object",
-            "description": "The request body. Properties (`?` marks optional):\n\npublications?: object[] | null — References to all the catalogs the dataset metadata is published too\npublicationSites?: string[] | null — References to all sites the dataset is exposed in.\nreadApiKey?: object | null\nmasterData?: object | null — Données de référence\npartOf?: object | null — Declares this dataset as a fragment of another resource (a virtual dataset, a me…"
+            "description": "The request body. Properties (`?` marks optional):\n\npublications?: object[] | null — References to all the catalogs the dataset metadata is published too\npublicationSites?: string[] | null — References to all sites the dataset is exposed in.\nreadApiKey?: object | null\nmasterData?: object | null — Master data\npartOf?: object | null — Declares this dataset as a fragment of another resource (a virtual dataset, a me…"
           },
           "datasetTitle": {
             "type": "string",
@@ -583,14 +583,14 @@
             "type": "integer",
             "default": 1,
             "minimum": 1,
-            "description": "Numéro de page"
+            "description": "Page number"
           },
           "size": {
             "type": "integer",
             "default": 10,
             "minimum": 0,
             "maximum": 50,
-            "description": "Taille de la page. La somme de la taille et du décalage (page - 1) × taille ne peut pas dépasser 10000."
+            "description": "Page size. The sum of the size and of the offset (page - 1) × size cannot exceed 10000."
           },
           "response_format": {
             "type": "string",
@@ -899,7 +899,7 @@
             "anyOf": [
               {
                 "type": "string",
-                "description": "URL d'une image, illustration du jeu de données"
+                "description": "URL of an image illustrating the application"
               },
               {
                 "type": "null"
@@ -942,7 +942,7 @@
                         },
                         "applicationKeyPermissions": {
                           "type": "object",
-                          "description": "The permissions that should be applied to users accessing this dataset through a protecte application key of this application",
+                          "description": "The permissions that should be applied to users accessing this dataset through a protected application key of this application",
                           "default": {
                             "classes": [
                               "read"
@@ -1009,7 +1009,7 @@
             "anyOf": [
               {
                 "type": "array",
-                "title": "Liste de thématiques",
+                "title": "Topics list",
                 "layout": {
                   "itemTitle": "item.title"
                 },
@@ -1047,9 +1047,9 @@
                       "x-i18n-title": {
                         "fr": "Icône"
                       },
-                      "description": "Il est possible de consulter plus facilement la liste des icônes disponibles sur <a href='https://pictogrammers.com/library/mdi/' target='_blank'>ce site </a>.<br>Commencez à taper pour rechercher dans la collection complète d'icônes. Seuls quelques icônes sont chargées initialement pour de meilleures performances.",
+                      "description": "You can easily browse the list of available icons on <a href='https://pictogrammers.com/library/mdi/' target='_blank'>this website</a>.<br>Start typing to search through the complete collection of icons. Only a few icons are loaded initially for better performance.",
                       "x-i18n-description": {
-                        "en": "You can easily browse the list of available icons on this <a href='https://pictogrammers.com/library/mdi/' target='_blank'>this website</a>.<br>Start typing to search through the complete collection of icons. Only a few icons are loaded initially for better performance."
+                        "fr": "Il est possible de consulter plus facilement la liste des icônes disponibles sur <a href='https://pictogrammers.com/library/mdi/' target='_blank'>ce site</a>.<br>Commencez à taper pour rechercher dans la collection complète d'icônes. Seules quelques icônes sont chargées initialement pour de meilleures performances."
                       },
                       "layout": {
                         "getItems": {
@@ -1136,7 +1136,7 @@
                   "properties": {
                     "title": {
                       "type": "string",
-                      "title": "Titre",
+                      "title": "Attachment title",
                       "layout": {
                         "props": {
                           "outlined": true,
@@ -1261,11 +1261,11 @@
                     },
                     "catalog": {
                       "type": "string",
-                      "description": "L'identifiant du catalogue de destination de cette publication."
+                      "description": "Identifier of the target catalog of this publication."
                     },
                     "status": {
                       "type": "string",
-                      "description": "Statut indiquant clairement si la publication a réussi. Si \"published\", la propriété targetUrl doit être renseignée. Si \"error\", la propriété error doit être renseignée.",
+                      "description": "Status telling whether the publication succeeded. If \"published\", the targetUrl property must be set. If \"error\", the error property must be set.",
                       "enum": [
                         "waiting",
                         "published",
@@ -1275,7 +1275,7 @@
                     },
                     "publishedAt": {
                       "type": "string",
-                      "description": "Date de la dernière mise à jour de cette publication.",
+                      "description": "Date of the last update of this publication.",
                       "format": "date-time"
                     },
                     "error": {
@@ -1286,7 +1286,7 @@
                     },
                     "result": {
                       "type": "object",
-                      "description": "Résultat de la publication. La structure de cet objet est libre et dépend du type de catalogue."
+                      "description": "Result of the publication. The structure of this object is free and depends on the catalog type."
                     }
                   }
                 }
@@ -1373,6 +1373,80 @@
         {
           "oauth2": [
             "applications"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:admin"
+          ]
+        }
+      ]
+    },
+    {
+      "name": "datafair_list_publication_sites",
+      "description": "List the portals and sites the active account publishes its datasets and applications on. Each entry is the publicationSite object catalogs_create_publication takes (copy its title, url and datasetUrlTemplate), and its key \"<type>:<id>\" is the one listed in the publicationSites of datafair_describe_dataset.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "type": {
+            "type": "string",
+            "enum": [
+              "user",
+              "organization"
+            ],
+            "description": "The type of the active account: user or organization."
+          },
+          "id": {
+            "type": "string",
+            "description": "The id of the active account; for a department \"<id>:<department>\", or \"<id>:*\" for every department of the organization."
+          }
+        },
+        "additionalProperties": false,
+        "required": [
+          "type",
+          "id"
+        ]
+      },
+      "annotations": {
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "openWorldHint": false
+      },
+      "security": [
+        {
+          "apiKey": []
+        },
+        {
+          "sdCookie": []
+        },
+        {
+          "oauth2": [
+            "datasets:read"
+          ]
+        },
+        {
+          "oauth2": [
+            "datasets:write"
+          ]
+        },
+        {
+          "oauth2": [
+            "datasets:admin"
+          ]
+        },
+        {
+          "oauth2": [
+            "datasets"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:read"
+          ]
+        },
+        {
+          "oauth2": [
+            "all:write"
           ]
         },
         {

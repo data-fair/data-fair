@@ -82,6 +82,7 @@
 <script setup lang="ts">
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 import settingsSchema from '../../../api/types/settings/schema.js'
+import { schemaText } from '~/utils/schema-i18n'
 
 const { t, locale } = useI18n()
 const { sendUiNotif } = useUiNotif()
@@ -96,7 +97,7 @@ const eventOptions = settingsSchema.properties.webhooks.items.properties.events.
 }>
 
 const localizedTitle = (opt: typeof eventOptions[number]) =>
-  (opt['x-i18n-title']?.[locale.value] ?? opt.title).replace(/,/g, ' ')
+  (schemaText(opt, 'title', locale.value) ?? opt.const).replace(/,/g, ' ')
 
 // finalize-end is a webhook-only firehose, skip it from user subscriptions
 const subscriptionExcluded = new Set(['dataset-finalize-end'])

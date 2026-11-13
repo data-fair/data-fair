@@ -2,11 +2,13 @@
 {{
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { requiredCapability } from '../../datasets/es/operations.ts'
+import { unknownFieldError } from '../../datasets/utils/field-errors.ts'
+import { notNumericError, notDateError } from './errors.ts'
 
 const assertDate = (dataset, key, operation) => {
   const prop = dataset.schema.find(p => p.key === key)
-  if (!prop) throw httpError(400, `Impossible de sélectionner le champ ${key}, il n'existe pas dans le jeu de données.`)
-  if (prop.type !== 'string' || (prop.format !== 'date' && prop.format !== 'date-time')) throw httpError(400, `Impossible de calculer ${operation}, la colonne n'est pas de type date.`)
+  if (!prop) throw unknownFieldError('select', key)
+  if (prop.type !== 'string' || (prop.format !== 'date' && prop.format !== 'date-time')) throw notDateError(operation)
   return prop
 }
 }}
@@ -77,15 +79,15 @@ As = "as"i
 SelectFieldName
   = key:FieldName {
     const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop) throw httpError(400, `Impossible de sélectionner le champ ${key}, il n'existe pas dans le jeu de données.`)
+    if (!prop) throw unknownFieldError('select', key)
     return { source: key }
   }
 
 SelectAvg
   = "avg("i _ key:FieldName _ ")" {
     const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop) throw httpError(400, `Impossible de sélectionner le champ ${key}, il n'existe pas dans le jeu de données.`)
-    if (prop.type !== 'number' && prop.type !== 'integer') throw httpError(400, `Impossible de calculer la moyenne du champ ${key}, il n'est pas de type numérique.`)
+    if (!prop) throw unknownFieldError('select', key)
+    if (prop.type !== 'number' && prop.type !== 'integer') throw notNumericError('select', 'avg', key)
     return { aggregation: { [text()]: { avg: {field: key} } } }
   }
 
@@ -98,14 +100,14 @@ SelectCountAll
 SelectCountField
   = "count("i _ key:FieldName _ ")" {
     const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop) throw httpError(400, `Impossible de sélectionner le champ ${key}, il n'existe pas dans le jeu de données.`)
+    if (!prop) throw unknownFieldError('select', key)
     return { aggregation: { [text()]: { value_count: {field: key} } } }
   }
 
 SelectCountDistinct
   = "count(distinct"i __ key:FieldName _ ")" {
     const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop) throw httpError(400, `Impossible de sélectionner le champ ${key}, il n'existe pas dans le jeu de données.`)
+    if (!prop) throw unknownFieldError('select', key)
     return { aggregation: { [text()]: { cardinality: {field: key} } } }
   }
 
@@ -120,38 +122,38 @@ SelectBBox
 SelectMax
   = "max("i _ key:FieldName _ ")" {
     const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop) throw httpError(400, `Impossible de sélectionner le champ ${key}, il n'existe pas dans le jeu de données.`)
+    if (!prop) throw unknownFieldError('select', key)
     return { aggregation: { [text()]: { max: {field: key} } } }
   }
 
 SelectMin
   = "min("i _ key:FieldName _ ")" {
     const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop) throw httpError(400, `Impossible de sélectionner le champ ${key}, il n'existe pas dans le jeu de données.`)
+    if (!prop) throw unknownFieldError('select', key)
     return { aggregation: { [text()]: { min: {field: key} } } }
   }
 
 SelectSum
   = "sum("i _ key:FieldName _ ")" {
     const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop) throw httpError(400, `Impossible de sélectionner le champ ${key}, il n'existe pas dans le jeu de données.`)
-    if (prop.type !== 'number' && prop.type !== 'integer') throw httpError(400, `Impossible de calculer la somme du champ ${key}, il n'est pas de type numérique.`)
+    if (!prop) throw unknownFieldError('select', key)
+    if (prop.type !== 'number' && prop.type !== 'integer') throw notNumericError('select', 'sum', key)
     return { aggregation: { [text()]: { sum: {field: key} } } }
   }
 
 SelectPercentile
   = "percentile("i _ key:FieldName _ "," _ percent:NumericLiteral _ ")" {
     const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop) throw httpError(400, `Impossible de sélectionner le champ ${key}, il n'existe pas dans le jeu de données.`)
-    if (prop.type !== 'number' && prop.type !== 'integer') throw httpError(400, `Impossible de calculer les percentiles du champ ${key}, il n'est pas de type numérique.`)
+    if (!prop) throw unknownFieldError('select', key)
+    if (prop.type !== 'number' && prop.type !== 'integer') throw notNumericError('select', 'percentile', key)
     return { aggregation: { [text()]: { percentiles: {field: key, percents: [percent], keyed: false} } } }
   }
 
 SelectMedian
   = "median("i _ key:FieldName _ ")" {
     const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop) throw httpError(400, `Impossible de sélectionner le champ ${key}, il n'existe pas dans le jeu de données.`)
-    if (prop.type !== 'number' && prop.type !== 'integer') throw httpError(400, `Impossible de calculer la médiane du champ ${key}, il n'est pas de type numérique.`)
+    if (!prop) throw unknownFieldError('select', key)
+    if (prop.type !== 'number' && prop.type !== 'integer') throw notNumericError('select', 'median', key)
     return { aggregation: { [text()]: { percentiles: {field: key, percents: [50], keyed: false} } } }
   }
 

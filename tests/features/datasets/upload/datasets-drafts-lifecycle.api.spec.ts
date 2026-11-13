@@ -200,7 +200,7 @@ test.describe('datasets in draft mode - lifecycle', () => {
     assert.equal(evt.draft, true)
     const errorEvent = journal.pop()
     assert.equal(errorEvent.type, 'validation-error')
-    assert.ok(errorEvent.data.startsWith('La structure'))
+    assert.ok(errorEvent.data.startsWith('The structure'))
     assert.equal(journal.pop().type, 'finalize-end')
 
     // manual draft validation
@@ -319,7 +319,7 @@ test.describe('datasets in draft mode - lifecycle', () => {
     assert.equal(evt.draft, true)
     const errorEvent = journal.pop()
     assert.equal(errorEvent.type, 'validation-error')
-    assert.ok(errorEvent.data.startsWith('La structure'))
+    assert.ok(errorEvent.data.startsWith('The structure'))
     assert.equal(journal.pop().type, 'finalize-end')
 
     // draft cancellation

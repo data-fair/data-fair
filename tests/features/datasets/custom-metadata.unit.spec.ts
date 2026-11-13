@@ -1,6 +1,7 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import { ajv } from '@data-fair/data-fair-shared/ajv.js'
+import { resolveXI18n } from '@data-fair/lib-utils/json-schema.js'
 import { customMetadataSchema, formatCustomMetadata, trimCustomMetadata } from '../../../api/types/custom-metadata.ts'
 
 const DEFS = [
@@ -13,8 +14,10 @@ const DEFS = [
   { key: 'validation', title: 'Validation', type: 'date' as const },
   { key: 'contact', title: 'Contact', type: 'link' as const }
 ]
-// the schema the API validates with: every key has a definition and its value fits it
-const validate = ajv.compile(customMetadataSchema(DEFS))
+// the schema the API validates with: every key has a definition and its value fits it, its messages in French
+const apiSchema = customMetadataSchema(DEFS)
+resolveXI18n(apiSchema, 'fr')
+const validate = ajv.compile(apiSchema)
 const valid = (value: object) => validate(value)
 
 test.describe('custom metadata check', () => {
@@ -62,6 +65,10 @@ test.describe('custom metadata check', () => {
   test('errors are readable', () => {
     validate({ effectif: 1.5 })
     assert.equal(validate.errors?.[0].message, 'nombre entier attendu')
+    // the form shows the English base, or its French translation
+    const formSchema = customMetadataSchema(DEFS)
+    assert.equal(formSchema.properties.effectif.errorMessage, 'integer expected')
+    assert.equal(formSchema.properties.effectif['x-i18n-errorMessage'].fr, 'nombre entier attendu')
   })
 
   test('display text per shape', () => {

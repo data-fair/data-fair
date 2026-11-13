@@ -13,7 +13,6 @@ import { prepareThumbnailUrl } from '../../misc/utils/thumbnails.ts'
 import * as tiles from '../utils/tiles.ts'
 import * as geo from '../utils/geo.ts'
 import { geojsonToWKT } from '@terraformer/wkt'
-import capabilities from '../../../contract/capabilities.js'
 import turfDistance from '@turf/distance'
 import { defaultMarked, vuetifyMarked } from '../../misc/utils/markdown.ts'
 import {
@@ -29,7 +28,6 @@ import {
   EXACT_MATCH_BOOST,
   FILTER_CAPABILITIES,
   getColumnFilters,
-  columnOperationsHint,
   resolveExactKeywordTarget,
   resolveExistsFields,
   resolveRangeOrPrefixField,
@@ -41,6 +39,8 @@ import {
   parseQIgnored,
   DEFAULT_Q_MODE
 } from './operations.ts'
+import { unknownFieldError, missingCapabilityError, columnOperationsHint, fieldAction } from '../utils/field-errors.ts'
+import { i18nHttpError } from '../../misc/utils/i18n-errors.ts'
 
 dayjs.extend(utc)
 dayjs.extend(timezone)
@@ -106,12 +106,12 @@ export const parseSort = (sortStr: string | undefined, fields: string[], dataset
     }
 
     if (!fields.concat(['_key', '_count', '_time', 'metric', '_i', '_rand', '_score']).includes(key)) {
-      throw httpError(400, `Impossible de trier sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+      throw unknownFieldError('sort', key)
     }
     const field = dataset.schema.find((f: any) => f.key === key)
     const capabilities = (field && field['x-capabilities']) || {}
     if (capabilities.values === false && capabilities.insensitive === false) {
-      throw httpError(400, `Impossible de trier sur le champ ${key}. La fonctionnalité "Triable et groupable" n'est pas activée dans la configuration technique du champ. ${columnOperationsHint(field)}`)
+      throw missingCapabilityError('sort', key, 'values', field)
     }
     if (capabilities.insensitive !== false && field && field.type === 'string' && (field.format === 'uri-reference' || !field.format)) {
       // ignore_unmapped is necessary to maintain compatibility with older indices
@@ -145,7 +145,7 @@ function checkQuery (query: any, schema: any[], esFields: string[], currentField
     try {
       query = queryParser.parse(query)
     } catch (err) {
-      throw httpError(400, `Impossible d'effectuer cette recherche, la syntaxe du paramètre "qs" n'est pas respectée : requête = "${query}", erreur = "${(err as Error).message}"`)
+      throw i18nHttpError(400, 'errors.query.qsSyntax', { query, error: (err as Error).message })
     }
   }
   query.field = query.field && query.field.replace(/\\/g, '')
@@ -153,23 +153,23 @@ function checkQuery (query: any, schema: any[], esFields: string[], currentField
   if (query.field === '_exists_') {
     const field = query.term.replace(/\\/g, '')
     if (!schema.find(p => p.key === field)) {
-      throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}, il n'existe pas dans le jeu de données.`)
+      throw unknownFieldError('filter', query.field)
     }
     if (field !== '<implicit>' && !esFields.includes(field)) {
-      throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}. La fonctionnalité "${capabilities.properties.index.title}" n'est pas activée dans la configuration technique du champ.`)
+      throw missingCapabilityError('filter', query.field, 'index')
     }
   } else if (query.field && query.field !== '<implicit>' && !esFields.includes(query.field)) {
     const suffix = capabilitiesSuffixes.find(cs => query.field.endsWith(cs[0]))
     if (suffix) {
       if (!schema.find(p => p.key + suffix[0] === query.field)) {
-        throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}, il n'existe pas dans le jeu de données.`)
+        throw unknownFieldError('filter', query.field)
       }
-      throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}. La fonctionnalité "${(capabilities.properties as Record<string, any>)[suffix[1]]?.title}" n'est pas activée dans la configuration technique du champ.`)
+      throw missingCapabilityError('filter', query.field, suffix[1])
     } else {
       if (!schema.find(p => p.key === query.field)) {
-        throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}, il n'existe pas dans le jeu de données.`)
+        throw unknownFieldError('filter', query.field)
       }
-      throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${query.field}. La fonctionnalité "${capabilities.properties.index.title}" n'est pas activée dans la configuration technique du champ.`)
+      throw missingCapabilityError('filter', query.field, 'index')
     }
   }
   if (query.term && (query.term.startsWith('*') || query.term.startsWith('?')) && (!query.field || !query.field.endsWith('.wildcard'))) {
@@ -188,10 +188,10 @@ export const applyCollapse = (esQuery: any, dataset: any, query: Record<string, 
   if (!query.collapse) return
   const collapseField = dataset.schema.find((f: any) => f.key === query.collapse)
   if (!collapseField) {
-    throw httpError(400, `Impossible d'utiliser "collapse" sur le champ ${query.collapse}, il n'existe pas dans le jeu de données.`)
+    throw unknownFieldError('collapse', query.collapse)
   }
   if (collapseField.separator) {
-    throw httpError(400, `Impossible d'utiliser "collapse" sur le champ ${query.collapse}, il est multivalué.`)
+    throw i18nHttpError(400, 'errors.fields.multivalued', { action: fieldAction('collapse', query.collapse) })
   }
   esQuery.collapse = { field: query.collapse }
   // number after which we accept that cardinality is approximative
@@ -207,10 +207,10 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
   if (qFields && (query.q || query._c_q || query.qs)) {
     for (const qField of qFields) {
       const prop = dataset.schema.find((p: any) => p.key === qField)
-      if (!prop) throw httpError(400, `Impossible de rechercher sur le champ ${qField}, il n'existe pas dans le jeu de données.`)
+      if (!prop) throw unknownFieldError('search', qField)
       const caps = prop['x-capabilities'] || {}
       const searchable = caps.text !== false || caps.textStandard !== false || caps.index !== false || caps.wildcard === true
-      if (!searchable) throw httpError(400, `Impossible de rechercher sur le champ ${qField}. Aucune fonctionnalité de recherche n'est activée dans la configuration technique du champ. ${columnOperationsHint(prop)}`)
+      if (!searchable) throw i18nHttpError(400, 'errors.fields.notSearchable', { action: fieldAction('search', qField), hint: columnOperationsHint(prop) })
     }
   }
 
@@ -253,7 +253,7 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
     ? query.select.split(',')
     : fields.filter((key: string) => key !== '_geoshape' && key !== '_geocorners')
   const unknownField = esQuery._source.find((s: string) => !fields.includes(s))
-  if (unknownField) throw httpError(400, `Impossible de sélectionner le champ ${unknownField}, il n'existe pas dans le jeu de données.`)
+  if (unknownField) throw unknownFieldError('select', unknownField)
 
   // Others are included depending on the context
   if (query.thumbnail) {
@@ -295,11 +295,11 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
   if (query.highlight) {
     esQuery.highlight = { fields: {}, no_match_size: 300, fragment_size: 100, pre_tags: ['<em class="highlighted">'], post_tags: ['</em>'] }
     for (const key of query.highlight.split(',')) {
-      if (!fields.includes(key)) throw httpError(400, `Impossible de demander un "highlight" sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+      if (!fields.includes(key)) throw unknownFieldError('highlight', key)
       const prop = dataset.schema.find((p: any) => p.key === key)
       const caps = (prop && prop['x-capabilities']) || {}
       if (caps.text === false && caps.textStandard === false) {
-        throw httpError(400, `Impossible de demander un "highlight" sur le champ ${key}. La fonctionnalité de recherche plein texte n'est pas activée dans la configuration technique du champ. ${columnOperationsHint(prop)}`)
+        throw i18nHttpError(400, 'errors.fields.noFullTextSearch', { action: fieldAction('highlight', key), hint: columnOperationsHint(prop) })
       }
       esQuery.highlight.fields[key + '.text'] = {}
       esQuery.highlight.fields[key + '.text_standard'] = {}
@@ -330,13 +330,13 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
 
   if (query.account) {
     const accountField = dataset.schema.find((f: any) => f['x-refersTo'] === 'https://github.com/data-fair/lib/account')
-    if (!accountField) throw httpError(400, 'Impossible de filtrer sur le concept compte, il n\'est pas défini sur le dataset.')
+    if (!accountField) throw i18nHttpError(400, 'errors.query.noAccountConcept')
     filter.push({ terms: { [accountField.key]: query.account.split(',') } })
   }
 
   let q = query.q ?? query._c_q
   if (q) q = q.trim()
-  if (q?.length > maxQLength || query.q_ignored?.length > maxQLength) throw httpError(400, `Les paramètres q et q_ignored sont limités à ${maxQLength} caractères.`)
+  if (q?.length > maxQLength || query.q_ignored?.length > maxQLength) throw i18nHttpError(400, 'errors.query.qTooLong', { max: maxQLength })
 
   if (q || query.qs) {
     if (query.qs) {
@@ -382,7 +382,7 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
     } else {
       const propKey = queryKey.slice(0, queryKey.length - filterSuffix.length)
       prop = schemaByKey.get(propKey)
-      if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${propKey}, il n'existe pas dans le jeu de données.`)
+      if (!prop) throw unknownFieldError('filter', propKey)
     }
 
     // single source of truth: the capability-gated suffixes require exactly one capability. The any-of
@@ -393,9 +393,9 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
     if (filterSuffix === '_in') {
       try {
         const values = query[queryKey].startsWith('"') ? JSON.parse(`[${query[queryKey]}]`) : query[queryKey].split(',').filter(Boolean)
-        if (!values.length) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
+        if (!values.length) throw i18nHttpError(400, 'errors.query.filterValueRequired', { filter: queryKey })
         const target = resolveExactKeywordTarget(prop, values)
-        if ('impossible' in target) throw httpError(400, `Filtre ${queryKey} : une valeur dépasse ${KEYWORD_IGNORE_ABOVE} caractères et ne peut pas être filtrée exactement sur ce champ. ${columnOperationsHint(prop)}`)
+        if ('impossible' in target) throw i18nHttpError(400, 'errors.fields.valuesTooLong', { filter: queryKey, max: KEYWORD_IGNORE_ABOVE, hint: columnOperationsHint(prop) })
         filter.push({ terms: { [target.field]: values } })
       } catch (err) {
         if ((err as any).status === 400) throw err
@@ -404,47 +404,47 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
     } else if (filterSuffix === '_nin') {
       try {
         const values = query[queryKey].startsWith('"') ? JSON.parse(`[${query[queryKey]}]`) : query[queryKey].split(',').filter(Boolean)
-        if (!values.length) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
+        if (!values.length) throw i18nHttpError(400, 'errors.query.filterValueRequired', { filter: queryKey })
         const target = resolveExactKeywordTarget(prop, values)
-        if ('impossible' in target) throw httpError(400, `Filtre ${queryKey} : une valeur dépasse ${KEYWORD_IGNORE_ABOVE} caractères et ne peut pas être filtrée exactement sur ce champ. ${columnOperationsHint(prop)}`)
+        if ('impossible' in target) throw i18nHttpError(400, 'errors.fields.valuesTooLong', { filter: queryKey, max: KEYWORD_IGNORE_ABOVE, hint: columnOperationsHint(prop) })
         filter.push({ bool: { must_not: { terms: { [target.field]: values } } } })
       } catch (err) {
         if ((err as any).status === 400) throw err
         throw httpError(400, `"${queryKey}" parameter is malformed`)
       }
     } else if (filterSuffix === '_eq') {
-      if (!query[queryKey]) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
+      if (!query[queryKey]) throw i18nHttpError(400, 'errors.query.filterValueRequired', { filter: queryKey })
       const target = resolveExactKeywordTarget(prop, [query[queryKey]])
-      if ('impossible' in target) throw httpError(400, `Filtre ${queryKey} : la valeur dépasse ${KEYWORD_IGNORE_ABOVE} caractères et ne peut pas être filtrée exactement sur ce champ. ${columnOperationsHint(prop)}`)
+      if ('impossible' in target) throw i18nHttpError(400, 'errors.fields.valueTooLong', { filter: queryKey, max: KEYWORD_IGNORE_ABOVE, hint: columnOperationsHint(prop) })
       filter.push({ term: { [target.field]: query[queryKey] } })
     } else if (filterSuffix === '_neq') {
-      if (!query[queryKey]) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
+      if (!query[queryKey]) throw i18nHttpError(400, 'errors.query.filterValueRequired', { filter: queryKey })
       const target = resolveExactKeywordTarget(prop, [query[queryKey]])
-      if ('impossible' in target) throw httpError(400, `Filtre ${queryKey} : la valeur dépasse ${KEYWORD_IGNORE_ABOVE} caractères et ne peut pas être filtrée exactement sur ce champ. ${columnOperationsHint(prop)}`)
+      if ('impossible' in target) throw i18nHttpError(400, 'errors.fields.valueTooLong', { filter: queryKey, max: KEYWORD_IGNORE_ABOVE, hint: columnOperationsHint(prop) })
       filter.push({ bool: { must_not: { term: { [target.field]: query[queryKey] } } } })
     } else if (filterSuffix === '_gt') {
-      if (!query[queryKey]) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
+      if (!query[queryKey]) throw i18nHttpError(400, 'errors.query.filterValueRequired', { filter: queryKey })
       if (prop.format === 'date-time' && query[queryKey].length === 10 && dayjs(query[queryKey], 'YYYY-MM-DD', true).isValid()) {
         filter.push({ range: { [prop.key]: { gt: dayjs(query[queryKey]).tz(prop.timeZone || config.defaultTimeZone, true).endOf('day').toISOString() } } })
       } else {
         filter.push({ range: { [resolveRangeOrPrefixField(prop, ignoredKeywordFields.has(prop.key)).field]: { gt: query[queryKey] } } })
       }
     } else if (filterSuffix === '_gte') {
-      if (!query[queryKey]) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
+      if (!query[queryKey]) throw i18nHttpError(400, 'errors.query.filterValueRequired', { filter: queryKey })
       if (prop.format === 'date-time' && query[queryKey].length === 10 && dayjs(query[queryKey], 'YYYY-MM-DD', true).isValid()) {
         filter.push({ range: { [prop.key]: { gte: dayjs(query[queryKey]).tz(prop.timeZone || config.defaultTimeZone, true).startOf('day').toISOString() } } })
       } else {
         filter.push({ range: { [resolveRangeOrPrefixField(prop, ignoredKeywordFields.has(prop.key)).field]: { gte: query[queryKey] } } })
       }
     } else if (filterSuffix === '_lt') {
-      if (!query[queryKey]) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
+      if (!query[queryKey]) throw i18nHttpError(400, 'errors.query.filterValueRequired', { filter: queryKey })
       if (prop.format === 'date-time' && query[queryKey].length === 10 && dayjs(query[queryKey], 'YYYY-MM-DD', true).isValid()) {
         filter.push({ range: { [prop.key]: { lt: dayjs(query[queryKey]).tz(prop.timeZone || config.defaultTimeZone, true).startOf('day').toISOString() } } })
       } else {
         filter.push({ range: { [resolveRangeOrPrefixField(prop, ignoredKeywordFields.has(prop.key)).field]: { lt: query[queryKey] } } })
       }
     } else if (filterSuffix === '_lte') {
-      if (!query[queryKey]) throw httpError(400, `Filtre ${queryKey} nécessite une valeur.`)
+      if (!query[queryKey]) throw i18nHttpError(400, 'errors.query.filterValueRequired', { filter: queryKey })
       if (prop.format === 'date-time' && query[queryKey].length === 10 && dayjs(query[queryKey], 'YYYY-MM-DD', true).isValid()) {
         filter.push({ range: { [prop.key]: { lte: dayjs(query[queryKey]).tz(prop.timeZone || config.defaultTimeZone, true).endOf('day').toISOString() } } })
       } else {
@@ -486,7 +486,7 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
     } else if (filterSuffix === '_exists' || filterSuffix === '_nexists') {
       const fields = resolveExistsFields(prop, ignoredKeywordFields.has(prop.key))
       // no indexed representation at all: an exists clause would silently match nothing
-      if (!fields.length) throw httpError(400, `Impossible d'appliquer un filtre ${filterSuffix} sur le champ ${prop.key}. Aucune indexation de ce champ ne permet de tester la présence d'une valeur. ${columnOperationsHint(prop)}`)
+      if (!fields.length) throw i18nHttpError(400, 'errors.fields.noExistsIndex', { action: fieldAction('filterOperator', prop.key, { operator: filterSuffix }), hint: columnOperationsHint(prop) })
       const clause = fields.length === 1
         ? { exists: { field: fields[0] } }
         : { bool: { should: fields.map(f => ({ exists: { field: f } })), minimum_should_match: 1 } }
@@ -502,7 +502,7 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
     const endDateField = dataset.schema.find((p: any) => p['x-refersTo'] === 'https://schema.org/endDate') ?? dateField
     if (!startDateField || !endDateField) {
       if (query.date_match) {
-        throw httpError(400, '"date_match" ne peut pas être utilisé sur ce jeu de données.')
+        throw i18nHttpError(400, 'errors.query.dateMatchUnavailable')
       } else {
         // silently ignore filters prefixed by _c_ if they are not used
       }
@@ -801,4 +801,4 @@ export const prepareResultItem = (hit: any, dataset: any, query: Record<string, 
   return res
 }
 
-export { extractError, escapeFilter } from './operations.ts'
+export { extractError, extractedHttpError, escapeFilter } from './operations.ts'

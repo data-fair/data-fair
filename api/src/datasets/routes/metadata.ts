@@ -25,7 +25,7 @@ import * as notifications from '../../misc/utils/notifications.ts'
 import * as webhooks from '../../misc/utils/webhooks.ts'
 import * as usersUtils from '../../misc/utils/users.ts'
 import i18n from 'i18n'
-import { type Locale } from '../../../i18n/utils.ts'
+import type { Locale } from '../../../i18n/utils.ts'
 import * as limits from '../../limits/service.ts'
 import { syncDataset as syncRemoteService } from '../../remote-services/service.ts'
 import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
@@ -58,7 +58,7 @@ const sendSchema = async (req: Request, res: Response, schema: any, contextualCa
     // keeps a column iff no line does, uniqueValues tells how many lines match at most: that is a
     // read of the lines, not of the schema
     if (filtered && !can('datasets', reqResource(req), 'readLines', reqSession(req), reqBypassPermissions(req))) {
-      throw httpError(403, 'Permission manquante pour l\'opération "readLines", nécessaire pour filtrer le schéma par des filtres sur les données.')
+      throw httpError(403, req.__('errors.permissions.readLinesForSchemaFilter'))
     }
     // contextual cardinality: the schema filters are applied first (without maxCardinality) to
     // bound the number of ES sub-aggregations, then the fields are filtered by their cardinality
@@ -310,12 +310,12 @@ export const registerMetadataRoutes = (router: Router) => {
     const dataset: any = reqDataset(req)
     usersUtils.normalizeOwner(req.body)
 
-    if (dataset.partOf) throw httpError(403, 'Un fragment ne peut pas changer de propriétaire, détachez-le d\'abord')
+    if (dataset.partOf) throw httpError(403, req.__('errors.fragments.noOwnerChange'))
 
     // integrity anchors are owner-scoped (data-fair/‹owner.type›-‹owner.id›/…): transferring
     // would orphan the anchor sequence. Deliberate simplification: disable integrity first.
     if (dataset.integrity?.active) {
-      return res.status(400).type('text/plain').send('Le contrôle d\'intégrité doit être désactivé avant un changement de propriétaire')
+      return res.status(400).type('text/plain').send(req.__('errors.datasets.integrityOwnerChange'))
     }
 
     const sessionState = reqSessionAuthenticated(req)

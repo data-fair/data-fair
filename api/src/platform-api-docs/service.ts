@@ -14,7 +14,7 @@ const initialWait = 5_000
 const fetchTimeout = 10_000
 
 /** the services of the platform document, url undefined for data-fair itself (in-process) */
-export function platformServices (cfg: { publicUrl: string, directoryUrl: string, privateDirectoryUrl?: string | null, privateMetricsUrl?: string | null, privateEventsUrl?: string | null, privateRegistryUrl?: string | null, privatePortalsManagerUrl?: string | null, privateProcessingsUrl?: string | null }): { service: PlatformService, url?: string }[] {
+export function platformServices (cfg: { publicUrl: string, directoryUrl: string, privateDirectoryUrl?: string | null, privateMetricsUrl?: string | null, privateEventsUrl?: string | null, privateRegistryUrl?: string | null, privatePortalsManagerUrl?: string | null, privateProcessingsUrl?: string | null, privateCatalogsUrl?: string | null }): { service: PlatformService, url?: string }[] {
   const datafairMount = new URL(cfg.publicUrl).pathname.replace(/\/$/, '') + '/api/v1'
   const services: { service: PlatformService, url?: string }[] = [
     { service: { id: 'datafair', title: 'Data Fair', mountPath: datafairMount, docPath: datafairMount + '/api-docs.json' } },
@@ -51,6 +51,12 @@ export function platformServices (cfg: { publicUrl: string, directoryUrl: string
     services.push({
       service: { id: 'processings', title: 'Processings', mountPath: '/processings/api/v1', docPath: '/processings/api/v1/api-docs.json' },
       url: cfg.privateProcessingsUrl + '/api/v1/api-docs.json'
+    })
+  }
+  if (cfg.privateCatalogsUrl) {
+    services.push({
+      service: { id: 'catalogs', title: 'Catalogs', mountPath: '/catalogs/api', docPath: '/catalogs/api/api-docs.json' },
+      url: cfg.privateCatalogsUrl + '/api/api-docs.json'
     })
   }
   return services

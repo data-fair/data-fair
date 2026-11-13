@@ -61,17 +61,18 @@ const { lines, selectedCols } = defineProps({
 const patch = defineModel<Record<string, string>>()
 
 const { jsonSchemaFetch, restDataset } = useDatasetStore()
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
-const vjsfOptions: VjsfOptions = {
+const vjsfOptions = computed<VjsfOptions>(() => ({
   titleDepth: 4,
   density: 'comfortable',
-  locale: 'fr',
+  locale: locale.value,
+  xI18n: true,
   fetchBaseURL: $sitePath + '/data-fair/',
   initialValidation: 'always',
   removeAdditional: true,
   plugins: [VjsfMarkdown]
-}
+}))
 
 const homogeneity = computed(() => {
   const jsonSchema = jsonSchemaFetch.data.value

@@ -2,9 +2,9 @@ import type { Readable } from 'node:stream'
 import { createGunzip } from 'node:zlib'
 import config from '#config'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import { type Client } from '@elastic/elasticsearch'
+import type { Client } from '@elastic/elasticsearch'
 import { aliasName, applyCollapse, prepareQuery } from './commons.ts'
-import { tooLongError } from './operations.ts'
+import { tooLongError, extractedHttpError } from './operations.ts'
 import { type EsAbortContext, timedEsCall } from './abort.ts'
 import { streamToSource } from './hits-stream.ts'
 import type { LinesSource } from '../routes/lines-source.ts'
@@ -41,7 +41,7 @@ const openSearchStream = async (client: Client, dataset: any, query: any, abortC
     let raw = ''
     try { for await (const c of body) raw += c.toString() } catch { /* ignore */ }
     let parsed: any; try { parsed = JSON.parse(raw) } catch { /* non-json body */ }
-    if (parsed?.timed_out || statusCode === 504) throw httpError(tooLongError.status, tooLongError.message)
+    if (parsed?.timed_out || statusCode === 504) throw extractedHttpError(tooLongError)
     throw httpError(statusCode, parsed?.error?.reason || raw || 'Elasticsearch error')
   }
 

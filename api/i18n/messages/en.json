@@ -20,7 +20,250 @@
 		"requireAnonymousToken": "An anonymous token is required.",
 		"noCrossDomain": "Request from an other domain not supported.",
 		"urlFriendly": "\"{{{value}}}\" should be more URL friendly, maybe you could use \"{{{slug}}}\" ?",
-		"dupSlug": "This slug is already used"
+		"dupSlug": "This slug is already used",
+		"fields": {
+			"action": {
+				"filter": "Cannot apply a filter on field {{{field}}}",
+				"sort": "Cannot sort on field {{{field}}}",
+				"group": "Cannot group on field {{{field}}}",
+				"metric": "Cannot compute a metric on field {{{field}}}",
+				"search": "Cannot search on field {{{field}}}",
+				"select": "Cannot select field {{{field}}}",
+				"aggregate": "Cannot aggregate on field {{{field}}}",
+				"highlight": "Cannot request a \"highlight\" on field {{{field}}}",
+				"collapse": "Cannot use \"collapse\" on field {{{field}}}",
+				"filterOperator": "Cannot apply a {{{operator}}} filter on field {{{field}}}"
+			},
+			"unknown": "{{{action}}}: it does not exist in the dataset.",
+			"missingCapability": "{{{action}}}: the \"{{{capability}}}\" capability is not enabled in the technical configuration of the field. {{{hint}}}",
+			"operationsHint": "Operations available on this field — filters: {{{filters}}}; sort: {{{sortable}}}; grouping: {{{groupable}}}.",
+			"yes": "yes",
+			"no": "no",
+			"none": "none",
+			"notSearchable": "{{{action}}}: no search capability is enabled in the technical configuration of the field. {{{hint}}}",
+			"noFullTextSearch": "{{{action}}}: full-text search is not enabled in the technical configuration of the field. {{{hint}}}",
+			"valuesTooLong": "Filter {{{filter}}}: a value exceeds {{{max}}} characters and cannot be filtered exactly on this field. {{{hint}}}",
+			"valueTooLong": "Filter {{{filter}}}: the value exceeds {{{max}}} characters and cannot be filtered exactly on this field. {{{hint}}}",
+			"noExistsIndex": "{{{action}}}: no index of this field can test the presence of a value. {{{hint}}}",
+			"multivalued": "{{{action}}}: it is multivalued.",
+			"metricNotSupported": "{{{action}}}: the metric \"{{{metric}}}\" is not supported for this type of field.",
+			"noMetricAgg": "{{{action}}}: this field does not support metric aggregations."
+		},
+		"permissions": {
+			"missingOperation": "Missing permission for the operation.",
+			"missingOperationOrClass": "Missing permission for the operation \"{{{operation}}}\" or the category \"{{{operationClass}}}\".",
+			"missingNamedOperation": "Missing permission for the operation \"{{{operation}}}\".",
+			"notPublic": "{{{resource}}} is not publicly accessible. Please log in.",
+			"otherActiveAccount": "{{{resource}}} {{{title}}} is accessible from the organization {{{org}}} ({{{orgId}}}) you are a member of, but it is not your active account. Switch account to view the information.",
+			"restricted": "{{{resource}}} is only accessible to the users authorized by its owner. You do not have the permissions needed to view the information.",
+			"fragment": "The permissions of a fragment derive from those of its parent and cannot be modified directly",
+			"readLinesForSchemaFilter": "Missing permission for the operation \"readLines\", needed to filter the schema with filters on the data."
+		},
+		"ods": {
+			"notNumeric": "{{{action}}}: it is not of a numeric type.",
+			"metricAction": {
+				"select": "Cannot compute {{{metric}}} of field {{{field}}}",
+				"sort": "Cannot sort on {{{metric}}} of field {{{field}}}"
+			},
+			"metric": {
+				"avg": "the average",
+				"sum": "the sum",
+				"median": "the median",
+				"percentile": "the percentiles"
+			},
+			"notDate": "Cannot compute {{{operation}}}: the column is not of a date type.",
+			"valueTooLong": "Cannot filter exactly on field {{{field}}}: the value exceeds {{{max}}} characters.",
+			"invalidGeometry": "Cannot parse the geometry {{{geometry}}}, error: {{{error}}}",
+			"invalidParam": "The \"{{{param}}}\" parameter is invalid: {{{error}}}",
+			"invalidLimit": "The \"limit\" parameter must be a positive integer or -1",
+			"invalidOffset": "The \"offset\" parameter must be a positive integer",
+			"unsupportedFormat": "The format \"{{{format}}}\" is not supported by the data export of this compatibility layer for the previous API version.",
+			"unsupportedRequest": "This compatibility layer for the previous API version does not support this request."
+		},
+		"fragments": {
+			"badPartOfParam": "The partOf parameter must be of the form \"dataset:{id}\" or \"application:{id}\"",
+			"self": "A resource cannot be a fragment of itself",
+			"parentIsFragment": "The parent is itself a fragment, a fragment cannot have fragments",
+			"sameOwner": "A fragment must have the same owner as its parent",
+			"applicationParent": "An application can only be a fragment of an application",
+			"datasetParent": "A dataset can only be a fragment of a virtual dataset, of a metadata-only dataset or of an application",
+			"hasFragments": "A resource that has fragments cannot become a fragment",
+			"publishedOnPortal": "The resource is published on a portal, remove the publication before attaching it",
+			"publishedOnCatalog": "The resource is published on a catalog, remove the publication before attaching it",
+			"masterData": "A reference dataset cannot be attached to a parent, remove its reference data configuration before attaching it",
+			"partOfOnlyByPatch": "partOf can only be modified by PATCH",
+			"notPublishable": "A fragment cannot be published (property {{{property}}})",
+			"notMasterData": "A fragment cannot be defined as reference data",
+			"unknownParent": "Unknown parent resource ({{{type}}} {{{id}}})",
+			"parentConfigPermission": "You must be able to modify the configuration of the parent application to add a sub-application to it",
+			"attachPermission": "You do not have the permission to attach or detach this resource",
+			"alreadyFragment": "The resource is already a fragment, detach it before attaching it to another parent",
+			"modifiedDuringAttach": "The resource was modified during its attachment, please retry",
+			"deletedDuringAttach": "The resource was deleted while its attachment was being modified",
+			"parentDeleted": "Parent resource deleted",
+			"parentModifiedDuringAttach": "The parent was modified during the attachment: {{{reason}}}",
+			"integrityOwnerChange": "The integrity control of the fragment \"{{{title}}}\" must be disabled before an owner change",
+			"ownerChangeDatasets": "You cannot create the fragment datasets in the new owner",
+			"ownerChangeApplications": "You cannot create the fragment applications in the new owner",
+			"noOwnerChange": "A fragment cannot change owner, detach it first"
+		},
+		"applications": {
+			"datasetScopeMissing": "The dataset {{{dataset}}} referenced in the application requires the datasets:read scope, missing from the session.",
+			"datasetNotReadable": "You do not have the permission to read the information of the dataset {{{dataset}}} referenced in the application.",
+			"datasetNotReadableByOwner": "The owner account of the application ({{{owner}}}) does not have the permission to read the information of the dataset {{{dataset}}} referenced in the configuration.",
+			"ownerChangeCreate": "You cannot create an application in the new owner",
+			"errorMessageRequired": "The \"message\" attribute is required"
+		},
+		"apiKeys": {
+			"unknown": "This API key is unknown.",
+			"expired": "This API key is expired.",
+			"missingScope": "This API key does not have the required scope (expected={{{expected}}} - received={{{received}}}).",
+			"asAccountRequired": "This API key requires to specify the account to impersonate",
+			"asAccountUnsupported": "This API key does not support specifying the account to impersonate"
+		},
+		"asVisitor": {
+			"invalid": "invalid asVisitor parameter \"{{{value}}}\"",
+			"apiKey": "the asVisitor parameter cannot be used with an API key",
+			"organizationRequired": "the asVisitor parameter requires an active organization account",
+			"adminOnly": "the asVisitor parameter is reserved to the administrators of the organization",
+			"adminScope": "the asVisitor parameter requires the administration scope of the resource family"
+		},
+		"settings": {
+			"duplicateTopicId": "The topics \"{{{first}}}\" and \"{{{second}}}\" have the same identifier",
+			"reservedGroupKey": "The category \"{{{title}}}\" uses a reserved identifier",
+			"duplicateGroupKey": "The categories \"{{{first}}}\" and \"{{{second}}}\" have the same identifier"
+		},
+		"remoteServices": {
+			"onlyGet": "Only GET operations are allowed on this service exposition",
+			"unknown": "unknown remote service"
+		},
+		"query": {
+			"qsSyntax": "Cannot run this search, the syntax of the \"qs\" parameter is invalid: query = \"{{{query}}}\", error = \"{{{error}}}\"",
+			"noAccountConcept": "Cannot filter on the account concept, it is not defined on the dataset.",
+			"qTooLong": "The q and q_ignored parameters are limited to {{{max}}} characters.",
+			"filterValueRequired": "Filter {{{filter}}} requires a value.",
+			"dateMatchUnavailable": "\"date_match\" cannot be used on this dataset.",
+			"tooLong": "This request is too long, its processing was interrupted.",
+			"invalidQMode": "Invalid q_mode \"{{{value}}}\" — accepted values: simple (or or), complete, and, adapt",
+			"qIgnoredNotInQ": "The q_ignored parameter contains \"{{{word}}}\" which is not a word of the q search.",
+			"qIgnoredAll": "The q_ignored parameter cannot cover all the words of the q search."
+		},
+		"aggs": {
+			"sortGroups": "Cannot sort the groups of column {{{field}}} by {{{key}}}",
+			"fieldRequired": "The \"field\" parameter is required",
+			"unknownField": "The \"field\" parameter references an unknown field {{{field}}}",
+			"intervalType": "Grouping by interval is only compatible with numbers and dates. {{{field}}} does not have the right type.",
+			"tooManyBuckets": "Too many aggregation results. Aborting.",
+			"tooManyWords": "This aggregation cannot return more than 200 words.",
+			"unknownMetric": "The metric \"{{{metric}}}\" does not exist.",
+			"mixedShapes": "This aggregation is unavailable until all the child datasets are re-indexed in a homogeneous format.",
+			"analysisStandardRetired": "The analysis=standard parameter is no longer available on this dataset, the analysis follows the language of the column."
+		},
+		"datasets": {
+			"blockingOperation": "A blocking operation is already running on the dataset {{{id}}}.",
+			"badState": "The dataset is not in a state allowing the requested operation. Current state: {{{status}}}.",
+			"multipleTypes": "A dataset cannot be of several types at once",
+			"virtualTitleRequired": "A virtual dataset must be created with a title",
+			"restTitleRequired": "An editable dataset must be created with a title",
+			"metaOnlyTitleRequired": "A metadata dataset must be created with a title",
+			"virtualNoAttachments": "A virtual dataset cannot have attachments",
+			"restNoAttachments": "An editable dataset cannot be created with attachments",
+			"initRequired": "A dataset must be initialized with a file or declared \"virtual\", \"editable\" or \"metadata\"",
+			"dateCoherenceExistingLines": "The date coherence constraint cannot be applied: at least one existing line does not respect it. {{{detail}}}",
+			"notDraft": "The dataset is not in draft state",
+			"cancelInitialDraft": "Cannot cancel a draft if no version of the dataset has been validated.",
+			"integrityOwnerChange": "The integrity control must be disabled before an owner change",
+			"datasetStorageLimit": "You reached the disk space limit for this dataset.",
+			"datasetIndexedLimit": "You exceed the volume allowed for this dataset."
+		},
+		"virtual": {
+			"childDeleted": "the dataset \"{{{id}}}\" does not exist anymore",
+			"childNotReadable": "the dataset \"{{{title}}}\" ({{{id}}}, owned by {{{owner}}}) cannot be read by the owner account of the virtual dataset",
+			"ownerUser": "user \"{{{name}}}\"",
+			"ownerOrganization": "organization \"{{{name}}}\"",
+			"ownerDepartment": "{{{owner}}} / department \"{{{department}}}\"",
+			"schemaUnavailable": "The schema of the virtual dataset cannot be established: {{{details}}}.",
+			"protectedField": "The field \"{{{field}}}\" is forbidden. It is present in a child dataset but is protected.",
+			"conflictingTypes": "The field \"{{{field}}}\" has conflicting types ({{{value1}}}, {{{value2}}}).",
+			"conflictingNumberTypes": "The field \"{{{field}}}\" has conflicting types ({{{value1}}}, {{{value2}}}). You can fix this inconsistency by forcing the processing of the columns as floating point numbers in all the child datasets.",
+			"conflictingSeparators": "The field \"{{{field}}}\" has conflicting separators ({{{value1}}}, {{{value2}}}).",
+			"conflictingFormats": "The field \"{{{field}}}\" has conflicting formats ({{{value1}}}, {{{value2}}}).",
+			"conflictingConcepts": "The field \"{{{field}}}\" has conflicting concepts ({{{value1}}}, {{{value2}}}).",
+			"notDefined": "not defined",
+			"conceptReused": "The concept \"{{{concept}}}\" is referenced by several fields ({{{field1}}}, {{{field2}}}).",
+			"cannotQuery": "The virtual dataset \"{{{id}}}\" cannot be queried: {{{details}}}.",
+			"activeAccountChild": "The virtual dataset \"{{{id}}}\" cannot be queried: it uses the virtual child dataset \"{{{child}}}\" which defines a filter on the active account, this is not supported.",
+			"noQueryableChild": "The virtual dataset cannot be queried, it does not use any queryable dataset."
+		},
+		"constraints": {
+			"unsupportedDataset": "Constraints are not supported on virtual datasets or datasets without data (isMetaOnly).",
+			"onlyOneDateCoherence": "Only one date coherence constraint can be declared.",
+			"dateCoherenceConcepts": "The date coherence constraint requires a column with the concept \"Start date\" (https://schema.org/startDate) and a column with the concept \"End date\" (https://schema.org/endDate).",
+			"dateCoherenceCalculated": "The column \"{{{key}}}\" is calculated or comes from an extension and cannot carry the date coherence constraint.",
+			"dateCoherenceType": "The column \"{{{key}}}\" must be a date or a date-time to carry the date coherence constraint.",
+			"dateCoherenceMultivalued": "The column \"{{{key}}}\" is multivalued and cannot carry the date coherence constraint.",
+			"uniqueEmpty": "A unicity constraint must apply to at least one column.",
+			"uniqueUnknownColumn": "The column \"{{{key}}}\" of a unicity constraint does not exist in the schema.",
+			"uniqueCalculated": "The column \"{{{key}}}\" is calculated or comes from an extension and cannot carry a unicity constraint.",
+			"uniqueNotGroupable": "The column \"{{{key}}}\" must have the \"Sortable and groupable\" capability enabled to carry a unicity constraint.",
+			"uniqueGeometry": "The column \"{{{key}}}\" is a geometry and cannot carry a unicity constraint.",
+			"uniqueObject": "The column \"{{{key}}}\" is an object and cannot carry a unicity constraint.",
+			"uniqueMultivalued": "The column \"{{{key}}}\" is multivalued and cannot carry a unicity constraint.",
+			"uniqueExistingViolation": "The existing data of the dataset violate the unicity constraint on ({{{columns}}})."
+		},
+		"rest": {
+			"notRest": "The operations that modify lines are only available on editable datasets.",
+			"ownLinesUnsupported": "The operations to manage lines by owner are not supported on this dataset.",
+			"invalidAttachmentLineId": "invalid line id for an attachment",
+			"noAttachmentField": "The schema does not allow associating an attachment",
+			"indexRejected": "the line is saved but its indexing was rejected by elasticsearch for {{{count}}} line(s): {{{reason}}}",
+			"unsupportedAction": "action \"{{{action}}}\" is not supported on this route, use POST /lines",
+			"deleteAllIntegrity": "deleting all the lines is refused while integrity tracking is active",
+			"dropIntegrity": "the drop mode is refused while integrity tracking is active",
+			"dropOwnLines": "the drop mode is refused on the routes that manage your own lines",
+			"attachmentsOwnLines": "An attachments archive cannot be sent on the routes that manage your own lines",
+			"mandatoryExtensionInMemory": "A mandatory extension is configured on this dataset. The request must be processed in memory and therefore cannot exceed {{{max}}} characters nor use the \"async\" mode. Split the request into smaller batches.",
+			"transactionsUnreadable": "The transactions file could not be read, please try again.",
+			"syncNoAttachment": "The schema does not define any attachment",
+			"syncAttachmentNotPrimaryKey": "The schema does not define the attachment path as the primary key",
+			"historyDisabled": "The history of the lines is not enabled on this dataset.",
+			"unknownLine": "Unknown line id"
+		},
+		"files": {
+			"attachmentDownloadFailed": "Failed to download the file: {{{message}}}",
+			"noDataFile": "This dataset does not contain a data file",
+			"noDiagnostic": "No diagnostic file available"
+		},
+		"patch": {
+			"attachmentNoExtension": "The file name of the attachment {{{name}}} has no extension.",
+			"attachmentNoTarget": "Cannot create the attachment {{{name}}} without a target URL",
+			"ownershipInPrimaryKey": "Cannot disable the line ownership while the ownership columns are part of the primary key",
+			"ownershipInConstraint": "Cannot disable the line ownership while a unicity constraint applies to the ownership columns",
+			"primaryKeyModeChange": "Cannot change the primary key mode"
+		},
+		"schema": {
+			"extensionKeyConflict": "An extension tries to create the column \"{{{key}}}\" but this key is already used.",
+			"unsafeKeys": "The following column keys cannot contain a dot or start with \"_\": {{{details}}}.",
+			"unsafeKeyDetail": "\"{{{key}}}\" (use \"{{{normalized}}}\" instead)"
+		},
+		"upload": {
+			"attachmentsNotZip": "The attachments must be embedded in a zip archive",
+			"unsupportedField": "File in an unsupported field: \"{{{field}}}\""
+		},
+		"extensions": {
+			"unknownRemoteService": "unknown master data source \"{{{id}}}\"",
+			"unknownAction": "unknown master data retrieval operation \"{{{action}}}\"",
+			"missingConcept": "validation error of the extension \"{{{summary}}}\", a concept needed to use the master data is not present in the dataset ({{{concepts}}})",
+			"invalidCalculatedColumn": "validation error of the calculated column \"{{{key}}}\", {{{error}}}"
+		},
+		"masterData": {
+			"inputRequired": "the input property {{{property}}} is required",
+			"unknownBulkSearch": "Unknown bulk search \"{{{id}}}\"",
+			"unknownSingleSearch": "Unknown single search \"{{{id}}}\""
+		},
+		"customMetadata": {
+			"unknown": "unknown custom metadata: {{{key}}}"
+		}
 	},
 	"appRequire": {
 		"noDataset": "Does not use a dataset as source.",

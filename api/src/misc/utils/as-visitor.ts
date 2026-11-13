@@ -1,5 +1,6 @@
 import { hasScope, type SessionState } from '@data-fair/lib-express'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
+import { i18nHttpError } from './i18n-errors.ts'
 import { acceptedScopes, type ScopeFamily } from './scopes.ts'
 
 /**
@@ -26,7 +27,7 @@ export type AsVisitorContext = {
 // serialize as null in Mongo filters and match email-only permission entries)
 export const unknownUserId = '*unknown*'
 
-const invalid = (raw: string) => httpError(400, `paramètre asVisitor invalide "${raw}"`)
+const invalid = (raw: string) => i18nHttpError(400, 'errors.asVisitor.invalid', { value: raw })
 
 /** Parses the asVisitor param, the audited account giving the organization of member and role visitors. */
 export const parseAsVisitor = (raw: string, accountId: string): AsVisitor => {
@@ -78,19 +79,19 @@ export const getAsVisitorContext = (rawParam: string, sessionState: SessionState
   // admin from a read-scoped API key. Reject API-key sessions outright: the feature is reserved
   // to interactive org admins.
   if ((sessionState as SessionState & { isApiKey?: boolean }).isApiKey) {
-    throw httpError(403, 'le paramètre asVisitor n\'est pas utilisable avec une clé d\'API')
+    throw i18nHttpError(403, 'errors.asVisitor.apiKey')
   }
   const account = sessionState.account
   if (!account || account.type !== 'organization') {
-    throw httpError(403, 'le paramètre asVisitor requiert un compte organisation actif')
+    throw i18nHttpError(403, 'errors.asVisitor.organizationRequired')
   }
   if (!sessionState.user.adminMode && sessionState.accountRole !== adminRole) {
-    throw httpError(403, 'le paramètre asVisitor est réservé aux administrateurs de l\'organisation')
+    throw i18nHttpError(403, 'errors.asVisitor.adminOnly')
   }
   // auditing as a visitor is an admin act: a scoped session also needs the admin tier of the
   // audited family (fail closed when the caller names none)
   if (sessionState.scopes && !(family && hasScope(sessionState, acceptedScopes(family, 'admin')))) {
-    throw httpError(403, 'le paramètre asVisitor requiert le scope d\'administration de la famille de ressources')
+    throw i18nHttpError(403, 'errors.asVisitor.adminScope')
   }
 
   const visitor = parseAsVisitor(rawParam, account.id)

@@ -14,11 +14,22 @@
   />
 </template>
 
+<i18n lang="yaml">
+fr:
+  dateCoherence: Cohérence des dates (début ≤ fin)
+  uniqueness: 'Unicité : '
+en:
+  dateCoherence: Date consistency (start ≤ end)
+  uniqueness: 'Uniqueness: '
+</i18n>
+
 <script setup lang="ts">
 import type { Dataset, SchemaProperty } from '#api/types'
 import Vjsf, { type Options as VjsfOptions } from '@koumoul/vjsf'
 import datasetContractSchema from '~/../../api/types/dataset/schema.js'
 import equal from 'fast-deep-equal'
+
+const { t, locale } = useI18n()
 
 type Constraints = NonNullable<Dataset['constraints']>
 
@@ -83,12 +94,12 @@ const schema = computed(() => {
     title: '', // redundant with the tab name
     listEditMode: 'menu',
     listActions: ['add', 'edit', 'delete'],
-    itemTitle: "item.type === 'dateCoherence' ? 'Cohérence des dates (début ≤ fin)' : ('Unicité : ' + (item.properties || []).join(', '))"
+    itemTitle: `item.type === 'dateCoherence' ? ${JSON.stringify(t('dateCoherence'))} : (${JSON.stringify(t('uniqueness'))} + (item.properties || []).join(', '))`
   }
   return { type: 'object', properties: { constraints: constraintsSchema } }
 })
 
-const vjsfOptions = computed<VjsfOptions>(() => ({ disableAll: !props.editable, density: 'compact' }))
+const vjsfOptions = computed<VjsfOptions>(() => ({ disableAll: !props.editable, density: 'compact', locale: locale.value, xI18n: true }))
 
 function apply () {
   emit('update:modelValue', editConstraints.value?.constraints ?? [])

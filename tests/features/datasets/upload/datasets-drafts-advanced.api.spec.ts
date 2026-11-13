@@ -239,7 +239,7 @@ other
     const journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
     const errorEvent = journal.find((e: any) => e.type === 'error')
     assert.ok(errorEvent)
-    assert.ok(errorEvent.data.includes('un concept nécessaire'))
+    assert.ok(errorEvent.data.includes('a concept needed'))
   })
 
   test('Auto-validate a draft larger than the 100-line sample with active extensions', async () => {

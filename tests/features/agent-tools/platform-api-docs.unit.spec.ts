@@ -612,4 +612,24 @@ test.describe('platform api docs', () => {
     assert.deepEqual(names(['processings:read']).sort(), ['processings_describe_processing', 'processings_describe_run', 'processings_list_processings', 'processings_list_runs'])
     assert.ok(!names(['processings:write']).includes('processings_delete_processing'))
   })
+
+  test('the catalogs document prepares without warnings and its editors load in openapi-mcp', async () => {
+    const catalogs: PlatformService = { id: 'catalogs', title: 'Catalogs', mountPath: '/catalogs/api', docPath: '/catalogs/api/api-docs.json' }
+    const source = JSON.parse(readFileSync(path.resolve(import.meta.dirname, '../../fixtures/catalogs-api-docs.json'), 'utf8'))
+    const result = prepareFragment(catalogs, source)
+    assert.ok('fragment' in result, 'refused' in result ? result.refused : '')
+    assert.deepEqual(result.fragment.warnings, [])
+    assert.deepEqual(result.fragment.skills.map(s => s.name), ['catalogs-workflow'])
+    assert.ok(Object.keys(result.fragment.scopes).includes('catalogs:write'))
+
+    const doc = mergePlatformDoc('https://example.test', [{ service: catalogs, fragment: result.fragment, status: 'ok' }], { version: '1.0.0', oauth2Description: 'tokens' })
+    const toolSet = await load(doc, { lint: 'error' })
+    const names = (scopes?: string[]) => (scopes ? toolsForScopes(toolSet, scopes) : toolSet).tools.map(tool => tool.name)
+    assert.deepEqual(names().filter(name => !name.startsWith('catalogs_')), [])
+    assert.ok(names().includes('catalogs_catalog_configuration_saveForm'))
+    assert.ok(names().includes('catalogs_import_configuration_saveForm'))
+    assert.deepEqual(names(['catalogs:read']).sort(), ['catalogs_browse_remote_resources', 'catalogs_describe_catalog', 'catalogs_describe_catalog_plugin', 'catalogs_describe_import', 'catalogs_describe_publication', 'catalogs_list_catalogs', 'catalogs_list_imports', 'catalogs_list_publications'])
+    assert.ok(names(['catalogs:write']).includes('catalogs_create_publication'))
+    assert.ok(!names(['catalogs:write']).includes('catalogs_create_catalog'))
+  })
 })

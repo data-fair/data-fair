@@ -1,8 +1,7 @@
 import config from '#config'
-import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { aliasName, applyCollapse, prepareQuery, rewriteAttachmentUrl } from './commons.ts'
-import { tooLongError } from './operations.ts'
-import { type Client } from '@elastic/elasticsearch'
+import { tooLongError, extractedHttpError } from './operations.ts'
+import type { Client } from '@elastic/elasticsearch'
 import { type EsAbortContext, timedEsCall } from './abort.ts'
 
 export default async (client: Client, dataset, query, publicBaseUrl?, vtXYZ?, abortContext?: EsAbortContext) => {
@@ -35,7 +34,7 @@ export default async (client: Client, dataset, query, publicBaseUrl?, vtXYZ?, ab
   const esResponse: any = res.body
   // belt-and-suspenders: with allow_partial_search_results=false ES errors on timeout, but if a
   // timed_out response ever slips through, surface it as the same 504 rather than a silent partial
-  if (esResponse.timed_out) throw httpError(tooLongError.status, tooLongError.message)
+  if (esResponse.timed_out) throw extractedHttpError(tooLongError)
 
   for (const hit of esResponse.hits.hits) {
     if (hit._source && hit._source._attachment_url) {

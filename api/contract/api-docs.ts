@@ -9,9 +9,24 @@ import { resolvedSchema as applicationPatchReq } from '../doc/applications/patch
 import { resolvedSchema as applicationPostReq } from '../doc/applications/post-req/.type/index.js'
 import privateDatasetAPIDocs from './dataset-private-api-docs.ts'
 import * as utils from './utils.js'
-import { oauth2Scheme, applyOauth2Security } from './scopes-security.ts'
+import { oauth2Scheme, applyOauth2Security, agentSecurity } from './scopes-security.ts'
+import publicationSitesSchema from './publication-sites.js'
 import pJson from './p-json.js'
 import { root as xAgentRoot, operations as xAgent, datasetSchemaKeyHint, datasetSchemaCalculatedHint, withDatasetLabels } from './x-agent.ts'
+
+// a publication site as the settings return it: the fields of the settings schema a publication uses
+const publicationSiteSchema = (() => {
+  const { properties } = publicationSitesSchema(false).items as { properties: Record<string, any> }
+  const keys = ['type', 'id', 'department', 'title', 'url', 'datasetUrlTemplate', 'applicationUrlTemplate', 'private']
+  return {
+    type: 'object',
+    required: ['type', 'id', 'url'],
+    properties: Object.fromEntries(keys.map(k => {
+      const { layout, readOnly, default: _default, ...property } = properties[k]
+      return [k, property]
+    }))
+  }
+})()
 
 const datasetIdParam = {
   in: 'path',
@@ -592,6 +607,32 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
           }
         }
       },
+      '/settings/{type}/{id}/publication-sites': {
+        get: {
+          summary: 'Lister les sites de publication',
+          description: "Récupérer les portails et sites sur lesquels le compte peut publier ses jeux de données et applications. Membres du compte uniquement. La clé `<type>:<id>` d'un site est celle des `publicationSites` d'un jeu de données.",
+          operationId: 'listPublicationSites',
+          'x-agent': xAgent.listPublicationSites,
+          tags: ['Paramètres'],
+          // a settings read: no permission class, the datasets read tier is the scope its agent tool needs
+          security: agentSecurity('datasets', 'read'),
+          parameters: [
+            { in: 'path', name: 'type', required: true, description: 'Type du compte.', schema: { type: 'string', enum: ['user', 'organization'] } },
+            { in: 'path', name: 'id', required: true, description: "Identifiant du compte, ou `<id>:<département>` pour un département (`<id>:*` pour tous les départements d'une organisation).", schema: { type: 'string' } }
+          ],
+          responses: {
+            200: {
+              description: 'Les sites de publication.',
+              content: {
+                'application/json': {
+                  schema: { type: 'array', items: publicationSiteSchema }
+                }
+              }
+            },
+            ...readErrorResponses
+          }
+        }
+      },
     },
     externalDocs: {
       description: 'Documentation sur GitHub',
@@ -650,7 +691,8 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
     'JDD / Éditable',
     'JDD / Rétrocompatibilité',
     'JDD / Administration',
-    'Applications'
+    'Applications',
+    'Paramètres'
   ]
   api.tags = tagOrder.filter(t => usedTags.has(t)).map(name => ({ name }))
 

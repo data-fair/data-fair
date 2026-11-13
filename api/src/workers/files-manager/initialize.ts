@@ -43,10 +43,10 @@ export default async function (dataset: DatasetInternal) {
   if (dataset.initFrom) {
     const pseudoSessionState = getPseudoSessionState(dataset.owner, 'initializer', '_init_from', dataset.initFrom.role, dataset.initFrom.department)
     const parentDataset = await mongo.datasets.findOne({ id: dataset.initFrom.dataset })
-    if (!parentDataset) throw new Error('[noretry] jeu de données d\'initialisation inconnu ' + dataset.initFrom.dataset)
+    if (!parentDataset) throw new Error('[noretry] unknown initialization dataset ' + dataset.initFrom.dataset)
     const parentDatasetPermissions = permissionsUtils.list('datasets', parentDataset, pseudoSessionState)
     if (!parentDatasetPermissions.includes('readDescription')) {
-      throw new Error(`[noretry] permission manquante sur le jeu de données d'initialisation "${parentDataset.slug}" (${parentDataset.id})`)
+      throw new Error(`[noretry] missing permission on the initialization dataset "${parentDataset.slug}" (${parentDataset.id})`)
     }
     const hasAttachments = parentDataset.schema?.find(p => p['x-refersTo'] === 'http://schema.org/DigitalDocument')
 
@@ -56,15 +56,15 @@ export default async function (dataset: DatasetInternal) {
 
     if (dataset.initFrom.parts.includes('data')) {
       if (parentDataset.isMetaOnly) {
-        throw new Error(`[noretry] le jeu de données d'initialisation "${parentDataset.slug}" (${parentDataset.id}) ne contient que des métadonnées, ses données ne peuvent pas être copiées`)
+        throw new Error(`[noretry] the initialization dataset "${parentDataset.slug}" (${parentDataset.id}) only contains metadata, its data cannot be copied`)
       }
       if (!parentDatasetPermissions.includes('readLines')) {
-        throw new Error(`[noretry] permission manquante sur le jeu de données d'initialisation "${parentDataset.slug}" (${parentDataset.id})`)
+        throw new Error(`[noretry] missing permission on the initialization dataset "${parentDataset.slug}" (${parentDataset.id})`)
       }
       count += parentDataset.count ?? 0
 
       if (hasAttachments && !parentDatasetPermissions.includes('downloadAttachment')) {
-        throw new Error(`[noretry] permission manquante sur le jeu de données d'initialisation "${parentDataset.slug}" (${parentDataset.id})`)
+        throw new Error(`[noretry] missing permission on the initialization dataset "${parentDataset.slug}" (${parentDataset.id})`)
       }
       if (hasAttachments) {
         count += attachments.length
@@ -76,7 +76,7 @@ export default async function (dataset: DatasetInternal) {
 
     if (dataset.initFrom.parts.includes('metadataAttachments')) {
       if (!parentDatasetPermissions.includes('downloadMetadataAttachment')) {
-        throw new Error(`[noretry] permission manquante sur le jeu de données d'initialisation "${parentDataset.slug}" (${parentDataset.id})`)
+        throw new Error(`[noretry] missing permission on the initialization dataset "${parentDataset.slug}" (${parentDataset.id})`)
       }
       metadataAttachments = await lsMetadataAttachments(parentDataset)
       count += metadataAttachments.length
