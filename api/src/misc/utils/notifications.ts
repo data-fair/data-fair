@@ -40,18 +40,12 @@ export const sendResourceEvent = async (resourceType: ResourceType, resource: Re
   delete sender.role
   const fullLabel = `${resource.title} (${resource.slug || resource.id})`
   const draftPrefix = (resource as Dataset).draftReason ? 'draft-' : ''
-  const titleI18nKey = `notifications.${resourceType}.${draftPrefix}${options.i18nKey ?? key}.title`
-  const bodyI18nKey = `notifications.${resourceType}.${draftPrefix}${options.i18nKey ?? key}.body`
-  if (i18n.__(titleI18nKey) === titleI18nKey) throw new Error('missing i18n for event key ' + titleI18nKey)
-  const title = {
-    // TODO: truncate title ?
-    fr: i18n.__({ phrase: titleI18nKey, locale: 'fr' }, { label: resource.title ?? '', ...options.params, ...options.localizedParams?.fr }),
-    en: i18n.__({ phrase: titleI18nKey, locale: 'en' }, { label: resource.title ?? '', ...options.params, ...options.localizedParams?.en })
-  }
-  const body = {
-    fr: i18n.__({ phrase: bodyI18nKey, locale: 'fr' }, { label: fullLabel, ...options.params, ...options.localizedParams?.fr }),
-    en: i18n.__({ phrase: bodyI18nKey, locale: 'en' }, { label: fullLabel, ...options.params, ...options.localizedParams?.en })
-  }
+  const { title, body } = eventTexts(
+    `${resourceType}.${draftPrefix}${options.i18nKey ?? key}`,
+    { title: resource.title ?? '', full: fullLabel },
+    options.params,
+    options.localizedParams
+  )
   const fullKey = (resource as Dataset).draftReason ? `${singularResourceType}-draft-${key}` : `${singularResourceType}-${key}`
   // see notifications.md §3 (error umbrella) and §12 (dual slug/id emission)
   const umbrellaKey = `${singularResourceType}-error`
@@ -90,8 +84,8 @@ export const sendResourceEvent = async (resourceType: ResourceType, resource: Re
 }
 
 /**
- * Title and body of notifications.<key> in every language, for an event built outside of
- * sendResourceEvent. The title gets the label alone, the body the label with its id or slug.
+ * Title and body of notifications.<key> in every language, for sendResourceEvent and the events
+ * built outside of it. The title gets the label alone, the body the label with its id or slug.
  */
 export const eventTexts = (
   key: string,
