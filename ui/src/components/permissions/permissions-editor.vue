@@ -289,7 +289,7 @@ fr:
   implicitScopeUser: Utilisateur {org}
   implicitHint: Permission implicite, liée à la propriété de la ressource
   allActions: Toutes les actions
-  readDepPermissionsDoc: Consultez la documentation sur les départements pour comprend les permissions des différents membres du département.
+  readDepPermissionsDoc: Consultez la documentation sur les départements pour comprendre les permissions des membres du département et de l'organisation.
   classNames:
     list: Lister
     read: Lecture
@@ -301,24 +301,24 @@ fr:
   allUsersManageOwnLines: Permettre à tous les utilisateurs externes de gérer leurs propres lignes à l'intérieur de ce jeu de données (usages crowd-sourcing avancés).
 en:
   description: Allow other users to use this resource.
-  visibilityLabel: Who can read this dataset ?
+  visibilityLabel: Who can read this resource?
   visibility:
     public: Anyone
     privateOrg: Only admins of the organization {org}
     privateOrgDep: Only admins of the department {dep} and those of the organization {org}
     privateOrgContrib: Admins and contributors of the organization {org}
     privateOrgContribDep: Admins and contributors of the department {dep} and of the organization {org}
-    privateUser: Only yourself
+    privateUser: Only the user {user}
     sharedInOrg: Any user of the organization {org}
     sharedInDep: Any user of the department {dep} and of the organization {org}
     sharedInOrgDep: Any user of the organization {org}, across all departments
-  contribProfileLabel: Who can contribute to this resource ?
+  contribProfileLabel: Who can contribute to this resource?
   contribProfile:
     adminOnly: Only admins of the organization {org}
     adminOnlyDep: Only admins of the department {dep} and those of the organization {org}
-    contribWriteData: Contribs {scope} can update only the data and only if it is compatible
-    contribWriteNoBreaking: Contribs {scope} can update anything except for what might constitute a breaking change
-    contribWriteAll: Contribs {scope} can update anything and delete the resource
+    contribWriteData: Contributors {scope} can update only the data and only if it is compatible
+    contribWriteNoBreaking: Contributors {scope} can update anything except for what might constitute a breaking change
+    contribWriteAll: Contributors {scope} can update anything and delete the resource
   contribScope:
     org: of the organization {org}
     dep: of the department {dep} and of the organization {org}
@@ -336,12 +336,12 @@ en:
   userName: User {name}
   rolesLabel: Roles (all if none is selected)
   allRoles: All roles
-  restrictedRoles: "Restricted to roles : {roles}"
+  restrictedRoles: "Restricted to roles: {roles}"
   validate: Validate
   cancel: Cancel
   scope: Scope
   detailedActions: Detailed actions
-  detailedMode: Detailed edition of permissions
+  detailedMode: Detailed permissions editing
   actions: Actions
   permissionsUpdated: Permissions were updated
   scopeDep: Department {dep} and organization root
@@ -352,7 +352,7 @@ en:
   implicitScopeUser: User {org}
   implicitHint: Implicit permission, derived from the ownership of the resource
   allActions: All actions
-  readDepPermissionsDoc: Read the documentation about departments to understand the permissions applied to members of the departement and of the organization.
+  readDepPermissionsDoc: Read the documentation about departments to understand the permissions applied to members of the department and of the organization.
   classNames:
     list: List
     read: Read
