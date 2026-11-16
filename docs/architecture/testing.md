@@ -53,7 +53,15 @@ Check that the scoped key set is served:
 curl -s http://localhost:$SD_PORT/.well-known/scoped-jwks.json
 ```
 
-The test NHI `test_datafair_org1_scope_nhi` (key in `tests/resources/nhi/`, helper `tests/support/nhi.ts`) is defined in `dev/resources/users.template.json`. After editing the template, re-render `users.json` and run `docker compose up -d --force-recreate sd`: the file is bind-mounted alone and the render replaces it by rename, so a plain restart keeps the old content.
+The test NHI `test_datafair_org1_scope_nhi` (key in `tests/resources/nhi/`, helper `tests/support/nhi.ts`) is one of the test accounts of `tests/support/sd-fixtures.ts`, seeded again by every test run.
+
+## Test accounts: the `test_datafair_` sub-space
+
+simple-directory stores its accounts in mongo. The accounts of this suite all start with `test_datafair_` (ids and emails), defined in `tests/support/sd-fixtures.ts`:
+
+- `tests/global-setup.ts` cleans the sub-space in simple-directory (`DELETE /api/test-env?prefix=test_datafair_`) and seeds it (`POST /api/test-env/seed`), before playwright loads the spec files (many log in at import).
+- `clean()` (`tests/support/axios.ts`) calls `DELETE /api/v1/test-env?prefix=test_datafair_` on data-fair: it deletes what the sub-space owns (datasets and their indices and collections, applications, journals, settings, limits, application keys, data files) and resets the shared state (locks, integrity collections, caches, remote services, base applications, tmp dir), which assumes one suite at a time against a data-fair. A prefix that is not `test_<a-z0-9 words>_` is refused (400).
+- The demo world of `npm run dev-fixtures` is another sub-space, `test_demo_` (`dev/resources/demo-world.json`, seeded with the same `POST /api/test-env/seed`): the suite's cleanups never touch it.
 
 ## File Naming Convention
 

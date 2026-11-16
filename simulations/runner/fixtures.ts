@@ -1,7 +1,7 @@
 /**
  * The datasets a case's person expects to find. Seeded fresh on every run after
  * clean(), so a case never inherits another run's state — and so a case that
- * writes metadata can never dirty the dev_fixtures demo data.
+ * writes metadata can never dirty the test_demo_ demo data.
  */
 import FormData from 'form-data'
 import { readFileSync } from 'node:fs'

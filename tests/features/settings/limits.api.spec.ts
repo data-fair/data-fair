@@ -5,6 +5,7 @@ import fs from 'fs-extra'
 import tmp from 'tmp-promise'
 import { axios, axiosAuth, clean, checkPendingTasks, config, mockAppUrl } from '../../support/axios.ts'
 import { sendDataset, waitForDatasetError, clearRateLimiting } from '../../support/workers.ts'
+import { prefix } from '../../support/sd-fixtures.ts'
 
 const anonymous = axios()
 const testUser1 = await axiosAuth('test_datafair_user1@test.com')
@@ -137,10 +138,11 @@ test.describe('limits', () => {
     await ax.post('/api/v1/limits/user/test_datafair_user1', baseLimit, { params: { key: config.secretKeys.limits } })
     const res = await ax.get('/api/v1/limits')
     assert.equal(res.status, 200)
-    assert.equal(res.data.count, 1)
-    assert.equal(res.data.results.length, 1)
-    assert.equal(res.data.results[0].id, 'test_datafair_user1')
-    assert.equal(res.data.results[0].type, 'user')
+    // the accounts outside the test sub-space (a developer's own) keep their limits
+    const testLimits = res.data.results.filter((l: any) => l.id.startsWith(prefix))
+    assert.equal(testLimits.length, 1)
+    assert.equal(testLimits[0].id, 'test_datafair_user1')
+    assert.equal(testLimits[0].type, 'user')
   })
 
   test('rate limiting should throttle content download', async () => {

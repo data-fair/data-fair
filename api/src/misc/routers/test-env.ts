@@ -19,13 +19,26 @@ import { capturedNotifications } from '../utils/test-notif-buffer.ts'
 
 const router = express.Router()
 
-// Cleanup: delete test_* owned data from mongo/ES/filesystem, clear caches
+// Prefixed test sub-spaces: a test suite owns the accounts whose ids start with its own prefix (test_<suite>_)
+// and the data they own, cleaned without touching the other suites nor the unprefixed accounts
+const testPrefixRegexp = /^test_[a-z0-9]+(?:_[a-z0-9]+)*_$/
+
+// Cleanup of a sub-space (DELETE /?prefix=test_<suite>_): delete the data owned by its accounts from
+// mongo/ES/filesystem, then reset the shared state (locks, integrity collections, caches, remote services,
+// base applications, tmp dir). Resetting the shared state assumes one suite at a time against a data-fair.
 router.delete('/', async (req, res, next) => {
   try {
+    const prefix = req.query.prefix
+    if (typeof prefix !== 'string' || !testPrefixRegexp.test(prefix)) {
+      return res.status(400).type('text/plain').send('invalid test prefix')
+    }
+    // the prefix only holds [a-z0-9_], safe in a regexp
+    const prefixRegexp = new RegExp('^' + prefix)
+
     await resetPing()
 
-    const testOwnerFilter = { 'owner.id': { $regex: /^test_/ } }
-    const testIdFilter = { id: { $regex: /^test_/ } }
+    const testOwnerFilter = { 'owner.id': { $regex: prefixRegexp } }
+    const testIdFilter = { id: { $regex: prefixRegexp } }
 
     // collect test-owned dataset IDs before deleting them (for ES index cleanup)
     const testDatasets = await mongo.datasets.find(testOwnerFilter, { projection: { id: 1 } }).toArray()
@@ -54,9 +67,9 @@ router.delete('/', async (req, res, next) => {
       mongo.applications.deleteMany(testOwnerFilter),
       mongo.db.collection('journals').deleteMany(testOwnerFilter),
       mongo.settings.deleteMany(testIdFilter),
-      mongo.limits.deleteMany({}),
-      // collections without owner (blanket delete)
-      mongo.applicationsKeys.deleteMany({}),
+      mongo.limits.deleteMany(testIdFilter),
+      mongo.applicationsKeys.deleteMany(testOwnerFilter),
+      // shared state, without owner (blanket delete)
       mongo.db.collection('locks').deleteMany({}),
       mongo.db.collection('integrity-purge').deleteMany({}),
       // the storage-accounting measure of still-locked test revisions would otherwise keep
@@ -68,13 +81,13 @@ router.delete('/', async (req, res, next) => {
       mongo.baseApplications.deleteMany({})
     ])
 
-    // selective directory deletion: only remove test_* owner dirs
+    // selective directory deletion: only remove the owner dirs of the sub-space
     for (const ownerType of ['user', 'organization']) {
       const ownerTypeDir = path.join(dataDir, ownerType)
       if (await fs.pathExists(ownerTypeDir)) {
         const entries = await fs.readdir(ownerTypeDir)
         for (const entry of entries) {
-          if (entry.startsWith('test_')) {
+          if (entry.startsWith(prefix)) {
             await filesStorage.removeDir(path.join(ownerTypeDir, entry))
           }
         }
@@ -111,7 +124,7 @@ router.delete('/', async (req, res, next) => {
     const { init: initBaseApps } = await import('../../base-applications/router.ts')
     await initBaseApps()
 
-    res.status(200).json({ ok: true })
+    res.status(204).send()
   } catch (err) {
     next(err)
   }

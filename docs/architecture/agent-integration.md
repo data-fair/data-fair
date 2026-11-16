@@ -612,10 +612,10 @@ timeout released the turn, which was the first moment they could.
 from `simulations/resources/*.csv` plus one REST register built in code
 (`seedRestRegister`: a subsidy-request dataset with columns, history and two
 rows, one carrying a deliberate decimal slip for the data-entry case to fix), so
-no case inherits another run's state and no case can dirty the `dev_fixtures`
-demo data. `clean()` resets the dev
-environment's whole test state, not just `test_`-owned datasets: it also wipes
-the `limits`, `applicationsKeys`, `remoteServices`, `baseApplications`,
+no case inherits another run's state and no case can dirty the `test_demo_org`
+demo data. `clean()` resets the test
+sub-space `test_datafair_` (its datasets, applications, limits, application keys...)
+and the dev environment's shared state: it wipes the `remoteServices`, `baseApplications`,
 `extensions-cache`, `thumbnails-cache`, `locks` and integrity collections
 unfiltered, and removes the tmp directory — this is pre-existing `clean()`
 behaviour shared with `npm test`, not something the simulation suite adds.
@@ -657,9 +657,8 @@ document (`/api/v1/platform/api-docs.json`, see [platform-api-docs.md](./platfor
 Until the mcp server reads that document these cases cannot run. The back-office
 drawer and its in-page tools are not involved.
 
-- The NHI `test_datafair_org1_agent_nhi` is declared in simple-directory's file storage
-  (`dev/resources/users.template.json`, rendered into `users.json` by
-  `dev/render-users.mjs` with the host and port of `.env`, which its issuer names). Its
+- The NHI `test_datafair_org1_agent_nhi` is one of the test accounts seeded in simple-directory
+  (`tests/support/sd-fixtures.ts`, its issuer named with the host and port of `.env`). Its
   subject `autonomous-agent:sim-mcp` pins the agent id, so the runner seeds the agent
   through the agents test-env route, available because the dev stack runs the agents
   image with `NODE_ENV=development`.

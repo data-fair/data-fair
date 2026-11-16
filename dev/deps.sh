@@ -14,9 +14,6 @@ fi
 ls parquet-writer/*.node > /dev/null 2>&1 || npm -w parquet-writer run build
 [ -f ui/dist/index.html ] || npm -w ui run build
 
-# simple-directory mounts dev/resources/users.json, rendered from .env
-node dev/render-users.mjs
-
 # --scale only applies to "up", the other arguments (e.g. --profile) are global compose options
 global_args=()
 scale_args=()

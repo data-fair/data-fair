@@ -87,7 +87,7 @@ test.describe('bridge provider settings', () => {
 
   test('targets a test owner, so clean() can reset it', () => {
     assert.equal(OWNER.type, 'organization')
-    assert.match(OWNER.id, /^test_/)
+    assert.match(OWNER.id, /^test_datafair_/)
   })
 })
 

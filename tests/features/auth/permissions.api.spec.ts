@@ -288,7 +288,7 @@ test.describe('permissions', () => {
   })
 
   test('owner transfer recomputes the search index from the permissions it just reset', async () => {
-    // test_datafair_user5 is admin of both test_datafair_org2 and test_datafair_org6 (dev/resources/organizations.json)
+    // test_datafair_user5 is admin of both test_datafair_org2 and test_datafair_org6 (tests/support/sd-fixtures.ts)
     const testUser5Org2 = await axiosAuth('test_datafair_user5@test.com', 'test_datafair_org2')
     const testUser5Org6 = await axiosAuth('test_datafair_user5@test.com', 'test_datafair_org6')
     const count = async (ax: any, q: string) => (await ax.get('/api/v1/datasets', { params: { q, size: 0 } })).data.count

@@ -1,7 +1,8 @@
 import assert from 'node:assert/strict'
 import { axiosBuilder } from '@data-fair/lib-node/axios.js'
 import { test as setup } from '@playwright/test'
-import { apiUrl } from './support/axios.ts'
+import { apiUrl, clean } from './support/axios.ts'
+import { sdTestEnvUrl } from './support/sd-fixtures.ts'
 
 const ax = axiosBuilder()
 
@@ -33,4 +34,12 @@ Last error: ${lastErr instanceof Error ? lastErr.message : String(lastErr)}`)
     ax.get(`${mockUrl}/geocoder/api-docs.json`),
     `Mock server seems to be unavailable at ${mockUrl}. If you are an agent, read its logs with "npx --no df-dev logs mock" (or "npx --no df-dev restart mock" if the pane exited).`
   )
+
+  // the accounts of the test sub-space were seeded in simple-directory by global-setup.ts (before the
+  // spec files were loaded), then data-fair deletes what they own
+  await assert.doesNotReject(
+    ax.get(`${sdTestEnvUrl()}/ping`),
+    `simple-directory's test API is unavailable at ${sdTestEnvUrl()}: the container needs ENABLE_TEST_API=1 (docker-compose.yaml).`
+  )
+  await clean()
 })

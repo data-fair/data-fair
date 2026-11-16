@@ -174,7 +174,7 @@ jobs:
 
     # every profile, not only the core services: e2e pages need events, registry, agents and
     # capture (each optional service has its own profile, see dev/dev.json "optional").
-    # dev/deps.sh renders the dev users, starts the containers and, once they are healthy, runs the
+    # dev/deps.sh starts the containers and, once they are healthy, runs the
     # s3-init one-shot (kept out of the wait: it exits at once, which --wait reports as a failure).
     # mcp reads the platform document from the dev API, which only starts in a later step: it
     # exits at once and fails the wait. No test calls it.

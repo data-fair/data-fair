@@ -213,10 +213,10 @@ test.describe('virtual datasets features', () => {
     assert.ok(res.headers['cache-control'].includes('private'))
 
     // owner of dataset can use account filter both on virtual dataset and on child
-    res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines?account=user%3Atest_user3`)
+    res = await ax.get(`/api/v1/datasets/${virtualDataset.id}/lines?account=user%3Atest_datafair_user3`)
     assert.equal(res.status, 200)
     assert.equal(res.data.total, 2)
-    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?account=user%3Atest_user3`)
+    res = await ax.get(`/api/v1/datasets/${dataset.id}/lines?account=user%3Atest_datafair_user3`)
     assert.equal(res.status, 200)
     assert.equal(res.data.total, 2)
 
@@ -229,7 +229,7 @@ test.describe('virtual datasets features', () => {
     assert.equal(res.data.results[0].account, 'user:test_datafair_user3')
     assert.ok(res.headers['cache-control'].includes('private'))
     assert.ok(res.data.next)
-    assert.ok(res.data.next.includes('account=user%3Atest_user3'))
+    assert.ok(res.data.next.includes('account=user%3Atest_datafair_user3'))
     res = await testUser3.get(res.data.next)
     assert.equal(res.status, 200)
     assert.equal(res.data.results.length, 1)
@@ -241,7 +241,7 @@ test.describe('virtual datasets features', () => {
     assert.equal(res.status, 200)
     assert.equal(res.data.total, 0)
     await assert.rejects(
-      testUser5.get(`/api/v1/datasets/${virtualDataset.id}/lines?account=user%3Atest_user3`),
+      testUser5.get(`/api/v1/datasets/${virtualDataset.id}/lines?account=user%3Atest_datafair_user3`),
       { status: 403 }
     )
 

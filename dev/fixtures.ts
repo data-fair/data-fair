@@ -2,25 +2,32 @@
  * Dev fixtures: seed the RUNNING dev environment with a few example datasets
  * (REST, CSV file, geo, a date/timezone showcase) and configure the AI agents
  * integration with a mock provider. Everything is owned by the dedicated
- * `dev_fixtures` org, which is
- * excluded from the test-suite cleanup (owner ids matching /^test_/ only).
+ * `test_demo_org` org of the demo world: the prefixed sub-space test_demo_, seeded
+ * and cleaned like the test suite's own (test_datafair_), whose cleanup never touches it.
  *
  * Run it (dev env must be up — `npx --no df-dev status`):
  *   npm run dev-fixtures
  *
  * Idempotent: datasets that already exist are skipped; settings are upserted.
- * It never deletes anything. Requires the `dev_fixtures` org to exist in
- * simple-directory (see dev/resources/organizations.json) — restart `sd` after
- * adding it.
+ * It never deletes anything by default. The world's accounts, the developer
+ * account test_demo_dev@example.org (password passwd, a simple-directory admin)
+ * and its `test_demo_org` org, are first upserted in simple-directory from
+ * dev/resources/demo-world.json (POST /api/test-env/seed).
+ *
+ * `npm run dev-fixtures -- --reset` first deletes the whole world:
+ *   DELETE http://localhost:$SD_PORT/api/test-env?prefix=test_demo_ (accounts)
+ *   DELETE http://localhost:$DEV_API_PORT/api/v1/test-env?prefix=test_demo_ (what they own in data-fair)
  */
 import { axiosAuth } from '@data-fair/lib-node/axios-auth.js'
+import { readFileSync } from 'node:fs'
 import FormData from 'form-data'
 import { generateTablePerfCsv, tablePerfDatasetBody, chunkCsv, TABLE_PERF_ID } from './table-perf-fixture.ts'
 
 const root = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}`
 const directoryUrl = `${root}/simple-directory`
 const dfBaseURL = `${root}/data-fair`
-const creds = { email: 'alban.mouton@koumoul.com', password: 'passwd', directoryUrl }
+const demoWorld = JSON.parse(readFileSync(new URL('./resources/demo-world.json', import.meta.url), 'utf8'))
+const creds = { email: demoWorld.users[0].email, password: demoWorld.users[0].password.clear, directoryUrl }
 
 // Mock-provider settings: the mock model needs no API key, so the dev env can
 // use the back-office AI assistant with zero external configuration.
@@ -52,7 +59,7 @@ const agentOrgSettings = {
   reviewPersonalAssistant: true
 }
 
-// Filled in main() so the org-missing hint can wrap their creation.
+// Filled in main(), once the dev accounts are seeded.
 let dfAx: any
 let dfAdminAx: any
 let agentsAx: any
@@ -216,15 +223,15 @@ const datasetTopics: Record<string, string[]> = {
 /** Upsert the demo topics into the org settings — merge by id so manually
  * added topics survive. Topic renames propagate to datasets server-side. */
 async function ensureTopics () {
-  const { data: settings } = await dfAx.get('/api/v1/settings/organization/dev_fixtures')
+  const { data: settings } = await dfAx.get('/api/v1/settings/organization/test_demo_org')
   const topics = [...(settings.topics ?? [])]
   let changed = false
   for (const t of fixtureTopics) {
     const i = topics.findIndex((e: any) => e.id === t.id)
     if (i === -1) { topics.push(t); changed = true } else if (topics[i].title !== t.title || topics[i].color !== t.color) { topics[i] = { ...topics[i], ...t }; changed = true }
   }
-  if (changed) await dfAx.patch('/api/v1/settings/organization/dev_fixtures', { topics })
-  console.log(`topics ${changed ? 'upserted into' : 'already present in'} organization/dev_fixtures settings`)
+  if (changed) await dfAx.patch('/api/v1/settings/organization/test_demo_org', { topics })
+  console.log(`topics ${changed ? 'upserted into' : 'already present in'} organization/test_demo_org settings`)
 }
 
 /** Tag every fixture dataset with its topics. Runs after seeding so it also
@@ -990,17 +997,17 @@ async function seedBrouillonErreur () {
 }
 
 /** Wide and long dataset for the table's performance (benchmark/src/ui). Private to the
- * dev_fixtures org: a public dataset would break the test suites, which run against the
+ * test_demo_org org: a public dataset would break the test suites, which run against the
  * same API and count every dataset a user can read. Permissions are reset on every run
  * (envs seeded while the fixture was public get repaired).
  * The dev config caps every request body at 160KB per dataset and every account at 200KB:
- * the lines go in CSV chunks to a REST dataset, and the dev_fixtures org gets unlimited
+ * the lines go in CSV chunks to a REST dataset, and the test_demo_org org gets unlimited
  * storage (re-applied on every run: the simulations' clean() wipes all limits).
  * An incomplete dataset (interrupted run) is deleted and seeded again. */
 async function seedTablePerf () {
   const id = TABLE_PERF_ID
   const unlimited = { limit: -1, consumption: 0 }
-  await dfAdminAx.post('/api/v1/limits/organization/dev_fixtures', {
+  await dfAdminAx.post('/api/v1/limits/organization/test_demo_org', {
     store_bytes: unlimited, indexed_bytes: unlimited, nb_datasets: unlimited, lastUpdate: new Date().toISOString()
   })
   const rows = 10000
@@ -1026,30 +1033,42 @@ async function seedTablePerf () {
 }
 
 async function main () {
-  try {
-    dfAx = await axiosAuth({ ...creds, org: 'dev_fixtures', axiosOpts: { baseURL: dfBaseURL } })
-  } catch (err) {
-    console.error('\nCould not authenticate into org "dev_fixtures".')
-    console.error('If you just added it to dev/resources/organizations.json, restart the')
-    console.error('simple-directory container (e.g. `docker compose restart simple-directory`) and re-run.\n')
-    throw err
+  const sdTestEnv = `http://localhost:${process.env.SD_PORT}/api/test-env`
+  if (process.argv.includes('--reset')) {
+    for (const url of [`${sdTestEnv}?prefix=${demoWorld.prefix}`, `http://localhost:${process.env.DEV_API_PORT}/api/v1/test-env?prefix=${demoWorld.prefix}`]) {
+      const res = await fetch(url, { method: 'DELETE' })
+      if (!res.ok) throw new Error(`reset refused by ${url}: HTTP ${res.status} ${await res.text()}`)
+    }
+    console.log(`demo world ${demoWorld.prefix} deleted`)
   }
+  // the accounts of the demo world (upsert by id)
+  const seed = () => fetch(`${sdTestEnv}/seed`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(demoWorld) })
+  let seedRes = await seed()
+  if (seedRes.status === 409) {
+    // simple-directory creates the accounts of its ADMINS at start, with a generated id: the same email under
+    // another id. Only the world's accounts are recreated, what they own in data-fair is kept (same owner ids).
+    await fetch(`${sdTestEnv}?prefix=${demoWorld.prefix}`, { method: 'DELETE' })
+    seedRes = await seed()
+  }
+  if (!seedRes.ok) throw new Error(`simple-directory refused dev/resources/demo-world.json: HTTP ${seedRes.status} ${await seedRes.text()}`)
+
+  dfAx = await axiosAuth({ ...creds, org: 'test_demo_org', axiosOpts: { baseURL: dfBaseURL } })
   // admin-mode global-admin session writes any owner's agent settings; base is
   // the root origin so we can call the agents service under /agents/api/...
   agentsAx = await axiosAuth({ ...creds, adminMode: true, axiosOpts: { baseURL: root } })
 
   // admin-mode data-fair session: the integrity endpoints require admin mode
-  // (reqAdminMode). Same dev_fixtures org context as dfAx, but elevated.
-  dfAdminAx = await axiosAuth({ ...creds, org: 'dev_fixtures', adminMode: true, axiosOpts: { baseURL: dfBaseURL } })
+  // (reqAdminMode). Same test_demo_org org context as dfAx, but elevated.
+  dfAdminAx = await axiosAuth({ ...creds, org: 'test_demo_org', adminMode: true, axiosOpts: { baseURL: dfBaseURL } })
 
-  await agentsAx.put('/agents/api/settings/organization/dev_fixtures', agentSettings)
-  await agentsAx.put('/agents/api/settings/organization/dev_fixtures/org', agentOrgSettings)
-  console.log('agent settings written (mock provider) for organization/dev_fixtures')
+  await agentsAx.put('/agents/api/settings/organization/test_demo_org', agentSettings)
+  await agentsAx.put('/agents/api/settings/organization/test_demo_org/org', agentOrgSettings)
+  console.log('agent settings written (mock provider) for organization/test_demo_org')
 
   // activate the AI assistant on the data-fair org settings (the agentChat flag
   // gates the assistant UI). PATCH merges, so it preserves any other settings.
-  await dfAx.patch('/api/v1/settings/organization/dev_fixtures', { agentChat: true })
-  console.log('agent chat activated on organization/dev_fixtures settings')
+  await dfAx.patch('/api/v1/settings/organization/test_demo_org', { agentChat: true })
+  console.log('agent chat activated on organization/test_demo_org settings')
 
   await ensureTopics()
 

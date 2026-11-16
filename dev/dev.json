@@ -36,8 +36,7 @@
   },
   "url": "http://${DEV_HOST}:${NGINX_PORT}/data-fair/",
   "setup": [
-    "npm -w parquet-writer run build",
-    "node dev/render-users.mjs"
+    "npm -w parquet-writer run build"
   ],
   "optional": {
     "events": {

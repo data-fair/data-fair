@@ -10,9 +10,9 @@ export const ROOT = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}`
 export const BRIDGE_URL = process.env.BRIDGE_URL ?? `http://localhost:${process.env.BRIDGE_PORT ?? 3194}/v1`
 
 /** An org rather than a user: it is the account shape most Data Fair users work
- *  in, and `clean()` resets anything matching /^test_/ between runs. */
+ *  in, and `clean()` resets the test sub-space (test_datafair_) between runs. */
 export const OWNER = { type: 'organization', id: 'test_datafair_org1' } as const
-/** Admin of OWNER per dev/resources/organizations.json. */
+/** Admin of OWNER per tests/support/sd-fixtures.ts. */
 export const OWNER_USER = 'test_datafair_user1'
 /** Global admin, needed to write another owner's agent settings. */
 const SUPER_ADMIN = 'test_datafair_superadmin@test.com'

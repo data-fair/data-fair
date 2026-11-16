@@ -14,7 +14,7 @@ Install the dependencies and start the development environment (docker is requir
     npm ci
     npm run dev
 
-The dev server is available at <http://localhost:5600/data-fair/>; log in with an account of `dev/resources/users.template.json`. `npm run dev-deps` only starts the containers (extra arguments go to docker compose, e.g. `npm run dev-deps -- --profile events`). The default ports (5600-5649) are in `dev/default.env`, copied to `.env` the first time: `.env` overrides `dev/default.env` and is never overwritten.
+The dev server is available at <http://localhost:5600/data-fair/>; run `npm run dev-fixtures` once to create the demo world (prefix `test_demo_`, `dev/resources/demo-world.json`): the account `test_demo_dev@example.org` (password `passwd`) and the example datasets of its organization, then log in with it (`npm run dev-fixtures -- --reset` recreates the world from scratch). The test accounts (`test_datafair_*`, `tests/support/sd-fixtures.ts`) are seeded by each test run. `npm run dev-deps` only starts the containers (extra arguments go to docker compose, e.g. `npm run dev-deps -- --profile events`). The default ports (5600-5649) are in `dev/default.env`, copied to `.env` the first time: `.env` overrides `dev/default.env` and is never overwritten.
 
 Alternative with random free ports per checkout, panes and agent-friendly status (zellij >= 0.44):
 

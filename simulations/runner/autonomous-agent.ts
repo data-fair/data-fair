@@ -2,7 +2,7 @@
  * The autonomous agent a case drives: owned by test_datafair_org1, acting as its own NHI, calling the mcp
  * server's tools — the configuration production runs.
  *
- * The NHI is declared in simple-directory's file storage (dev/resources/users.template.json) with the
+ * The NHI is one of the test accounts seeded in simple-directory (tests/support/sd-fixtures.ts) with the
  * subject autonomous-agent:sim-mcp, which pins the agent id. The public creation route always
  * generates the id, so the agent is seeded through the agents test-env route (development mode only),
  * the same contract the agents repo's own simulations use.

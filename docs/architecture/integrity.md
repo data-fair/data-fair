@@ -619,7 +619,7 @@ is `true` with a 2-day revision retention and a 1-day attribution retention (del
 distinct windows, so tests can tell the two formulas apart), so the capability is on by default —
 but it is still opt-in **per dataset** (admin-mode `PUT /datasets/{id}/_integrity`).
 
-`npm run dev-fixtures` seeds **three** datasets in the `dev_fixtures` org that demonstrate the
+`npm run dev-fixtures` seeds **three** datasets in the `test_demo_org` org that demonstrate the
 feature end-to-end (each is documented in detail in the fixtures script itself):
 
 - `fixtures-integrite-ok` — enabled, organically re-anchored twice (file update + metadata

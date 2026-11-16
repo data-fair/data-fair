@@ -31,8 +31,15 @@ services:
       - MONGO_URL=mongodb://localhost:${MONGO_PORT}/simple-directory
       - OBSERVER_ACTIVE=false
       - CIPHER_PASSWORD=dev-cipher-password-0123456789abcdef
-      - STORAGE_TYPE=file
-      - ADMINS=["test_datafair_superadmin@test.com","superadmin@test.com","alban.mouton@koumoul.com"]
+      # accounts in mongo: the test suites seed and clean their own sub-space (test_datafair_ for this
+      # repository, tests/support/sd-fixtures.ts) through the test API, npm run dev-fixtures seeds
+      # the demo world test_demo_ the same way (dev/resources/demo-world.json)
+      - STORAGE_TYPE=mongo
+      - ENABLE_TEST_API=1
+      # the test API needs NODE_ENV=development, the configuration stays the image's production one
+      - NODE_ENV=development
+      - NODE_CONFIG_ENV=production
+      - ADMINS=["test_datafair_superadmin@test.com","test_demo_dev@example.org"]
       - CONTACT=contact@test.com
       # in dev simple-directory only notifies this service, directly (the shared identities router refuses calls through the proxy)
       - IDENTITIES_WEBHOOKS=[{"base":"http://localhost:${DEV_API_PORT}/api/v1/identities","key":"secret-identities"}]
@@ -60,7 +67,7 @@ services:
       - MAILS_TRANSPORT={"host":"localhost","port":${MAILDEV_SMTP_PORT},"ignoreTLS":true}
       # per recipient, stored in mongo: repeated test runs would stop the mails silently
       - MAILSRATELIMIT_POINTS=100000
-      # non-human identities, declared in dev/resources/users.template.json (the autonomous-agent simulations)
+      # non-human identities, declared in tests/support/sd-fixtures.ts (the autonomous-agent simulations)
       - MANAGE_NHIS=true
       # dev only: the NHI issuer is plain http on a .localhost host, which assertSafeIssuer refuses otherwise
       - NHIS_ALLOW_INSECURE_ISSUERS=true
@@ -68,9 +75,6 @@ services:
       - OAUTH_SERVER_ENABLED=true
       # the scopes an NHI may hold: those of every service of data-fair's platform document
       - PLATFORM_SCOPES_URL=http://localhost:${DEV_API_PORT}/api/v1/scopes.json
-    volumes:
-      - ./dev/resources/users.json:/app/data/users.json
-      - ./dev/resources/organizations.json:/app/data/organizations.json
     healthcheck:
       test: ["CMD", "nc", "-z", "localhost", "${SD_PORT}"]
       interval: 2s
@@ -114,7 +118,7 @@ services:
       - DEFAULT_MODELS={"assistant":{"provider":"global-mock","id":"mock-model"}}
       - DEFAULT_CREDITS=-1
       # NODE_ENV=development only for POST /api/test-env/autonomous-agent: an NHI declared in
-      # simple-directory's files pins the agent id (autonomous-agent:<id>), which the public creation
+      # simple-directory pins the agent id (autonomous-agent:<id>), which the public creation
       # route always generates. The configuration stays the image's production one.
       - NODE_ENV=development
       - NODE_CONFIG_ENV=production

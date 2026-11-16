@@ -9,6 +9,8 @@ import 'dotenv/config'
 export default defineConfig({
   testDir: './simulations',
   testMatch: /.*\.sim\.spec\.ts/,
+  // seeds the test accounts in simple-directory, before the spec files (that log in at import) are loaded
+  globalSetup: './tests/global-setup.ts',
   workers: 1,
   fullyParallel: false,
   // A judged scenario is many model turns, each of which can be a slow first
