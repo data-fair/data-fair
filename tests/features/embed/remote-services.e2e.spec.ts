@@ -3,7 +3,7 @@ import { clean } from '../../support/axios.ts'
 
 const test = base.extend<{ goToAsAdmin: (path: string) => Promise<void> }>({
   goToAsAdmin: async ({ goToWithAuth }, use) => {
-    await use(path => goToWithAuth(path, 'test_superadmin', { adminMode: true }))
+    await use(path => goToWithAuth(path, 'test_datafair_superadmin', { adminMode: true }))
   }
 })
 

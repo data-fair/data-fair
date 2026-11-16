@@ -6,7 +6,7 @@ import FormData from 'form-data'
 
 const test = base.extend<{ goToAsAdmin: (path: string) => Promise<void> }>({
   goToAsAdmin: async ({ goToWithAuth }, use) => {
-    await use(path => goToWithAuth(path, 'test_superadmin', { adminMode: true }))
+    await use(path => goToWithAuth(path, 'test_datafair_superadmin', { adminMode: true }))
   }
 })
 
@@ -26,7 +26,7 @@ test.describe('admin pages', () => {
     // would break whenever the shared dev env contains deliberately-errored datasets
     // (e.g. seeded by `npm run dev-fixtures`). Seed our own errored dataset (owned by
     // a test user, removed by clean()) and assert it is listed.
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     const form = new FormData()
     form.append('file', fs.readFileSync('./tests/resources/csv-cases/dataset-bad-separators.csv'), 'dataset-bad-separators.csv')
     const res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })

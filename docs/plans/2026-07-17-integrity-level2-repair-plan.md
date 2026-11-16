@@ -223,7 +223,7 @@ git commit -m "feat(integrity): suffix-aware revision key operations for .file p
 
 ```ts
 test('anchor carries the level-2 payload: inline metadata snapshot + locked .file sibling', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   const prefix = revisionsPrefix(dataset)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
@@ -245,7 +245,7 @@ test('anchor carries the level-2 payload: inline metadata snapshot + locked .fil
 })
 
 test('dedupe is payload-aware: an L1-era anchor self-heals to level 2', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   const prefix = revisionsPrefix(dataset)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
@@ -371,7 +371,7 @@ git commit -m "feat(integrity): anchors carry level-2 payloads with payload-awar
 
 ```ts
 test('lock renewal extends the payload object too', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   const prefix = revisionsPrefix(dataset)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
@@ -461,7 +461,7 @@ git commit -m "feat(integrity): lock renewal slides the payload object's lock wi
 
 ```ts
 test('owner transfer is refused while integrity is active', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
 
@@ -628,7 +628,7 @@ git commit -m "feat(integrity): restoreUpdate/rehydrateTopics pure operations + 
 
 ```ts
 test('restore heals a tampered metadata field synchronously and appends a restore revision', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   const prefix = revisionsPrefix(dataset)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
@@ -653,8 +653,8 @@ test('restore heals a tampered metadata field synchronously and appends a restor
 })
 
 test('restore guards: inactive, unknown index, payload-less revision, non-admin', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
-  const user = await axiosAuth('test_superadmin@test.com', undefined, false)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
+  const user = await axiosAuth('test_datafair_superadmin@test.com', undefined, false)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   const prefix = revisionsPrefix(dataset)
 
@@ -751,7 +751,7 @@ git commit -m "feat(integrity): synchronous metadata restore route (_restore)"
 
 ```ts
 test('restore re-ingests a tampered file through the pipeline and anchors with restore context', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   const prefix = revisionsPrefix(dataset)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
@@ -866,7 +866,7 @@ git commit -m "feat(integrity): file restore re-ingests the payload through the 
 
 ```ts
 test('revision detail returns snapshot + current projection; file endpoint streams the payload', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
   await admin.patch(`/api/v1/datasets/${dataset.id}`, { description: 'edited legitimately' })

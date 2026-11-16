@@ -105,15 +105,15 @@ export async function seedDatasets () {
 }
 
 /**
- * Public datasets of ANOTHER organization, close to test_org1's in topic and title: what an agent
- * must leave out when it lists its own organization's data. test_org3 rather than test_org2, which is
- * a partner of test_org1 and could legitimately share with it. test_user1, the person in the chat, is
- * also a member of test_org3, which does not matter here: the agent acts as its NHI, a member of
- * test_org1 only, so test_org3's datasets reach it only as public ones.
+ * Public datasets of ANOTHER organization, close to test_datafair_org1's in topic and title: what an agent
+ * must leave out when it lists its own organization's data. test_datafair_org3 rather than test_datafair_org2, which is
+ * a partner of test_datafair_org1 and could legitimately share with it. test_datafair_user1, the person in the chat, is
+ * also a member of test_datafair_org3, which does not matter here: the agent acts as its NHI, a member of
+ * test_datafair_org1 only, so test_datafair_org3's datasets reach it only as public ones.
  */
 export async function seedDecoys () {
   const { axiosAuth, waitForWorkerIdle } = await import('../../tests/support/axios.ts')
-  const ax = await axiosAuth('test_user3@test.com', 'test_org3')
+  const ax = await axiosAuth('test_datafair_user3@test.com', 'test_datafair_org3')
   await uploadCsv(ax, 'sim-decoy-equipements', 'equipements-sportifs.csv', {
     title: 'Équipements sportifs du département',
     description: 'Inventaire départemental des équipements sportifs.'

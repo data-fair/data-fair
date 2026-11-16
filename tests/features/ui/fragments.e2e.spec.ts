@@ -26,13 +26,13 @@ test.describe('fragments UI', () => {
 
   test.beforeAll(async () => {
     await clean()
-    ax = await axiosAuth('test_user1@test.com', 'test_org1')
+    ax = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
     virtualId = (await ax.post('/api/v1/datasets', { isVirtual: true, title: 'virtual parent' })).data.id
     fragmentId = (await sendDataset('datasets/dataset1.csv', ax, {}, { partOf: { type: 'dataset', id: virtualId } })).id
   })
 
   test('fragment page links to its parent and hides what the parent covers', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${fragmentId}`, 'test_user1', { org: 'test_org1' })
+    await goToWithAuth(`/data-fair/dataset/${fragmentId}`, 'test_datafair_user1', { org: 'test_datafair_org1' })
     await pastActiveAccountGate(page, page.getByText(/fragment de/i))
     await expect(page.getByText(/fragment de/i)).toBeVisible({ timeout: 15000 })
     await expect(page.getByRole('link', { name: 'virtual parent' })).toBeVisible()
@@ -47,7 +47,7 @@ test.describe('fragments UI', () => {
   })
 
   test('a fragment becomes a source of its virtual parent only when explicitly added', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${fragmentId}`, 'test_user1', { org: 'test_org1' })
+    await goToWithAuth(`/data-fair/dataset/${fragmentId}`, 'test_datafair_user1', { org: 'test_datafair_org1' })
     await pastActiveAccountGate(page, page.getByText(/fragment de/i))
     await expect(page.getByText(/pas encore une source/)).toBeVisible({ timeout: 15000 })
     await page.getByRole('button', { name: 'Ajouter aux sources' }).click()
@@ -56,7 +56,7 @@ test.describe('fragments UI', () => {
 
     // the parent's Fragments tab tells its sources apart
     await expect.poll(async () => (await ax.get(`/api/v1/datasets/${virtualId}`)).data.status, { timeout: 10000 }).toBe('finalized')
-    await goToWithAuth(`/data-fair/dataset/${virtualId}`, 'test_user1', { org: 'test_org1' })
+    await goToWithAuth(`/data-fair/dataset/${virtualId}`, 'test_datafair_user1', { org: 'test_datafair_org1' })
     const fragmentsTab = page.locator('#structure').getByRole('tab', { name: 'Fragments' })
     await pastActiveAccountGate(page, fragmentsTab)
     await fragmentsTab.click()
@@ -82,7 +82,7 @@ test.describe('fragments UI', () => {
   })
 
   test('creating a fragment starts from the parent', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/new-dataset?partOf=dataset:${virtualId}`, 'test_user1', { org: 'test_org1' })
+    await goToWithAuth(`/data-fair/new-dataset?partOf=dataset:${virtualId}`, 'test_datafair_user1', { org: 'test_datafair_org1' })
     // the parent is read from the active account, which the switch gate fixes when it is not the org yet
     await pastActiveAccountGate(page, page.getByText('Éditable'))
     // no metadata-only fragment, the breadcrumb leads back to the parent
@@ -106,7 +106,7 @@ test.describe('fragments UI', () => {
   test('attaching is only proposed towards the single virtual dataset already using the dataset', async ({ page, goToWithAuth }) => {
     const standalone = await sendDataset('datasets/dataset1.csv', ax, {}, { title: 'standalone' })
     const user = (await ax.post('/api/v1/datasets', { isVirtual: true, title: 'the only user', virtual: { children: [standalone.id] } })).data
-    await goToWithAuth(`/data-fair/dataset/${standalone.id}`, 'test_user1', { org: 'test_org1' })
+    await goToWithAuth(`/data-fair/dataset/${standalone.id}`, 'test_datafair_user1', { org: 'test_datafair_org1' })
     await pastActiveAccountGate(page, page.locator('#danger-zone'))
     const dangerZone = page.locator('#danger-zone')
     await expect(dangerZone.getByText(/n'est utilisé que par « the only user »/)).toBeVisible({ timeout: 15000 })
@@ -120,7 +120,7 @@ test.describe('fragments UI', () => {
     for (const title of ['first user', 'second user']) {
       await ax.post('/api/v1/datasets', { isVirtual: true, title, virtual: { children: [shared.id] } })
     }
-    await goToWithAuth(`/data-fair/dataset/${shared.id}`, 'test_user1', { org: 'test_org1' })
+    await goToWithAuth(`/data-fair/dataset/${shared.id}`, 'test_datafair_user1', { org: 'test_datafair_org1' })
     await pastActiveAccountGate(page, page.locator('#danger-zone'))
     await expect(page.locator('#danger-zone').getByText(/Supprimer le jeu de données/).first()).toBeVisible({ timeout: 15000 })
     await expect(page.locator('#danger-zone').getByText(/Rattacher/)).toHaveCount(0)
@@ -134,7 +134,7 @@ test.describe('fragments UI', () => {
     }
     const standalone = (await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'standalone app' })).data
     const dashboard = await embed('the only dashboard', [standalone.id])
-    await goToWithAuth(`/data-fair/application/${standalone.id}`, 'test_user1', { org: 'test_org1' })
+    await goToWithAuth(`/data-fair/application/${standalone.id}`, 'test_datafair_user1', { org: 'test_datafair_org1' })
     await pastActiveAccountGate(page, page.locator('#danger-zone'))
     const dangerZone = page.locator('#danger-zone')
     await expect(dangerZone.getByText(/n'est intégrée que dans « the only dashboard »/)).toBeVisible({ timeout: 15000 })
@@ -147,7 +147,7 @@ test.describe('fragments UI', () => {
     const shared = (await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'shared app' })).data
     await embed('first dashboard', [shared.id])
     await embed('second dashboard', [shared.id])
-    await goToWithAuth(`/data-fair/application/${shared.id}`, 'test_user1', { org: 'test_org1' })
+    await goToWithAuth(`/data-fair/application/${shared.id}`, 'test_datafair_user1', { org: 'test_datafair_org1' })
     await pastActiveAccountGate(page, page.locator('#danger-zone'))
     await expect(page.locator('#danger-zone').getByText(/Supprimer l'application/).first()).toBeVisible({ timeout: 15000 })
     await expect(page.locator('#danger-zone').getByText(/Rattacher/)).toHaveCount(0)
@@ -160,7 +160,7 @@ test.describe('fragments UI', () => {
       contentType: 'text/html',
       body: '<html><head><title>Dashboard</title><meta name="application-name" content="dashapp"><meta name="df:use-apps" content="true"></head><body>dashboard</body></html>'
     })
-    const superadmin = await axiosAuth('test_superadmin@test.com', undefined, true)
+    const superadmin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
     await superadmin.post('/api/v1/base-applications', { url: mockAppUrl('dashapp') })
     const dashboard = (await ax.post('/api/v1/applications', { url: mockAppUrl('dashapp'), title: 'a dashboard' })).data
     const plain = (await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'a plain app' })).data
@@ -168,14 +168,14 @@ test.describe('fragments UI', () => {
     const fragmentsTab = page.locator('#render').getByRole('tab', { name: 'Fragments' })
     const render = page.locator('#render')
     try {
-      await goToWithAuth(`/data-fair/application/${dashboard.id}`, 'test_user1', { org: 'test_org1' })
+      await goToWithAuth(`/data-fair/application/${dashboard.id}`, 'test_datafair_user1', { org: 'test_datafair_org1' })
       await pastActiveAccountGate(page, fragmentsTab)
       await fragmentsTab.click()
       await expect(render.getByRole('link', { name: 'Nouvelle application fragment' })).toBeVisible({ timeout: 15000 })
       await expect(render.getByRole('link', { name: 'Nouveau jeu de données fragment' })).toHaveCount(0)
 
       // the tab stays, it lists the fragments created through the API
-      await goToWithAuth(`/data-fair/application/${plain.id}`, 'test_user1', { org: 'test_org1' })
+      await goToWithAuth(`/data-fair/application/${plain.id}`, 'test_datafair_user1', { org: 'test_datafair_org1' })
       await pastActiveAccountGate(page, fragmentsTab)
       await fragmentsTab.click()
       await expect(render.getByText('Aucun fragment.')).toBeVisible({ timeout: 15000 })
@@ -187,7 +187,7 @@ test.describe('fragments UI', () => {
   })
 
   test('the fragments of a virtual parent switch to a list that keeps their source status', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${virtualId}`, 'test_user1', { org: 'test_org1' })
+    await goToWithAuth(`/data-fair/dataset/${virtualId}`, 'test_datafair_user1', { org: 'test_datafair_org1' })
     const structure = page.locator('#structure')
     const fragmentsTab = structure.getByRole('tab', { name: 'Fragments' })
     await pastActiveAccountGate(page, fragmentsTab)
@@ -205,7 +205,7 @@ test.describe('fragments UI', () => {
   })
 
   test('parent page lists fragments and the delete dialog offers to detach them first', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${virtualId}`, 'test_user1', { org: 'test_org1' })
+    await goToWithAuth(`/data-fair/dataset/${virtualId}`, 'test_datafair_user1', { org: 'test_datafair_org1' })
     const fragmentsTab = page.locator('#structure').getByRole('tab', { name: 'Fragments' })
     await pastActiveAccountGate(page, fragmentsTab)
     await fragmentsTab.click()
@@ -222,7 +222,7 @@ test.describe('fragments UI', () => {
   test('a meta-only parent lists its fragments and warns that only whole permission classes pass', async ({ page, goToWithAuth }) => {
     const metaOnlyId = (await ax.post('/api/v1/datasets', { isMetaOnly: true, title: 'meta-only parent' })).data.id
     await ax.post('/api/v1/datasets', { isRest: true, title: 'meta-only fragment', partOf: { type: 'dataset', id: metaOnlyId } })
-    await goToWithAuth(`/data-fair/dataset/${metaOnlyId}`, 'test_user1', { org: 'test_org1' })
+    await goToWithAuth(`/data-fair/dataset/${metaOnlyId}`, 'test_datafair_user1', { org: 'test_datafair_org1' })
     // a meta-only has no schema: the Fragments tab is the whole structure section
     const fragmentsTab = page.locator('#structure').getByRole('tab', { name: 'Fragments' })
     await pastActiveAccountGate(page, fragmentsTab)
@@ -247,7 +247,7 @@ test.describe('fragments UI', () => {
       const response = await route.fetch()
       await route.fulfill({ response, headers: { ...response.headers(), 'access-control-allow-origin': '*' } })
     })
-    await goToWithAuth(`/data-fair/application/${app.id}/config`, 'test_user1', { org: 'test_org1' })
+    await goToWithAuth(`/data-fair/application/${app.id}/config`, 'test_datafair_user1', { org: 'test_datafair_org1' })
     const panel = page.locator('.v-expansion-panel-title').first()
     await pastActiveAccountGate(page, panel)
     await panel.click()
@@ -266,7 +266,7 @@ test.describe('fragments UI', () => {
     await ax.put(`/api/v1/applications/${parent.id}/config`, { applications: [{ id: sub.id, href: subRef.href }] })
     await ax.put(`/api/v1/applications/${other.id}/config`, { applications: [{ id: sub.id, href: subRef.href }] })
 
-    await goToWithAuth(`/data-fair/application/${sub.id}`, 'test_user1', { org: 'test_org1' })
+    await goToWithAuth(`/data-fair/application/${sub.id}`, 'test_datafair_user1', { org: 'test_datafair_org1' })
     const alert = page.locator('.v-alert').filter({ hasText: 'aussi utilisée en dehors de son parent' })
     await pastActiveAccountGate(page, alert)
     await expect(alert.getByRole('link', { name: 'other dashboard' })).toBeVisible()
@@ -274,7 +274,7 @@ test.describe('fragments UI', () => {
     await expect(alert.getByRole('link', { name: 'real parent' })).toHaveCount(0)
 
     // on the other dashboard, the sub-application card says it does not belong there
-    await goToWithAuth(`/data-fair/application/${other.id}`, 'test_user1', { org: 'test_org1' })
+    await goToWithAuth(`/data-fair/application/${other.id}`, 'test_datafair_user1', { org: 'test_datafair_org1' })
     const childrenTab = page.locator('#metadata').getByRole('tab', { name: 'Applications utilisées' })
     await pastActiveAccountGate(page, childrenTab)
     await childrenTab.click()
@@ -283,7 +283,7 @@ test.describe('fragments UI', () => {
     await expect(page.getByText('Utilisé ici en dehors de son parent')).toBeVisible()
 
     // on the real parent, the same card is not flagged
-    await goToWithAuth(`/data-fair/application/${parent.id}`, 'test_user1', { org: 'test_org1' })
+    await goToWithAuth(`/data-fair/application/${parent.id}`, 'test_datafair_user1', { org: 'test_datafair_org1' })
     await pastActiveAccountGate(page, childrenTab)
     await childrenTab.click()
     await expect(page.locator('#metadata .v-card').filter({ hasText: 'shared sub app' })).toBeVisible()
@@ -297,7 +297,7 @@ test.describe('fragments UI', () => {
     const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}`
     const fullUrl = `${baseUrl}/data-fair/datasets?showAll=true&q=listedfragment`
     await page.goto(`${baseUrl}/simple-directory/login?redirect=${encodeURIComponent(fullUrl)}&adminMode=true`)
-    await page.getByLabel('Adresse mail').fill('test_superadmin@test.com')
+    await page.getByLabel('Adresse mail').fill('test_datafair_superadmin@test.com')
     await page.getByLabel('Mot de passe', { exact: true }).fill('passwd')
     await page.getByRole('button', { name: 'Se connecter' }).click()
     await page.waitForURL(fullUrl, { timeout: 10000 })

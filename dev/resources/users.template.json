@@ -1,111 +1,111 @@
 [
   {
-    "id": "test_user1",
+    "id": "test_datafair_user1",
     "firstName": "Test",
     "lastName": "User1",
-    "email": "test_user1@test.com",
+    "email": "test_datafair_user1@test.com",
     "password": {
       "clear": "passwd"
     }
   },
   {
-    "id": "test_user2",
+    "id": "test_datafair_user2",
     "firstName": "Test",
     "lastName": "User2",
-    "email": "test_user2@test.com",
+    "email": "test_datafair_user2@test.com",
     "password": {
       "clear": "passwd"
     }
   },
   {
-    "id": "test_user3",
+    "id": "test_datafair_user3",
     "firstName": "Test",
     "lastName": "User3",
-    "email": "test_user3@test.com",
+    "email": "test_datafair_user3@test.com",
     "password": {
       "clear": "passwd"
     }
   },
   {
-    "id": "test_user4",
+    "id": "test_datafair_user4",
     "firstName": "Test",
     "lastName": "User4",
-    "email": "test_user4@test.com",
+    "email": "test_datafair_user4@test.com",
     "password": {
       "clear": "passwd"
     }
   },
   {
-    "id": "test_user5",
+    "id": "test_datafair_user5",
     "firstName": "Test",
     "lastName": "User5",
-    "email": "test_user5@test.com",
+    "email": "test_datafair_user5@test.com",
     "password": {
       "clear": "passwd"
     }
   },
   {
-    "id": "test_user6",
+    "id": "test_datafair_user6",
     "firstName": "Test",
     "lastName": "User6",
-    "email": "test_user6@test.com",
+    "email": "test_datafair_user6@test.com",
     "password": {
       "clear": "passwd"
     }
   },
   {
-    "id": "test_user7",
+    "id": "test_datafair_user7",
     "firstName": "Test",
     "lastName": "User7",
-    "email": "test_user7@test.com"
+    "email": "test_datafair_user7@test.com"
   },
   {
-    "id": "test_user8",
+    "id": "test_datafair_user8",
     "firstName": "Test",
     "lastName": "User8",
-    "email": "test_user8@test.com",
+    "email": "test_datafair_user8@test.com",
     "password": {
       "clear": "passwd"
     }
   },
   {
-    "id": "test_user9",
+    "id": "test_datafair_user9",
     "firstName": "Test",
     "lastName": "User9",
-    "email": "test_user9@test.com"
+    "email": "test_datafair_user9@test.com"
   },
   {
-    "id": "test_user10",
+    "id": "test_datafair_user10",
     "firstName": "Test",
     "lastName": "User10",
-    "email": "test_user10@test.com",
+    "email": "test_datafair_user10@test.com",
     "password": {
       "clear": "passwd"
     }
   },
   {
-    "id": "test_alone",
+    "id": "test_datafair_alone",
     "firstName": "Test",
     "lastName": "Alone",
-    "email": "test_alone@test.com",
+    "email": "test_datafair_alone@test.com",
     "password": {
       "clear": "passwd"
     }
   },
   {
-    "id": "test_user",
+    "id": "test_datafair_user",
     "firstName": "Test",
     "lastName": "User",
-    "email": "test_user@test.com",
+    "email": "test_datafair_user@test.com",
     "password": {
       "clear": "passwd"
     }
   },
   {
-    "id": "test_contrib",
+    "id": "test_datafair_contrib",
     "firstName": "Test",
     "lastName": "Contrib",
-    "email": "test_contrib@test.com",
+    "email": "test_datafair_contrib@test.com",
     "password": {
       "clear": "passwd"
     }
@@ -121,109 +121,109 @@
     "defaultOrg": "dev_fixtures"
   },
   {
-    "id": "test_superadmin",
+    "id": "test_datafair_superadmin",
     "firstName": "Test",
     "lastName": "Superadmin",
-    "email": "test_superadmin@test.com",
+    "email": "test_datafair_superadmin@test.com",
     "password": {
       "clear": "passwd"
     }
   },
   {
-    "id": "kml_admin",
-    "firstName": "Koumoul",
+    "id": "test_datafair_depts_admin",
+    "firstName": "Depts",
     "lastName": "Admin",
-    "email": "kml_admin@koumoul-test.com",
+    "email": "test_datafair_depts_admin@test.com",
     "password": {
       "clear": "passwd"
     }
   },
   {
-    "id": "kml_user",
-    "firstName": "Koumoul",
+    "id": "test_datafair_depts_user",
+    "firstName": "Depts",
     "lastName": "User",
-    "email": "kml_user@koumoul-test.com",
+    "email": "test_datafair_depts_user@test.com",
     "password": {
       "clear": "passwd"
     }
   },
   {
-    "id": "kml_data_admin",
-    "firstName": "Koumoul Data",
+    "id": "test_datafair_depts_data_admin",
+    "firstName": "Depts Data",
     "lastName": "Admin",
-    "email": "kml_data_admin@koumoul-test.com",
+    "email": "test_datafair_depts_data_admin@test.com",
     "password": {
       "clear": "passwd"
     }
   },
   {
-    "id": "kml_data_contrib",
-    "firstName": "Koumoul Data",
+    "id": "test_datafair_depts_data_contrib",
+    "firstName": "Depts Data",
     "lastName": "Contrib",
-    "email": "kml_data_contrib@koumoul-test.com",
+    "email": "test_datafair_depts_data_contrib@test.com",
     "password": {
       "clear": "passwd"
     }
   },
   {
-    "id": "kml_data_user",
-    "firstName": "Koumoul Data",
+    "id": "test_datafair_depts_data_user",
+    "firstName": "Depts Data",
     "lastName": "User",
-    "email": "kml_data_user@koumoul-test.com",
+    "email": "test_datafair_depts_data_user@test.com",
     "password": {
       "clear": "passwd"
     }
   },
   {
-    "id": "kml_support_admin",
-    "firstName": "Koumoul Support",
+    "id": "test_datafair_depts_support_admin",
+    "firstName": "Depts Support",
     "lastName": "Admin",
-    "email": "kml_support_admin@koumoul-test.com",
+    "email": "test_datafair_depts_support_admin@test.com",
     "password": {
       "clear": "passwd"
     }
   },
   {
-    "id": "kml_support_contrib",
-    "firstName": "Koumoul Support",
+    "id": "test_datafair_depts_support_contrib",
+    "firstName": "Depts Support",
     "lastName": "Contrib",
-    "email": "kml_support_contrib@koumoul-test.com",
+    "email": "test_datafair_depts_support_contrib@test.com",
     "password": {
       "clear": "passwd"
     }
   },
   {
-    "id": "kml_marketing_admin",
-    "firstName": "Koumoul Marketing",
+    "id": "test_datafair_depts_marketing_admin",
+    "firstName": "Depts Marketing",
     "lastName": "Admin",
-    "email": "kml_marketing_admin@koumoul-test.com",
+    "email": "test_datafair_depts_marketing_admin@test.com",
     "password": {
       "clear": "passwd"
     }
   },
   {
-    "id": "kml_marketing_contrib",
-    "firstName": "Koumoul Marketing",
+    "id": "test_datafair_depts_marketing_contrib",
+    "firstName": "Depts Marketing",
     "lastName": "Contrib",
-    "email": "kml_marketing_contrib@koumoul-test.com",
+    "email": "test_datafair_depts_marketing_contrib@test.com",
     "password": {
       "clear": "passwd"
     }
   },
   {
-    "id": "kml_multi_admin",
-    "firstName": "Koumoul Multi",
+    "id": "test_datafair_depts_multi_admin",
+    "firstName": "Depts Multi",
     "lastName": "Admin",
-    "email": "kml_multi_admin@koumoul-test.com",
+    "email": "test_datafair_depts_multi_admin@test.com",
     "password": {
       "clear": "passwd"
     }
   },
   {
-    "id": "test_org1_agent_nhi",
+    "id": "test_datafair_org1_agent_nhi",
     "firstName": "Agent",
     "lastName": "MCP",
-    "email": "test_org1_agent_nhi@test.com",
+    "email": "test_datafair_org1_agent_nhi@test.com",
     "nhi": {
       "provider": {
         "issuer": "http://{DEV_HOST}:{NGINX_PORT}/agents/api/nhi"
@@ -233,10 +233,10 @@
     }
   },
   {
-    "id": "test_org1_lines_nhi",
+    "id": "test_datafair_org1_lines_nhi",
     "firstName": "Agent",
     "lastName": "Lines",
-    "email": "test_org1_lines_nhi@test.com",
+    "email": "test_datafair_org1_lines_nhi@test.com",
     "nhi": {
       "provider": {
         "issuer": "http://{DEV_HOST}:{NGINX_PORT}/agents/api/nhi"
@@ -246,10 +246,10 @@
     }
   },
   {
-    "id": "test_org1_scope_nhi",
+    "id": "test_datafair_org1_scope_nhi",
     "firstName": "Agent",
     "lastName": "Scope",
-    "email": "test_org1_scope_nhi@test.com",
+    "email": "test_datafair_org1_scope_nhi@test.com",
     "nhi": {
       "provider": {
         "issuer": "https://data-fair-tests.example.com",

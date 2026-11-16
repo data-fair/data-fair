@@ -7,9 +7,9 @@ import { axios, axiosAuth, clean, checkPendingTasks, config, mockAppUrl } from '
 import { sendDataset, waitForDatasetError, clearRateLimiting } from '../../support/workers.ts'
 
 const anonymous = axios()
-const testUser1 = await axiosAuth('test_user1@test.com')
-const alban = await axiosAuth('alban.mouton@koumoul.com', undefined, true)
-const testUser4 = await axiosAuth('test_user4@test.com')
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
+const testSuperadmin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
+const testUser4 = await axiosAuth('test_datafair_user4@test.com')
 
 const baseLimit = {
   indexed_bytes: { limit: 300000, consumption: 0 },
@@ -45,13 +45,13 @@ test.describe('limits', () => {
     // a wrong or repeated secret key does not open the route (the user is not a super admin)
     for (const key of [config.secretKeys.limits + 'x', config.secretKeys.limits.slice(0, -1), [config.secretKeys.limits, config.secretKeys.limits]]) {
       await assert.rejects(
-        ax.post('/api/v1/limits/user/test_user1', baseLimit, { params: { key }, paramsSerializer: { indexes: null } }),
+        ax.post('/api/v1/limits/user/test_datafair_user1', baseLimit, { params: { key }, paramsSerializer: { indexes: null } }),
         (err: any) => [400, 401, 403].includes(err.status)
       )
     }
 
     // define a higher limit
-    res = await ax.post('/api/v1/limits/user/test_user1', baseLimit, { params: { key: config.secretKeys.limits } })
+    res = await ax.post('/api/v1/limits/user/test_datafair_user1', baseLimit, { params: { key: config.secretKeys.limits } })
 
     // test storage size limit
     form = new FormData()
@@ -70,7 +70,7 @@ test.describe('limits', () => {
     }
     await assert.rejects(ax.post('/api/v1/datasets', { title: 'rest-dataset', isRest: true }), (err: any) => err.status === 429)
 
-    res = await ax.get('/api/v1/limits/user/test_user1')
+    res = await ax.get('/api/v1/limits/user/test_datafair_user1')
     assert.equal(res.status, 200)
     assert.equal(res.data.store_bytes.limit, 300000)
     assert.equal(res.data.store_bytes.consumption, 250000)
@@ -79,14 +79,14 @@ test.describe('limits', () => {
 
     // delete a dataset and check nb_datasets
     await ax.delete('/api/v1/datasets/' + lastDataset.id)
-    res = await ax.get('/api/v1/limits/user/test_user1')
+    res = await ax.get('/api/v1/limits/user/test_datafair_user1')
     assert.equal(res.data.nb_datasets.consumption, 9)
   })
 
   test('Manage a user applications limit', async () => {
     const ax = testUser1
     const params = { key: config.secretKeys.limits }
-    await ax.post('/api/v1/limits/user/test_user1', { ...baseLimit, nb_applications: { limit: 2, consumption: 0 } }, { params })
+    await ax.post('/api/v1/limits/user/test_datafair_user1', { ...baseLimit, nb_applications: { limit: 2, consumption: 0 } }, { params })
 
     const app = (await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })).data
     await ax.put('/api/v1/applications/app-2', { url: mockAppUrl('monapp1') })
@@ -95,15 +95,15 @@ test.describe('limits', () => {
     await assert.rejects(ax.put('/api/v1/applications/app-3', { url: mockAppUrl('monapp1') }), { status: 429 })
     await ax.put('/api/v1/applications/app-2', { url: mockAppUrl('monapp1'), title: 'updated' })
 
-    let res = await ax.get('/api/v1/limits/user/test_user1')
+    let res = await ax.get('/api/v1/limits/user/test_datafair_user1')
     assert.deepEqual(res.data.nb_applications, { limit: 2, consumption: 2 })
 
     // a transfer to an account at its limit is refused
-    await ax.post('/api/v1/limits/organization/test_org1', { ...baseLimit, nb_applications: { limit: 0, consumption: 0 } }, { params })
-    await assert.rejects(ax.put(`/api/v1/applications/${app.id}/owner`, { type: 'organization', id: 'test_org1', name: 'Test Org 1' }), { status: 429 })
+    await ax.post('/api/v1/limits/organization/test_datafair_org1', { ...baseLimit, nb_applications: { limit: 0, consumption: 0 } }, { params })
+    await assert.rejects(ax.put(`/api/v1/applications/${app.id}/owner`, { type: 'organization', id: 'test_datafair_org1', name: 'Test Org 1' }), { status: 429 })
 
     await ax.delete(`/api/v1/applications/${app.id}`)
-    res = await ax.get('/api/v1/limits/user/test_user1')
+    res = await ax.get('/api/v1/limits/user/test_datafair_user1')
     assert.equal(res.data.nb_applications.consumption, 1)
     await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })
   })
@@ -111,15 +111,15 @@ test.describe('limits', () => {
   test('A user cannot change limits', async () => {
     const ax = testUser1
     await assert.rejects(
-      ax.post('/api/v1/limits/user/test_user1', baseLimit),
+      ax.post('/api/v1/limits/user/test_datafair_user1', baseLimit),
       { status: 403 }
     )
   })
 
   test('A user can read his limits', async () => {
     const ax = testUser1
-    await ax.post('/api/v1/limits/user/test_user1', baseLimit, { params: { key: config.secretKeys.limits } })
-    const res = await ax.get('/api/v1/limits/user/test_user1')
+    await ax.post('/api/v1/limits/user/test_datafair_user1', baseLimit, { params: { key: config.secretKeys.limits } })
+    const res = await ax.get('/api/v1/limits/user/test_datafair_user1')
     assert.equal(res.status, 200)
     assert.equal(res.data.store_bytes.limit, 300000)
   })
@@ -133,13 +133,13 @@ test.describe('limits', () => {
   })
 
   test('A super admin can read the list of limits', async () => {
-    const ax = alban
-    await ax.post('/api/v1/limits/user/test_user1', baseLimit, { params: { key: config.secretKeys.limits } })
+    const ax = testSuperadmin
+    await ax.post('/api/v1/limits/user/test_datafair_user1', baseLimit, { params: { key: config.secretKeys.limits } })
     const res = await ax.get('/api/v1/limits')
     assert.equal(res.status, 200)
     assert.equal(res.data.count, 1)
     assert.equal(res.data.results.length, 1)
-    assert.equal(res.data.results[0].id, 'test_user1')
+    assert.equal(res.data.results[0].id, 'test_datafair_user1')
     assert.equal(res.data.results[0].type, 'user')
   })
 
@@ -147,7 +147,7 @@ test.describe('limits', () => {
     const ax = testUser4
 
     // higher storage limit first
-    await ax.post('/api/v1/limits/user/test_user4',
+    await ax.post('/api/v1/limits/user/test_datafair_user4',
       { store_bytes: { limit: 10000000, consumption: 0 }, lastUpdate: new Date().toISOString() },
       { params: { key: config.secretKeys.limits } })
 

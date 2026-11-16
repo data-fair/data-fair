@@ -6,11 +6,11 @@ import { axiosAuth, clean, checkPendingTasks, config } from '../../../support/ax
 import { waitForFinalize, sendDataset, doAndWaitForFinalize } from '../../../support/workers.ts'
 import { collectNotifs, expectNotif } from '../../../support/notifications.ts'
 
-const testUser1 = await axiosAuth('test_user1@test.com')
-const testUser3 = await axiosAuth('test_user3@test.com')
-const testUser4 = await axiosAuth('test_user4@test.com')
-const testUser4Org = await axiosAuth('test_user4@test.com', 'test_org1')
-const testUser5 = await axiosAuth('test_user5@test.com')
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
+const testUser3 = await axiosAuth('test_datafair_user3@test.com')
+const testUser4 = await axiosAuth('test_datafair_user4@test.com')
+const testUser4Org = await axiosAuth('test_datafair_user4@test.com', 'test_datafair_org1')
+const testUser5 = await axiosAuth('test_datafair_user5@test.com')
 
 test.describe('virtual datasets features', () => {
   test.beforeEach(async () => {
@@ -183,12 +183,12 @@ test.describe('virtual datasets features', () => {
       schema: [{ key: 'attr1', type: 'string' }, { key: 'account', type: 'string', 'x-refersTo': 'https://github.com/data-fair/lib/account' }]
     })).data
     const lines = [
-      { attr1: 'test1', account: 'user:test_user2' },
-      { attr1: 'test2', account: 'user:test_user3' },
-      { attr1: 'test3', account: 'user:test_user3' },
+      { attr1: 'test1', account: 'user:test_datafair_user2' },
+      { attr1: 'test2', account: 'user:test_datafair_user3' },
+      { attr1: 'test3', account: 'user:test_datafair_user3' },
       { attr1: 'test4' },
-      { attr1: 'test5', account: 'organization:test_org1:dep1' },
-      { attr1: 'test6', account: 'user:test_user4' }
+      { attr1: 'test5', account: 'organization:test_datafair_org1:dep1' },
+      { attr1: 'test6', account: 'user:test_datafair_user4' }
     ]
     await ax.post('/api/v1/datasets/rest1/_bulk_lines', lines)
     await waitForFinalize(ax, dataset.id)
@@ -226,7 +226,7 @@ test.describe('virtual datasets features', () => {
     assert.equal(res.data.total, 2)
     assert.equal(res.data.results.length, 1)
     assert.equal(res.data.results[0].attr1, 'test2')
-    assert.equal(res.data.results[0].account, 'user:test_user3')
+    assert.equal(res.data.results[0].account, 'user:test_datafair_user3')
     assert.ok(res.headers['cache-control'].includes('private'))
     assert.ok(res.data.next)
     assert.ok(res.data.next.includes('account=user%3Atest_user3'))
@@ -234,7 +234,7 @@ test.describe('virtual datasets features', () => {
     assert.equal(res.status, 200)
     assert.equal(res.data.results.length, 1)
     assert.equal(res.data.results[0].attr1, 'test3')
-    assert.equal(res.data.results[0].account, 'user:test_user3')
+    assert.equal(res.data.results[0].account, 'user:test_datafair_user3')
 
     // another user cannot read the lines where he is not referenced
     res = await testUser5.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
@@ -252,10 +252,10 @@ test.describe('virtual datasets features', () => {
     res = await testUser4Org.get(`/api/v1/datasets/${virtualDataset.id}/lines`)
     assert.equal(res.status, 200)
     assert.equal(res.data.total, 2)
-    res = await testUser4Org.get(`/api/v1/datasets/${virtualDataset.id}/lines?account=user:test_user4`)
+    res = await testUser4Org.get(`/api/v1/datasets/${virtualDataset.id}/lines?account=user:test_datafair_user4`)
     assert.equal(res.status, 200)
     assert.equal(res.data.total, 1)
-    res = await testUser4Org.get(`/api/v1/datasets/${virtualDataset.id}/lines?account=organization:test_org1:dep1`)
+    res = await testUser4Org.get(`/api/v1/datasets/${virtualDataset.id}/lines?account=organization:test_datafair_org1:dep1`)
     assert.equal(res.status, 200)
     assert.equal(res.data.total, 1)
   })

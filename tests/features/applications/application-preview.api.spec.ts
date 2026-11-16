@@ -34,15 +34,15 @@ test.describe('pseudo session', () => {
 
   test('is a GET-only session of an org admin', async () => {
     test.skip(!pseudoAvailable, 'simple-directory has no pseudo session secret in this test environment')
-    const admin = await axiosAuth('test_user1@test.com', 'test_org1')
+    const admin = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
     await admin.put('/api/v1/datasets/pseudo-org', { isRest: true, title: 'Pseudo org' })
     const cookie = await pseudoSessionCookie({
-      user: { id: 'test_user1', email: 'test_user1@test.com', name: 'Test User1', organizations: [] },
-      account: { type: 'organization', id: 'test_org1', name: 'Test Org1' },
+      user: { id: 'test_datafair_user1', email: 'test_datafair_user1@test.com', name: 'Test User1', organizations: [] },
+      account: { type: 'organization', id: 'test_datafair_org1', name: 'Test Org1' },
       accountRole: 'admin',
       lang: 'en'
     })
-    assert.match(cookie, /^id_token=[^;]+; id_token_sign=[^;]+; id_token_org=test_org1$/)
+    assert.match(cookie, /^id_token=[^;]+; id_token_sign=[^;]+; id_token_org=test_datafair_org1$/)
 
     const pseudo = withCookie(cookie)
     const list = await pseudo.get('/api/v1/datasets')
@@ -57,16 +57,16 @@ test.describe('pseudo session', () => {
 
   test('keeps the active department of a member', async () => {
     test.skip(!pseudoAvailable, 'simple-directory has no pseudo session secret in this test environment')
-    const member = await _axiosAuth({ email: 'kml_data_admin@koumoul-test.com', password: 'passwd', directoryUrl, org: 'koumoul', dep: 'data', axiosOpts: { baseURL, headers: { 'x-cache-bypass': '1' } } })
-    const supportAdmin = await _axiosAuth({ email: 'kml_support_admin@koumoul-test.com', password: 'passwd', directoryUrl, org: 'koumoul', dep: 'support', axiosOpts: { baseURL, headers: { 'x-cache-bypass': '1' } } })
+    const member = await _axiosAuth({ email: 'test_datafair_depts_data_admin@test.com', password: 'passwd', directoryUrl, org: 'test_datafair_org_depts', dep: 'data', axiosOpts: { baseURL, headers: { 'x-cache-bypass': '1' } } })
+    const supportAdmin = await _axiosAuth({ email: 'test_datafair_depts_support_admin@test.com', password: 'passwd', directoryUrl, org: 'test_datafair_org_depts', dep: 'support', axiosOpts: { baseURL, headers: { 'x-cache-bypass': '1' } } })
     await member.put('/api/v1/datasets/pseudo-dep-data', { isRest: true, title: 'Pseudo data dep' })
     await supportAdmin.put('/api/v1/datasets/pseudo-dep-support', { isRest: true, title: 'Pseudo support dep' })
     const own = (await member.get('/api/v1/datasets')).data.results.map((d: any) => d.id)
     assert.deepEqual(own, ['pseudo-dep-data'])
 
     const cookie = await pseudoSessionCookie({
-      user: { id: 'kml_data_admin', email: 'kml_data_admin@koumoul-test.com', name: 'Koumoul Data Admin', organizations: [] },
-      account: { type: 'organization', id: 'koumoul', name: 'Koumoul', department: 'data' },
+      user: { id: 'test_datafair_depts_data_admin', email: 'test_datafair_depts_data_admin@test.com', name: 'Depts Data Admin', organizations: [] },
+      account: { type: 'organization', id: 'test_datafair_org_depts', name: 'Test Org Depts', department: 'data' },
       accountRole: 'admin',
       lang: 'en'
     })
@@ -76,13 +76,13 @@ test.describe('pseudo session', () => {
 
   test('is a session of the organization of an NHI', async () => {
     test.skip(!pseudoAvailable, 'simple-directory has no pseudo session secret in this test environment')
-    const admin = await axiosAuth('test_user1@test.com', 'test_org1')
+    const admin = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
     await admin.put('/api/v1/datasets/pseudo-nhi', { isRest: true, title: 'Pseudo nhi' })
     const { accessToken } = await nhiSession()
     const exp = decodeJwt(accessToken).exp!
     const cookie = await pseudoSessionCookie({
-      user: { id: scopeNhiId, email: 'test_org1_scope_nhi@test.com', name: 'scope nhi', organizations: [], nhi: 1, exp } as any,
-      account: { type: 'organization', id: 'test_org1', name: 'Test Org1' },
+      user: { id: scopeNhiId, email: 'test_datafair_org1_scope_nhi@test.com', name: 'scope nhi', organizations: [], nhi: 1, exp } as any,
+      account: { type: 'organization', id: 'test_datafair_org1', name: 'Test Org1' },
       accountRole: 'admin',
       lang: 'en'
     })
@@ -120,7 +120,7 @@ test.describe('GET /applications/:id/preview', () => {
 
   test('renders an application on a public dataset', async () => {
     skipUnlessAvailable()
-    const ax = await axiosAuth('test_user1@test.com', 'test_org1')
+    const ax = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
     const id = await createApp(ax, 'preview-public', true)
     const res = await ax.get(`/api/v1/applications/${id}/preview`)
     assert.equal(res.status, 200)
@@ -141,10 +141,10 @@ test.describe('GET /applications/:id/preview', () => {
     await setupMockRoute({ path: '/monapperror/index.html', body: html, contentType: 'text/html' })
     await setupMockRoute({ path: '/monapperror/config-schema.json', body: {} })
     try {
-      const superadmin = await axiosAuth('test_superadmin@test.com', undefined, true)
+      const superadmin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
       await superadmin.post('/api/v1/base-applications', { url: mockAppUrl('monapperror') })
       await superadmin.patch(`/api/v1/base-applications/${mockAppId('monapperror')}`, { public: true })
-      const ax = await axiosAuth('test_user1@test.com', 'test_org1')
+      const ax = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
       const { data: app } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapperror'), title: 'preview-error' })
       await ax.put(`/api/v1/applications/${app.id}/config`, {})
       const res = await ax.get(`/api/v1/applications/${app.id}/preview`)
@@ -162,7 +162,7 @@ test.describe('GET /applications/:id/preview', () => {
 
   test('opens the draft of the application when asked', async () => {
     skipUnlessAvailable()
-    const ax = await axiosAuth('test_user1@test.com', 'test_org1')
+    const ax = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
     const id = await createApp(ax, 'preview-draft', true)
     const res = await ax.get(`/api/v1/applications/${id}/preview`, { params: { draft: true, viewport: 'mobile', fullPage: true, app_foo: 'bar' } })
     assert.equal(res.status, 200)
@@ -175,7 +175,7 @@ test.describe('GET /applications/:id/preview', () => {
 
   test('renders a private application as the member who asks', async () => {
     skipUnlessAvailable()
-    const ax = await axiosAuth('test_user1@test.com', 'test_org1')
+    const ax = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
     const id = await createApp(ax, 'preview-private', false)
     const res = await ax.get(`/api/v1/applications/${id}/preview`)
     assert.equal(res.status, 200)
@@ -184,7 +184,7 @@ test.describe('GET /applications/:id/preview', () => {
 
   test('renders a private application with the applications scope only', async () => {
     skipUnlessAvailable()
-    const ax = await axiosAuth('test_user1@test.com', 'test_org1')
+    const ax = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
     const id = await createApp(ax, 'preview-scoped-render', false)
     // the render reads the private dataset with the permissions of the account
     const applicationsOnly = await nhiSession('applications:read')
@@ -196,26 +196,26 @@ test.describe('GET /applications/:id/preview', () => {
   // the refusals below come before the capture service is needed: they run without it
 
   test('refuses an anonymous visitor on a private application', async () => {
-    const ax = await axiosAuth('test_user1@test.com', 'test_org1')
+    const ax = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
     const id = await createApp(ax, 'preview-private-anon', false)
     await assert.rejects(anonymousAx.get(`/api/v1/applications/${id}/preview`), { status: 403 })
   })
 
   test('needs an authenticated session even on a public application', async () => {
-    const ax = await axiosAuth('test_user1@test.com', 'test_org1')
+    const ax = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
     const id = await createApp(ax, 'preview-anonymous', true)
     await assert.rejects(anonymousAx.get(`/api/v1/applications/${id}/preview`), { status: 401 })
   })
 
   test('is limited by the scopes of the session', async () => {
-    const ax = await axiosAuth('test_user1@test.com', 'test_org1')
+    const ax = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
     const id = await createApp(ax, 'preview-scoped', false)
     const datasetsOnly = await nhiSession('datasets:read')
     await assert.rejects(datasetsOnly.bearerAx.get(`/api/v1/applications/${id}/preview`), { status: 403 })
   })
 
   test('refuses bad query values', async () => {
-    const ax = await axiosAuth('test_user1@test.com', 'test_org1')
+    const ax = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
     const id = await createApp(ax, 'preview-query', true)
     for (const params of [{ viewport: 'tablet' }, { draft: 'yes' }, { fullPage: '1' }]) {
       await assert.rejects(ax.get(`/api/v1/applications/${id}/preview`, { params }), { status: 400 })
@@ -223,7 +223,7 @@ test.describe('GET /applications/:id/preview', () => {
   })
 
   test('answers 501 when the preview is not configured, before the rate limit', async () => {
-    const ax = await axiosAuth('test_user1@test.com', 'test_org1')
+    const ax = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
     const id = await createApp(ax, 'preview-unconfigured', true)
     const previous = config.secretKeys.pseudoSession
     await setConfig('secretKeys.pseudoSession', null)
@@ -240,7 +240,7 @@ test.describe('GET /applications/:id/preview', () => {
 
   test('refuses calls over the rate limit', async () => {
     skipUnlessAvailable()
-    const ax = await axiosAuth('test_user1@test.com', 'test_org1')
+    const ax = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
     const id = await createApp(ax, 'preview-rate', true)
     // the default is 30 calls per 600 s: a smaller budget keeps the test from rendering 30 pages
     await setConfig('defaultLimits.apiRate.appPreviews.nb', 2)

@@ -7,7 +7,7 @@ import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
 import { waitForFinalize, sendDataset, waitForDatasetError, restCollectionFindOne, waitForJournalEvent } from '../../../support/workers.ts'
 import FormData from 'form-data'
 
-const testSuperadmin = await axiosAuth('test_superadmin@test.com', undefined, true)
+const testSuperadmin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
 
 const initMaster = async (ax: any, info: any, masterData: any, id = 'master') => {
   if (Array.isArray(masterData)) {

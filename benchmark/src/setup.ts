@@ -12,7 +12,7 @@ const proxyBase = process.env.DEV_HOST && process.env.NGINX_PORT
 const baseUrl = process.env.BENCHMARK_URL || `${proxyBase}/data-fair`
 const directoryUrl = process.env.BENCHMARK_DIRECTORY_URL || `${proxyBase}/simple-directory`
 
-const credentials = { email: 'test_superadmin@test.com', password: 'passwd' }
+const credentials = { email: 'test_datafair_superadmin@test.com', password: 'passwd' }
 
 // `axiosAuth` is cookie-based (a simple-directory id_token) with no refresh, so a long
 // seed can outlive the session. `ax` is typed loosely because we touch `.cookieJar`,

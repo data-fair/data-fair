@@ -14,12 +14,12 @@ test.describe('new-dataset wizard — virtual dataset from master-data on a seco
   })
 
   test('initializes virtual dataset schema from a master-data child of the main domain', async ({ page, context }) => {
-    // 1) main-domain master-data dataset, owned by another org (test_org3) but
-    //    explicitly shared with test_org1 so the corresponding remote-service is
-    //    surfaced by /api/v1/remote-services?privateAccess=organization:test_org1.
+    // 1) main-domain master-data dataset, owned by another org (test_datafair_org3) but
+    //    explicitly shared with test_datafair_org1 so the corresponding remote-service is
+    //    surfaced by /api/v1/remote-services?privateAccess=organization:test_datafair_org1.
     //    This mirrors the production scenario: a master-data published as a
     //    cross-domain reference for another organization.
-    const axOtherOrg = await axiosAuth('test_user2@test.com', 'test_org3')
+    const axOtherOrg = await axiosAuth('test_datafair_user2@test.com', 'test_datafair_org3')
     await axOtherOrg.put('/api/v1/datasets/master-products', {
       isRest: true,
       title: 'Master products',
@@ -29,10 +29,10 @@ test.describe('new-dataset wizard — virtual dataset from master-data on a seco
       ],
       masterData: {
         virtualDatasets: { active: true },
-        shareOrgs: [{ id: 'test_org1', name: 'Test Org 1' }]
+        shareOrgs: [{ id: 'test_datafair_org1', name: 'Test Org 1' }]
       }
     })
-    // grant public read+list so test_org1 can find it via the bulk listing
+    // grant public read+list so test_datafair_org1 can find it via the bulk listing
     // used by the new-dataset wizard's "fill schema from children" flow
     await axOtherOrg.put('/api/v1/datasets/master-products/permissions', [{ classes: ['read', 'list'] }])
     // populate the master-data with at least one row so it gets finalized
@@ -42,9 +42,9 @@ test.describe('new-dataset wizard — virtual dataset from master-data on a seco
     ])
     await waitForFinalize(axOtherOrg, 'master-products')
 
-    // 2) test_org1 registers a publication site bound to NGINX_PORT2
-    const axOrg = await axiosAuth('test_user1@test.com', 'test_org1')
-    await axOrg.post('/api/v1/settings/organization/test_org1/publication-sites', {
+    // 2) test_datafair_org1 registers a publication site bound to NGINX_PORT2
+    const axOrg = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
+    await axOrg.post('/api/v1/settings/organization/test_datafair_org1/publication-sites', {
       type: 'data-fair-portals',
       id: 'portal1',
       url: baseUrl2
@@ -66,12 +66,12 @@ test.describe('new-dataset wizard — virtual dataset from master-data on a seco
     const mainTarget = `${baseUrl1}/data-fair/`
     const loginUrl = `${baseUrl1}/simple-directory/login?redirect=${encodeURIComponent(mainTarget)}`
     await page.goto(loginUrl)
-    await page.getByLabel('Adresse mail').fill('test_user1@test.com')
+    await page.getByLabel('Adresse mail').fill('test_datafair_user1@test.com')
     await page.getByLabel('Mot de passe', { exact: true }).fill('passwd')
     await page.getByRole('button', { name: 'Se connecter' }).click()
     await page.waitForURL(/\/data-fair\/(\?|$|#)/, { timeout: 10000 })
 
-    // 5) switch from personal account to test_org1 context (org context is
+    // 5) switch from personal account to test_datafair_org1 context (org context is
     //    stored in the session cookie too, so it carries over to NGINX_PORT2)
     await page.getByRole('button', { name: /Ouvrez le menu personnel/ }).click()
     await page.getByRole('listitem').filter({ hasText: 'Test Org 1' }).click()

@@ -10,7 +10,7 @@ import { waitForFinalize } from '../../support/workers.ts'
 // assertions. Byte-parity between the streamed and buffered sources stays enforced at the unit level by
 // lines-stream-parity.unit.spec.ts (the buffered source still backs unrecognized `format` values).
 
-const testUser1 = await axiosAuth('test_user1@test.com')
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
 
 const esHost = `localhost:${process.env.ES_PORT}`
 const indicesPrefix = 'dataset-development'
@@ -36,7 +36,7 @@ test.describe('streamed /lines read path', () => {
     // the 2500 rows (~230KB) exceed the default store_bytes limit (200KB). Without an explicit limit the
     // setup only passes by racing the async consumption update between bulk chunks — set a high limit so
     // checkStorage never (correctly!) rejects a chunk with 429.
-    await testUser1.post('/api/v1/limits/user/test_user1',
+    await testUser1.post('/api/v1/limits/user/test_datafair_user1',
       { store_bytes: { limit: 10000000, consumption: 0 }, lastUpdate: new Date().toISOString() },
       { params: { key: config.secretKeys.limits } })
     await testUser1.put('/api/v1/datasets/' + id, {

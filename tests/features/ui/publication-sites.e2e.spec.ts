@@ -9,7 +9,7 @@ async function createPublicationSite (ax: AxiosInstance, opts?: {
   datasetUrlTemplate?: string
   applicationUrlTemplate?: string
 }) {
-  await ax.post('/api/v1/settings/organization/test_org1/publication-sites', {
+  await ax.post('/api/v1/settings/organization/test_datafair_org1/publication-sites', {
     type: 'data-fair-portals',
     id: opts?.id ?? 'portal1',
     url: 'http://portal.com',
@@ -28,8 +28,8 @@ async function goToPublicationSitesTab (
   goToWithAuth: any,
   resourceType: 'dataset' | 'application',
   resourceId: string,
-  user = 'test_user1',
-  account: { org: string, dep?: string } = { org: 'test_org1' }
+  user = 'test_datafair_user1',
+  account: { org: string, dep?: string } = { org: 'test_datafair_org1' }
 ) {
   await goToWithAuth(`/data-fair/${resourceType}/${resourceId}`, user, account)
   await expect(page.locator('#share')).toBeVisible({ timeout: 15000 })
@@ -38,10 +38,10 @@ async function goToPublicationSitesTab (
 }
 
 const clearPublicationSites = async () => {
-  const ax = await axiosAuth('test_user1@test.com', 'test_org1')
-  const sites = (await ax.get('/api/v1/settings/organization/test_org1/publication-sites')).data
+  const ax = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
+  const sites = (await ax.get('/api/v1/settings/organization/test_datafair_org1/publication-sites')).data
   for (const site of sites) {
-    await ax.delete(`/api/v1/settings/organization/test_org1/publication-sites/${site.type}/${site.id}`)
+    await ax.delete(`/api/v1/settings/organization/test_datafair_org1/publication-sites/${site.type}/${site.id}`)
   }
 }
 
@@ -57,7 +57,7 @@ test.describe('dataset publication sites', () => {
   })
 
   test('empty state when no publication sites configured', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com', 'test_org1')
+    const ax = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
     const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'test dataset', schema: [] })).data
 
     await goToPublicationSitesTab(page, goToWithAuth, 'dataset', dataset.id)
@@ -65,7 +65,7 @@ test.describe('dataset publication sites', () => {
   })
 
   test('shows configured publication sites', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com', 'test_org1')
+    const ax = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
     await createPublicationSite(ax)
     const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'test dataset', schema: [] })).data
 
@@ -76,7 +76,7 @@ test.describe('dataset publication sites', () => {
   })
 
   test('admin publishes a dataset', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com', 'test_org1')
+    const ax = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
     await createPublicationSite(ax)
     const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'test dataset', schema: [] })).data
     // clear default permissions that may trigger contrib permissions risk warning
@@ -93,7 +93,7 @@ test.describe('dataset publication sites', () => {
   })
 
   test('shows published URL when dataset is published', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com', 'test_org1')
+    const ax = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
     await createPublicationSite(ax, { datasetUrlTemplate: 'http://portal.com/datasets/{id}' })
     const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'test dataset', schema: [] })).data
     await ax.patch(`/api/v1/datasets/${dataset.id}`, { publicationSites: ['data-fair-portals:portal1'] })
@@ -103,7 +103,7 @@ test.describe('dataset publication sites', () => {
   })
 
   test('metadata warnings disable publish', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com', 'test_org1')
+    const ax = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
     await createPublicationSite(ax, { requiredMetadata: ['license', 'description'] })
     const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'test dataset', schema: [] })).data
 
@@ -113,12 +113,12 @@ test.describe('dataset publication sites', () => {
   })
 
   test('contrib can request publication', async ({ page, goToWithAuth }) => {
-    const axAdmin = await axiosAuth('test_user1@test.com', 'test_org1')
-    const axContrib = await axiosAuth('test_user5@test.com', 'test_org1')
+    const axAdmin = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
+    const axContrib = await axiosAuth('test_datafair_user5@test.com', 'test_datafair_org1')
     await createPublicationSite(axAdmin)
     const dataset = (await axContrib.post('/api/v1/datasets', { isRest: true, title: 'contrib dataset', schema: [] })).data
 
-    await goToPublicationSitesTab(page, goToWithAuth, 'dataset', dataset.id, 'test_user5')
+    await goToPublicationSitesTab(page, goToWithAuth, 'dataset', dataset.id, 'test_datafair_user5')
     await expect(page.getByLabel('publié')).toBeDisabled({ timeout: 10000 })
     await expect(page.getByLabel('publication demandée par un contributeur')).toBeVisible()
     await expect(page.getByLabel('publication demandée par un contributeur')).toBeEnabled()
@@ -131,12 +131,12 @@ test.describe('dataset publication sites', () => {
   })
 
   test('contrib can publish on staging site', async ({ page, goToWithAuth }) => {
-    const axAdmin = await axiosAuth('test_user1@test.com', 'test_org1')
-    const axContrib = await axiosAuth('test_user5@test.com', 'test_org1')
+    const axAdmin = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
+    const axContrib = await axiosAuth('test_datafair_user5@test.com', 'test_datafair_org1')
     await createPublicationSite(axAdmin, { id: 'staging1', staging: true })
     const dataset = (await axContrib.post('/api/v1/datasets', { isRest: true, title: 'staging dataset', schema: [] })).data
 
-    await goToPublicationSitesTab(page, goToWithAuth, 'dataset', dataset.id, 'test_user5')
+    await goToPublicationSitesTab(page, goToWithAuth, 'dataset', dataset.id, 'test_datafair_user5')
     await expect(page.getByLabel('publié')).toBeEnabled({ timeout: 10000 })
     await expect(page.getByLabel('publication demandée par un contributeur')).not.toBeVisible()
     await page.getByLabel('publié').click()
@@ -148,7 +148,7 @@ test.describe('dataset publication sites', () => {
   })
 
   test('conflicting slug surfaces an error notification', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com', 'test_org1')
+    const ax = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
     const taken = (await ax.post('/api/v1/datasets', { isRest: true, title: 'taken slug ds', schema: [] })).data
     const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'other ds', schema: [] })).data
 
@@ -163,8 +163,8 @@ test.describe('dataset publication sites', () => {
   })
 
   test('department admin sees and uses a portal shared with their department', async ({ page, goToWithAuth }) => {
-    const orgAx = await axiosAuth('test_user1@test.com', 'test_org1')
-    await orgAx.post('/api/v1/settings/organization/test_org1/publication-sites', {
+    const orgAx = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
+    await orgAx.post('/api/v1/settings/organization/test_datafair_org1/publication-sites', {
       type: 'data-fair-portals',
       id: 'shared-portal',
       url: 'http://portal.com',
@@ -173,11 +173,11 @@ test.describe('dataset publication sites', () => {
       settings: { contributorDepartments: ['dep1'] }
     })
 
-    const deptAx = await axiosAuth('test_user4@test.com', 'test_org1')
+    const deptAx = await axiosAuth('test_datafair_user4@test.com', 'test_datafair_org1')
     const dataset = (await deptAx.post('/api/v1/datasets', { isRest: true, title: 'dept dataset', schema: [] })).data
     await deptAx.put(`/api/v1/datasets/${dataset.id}/permissions`, [])
 
-    await goToPublicationSitesTab(page, goToWithAuth, 'dataset', dataset.id, 'test_user4', { org: 'test_org1', dep: 'dep1' })
+    await goToPublicationSitesTab(page, goToWithAuth, 'dataset', dataset.id, 'test_datafair_user4', { org: 'test_datafair_org1', dep: 'dep1' })
     await expect(page.getByRole('link', { name: 'Shared Portal' })).toBeVisible({ timeout: 10000 })
     await expect(page.getByText('Portail ouvert aux contributions de votre département')).toBeVisible()
     await expect(page.getByLabel('publié')).toBeEnabled()
@@ -197,7 +197,7 @@ test.describe('application publication sites', () => {
   })
 
   test('empty state when no publication sites configured', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com', 'test_org1')
+    const ax = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
     const app = (await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'test app' })).data
 
     await goToPublicationSitesTab(page, goToWithAuth, 'application', app.id)
@@ -205,7 +205,7 @@ test.describe('application publication sites', () => {
   })
 
   test('admin publishes an application', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com', 'test_org1')
+    const ax = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
     await createPublicationSite(ax)
     const app = (await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'test app' })).data
 
@@ -224,7 +224,7 @@ test.describe('application publication sites', () => {
   })
 
   test('conflicting slug surfaces an error notification', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com', 'test_org1')
+    const ax = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
     const taken = (await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'taken slug app' })).data
     const app = (await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'other app' })).data
 

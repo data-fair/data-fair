@@ -517,7 +517,7 @@ const lineIBounds = async (ax: any, datasetId: string, ids: string[]): Promise<{
 }
 
 test('clean REST dataset gets an ok index verdict with matching counts', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await enrolledRestDataset(ax)
   const check = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
   expect(check.status).toBe('ok')
@@ -527,7 +527,7 @@ test('clean REST dataset gets an ok index verdict with matching counts', async (
 })
 
 test('an out-of-band ES edit inside a sampled window is a breach with evidence', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await enrolledRestDataset(ax)
   await ax.post(`${apiUrl}/api/v1/test-env/es-tamper/${dataset.id}`, {
     query: { term: { _id: 'line0' } }, script: "ctx._source.attr1 = 'es-tampered'"
@@ -549,7 +549,7 @@ test('an out-of-band ES edit inside a sampled window is a breach with evidence',
 })
 
 test('an ES delete outside every sampled window is still caught by the count check', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await enrolledRestDataset(ax)
   await ax.post(`${apiUrl}/api/v1/test-env/es-tamper/${dataset.id}`, {
     query: { term: { _id: 'line0' } }, delete: true
@@ -564,7 +564,7 @@ test('an ES delete outside every sampled window is still caught by the count che
 })
 
 test('a surplus ES doc is flagged (count + window intersection)', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await enrolledRestDataset(ax)
   const { max } = await lineIBounds(ax, dataset.id, ['line0', 'line1', 'line2'])
   await ax.post(`${apiUrl}/api/v1/test-env/es-tamper/${dataset.id}`, {
@@ -576,7 +576,7 @@ test('a surplus ES doc is flagged (count + window intersection)', async () => {
 })
 
 test('pending indexing downgrades the index verdict to unknown, other verdicts unaffected', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await enrolledRestDataset(ax)
   // simulate a line awaiting the index task (out-of-band flag: no relay hint, no real write)
   await ax.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, {
@@ -862,7 +862,7 @@ const enrolledFileDataset = async (ax: any) => {
 }
 
 test('clean file dataset gets an ok index verdict', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await enrolledFileDataset(ax)
   const check = (await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)).data
   expect(check.status).toBe('ok')
@@ -872,7 +872,7 @@ test('clean file dataset gets an ok index verdict', async () => {
 })
 
 test('an out-of-band ES edit on a file dataset row is a breach (window aimed by _i)', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await enrolledFileDataset(ax)
   // tamper the first row (_i is the join key for file datasets)
   await ax.post(`${apiUrl}/api/v1/test-env/es-tamper/${dataset.id}`, {
@@ -973,7 +973,7 @@ git commit -m "feat(integrity): file-dataset source adapter for the index verdic
 
 ```ts
 test('deep=true catches a tamper the sampled windows miss', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await enrolledRestDataset(ax)
   await ax.post(`${apiUrl}/api/v1/test-env/es-tamper/${dataset.id}`, {
     query: { term: { _id: 'line0' } }, script: "ctx._source.attr1 = 'deep-tampered'"
@@ -991,7 +991,7 @@ test('deep=true catches a tamper the sampled windows miss', async () => {
 })
 
 test('a diverted alias pointing at a doctored index copy is a breach', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await enrolledRestDataset(ax)
   await ax.post(`${apiUrl}/api/v1/test-env/es-divert-alias/${dataset.id}`, {
     query: { term: { _id: 'line0' } }, script: "ctx._source.attr1 = 'diverted'"
@@ -1164,7 +1164,7 @@ git commit -m "feat(integrity): deep exhaustive index compare and alias-diversio
 
 ```ts
 test('index reindex action journals the evidence, repairs, and the next check is ok', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await enrolledRestDataset(ax)
   await ax.post(`${apiUrl}/api/v1/test-env/es-tamper/${dataset.id}`, {
     query: { term: { _id: 'line0' } }, script: "ctx._source.attr1 = 'repair-me'"

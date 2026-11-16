@@ -332,7 +332,7 @@ const existingLines = [
 export async function seedLineEditionDatasets (id: string): Promise<void> {
   const { axiosAuth, waitForWorkerIdle } = await import('../../tests/support/axios.ts')
   const ax = await axiosAuth(`${OWNER_USER}@test.com`, OWNER.id)
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
 
   // every commune of France is ~4 MB indexed, over the dev stack's 200 kB per-owner storage; clean()
   // drops the limits collection, so the raise is made again on every run

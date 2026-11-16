@@ -3,10 +3,10 @@ import assert from 'node:assert/strict'
 import { axiosAuth, clean } from '../../../support/axios.ts'
 import { waitForFinalize } from '../../../support/workers.ts'
 
-const adminAx = await axiosAuth('test_superadmin@test.com', undefined, true)
-const axOrg = await axiosAuth('test_user1@test.com', 'test_org1')
+const adminAx = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
+const axOrg = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
 
-const ax = await axiosAuth('test_user1@test.com')
+const ax = await axiosAuth('test_datafair_user1@test.com')
 const long = 'L'.repeat(260)
 
 // dataset with a plain keyword column and a wildcard-capable column; one short + one long row.
@@ -119,7 +119,7 @@ test.describe('keyword ignore_above — ODS where equality', () => {
   test.beforeEach(async () => { await clean() })
 
   test('ODS where equality with a > 200-char value and no wildcard → 400', async () => {
-    await axOrg.put('/api/v1/settings/organization/test_org1', { compatODS: true })
+    await axOrg.put('/api/v1/settings/organization/test_datafair_org1', { compatODS: true })
     await axOrg.post('/api/v1/datasets/ia-ods', {
       isRest: true,
       title: 'ia-ods',

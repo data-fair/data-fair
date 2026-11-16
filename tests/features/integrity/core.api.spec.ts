@@ -14,7 +14,7 @@ import { Readable } from 'node:stream'
 
 test.beforeAll(async () => { await ensureIntegrityBucket() })
 // reset test-owned datasets + limit counters before each test (the shared suite convention); the
-// integrity specs all run as the single test_superadmin, so without this their datasets accumulate
+// integrity specs all run as the single test_datafair_superadmin, so without this their datasets accumulate
 // and hit the dev nbDatasets quota. clean() spares dev_fixtures (owner.id !~ /^test_/).
 test.beforeEach(async () => { await clean() })
 
@@ -163,7 +163,7 @@ test('a revision body can carry an inline metadata payload', async () => {
 // ---------------------------------------------------------------------------------------------
 
 test('anchor carries the level-2 payload: inline metadata snapshot + locked .file sibling', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   const prefix = revisionsPrefix(dataset)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
@@ -185,7 +185,7 @@ test('anchor carries the level-2 payload: inline metadata snapshot + locked .fil
 })
 
 test('dedupe is payload-aware: an L1-era anchor self-heals to level 2', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   const prefix = revisionsPrefix(dataset)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
@@ -210,7 +210,7 @@ test('dedupe is payload-aware: an L1-era anchor self-heals to level 2', async ()
 })
 
 test('relay writes a locked revision when _needsHistorizing is set, then dedupes', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', ax)
   const prefix = revisionsPrefix(dataset)
 
@@ -238,7 +238,7 @@ test('relay writes a locked revision when _needsHistorizing is set, then dedupes
 })
 
 test('flagging a REST dataset (no file) anchors metadata only: metadata hash present, no file hash', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const ds = (await ax.post('/api/v1/datasets', { isRest: true, title: 'rest-relay', schema: [{ key: 'a', type: 'string' }] })).data
   const prefix = revisionsPrefix(ds)
   // integrity.active: true is required to pass the relay's enrollment guard (historize() drops
@@ -256,7 +256,7 @@ test('flagging a REST dataset (no file) anchors metadata only: metadata hash pre
 })
 
 test('a file replacement writes a new (second) revision', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', ax)
   const prefix = revisionsPrefix(dataset)
 
@@ -290,7 +290,7 @@ test('a file replacement writes a new (second) revision', async () => {
 // ---------------------------------------------------------------------------------------------
 
 test('a metadata-only edit references the file-owning revision; a file change owns a fresh payload', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   const prefix = revisionsPrefix(dataset)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
@@ -332,7 +332,7 @@ test('a metadata-only edit references the file-owning revision; a file change ow
 })
 
 test('a referencing revision extends the owning payload at write time; renewal on a reference anchor slides the referenced payload', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   const prefix = revisionsPrefix(dataset)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
@@ -370,7 +370,7 @@ test('a referencing revision extends the owning payload at write time; renewal o
 // ---------------------------------------------------------------------------------------------
 
 test('an integrity alert stays private even on a public dataset', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   // a permission entry with no type/id is the anonymous (public) one — sendResourceEvent would
   // normally derive visibility 'public' from it
@@ -390,7 +390,7 @@ test('an integrity alert stays private even on a public dataset', async () => {
 })
 
 test('check is ok after enable, breach after out-of-band tamper, ok again after _fix re-anchors', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
 
   // enable is synchronous: the anchor exists as soon as this returns, no wait needed
@@ -416,7 +416,7 @@ test('check is ok after enable, breach after out-of-band tamper, ok again after 
 })
 
 test('a check during a pending legitimate update never reports a breach', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   const prefix = revisionsPrefix(dataset)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
@@ -448,7 +448,7 @@ test('a check during a pending legitimate update never reports a breach', async 
 })
 
 test('out-of-band deletion of the stored file is reported as a breach', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
 
@@ -461,7 +461,7 @@ test('out-of-band deletion of the stored file is reported as a breach', async ()
 })
 
 test('breach notification fires once per transition, not on every re-check', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
 
@@ -496,7 +496,7 @@ const enabledDataset = async (admin: any) => {
 }
 
 test('a due anchor is renewed on check: retain-until advances and lastRenewal is ok', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const { dataset } = await enabledDataset(admin)
 
   // force the persisted anchor to look old (due): retain-until ~1h out (< 22h)
@@ -513,7 +513,7 @@ test('a due anchor is renewed on check: retain-until advances and lastRenewal is
 })
 
 test('a fresh anchor is not renewed by a check', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const { dataset } = await enabledDataset(admin)
   const before = (await admin.get(`/api/v1/datasets/${dataset.id}/_integrity`)).data.lastRevision.retainUntil
 
@@ -526,7 +526,7 @@ test('a fresh anchor is not renewed by a check', async () => {
 })
 
 test('a breached check does not renew the lock', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const { dataset } = await enabledDataset(admin)
 
   // due + tampered
@@ -543,7 +543,7 @@ test('a breached check does not renew the lock', async () => {
 })
 
 test('a failed lock extension is recorded as lastRenewal.failed and does not fail the check', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const { dataset, latestKey } = await enabledDataset(admin)
 
   // push the REAL S3 lock far into the future so a normal extend (~now+1day) would be a
@@ -563,7 +563,7 @@ test('a failed lock extension is recorded as lastRenewal.failed and does not fai
 })
 
 test('lock renewal extends the payload object too', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const { dataset, latestKey } = await enabledDataset(admin)
   const payloadKey = latestKey + '.file'
 
@@ -597,7 +597,7 @@ test('lock renewal extends the payload object too', async () => {
 // renewal runs) — this proves it end to end: the revision's lock slides forward, the `.who`
 // sibling's own (short, fixed) lock never moves.
 test('renewal advances the anchor lock but never touches the `.who` sibling\'s retain-until', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const { dataset, latestKey } = await enabledDataset(admin)
   const whoKey = latestKey + '.who'
   // enable is synchronous and superadmin-attributed: rev 0 already carries a `.who`
@@ -629,7 +629,7 @@ const runPurge = async (admin: any, prefix: string, opts: Record<string, any> = 
     { prefix, ignoreAge: true, skewMarginMs: 0, ignoreWatermark: true, ...opts })).data
 
 test('purge deletes a revision whose lock has lapsed and keeps one still locked', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   // a bare prefix with no matching dataset: nothing is "current anchor of an enrolled dataset",
   // so the compliance lock alone decides — exactly the property under test
   const prefix = `data-fair/test-purge-${Date.now()}/nodataset/`
@@ -651,7 +651,7 @@ test('purge deletes a revision whose lock has lapsed and keeps one still locked'
 })
 
 test('purge leaves a still-locked revision entirely untouched, attempting no delete', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const prefix = `data-fair/test-purge-locked-${Date.now()}/nodataset/`
   const context = { operation: 'create' as const, origin: 'worker' as const, date: new Date().toISOString() }
   // every version here is locked well into the future, and ignoreAge defeats the age pre-filter,
@@ -669,7 +669,7 @@ test('purge leaves a still-locked revision entirely untouched, attempting no del
 })
 
 test('purge never deletes the current anchor of an enrolled dataset, even with a lapsed lock', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const { dataset } = await enabledDataset(admin)
   const prefix = revisionsPrefix(dataset)
   const before = await listIntegrityKeys(prefix)
@@ -697,7 +697,7 @@ test('purge never deletes the current anchor of an enrolled dataset, even with a
 // ---------------------------------------------------------------------------------------------
 
 test('purge deletes a lapsed `.who` sibling of the current anchor but keeps the anchor itself protected', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const { dataset } = await enabledDataset(admin)
   const prefix = revisionsPrefix(dataset)
   const context = { operation: 'update' as const, origin: 'worker' as const, date: new Date().toISOString() }
@@ -721,7 +721,7 @@ test('purge deletes a lapsed `.who` sibling of the current anchor but keeps the 
 })
 
 test('the deliberate asymmetry: a referenced `.file` payload is protected like the anchor, but a `.who` at the same index is not, even with equally lapsed locks', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const { dataset } = await enabledDataset(admin)
   const prefix = revisionsPrefix(dataset)
   const context = { operation: 'update' as const, origin: 'worker' as const, date: new Date().toISOString() }
@@ -745,7 +745,7 @@ test('the deliberate asymmetry: a referenced `.file` payload is protected like t
 })
 
 test('a scope is skipped without listing objects until its watermark comes due', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const prefix = `data-fair/test-purge-wm-${Date.now()}/nodataset/`
   const context = { operation: 'create' as const, origin: 'worker' as const, date: new Date().toISOString() }
   await integrityTestStore.writeRevision(`${prefix}000000000`, { hash: { metadata: 'a' }, context, dataset: { id: 'nodataset' } },
@@ -763,7 +763,7 @@ test('a scope is skipped without listing objects until its watermark comes due',
 })
 
 test('disabling integrity clears the scope watermark so the anchors can age out', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const { dataset } = await enabledDataset(admin)
   const prefix = revisionsPrefix(dataset)
 
@@ -779,7 +779,7 @@ test('disabling integrity clears the scope watermark so the anchors can age out'
 })
 
 test('purge keeps every live line anchor of an enrolled rest dataset', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const res = await admin.post('/api/v1/datasets', {
     isRest: true,
     title: `integrity purge lines ${Date.now()}`,

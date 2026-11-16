@@ -53,7 +53,7 @@ Check that the scoped key set is served:
 curl -s http://localhost:$SD_PORT/.well-known/scoped-jwks.json
 ```
 
-The test NHI `test_org1_scope_nhi` (key in `tests/resources/nhi/`, helper `tests/support/nhi.ts`) is defined in `dev/resources/users.template.json`. After editing the template, re-render `users.json` and run `docker compose up -d --force-recreate sd`: the file is bind-mounted alone and the render replaces it by rename, so a plain restart keeps the old content.
+The test NHI `test_datafair_org1_scope_nhi` (key in `tests/resources/nhi/`, helper `tests/support/nhi.ts`) is defined in `dev/resources/users.template.json`. After editing the template, re-render `users.json` and run `docker compose up -d --force-recreate sd`: the file is bind-mounted alone and the render replaces it by rename, so a plain restart keeps the old content.
 
 ## File Naming Convention
 

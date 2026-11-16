@@ -55,15 +55,15 @@ test.describe('host events published to the assistant', () => {
   test.beforeEach(async () => {
     await clean()
     // The agent chat is off by default; the state is only published when it is on.
-    const ax = await axiosAuth('test_user1@test.com')
-    await ax.patch('/api/v1/settings/user/test_user1', { agentChat: true })
+    const ax = await axiosAuth('test_datafair_user1@test.com')
+    await ax.patch('/api/v1/settings/user/test_datafair_user1', { agentChat: true })
   })
 
   test('the layout publishes where the user is, and republishes it on navigation', async ({ page, goToWithAuth }) => {
     // the assistant's tools and host events are only on with the agents integration
     test.skip(!await serviceUp('AGENTS_PORT'), 'needs the optional agents service: npm run dev-zellij -- --services agents')
     await page.addInitScript(collectEvents)
-    await goToWithAuth('/data-fair/datasets', 'test_user1')
+    await goToWithAuth('/data-fair/datasets', 'test_datafair_user1')
 
     await expect.poll(async () => lastKeyed(await readEvents(page), 'location')?.path, { timeout: 15000 })
       .toBe('/datasets')
@@ -88,7 +88,7 @@ test.describe('host events published to the assistant', () => {
     // chat keeps one value per key. What must never happen is a re-emission on a
     // step change: the guidance is constant, so it must not ride along on refreshes.
     await page.addInitScript(collectEvents)
-    await goToWithAuth('/data-fair/new-dataset', 'test_user1')
+    await goToWithAuth('/data-fair/new-dataset', 'test_datafair_user1')
     const guidanceEvents = async () => (await readEvents(page)).filter(e => e.key === 'wizard-guidance')
     const stateRequests = async () => ((await page.evaluate('window.__hostEvents ?? []')) as Array<{ type: string }>).filter(m => m.type === 'agent-state-request').length
     await expect.poll(async () => (await guidanceEvents()).length, { timeout: 15000 }).toBeGreaterThanOrEqual(1)
@@ -114,7 +114,7 @@ test.describe('host events published to the assistant', () => {
 
   test('the dataset wizard publishes what it holds, and reports the creation before redirecting', async ({ page, goToWithAuth }) => {
     await page.addInitScript(collectEvents)
-    await goToWithAuth('/data-fair/new-dataset', 'test_user1')
+    await goToWithAuth('/data-fair/new-dataset', 'test_datafair_user1')
 
     const restCard = page.locator('.v-card-title', { hasText: 'Éditable' })
     await expect(restCard).toBeVisible({ timeout: 10000 })
@@ -169,7 +169,7 @@ test.describe('host events published to the assistant', () => {
     // que c'est fait, dites-le moi », and spend the person's whole next message on
     // a save the application already knew about. wait_for_user_action was offered
     // on every request and was never usable, because nothing would resolve it.
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     const { data: created } = await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'Registre',
@@ -177,7 +177,7 @@ test.describe('host events published to the assistant', () => {
     })
 
     await page.addInitScript(collectEvents)
-    await goToWithAuth(`/data-fair/dataset/${created.id}/edit-data`, 'test_user1')
+    await goToWithAuth(`/data-fair/dataset/${created.id}/edit-data`, 'test_datafair_user1')
 
     // Nothing open: the state is withdrawn rather than saying "no dialog".
     await expect(page.getByRole('button', { name: /Ajouter une ligne/ })).toBeVisible({ timeout: 15000 })
@@ -217,7 +217,7 @@ test.describe('host events published to the assistant', () => {
     // lived only in the action button's hidden context, which no judged run has
     // ever gone through — they navigate here themselves.
     await page.addInitScript(collectEvents)
-    await goToWithAuth('/data-fair/new-application', 'test_user1')
+    await goToWithAuth('/data-fair/new-application', 'test_datafair_user1')
 
     // A guidance detail is a raw string, not JSON — lastKeyed would try to parse it.
     const guidanceEvents = async () => (await readEvents(page)).filter(e => e.key === 'wizard-guidance')
@@ -235,11 +235,11 @@ test.describe('host events published to the assistant', () => {
     // wait because it had no event to wait on, and ask the person to report the
     // save back. This is the wizard's `ready` + `dataset-created` pair, on the
     // schema form.
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     const { data: created } = await ax.post('/api/v1/datasets', { isRest: true, title: 'Demandes de subvention', schema: [] })
 
     await page.addInitScript(collectEvents)
-    await goToWithAuth(`/data-fair/dataset/${created.id}`, 'test_user1')
+    await goToWithAuth(`/data-fair/dataset/${created.id}`, 'test_datafair_user1')
 
     // On arrival: no columns, nothing staged, nothing to press.
     await expect.poll(async () => lastKeyed(await readEvents(page), 'structure'), { timeout: 15000 })

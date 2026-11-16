@@ -1052,7 +1052,7 @@ const waitNotRunning = async (ax: any, datasetId: string, since: string, timeout
 }
 
 test('a check past its budget answers 202 running, then converges', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await enrolledRest(ax)
   await anonymousAx.post(`${apiUrl}/api/v1/test-env/set-config`, { path: 'integrity.adminSyncBudgetMs', value: 1 })
   const since = new Date().toISOString()
@@ -1064,7 +1064,7 @@ test('a check past its budget answers 202 running, then converges', async () => 
 })
 
 test('a check within budget still answers 200 with the verdict', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await enrolledRest(ax)
   const res = await ax.post(`/api/v1/datasets/${dataset.id}/_integrity/_check`)
   expect(res.status).toBe(200)
@@ -1072,7 +1072,7 @@ test('a check within budget still answers 200 with the verdict', async () => {
 })
 
 test('running without a held lock is dropped (pod died mid-action)', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await enrolledRest(ax)
   await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.running': { action: 'fix', startedAt: new Date().toISOString() } })
   await anonymousAx.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
@@ -1378,7 +1378,7 @@ test('lines integrity at scale', async () => {
   test.setTimeout(6 * 3600 * 1000)
   await ensureIntegrityBucket()
   await anonymousAx.post(`${apiUrl}/api/v1/test-env/set-config`, { path: 'integrity.lines.maxLines', value: LINES })
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: `integrity scale ${LINES}`, schema: [{ key: 'label', type: 'string' }, { key: 'n', type: 'integer' }] })).data
   await measure('seed', async () => {
     for (let offset = 0; offset < LINES; offset += 10000) {

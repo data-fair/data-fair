@@ -6,8 +6,8 @@ import { sendDataset, waitForDatasetError } from '../../support/workers.ts'
 const esHost = `localhost:${process.env.ES_PORT}`
 const indicesPrefix = 'dataset-development'
 
-const testUser1 = await axiosAuth('test_user1@test.com')
-const testSuperadmin = await axiosAuth('test_superadmin@test.com', undefined, true)
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
+const testSuperadmin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
 
 test.describe('Elasticsearch errors management', () => {
   test.beforeEach(async () => {

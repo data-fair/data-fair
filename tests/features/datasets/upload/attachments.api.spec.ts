@@ -5,8 +5,8 @@ import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks, mockUrl } from '../../../support/axios.ts'
 import { waitForFinalize, lsAttachments } from '../../../support/workers.ts'
 
-const testUser1 = await axiosAuth('test_user1@test.com')
-const testUser3 = await axiosAuth('test_user3@test.com')
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
+const testUser3 = await axiosAuth('test_datafair_user3@test.com')
 
 test.describe('Attachments', () => {
   test.beforeEach(async () => {

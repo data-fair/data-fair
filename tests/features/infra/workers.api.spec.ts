@@ -5,7 +5,7 @@ import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
 import { waitForFinalize, sendDataset, waitForDatasetError, setConfig, waitForJournalEvent } from '../../support/workers.ts'
 
-const testUser1 = await axiosAuth('test_user1@test.com')
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
 
 test.describe('workers', () => {
   test.beforeEach(async () => {

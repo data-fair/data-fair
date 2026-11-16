@@ -5,7 +5,7 @@ import { axios, axiosAuth, clean, checkPendingTasks, config } from '../../../sup
 import { patchRawDataset, clearDatasetCache } from '../../../support/workers.ts'
 
 const anonymous = axios()
-const testUser1 = await axiosAuth('test_user1@test.com')
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
 
 test.describe('Cache headers', () => {
   test.beforeEach(async () => {
@@ -32,7 +32,7 @@ test.describe('Cache headers', () => {
     const id = dataset.id
     assert.equal(dataset.status, 'finalized')
     assert.equal(dataset.owner.type, 'user')
-    assert.equal(dataset.owner.id, 'test_user1')
+    assert.equal(dataset.owner.id, 'test_datafair_user1')
 
     let res = await ax.get(`/api/v1/datasets/${id}/lines`)
     assert.equal(res.headers['cache-control'], 'must-revalidate, private, max-age=0')

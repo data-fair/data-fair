@@ -9,10 +9,10 @@ import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks, mockAppUrl } from '../../support/axios.ts'
 import { activeAccountScope } from '../../../ui/src/composables/agent/utils-logic.ts'
 
-const orgAdmin = await axiosAuth('test_user1@test.com', 'test_org1')
-const depAdmin = await axiosAuth('test_user4@test.com', 'test_org1')
-depAdmin.setOrg('test_org1', 'dep1')
-const user3 = await axiosAuth('test_user3@test.com')
+const orgAdmin = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
+const depAdmin = await axiosAuth('test_datafair_user4@test.com', 'test_datafair_org1')
+depAdmin.setOrg('test_datafair_org1', 'dep1')
+const user3 = await axiosAuth('test_datafair_user3@test.com')
 
 const ids = (res: any) => res.data.results.map((r: any) => r.id).sort()
 

@@ -1,10 +1,10 @@
 /**
  * Model-free smoke of the line edition arms (simulations/line-edition.sim.spec.ts): the tools a model
- * would call, called by this script on the real mcp server, as test_user1 with a cookie session in
- * test_org1. It spends no quota, so it is where an arm that cannot work is found, before any paid run.
+ * would call, called by this script on the real mcp server, as test_datafair_user1 with a cookie session in
+ * test_datafair_org1. It spends no quota, so it is where an arm that cannot work is found, before any paid run.
  *
  * The editor's master-data suggestions are the credential check: the communes referential is private
- * to test_org1, so `getFieldSuggestions` only answers when the editor's fetch carries the caller's
+ * to test_datafair_org1, so `getFieldSuggestions` only answers when the editor's fetch carries the caller's
  * credentials to the same data-fair.
  *
  * Resets the dev environment's test state (clean()), seeds a register of its own, flips the arm
@@ -34,10 +34,10 @@ function report (check: string, pass: boolean | 'info', evidence: string) {
 const short = (text: string, max = 600) => text.length > max ? `${text.slice(0, max)}…` : text
 
 const owner = await axiosAuth(`${OWNER_USER}@test.com`, OWNER.id)
-const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
 
 async function connect (): Promise<Client> {
-  // the session cookies of test_user1, relayed by the mcp server to data-fair on every call
+  // the session cookies of test_datafair_user1, relayed by the mcp server to data-fair on every call
   const cookie = owner.cookieJar.getCookieStringSync(`${ROOT}/mcp-server/mcp`)
   const client = new Client({ name: 'line-edition-smoke', version: '0' })
   await client.connect(new StreamableHTTPClientTransport(new URL(MCP_URL), { requestInit: { headers: { cookie } } }))

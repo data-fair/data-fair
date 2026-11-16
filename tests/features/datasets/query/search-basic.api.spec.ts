@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
 import { waitForFinalize, doAndWaitForFinalize, sendDataset, setConfig } from '../../../support/workers.ts'
 
-const testUser1 = await axiosAuth('test_user1@test.com')
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
 
 test.describe('search - basic', () => {
   test.beforeAll(async () => {
@@ -217,7 +217,7 @@ test.describe('search - basic', () => {
     let res = await ax.get('/api/v1/datasets', { params: { facets: 'topics' } })
     assert.equal(res.data.count, 2)
     assert.equal(res.data.facets.topics.length, 0)
-    res = await ax.put('/api/v1/settings/user/test_user1', { topics: [{ title: 'topics 1' }, { title: 'topics 2' }] })
+    res = await ax.put('/api/v1/settings/user/test_datafair_user1', { topics: [{ title: 'topics 1' }, { title: 'topics 2' }] })
     const topics = res.data.topics
     await ax.patch('/api/v1/datasets/' + dataset1.id, { topics: [topics[0]] })
     await ax.patch('/api/v1/datasets/' + dataset2.id, { topics })

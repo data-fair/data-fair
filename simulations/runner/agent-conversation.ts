@@ -1,5 +1,5 @@
 /**
- * One judged conversation with an autonomous agent of test_org1, on the agents page itself: the
+ * One judged conversation with an autonomous agent of test_datafair_org1, on the agents page itself: the
  * conversation loop and the evidence it leaves (simulations/tmp/sim-<name>.json and .run.json), shared
  * by the specs that drive an autonomous agent (autonomous-agent.sim.spec.ts, line-edition.sim.spec.ts).
  * The test fails only when the run itself is invalid; whether the person was served is the judge's call.

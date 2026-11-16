@@ -11,7 +11,7 @@ import { load, type Tool } from '@data-fair/openapi-mcp'
 import { axiosAuth, baseURL, clean, checkPendingTasks } from '../../support/axios.ts'
 import { sendDataset, waitForFinalize, doAndWaitForFinalize, getRawDataset } from '../../support/workers.ts'
 
-const testUser1 = await axiosAuth('test_user1@test.com')
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
 const ctx = { headers: { cookie: testUser1.cookieJar.getCookieStringSync(baseURL) } }
 
 const dataset1 = readFileSync('./tests/resources/datasets/dataset1.csv')

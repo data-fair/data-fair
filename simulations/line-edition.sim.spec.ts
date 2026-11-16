@@ -24,7 +24,7 @@ import { seedAutonomousAgent, waitForAgentTools, LINES_AGENT, type AbsentTool } 
 import { runAgentCase, ASSISTANT_MODEL, TOOLS_MODEL } from './runner/agent-conversation.ts'
 import { checkRows } from './runner/row-check.ts'
 
-const SUPER_ADMIN = 'test_superadmin@test.com'
+const SUPER_ADMIN = 'test_datafair_superadmin@test.com'
 
 /** Every tool of the editor groups, whatever the group. */
 const isEditorTool = (name: string) => name.startsWith('datafair_create_line_') || name.startsWith('datafair_edit_line_')

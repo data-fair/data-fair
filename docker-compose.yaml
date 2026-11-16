@@ -32,7 +32,7 @@ services:
       - OBSERVER_ACTIVE=false
       - CIPHER_PASSWORD=dev-cipher-password-0123456789abcdef
       - STORAGE_TYPE=file
-      - ADMINS=["test_superadmin@test.com","superadmin@test.com","alban.mouton@koumoul.com"]
+      - ADMINS=["test_datafair_superadmin@test.com","superadmin@test.com","alban.mouton@koumoul.com"]
       - CONTACT=contact@test.com
       # in dev simple-directory only notifies this service, directly (the shared identities router refuses calls through the proxy)
       - IDENTITIES_WEBHOOKS=[{"base":"http://localhost:${DEV_API_PORT}/api/v1/identities","key":"secret-identities"}]

@@ -33,14 +33,14 @@ test.describe('dataset activable metadata fields', () => {
 
   test.beforeAll(async () => {
     await clean()
-    const ax = await axiosAuth('test_user1@test.com')
-    await ax.put('/api/v1/settings/user/test_user1', settings())
+    const ax = await axiosAuth('test_datafair_user1@test.com')
+    await ax.put('/api/v1/settings/user/test_datafair_user1', settings())
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
     datasetId = dataset.id
   })
 
   test('fields activated in the owner settings are rendered in the metadata form', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_datafair_user1')
     const metadata = page.locator('#metadata')
     await expect(metadata).toBeVisible({ timeout: 15000 })
 
@@ -52,7 +52,7 @@ test.describe('dataset activable metadata fields', () => {
   })
 
   test('temporal coverage is a start and an end date, persisted', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_datafair_user1')
     const metadata = page.locator('#metadata')
     await expect(metadata).toBeVisible({ timeout: 15000 })
 
@@ -72,7 +72,7 @@ test.describe('dataset activable metadata fields', () => {
     await metadata.getByRole('button', { name: /Enregistrer/ }).click()
     await expect(metadata.getByRole('button', { name: /Enregistrer/ })).not.toBeVisible({ timeout: 10000 })
 
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     const saved = (await ax.get(`/api/v1/datasets/${datasetId}`)).data
     expect(saved.temporal).toEqual({ start: stored(start), end: stored(end) })
 
@@ -88,7 +88,7 @@ test.describe('dataset activable metadata fields', () => {
   })
 
   test('a custom metadata shows the help text set in the settings', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_datafair_user1')
     const metadata = page.locator('#metadata')
     await expect(metadata).toBeVisible({ timeout: 15000 })
 
@@ -98,7 +98,7 @@ test.describe('dataset activable metadata fields', () => {
   })
 
   test('the help set in the settings replaces the native help of a standard metadata', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_datafair_user1')
     const metadata = page.locator('#metadata')
     await expect(metadata).toBeVisible({ timeout: 15000 })
     const helpButton = "Afficher un message d'aide"
@@ -114,7 +114,7 @@ test.describe('dataset activable metadata fields', () => {
   })
 
   test('a category from the owner settings gets its own tab', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_datafair_user1')
     const metadata = page.locator('#metadata')
     await expect(metadata).toBeVisible({ timeout: 15000 })
     await expect(metadata.getByRole('combobox', { name: /Service référent/ })).toBeVisible()
@@ -126,7 +126,7 @@ test.describe('dataset activable metadata fields', () => {
     await expect(metadata.getByRole('combobox', { name: /Service référent/ })).not.toBeVisible()
   })
   test('custom metadata inputs follow their type', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_datafair_user1')
     const metadata = page.locator('#metadata')
     await expect(metadata).toBeVisible({ timeout: 15000 })
 
@@ -137,13 +137,13 @@ test.describe('dataset activable metadata fields', () => {
     await metadata.getByRole('button', { name: /Enregistrer/ }).click()
     await expect(metadata.getByRole('button', { name: /Enregistrer/ })).not.toBeVisible({ timeout: 10000 })
 
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     const saved = (await ax.get(`/api/v1/datasets/${datasetId}`)).data
     expect(saved.customMetadata).toMatchObject({ direction: 'Voirie', contact: { url: 'https://a.fr' }, effectif: 12 })
   })
 
   test('a typed field keeps what is typed while it is not valid yet', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_datafair_user1')
     const metadata = page.locator('#metadata')
     await expect(metadata).toBeVisible({ timeout: 15000 })
     const url = metadata.getByRole('textbox', { name: /Page de contact - URL/ })
@@ -153,7 +153,7 @@ test.describe('dataset activable metadata fields', () => {
   })
 
   test('editing a field keeps the unsaved edits of the other fields', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_datafair_user1')
     const metadata = page.locator('#metadata')
     await expect(metadata).toBeVisible({ timeout: 15000 })
     const summary = metadata.getByRole('textbox', { name: /Résumé/ })
@@ -166,7 +166,7 @@ test.describe('dataset activable metadata fields', () => {
 
     await metadata.getByRole('button', { name: /Enregistrer/ }).click()
     await expect(metadata.getByRole('button', { name: /Enregistrer/ })).not.toBeVisible({ timeout: 10000 })
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     const saved = (await ax.get(`/api/v1/datasets/${datasetId}`)).data
     expect(saved.summary).toBe('Un résumé modifié')
     expect(saved.description).toBe('Une description')
@@ -175,7 +175,7 @@ test.describe('dataset activable metadata fields', () => {
   test('owner settings loaded while typing keep the edits', async ({ page, goToWithAuth }) => {
     await page.route(/\/datasets-metadata$/, async route => { await new Promise(resolve => setTimeout(resolve, 3000)); await route.continue() })
     const settingsLoaded = page.waitForResponse(/\/datasets-metadata$/, { timeout: 15000 })
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_datafair_user1')
     const metadata = page.locator('#metadata')
     await expect(metadata).toBeVisible({ timeout: 15000 })
     await metadata.locator('.CodeMirror').click()
@@ -188,11 +188,11 @@ test.describe('dataset activable metadata fields', () => {
   })
 
   test('a type change empties the value and the form still saves', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'stale', schema: [{ key: 'a', type: 'string' }], customMetadata: { ancien: 3 } })).data
-    await ax.put('/api/v1/settings/user/test_user1', settings('date'))
+    await ax.put('/api/v1/settings/user/test_datafair_user1', settings('date'))
     try {
-      await goToWithAuth(`/data-fair/dataset/${dataset.id}`, 'test_user1')
+      await goToWithAuth(`/data-fair/dataset/${dataset.id}`, 'test_datafair_user1')
       const metadata = page.locator('#metadata')
       await expect(metadata).toBeVisible({ timeout: 15000 })
       await expect(metadata.getByRole('textbox', { name: /Ancien type/ })).toHaveValue('')
@@ -203,7 +203,7 @@ test.describe('dataset activable metadata fields', () => {
       expect(saved.title).toBe('stale renamed')
       expect(saved.customMetadata ?? {}).toEqual({})
     } finally {
-      await ax.put('/api/v1/settings/user/test_user1', settings())
+      await ax.put('/api/v1/settings/user/test_datafair_user1', settings())
     }
   })
 })

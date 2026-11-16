@@ -4,7 +4,7 @@ import { axiosBuilder } from '@data-fair/lib-node/axios.js'
 import type { AxiosInstance } from 'axios'
 import { baseURL, directoryUrl } from './axios.ts'
 
-export const scopeNhiId = 'test_org1_scope_nhi'
+export const scopeNhiId = 'test_datafair_org1_scope_nhi'
 const issuer = 'https://data-fair-tests.example.com'
 const subject = 'scope-tests'
 // the site origin simple-directory sees (reqSiteUrl), the assertion audience

@@ -180,9 +180,9 @@ export function expandRuns (cases: LineEditionCase[], arms: LineEditionArm[], re
     base: c.name,
     arm,
     repeat: i + 1,
-    route: `/agents/organization/test_org1/chat?agentId=${LINES_AGENT.id}`,
+    route: `/agents/organization/test_datafair_org1/chat?agentId=${LINES_AGENT.id}`,
     surface: 'autonomous-agent' as const,
-    user: 'test_user1',
+    user: 'test_datafair_user1',
     premise: {
       description: `a write tool of arm ${arm} was called on the run's register`,
       holds: exports => calledTool(exports, writeTools[arm], input => typeof input?.id === 'string' && input.id.startsWith('sim-lieux-'))

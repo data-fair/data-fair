@@ -8,9 +8,9 @@ import FormData from 'form-data'
 import { validate } from 'tableschema'
 
 const anonymous = axios()
-const testUser1 = await axiosAuth('test_user1@test.com')
-const testUser1Org = await axiosAuth('test_user1@test.com', 'test_org1')
-const testUser3 = await axiosAuth('test_user3@test.com')
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
+const testUser1Org = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
+const testUser3 = await axiosAuth('test_datafair_user3@test.com')
 
 const datasetFd = fs.readFileSync('./tests/resources/datasets/dataset1.csv')
 
@@ -31,7 +31,7 @@ test.describe('datasets - upload', () => {
   })
 
   test('Get datasets when authenticated', async () => {
-    const ax = await axiosAuth('test_alone@test.com')
+    const ax = await axiosAuth('test_datafair_alone@test.com')
     const res = await ax.get('/api/v1/datasets')
     assert.equal(res.status, 200)
     assert.equal(res.data.count, 0)
@@ -57,7 +57,7 @@ test.describe('datasets - upload', () => {
     assert.equal(res.data.count, 1)
     assert.equal(res.data.facets.owner.length, 1)
     assert.equal(res.data.facets.owner[0].count, 1)
-    assert.equal(res.data.facets.owner[0].value.id, 'test_user1')
+    assert.equal(res.data.facets.owner[0].value.id, 'test_datafair_user1')
     assert.equal(res.data.facets.owner[0].value.type, 'user')
     assert.equal(res.data.facets['field-type'].length, 4)
     assert.equal(res.data.facets['field-type'][0].count, 1)
@@ -67,12 +67,12 @@ test.describe('datasets - upload', () => {
     assert.equal(res.data.count, 3)
     assert.equal(res.data.facets.owner.length, 2)
 
-    res = await axOrg.get('/api/v1/datasets', { params: { facets: 'owner,field-type', sums: 'count', owner: 'organization:test_org1' } })
+    res = await axOrg.get('/api/v1/datasets', { params: { facets: 'owner,field-type', sums: 'count', owner: 'organization:test_datafair_org1' } })
     assert.equal(res.data.count, 2)
     assert.equal(res.data.facets.owner.length, 2)
     // owner facet is not affected by the owner filter
     assert.equal(res.data.facets.owner[0].count, 2)
-    assert.equal(res.data.facets.owner[0].value.id, 'test_org1')
+    assert.equal(res.data.facets.owner[0].value.id, 'test_datafair_org1')
     assert.equal(res.data.facets.owner[0].value.type, 'organization')
     // field-type facet is affected by the owner filter
     assert.equal(res.data.facets['field-type'].length, 4)
@@ -82,15 +82,15 @@ test.describe('datasets - upload', () => {
     res = await axOrg.get('/api/v1/datasets', { params: { count: false } })
     assert.equal(res.data.count, undefined)
 
-    res = await axOrg.get('/api/v1/datasets', { params: { raw: true, select: 'count', owner: 'organization:test_org1' } })
+    res = await axOrg.get('/api/v1/datasets', { params: { raw: true, select: 'count', owner: 'organization:test_datafair_org1' } })
     assert.equal(res.data.results[0].userPermissions, undefined)
     assert.equal(res.data.results[0].owner, undefined)
     assert.equal(res.data.results[0].count, 2)
 
-    res = await axOrg.get('/api/v1/datasets', { params: { select: '-userPermissions', owner: 'organization:test_org1' } })
+    res = await axOrg.get('/api/v1/datasets', { params: { select: '-userPermissions', owner: 'organization:test_datafair_org1' } })
     assert.equal(res.data.results[0].userPermissions, undefined)
-    assert.deepEqual(res.data.results[0].owner, { id: 'test_org1', name: 'Test Org 1', type: 'organization' })
-    res = await axOrg.get('/api/v1/datasets', { params: { select: '-userPermissions,-owner', owner: 'organization:test_org1' } })
+    assert.deepEqual(res.data.results[0].owner, { id: 'test_datafair_org1', name: 'Test Org 1', type: 'organization' })
+    res = await axOrg.get('/api/v1/datasets', { params: { select: '-userPermissions,-owner', owner: 'organization:test_datafair_org1' } })
     assert.equal(res.data.results[0].userPermissions, undefined)
     assert.deepEqual(res.data.results[0].owner, undefined)
   })
@@ -121,7 +121,7 @@ test.describe('datasets - upload', () => {
     let res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     assert.equal(res.status, 201)
     assert.equal(res.data.owner.type, 'user')
-    assert.equal(res.data.owner.id, 'test_user1')
+    assert.equal(res.data.owner.id, 'test_datafair_user1')
     assert.equal(res.data.previews.length, 1)
     assert.equal(res.data.previews[0].id, 'table')
     assert.equal(res.data.previews[0].title, 'Tableau')
@@ -168,7 +168,7 @@ test.describe('datasets - upload', () => {
     const res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     assert.equal(res.status, 201)
     assert.equal(res.data.owner.type, 'organization')
-    assert.equal(res.data.owner.id, 'test_org1')
+    assert.equal(res.data.owner.id, 'test_datafair_org1')
     await waitForFinalize(ax, res.data.id)
   })
 
@@ -176,11 +176,11 @@ test.describe('datasets - upload', () => {
     const ax = testUser1Org
     const form = new FormData()
     form.append('file', datasetFd, 'dataset2.csv')
-    form.append('body', JSON.stringify({ owner: { type: 'organization', id: 'test_org1', name: 'Test Org 1', department: 'dep1' } }))
+    form.append('body', JSON.stringify({ owner: { type: 'organization', id: 'test_datafair_org1', name: 'Test Org 1', department: 'dep1' } }))
     const res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     assert.equal(res.status, 201)
     assert.equal(res.data.owner.type, 'organization')
-    assert.equal(res.data.owner.id, 'test_org1')
+    assert.equal(res.data.owner.id, 'test_datafair_org1')
     assert.equal(res.data.owner.department, 'dep1')
     await waitForFinalize(ax, res.data.id)
   })
@@ -268,7 +268,7 @@ test.describe('datasets - upload', () => {
     await setupMockRoute({ path: '/webhook', status: 200, body: { ok: true } })
 
     // Configure webhook for dataset-finalize-end events
-    await ax.put('/api/v1/settings/user/test_user3', {
+    await ax.put('/api/v1/settings/user/test_datafair_user3', {
       webhooks: [{
         title: 'test',
         events: ['dataset-finalize-end'],
@@ -363,7 +363,7 @@ test.describe('datasets - upload', () => {
     form.append('file', datasetFd, 'dataset-name.csv')
     let res = await ax.post('/api/v1/datasets/dataset-name', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     await waitForFinalize(ax, 'dataset-name')
-    res = await ax.get('/api/v1/limits/user/test_user1')
+    res = await ax.get('/api/v1/limits/user/test_datafair_user1')
     assert.ok(res.data.store_bytes.consumption > 150)
     assert.ok(res.data.store_bytes.consumption < 300)
 
@@ -375,7 +375,7 @@ test.describe('datasets - upload', () => {
     assert.equal(dataset.file.name, 'dataset-name2.csv')
     assert.equal(dataset.updatedAt, dataset.dataUpdatedAt)
     assert.notEqual(dataset.updatedAt, dataset.createdAt)
-    res = await ax.get('/api/v1/limits/user/test_user1')
+    res = await ax.get('/api/v1/limits/user/test_datafair_user1')
     assert.ok(res.data.store_bytes.consumption > 150)
     assert.ok(res.data.store_bytes.consumption < 300)
   })

@@ -21,7 +21,7 @@ test.describe('embed dataset map popup', () => {
   })
 
   test('escapes dataset content instead of injecting it as markup', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     const dataset = await sendDataset('datasets/geo-html-injection.csv', ax, undefined, geoBody)
 
     // the dev stack has no tileserver, so the basemap style 404s and MapLibre never fires
@@ -31,7 +31,7 @@ test.describe('embed dataset map popup', () => {
     }))
 
     const tileRequest = page.waitForRequest(req => req.url().includes('format=pbf'), { timeout: 15000 })
-    await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/map`, 'test_user1')
+    await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/map`, 'test_datafair_user1')
     await tileRequest
 
     // a single point is centered by fitBounds at maxZoom 15, where the circle radius is

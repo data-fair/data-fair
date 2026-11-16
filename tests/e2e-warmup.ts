@@ -15,30 +15,30 @@ setup('warm up the dev UI routes', async ({ page, goToWithAuth }, testInfo) => {
   }
 
   await clean()
-  const dataset = await sendDataset('datasets/dataset1.csv', await axiosAuth('test_user1@test.com'))
+  const dataset = await sendDataset('datasets/dataset1.csv', await axiosAuth('test_datafair_user1@test.com'))
   stamp('seed a dataset')
 
-  await goToWithAuth('/data-fair/datasets', 'test_user1')
+  await goToWithAuth('/data-fair/datasets', 'test_datafair_user1')
   await expect(page.locator('.v-container .v-card').first()).toBeVisible()
   stamp('datasets list')
 
-  await goToWithAuth(`/data-fair/dataset/${dataset.id}`, 'test_user1')
+  await goToWithAuth(`/data-fair/dataset/${dataset.id}`, 'test_datafair_user1')
   await expect(page.locator('#structure')).toBeVisible()
   stamp('dataset page')
 
-  await goToWithAuth(`/data-fair/dataset/${dataset.id}/table`, 'test_user1')
+  await goToWithAuth(`/data-fair/dataset/${dataset.id}/table`, 'test_datafair_user1')
   await expect(page.locator('.dataset-table')).toBeAttached()
   stamp('dataset table')
 
-  await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_user1')
+  await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_datafair_user1')
   await expect(page.locator('.dataset-table')).toBeAttached()
   stamp('embedded dataset table')
 
-  await goToWithAuth('/data-fair/new-dataset', 'test_user1')
+  await goToWithAuth('/data-fair/new-dataset', 'test_datafair_user1')
   await expect(page.locator('.v-card-title', { hasText: 'Virtuel' })).toBeVisible()
   stamp('new dataset')
 
-  await goToWithAuth('/data-fair/applications', 'test_user1')
+  await goToWithAuth('/data-fair/applications', 'test_datafair_user1')
   await expect(page.locator('main')).toBeVisible()
   stamp('applications list')
 

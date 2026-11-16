@@ -21,7 +21,7 @@ test.describe('GET /api/v1/platform/api-docs.json', () => {
     assert.ok(paths.some(p => p.startsWith('/data-fair/api/v1/datasets')), 'data-fair paths')
     assert.ok(doc['x-platform'].services.some((s: any) => s.id === 'sd' && s.status === 'ok'), JSON.stringify(doc['x-platform']))
 
-    const user = await axiosAuth('test_user1@test.com')
+    const user = await axiosAuth('test_datafair_user1@test.com')
     const userDoc = (await user.get('/api/v1/platform/api-docs.json')).data
     assert.deepEqual(withoutFetchedAt(userDoc), withoutFetchedAt(doc))
 

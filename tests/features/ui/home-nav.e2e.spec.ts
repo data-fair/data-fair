@@ -7,42 +7,42 @@ test.describe('home dashboard', () => {
   })
 
   test('shows the greeting and the personal space notice', { tag: '@smoke' }, async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/', 'test_user1')
+    await goToWithAuth('/data-fair/', 'test_datafair_user1')
     await expect(page.getByRole('heading', { name: 'Bonjour Test User1' })).toBeVisible({ timeout: 10000 })
     await expect(page.getByText('Espace personnel')).toBeVisible()
     await expect(page.getByText(/mode collaboratif/)).toBeVisible()
   })
 
   test('shows the organization, the role and the creation buttons', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/', 'test_user1', { org: 'test_org1' })
+    await goToWithAuth('/data-fair/', 'test_datafair_user1', { org: 'test_datafair_org1' })
     await expect(page.locator('main').getByText('Test Org 1 Administrateur')).toBeVisible({ timeout: 10000 })
     await page.getByRole('link', { name: 'Créer un jeu de données' }).click()
     await page.waitForURL(/new-dataset/, { timeout: 10000 })
   })
 
   test('invite button is reserved to the admins of an organization', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/', 'test_user1', { org: 'test_org1' })
+    await goToWithAuth('/data-fair/', 'test_datafair_user1', { org: 'test_datafair_org1' })
     await page.getByRole('link', { name: 'Inviter un membre' }).click()
     await page.waitForURL(/\/organization/, { timeout: 10000 })
 
-    await goToWithAuth('/data-fair/', 'test_user1')
+    await goToWithAuth('/data-fair/', 'test_datafair_user1')
     await expect(page.getByRole('heading', { name: 'Bonjour Test User1' })).toBeVisible({ timeout: 10000 })
     await expect(page.getByRole('link', { name: 'Inviter un membre' })).not.toBeVisible()
   })
 
   test('key figure opens the datasets list', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/', 'test_user1')
+    await goToWithAuth('/data-fair/', 'test_datafair_user1')
     await page.getByTitle('Voir tous les jeux de données').click()
     await page.waitForURL(/\/datasets/, { timeout: 10000 })
   })
 
   test('to do card lists a requested publication', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com', 'test_org1')
-    await ax.post('/api/v1/settings/organization/test_org1/publication-sites', { type: 'data-fair-portals', id: 'home-portal', url: 'http://portal.com', title: 'Home Portal' })
+    const ax = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
+    await ax.post('/api/v1/settings/organization/test_datafair_org1/publication-sites', { type: 'data-fair-portals', id: 'home-portal', url: 'http://portal.com', title: 'Home Portal' })
     const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'home requested', schema: [{ key: 'a', type: 'string' }] })).data
     await ax.patch(`/api/v1/datasets/${dataset.id}`, { requestedPublicationSites: ['data-fair-portals:home-portal'] })
 
-    await goToWithAuth('/data-fair/', 'test_user1', { org: 'test_org1' })
+    await goToWithAuth('/data-fair/', 'test_datafair_user1', { org: 'test_datafair_org1' })
     await expect(page.getByText('1 · Publication de jeu de données à valider')).toBeVisible({ timeout: 10000 })
     // the publication site also lists the portal in the right column
     await expect(page.getByText('Vos portails')).toBeVisible()
@@ -50,41 +50,41 @@ test.describe('home dashboard', () => {
   })
 
   test('a department only sees its own portals, its organization sees them all', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com', 'test_org1')
-    await ax.post('/api/v1/settings/organization/test_org1:dep1/publication-sites', { type: 'data-fair-portals', id: 'dep-portal', url: 'http://dep-portal.com', title: 'Dep Portal' })
-    await ax.post('/api/v1/settings/organization/test_org1/publication-sites', { type: 'data-fair-portals', id: 'org-portal', url: 'http://org-portal.com', title: 'Org Portal' })
+    const ax = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
+    await ax.post('/api/v1/settings/organization/test_datafair_org1:dep1/publication-sites', { type: 'data-fair-portals', id: 'dep-portal', url: 'http://dep-portal.com', title: 'Dep Portal' })
+    await ax.post('/api/v1/settings/organization/test_datafair_org1/publication-sites', { type: 'data-fair-portals', id: 'org-portal', url: 'http://org-portal.com', title: 'Org Portal' })
 
-    await goToWithAuth('/data-fair/', 'test_user4', { org: 'test_org1', dep: 'dep1' })
+    await goToWithAuth('/data-fair/', 'test_datafair_user4', { org: 'test_datafair_org1', dep: 'dep1' })
     await expect(page.getByText('Dep Portal')).toBeVisible({ timeout: 10000 })
     await expect(page.getByText('Org Portal')).not.toBeVisible()
 
-    await goToWithAuth('/data-fair/', 'test_user1', { org: 'test_org1' })
+    await goToWithAuth('/data-fair/', 'test_datafair_user1', { org: 'test_datafair_org1' })
     await expect(page.getByText('Dep Portal')).toBeVisible({ timeout: 10000 })
     await expect(page.getByText('Org Portal')).toBeVisible()
   })
 
   test('a publication site with an invalid url does not break the page', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com', 'test_org1')
-    await ax.post('/api/v1/settings/organization/test_org1/publication-sites', { type: 'data-fair-portals', id: 'valid-portal', url: 'http://valid-portal.com', title: 'Valid Portal' })
+    const ax = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
+    await ax.post('/api/v1/settings/organization/test_datafair_org1/publication-sites', { type: 'data-fair-portals', id: 'valid-portal', url: 'http://valid-portal.com', title: 'Valid Portal' })
     // parsed as a "portal.com:" scheme: a valid url, but not a site
-    await ax.post('/api/v1/settings/organization/test_org1/publication-sites', { type: 'data-fair-portals', id: 'broken-portal', url: 'portal.com:8080', title: 'Broken Portal' })
+    await ax.post('/api/v1/settings/organization/test_datafair_org1/publication-sites', { type: 'data-fair-portals', id: 'broken-portal', url: 'portal.com:8080', title: 'Broken Portal' })
 
-    await goToWithAuth('/data-fair/', 'test_user1', { org: 'test_org1' })
+    await goToWithAuth('/data-fair/', 'test_datafair_user1', { org: 'test_datafair_org1' })
     await expect(page.getByText('Valid Portal')).toBeVisible({ timeout: 10000 })
     await expect(page.getByText('Broken Portal')).not.toBeVisible()
   })
 
   test('a publication site url starting with the letters http is not a site', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com', 'test_org1')
-    await ax.post('/api/v1/settings/organization/test_org1/publication-sites', { type: 'data-fair-portals', id: 'scheme-portal', title: 'Scheme Portal', url: 'httpbin.org:80' })
-    await goToWithAuth('/data-fair/', 'test_user1', { org: 'test_org1' })
+    const ax = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
+    await ax.post('/api/v1/settings/organization/test_datafair_org1/publication-sites', { type: 'data-fair-portals', id: 'scheme-portal', title: 'Scheme Portal', url: 'httpbin.org:80' })
+    await goToWithAuth('/data-fair/', 'test_datafair_user1', { org: 'test_datafair_org1' })
     await expect(page.getByText('Valid Portal')).toBeVisible({ timeout: 10000 })
     await expect(page.getByText('Scheme Portal')).not.toBeVisible()
   })
 
   test('to do card never says everything is fine after a failed check', async ({ page, goToWithAuth }) => {
     await page.route('**/data-fair/api/v1/datasets?*status=error*', route => route.fulfill({ status: 500 }))
-    await goToWithAuth('/data-fair/', 'test_user1')
+    await goToWithAuth('/data-fair/', 'test_datafair_user1')
     await expect(page.getByText('Certaines vérifications n\'ont pas abouti.')).toBeVisible({ timeout: 10000 })
     await expect(page.getByText('Rien à traiter')).not.toBeVisible()
   })
@@ -92,19 +92,19 @@ test.describe('home dashboard', () => {
   test('to do card says a check failed even when it has lines to show', async ({ page, goToWithAuth }) => {
     await page.route('**/data-fair/api/v1/datasets?*status=error*', route => route.fulfill({ status: 500 }))
     await page.route('**/data-fair/api/v1/datasets?*draftStatus=finalized*', route => route.fulfill({ json: { count: 2, results: [] } }))
-    await goToWithAuth('/data-fair/', 'test_user1')
+    await goToWithAuth('/data-fair/', 'test_datafair_user1')
     await expect(page.getByRole('link', { name: /brouillon/i })).toBeVisible({ timeout: 10000 })
     await expect(page.getByText('Certaines vérifications n\'ont pas abouti.')).toBeVisible()
   })
 
   test('to do card lists the datasets in error', async ({ page, goToWithAuth }) => {
     await page.route('**/data-fair/api/v1/datasets?*status=error*', route => route.fulfill({ json: { count: 3, results: [] } }))
-    await goToWithAuth('/data-fair/', 'test_user1')
+    await goToWithAuth('/data-fair/', 'test_datafair_user1')
     await expect(page.getByRole('link', { name: /en erreur/i })).toBeVisible({ timeout: 10000 })
   })
 
   test('read-only role gets a notice instead of the to do card', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/', 'test_user8', { org: 'test_org1' })
+    await goToWithAuth('/data-fair/', 'test_datafair_user8', { org: 'test_datafair_org1' })
     await expect(page.getByText('Vous consultez les données de Test Org 1')).toBeVisible({ timeout: 10000 })
     await expect(page.getByText('À traiter')).not.toBeVisible()
     await expect(page.getByRole('link', { name: 'Créer un jeu de données' })).not.toBeVisible()
@@ -127,19 +127,19 @@ test.describe('home dashboard', () => {
 
 test.describe('navigation drawer', () => {
   test('has collapsible content group with datasets and applications', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/', 'test_user1')
+    await goToWithAuth('/data-fair/', 'test_datafair_user1')
     // Content group should be expanded by default
     await expect(page.locator('nav').getByText('Jeux de données')).toBeVisible({ timeout: 10000 })
     await expect(page.locator('nav').getByText('Applications')).toBeVisible()
   })
 
   test('has dashboard link', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/', 'test_user1')
+    await goToWithAuth('/data-fair/', 'test_datafair_user1')
     await expect(page.locator('nav').getByText('Tableau de bord')).toBeVisible({ timeout: 10000 })
   })
 
   test('management group is present', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/', 'test_user1')
+    await goToWithAuth('/data-fair/', 'test_datafair_user1')
     // For personal account (type=user), settings should be visible after expanding management
     await expect(page.locator('nav').getByText('Gestion')).toBeVisible({ timeout: 10000 })
     // Click to expand management group
@@ -148,7 +148,7 @@ test.describe('navigation drawer', () => {
   })
 
   test('monitoring group shows storage', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/', 'test_user1')
+    await goToWithAuth('/data-fair/', 'test_datafair_user1')
     // Expand monitoring group (exact match to not also catch "Suivi des agents")
     await expect(page.locator('nav').getByText('Suivi', { exact: true })).toBeVisible({ timeout: 10000 })
     await page.locator('nav').getByText('Suivi', { exact: true }).click()
@@ -156,18 +156,18 @@ test.describe('navigation drawer', () => {
   })
 
   test('no admin group for regular user', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/', 'test_user1')
+    await goToWithAuth('/data-fair/', 'test_datafair_user1')
     await expect(page.locator('nav').getByText('Administration')).not.toBeVisible()
   })
 
   test('navigation from drawer to datasets works', { tag: '@smoke' }, async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/', 'test_user1')
+    await goToWithAuth('/data-fair/', 'test_datafair_user1')
     await page.locator('nav').getByText('Jeux de données').click()
     await page.waitForURL(/datasets/, { timeout: 10000 })
   })
 
   test('help group shows API doc link', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/', 'test_user1')
+    await goToWithAuth('/data-fair/', 'test_datafair_user1')
     // Expand help group
     await expect(page.locator('nav').getByText('Aide')).toBeVisible({ timeout: 10000 })
     await page.locator('nav').getByText('Aide').click()

@@ -608,7 +608,7 @@ before speaking over it. This also retired the reading that a judged run had
 "missed the click by ten seconds": the person acted fourteen seconds after the
 timeout released the turn, which was the first moment they could.
 
-**Isolation.** Every run calls `clean()` and re-seeds `organization/test_org1`
+**Isolation.** Every run calls `clean()` and re-seeds `organization/test_datafair_org1`
 from `simulations/resources/*.csv` plus one REST register built in code
 (`seedRestRegister`: a subsidy-request dataset with columns, history and two
 rows, one carrying a deliberate decimal slip for the data-entry case to fix), so
@@ -651,13 +651,13 @@ one subscription. An invalid run must never be judged, and
 
 `simulations/autonomous-agent.sim.spec.ts` drives the other way the stack exposes
 data-fair's tools: an **autonomous agent** of the agents service, owned by
-`test_org1`, acting as its own non-human identity and calling the **mcp server**,
+`test_datafair_org1`, acting as its own non-human identity and calling the **mcp server**,
 whose tools are composed from the `x-agent` annotations of the platform
 document (`/api/v1/platform/api-docs.json`, see [platform-api-docs.md](./platform-api-docs.md)).
 Until the mcp server reads that document these cases cannot run. The back-office
 drawer and its in-page tools are not involved.
 
-- The NHI `test_org1_agent_nhi` is declared in simple-directory's file storage
+- The NHI `test_datafair_org1_agent_nhi` is declared in simple-directory's file storage
   (`dev/resources/users.template.json`, rendered into `users.json` by
   `dev/render-users.mjs` with the host and port of `.env`, which its issuer names). Its
   subject `autonomous-agent:sim-mcp` pins the agent id, so the runner seeds the agent
@@ -666,8 +666,8 @@ drawer and its in-page tools are not involved.
 - The agent reaches the mcp server as a server built into every agent with an identity
   (`PRIVATE_MCP_URL` in `docker-compose.yaml`), not as a catalog entry: what it offers is the
   identity's scopes, and the simulated agent calls it as its own session.
-- Every case runs beside public decoys of `test_org3` (`seedDecoys`), close to
-  `test_org1`'s datasets, so a run shows whether the agent keeps to its organization.
+- Every case runs beside public decoys of `test_datafair_org3` (`seedDecoys`), close to
+  `test_datafair_org1`'s datasets, so a run shows whether the agent keeps to its organization.
 - Before any model call the runner asks the agent's tool diagnostic for the tools the
   cases need: a broken NHI exchange or an mcp server that composed nothing fails the
   run with its cause.
@@ -695,10 +695,10 @@ the platform document side (the switch, the two tool sets) is under
   `edit_line` groups (`datafair_create_line_*`, `datafair_edit_line_*`, ending in `saveForm`).
   `datafair_delete_line` is in both, and the cost report counts it as a write in both. The runner
   waits until the agent holds exactly its arm's tools before the first message.
-- **Agent.** `sim-lines` (`LINES_AGENT`), acting as its own NHI `test_org1_lines_nhi`, beside the existing
+- **Agent.** `sim-lines` (`LINES_AGENT`), acting as its own NHI `test_datafair_org1_lines_nhi`, beside the existing
   `sim-mcp` agent, which is untouched. Each run writes into a register of its own, seeded from
   `simulations/runner/line-edition-fixtures.ts`; the communes referential stays private to
-  `test_org1`, so the editor's master-data suggestions only work if its fetch carries the
+  `test_datafair_org1`, so the editor's master-data suggestions only work if its fetch carries the
   caller's credentials.
 - **Cases and measure.** `simulations/cases/line-edition.ts`: `saisie-courriel`, `import-tableur`,
   `corrections`, each run per arm and repeat (`SIM_ARMS`, default `json,editor`; `SIM_REPEAT`,

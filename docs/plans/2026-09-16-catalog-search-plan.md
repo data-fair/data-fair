@@ -81,7 +81,7 @@ import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
 
-const u1 = await axiosAuth('test_user1@test.com')
+const u1 = await axiosAuth('test_datafair_user1@test.com')
 
 const metaOnly = async (id: string, body: Record<string, any>) => {
   await u1.post('/api/v1/datasets/' + id, { isMetaOnly: true, title: id, ...body })
@@ -535,13 +535,13 @@ git commit -m "feat(datasets): computeSearchText, the bounded and permission-gua
 
 ```ts
   test('accepts catalogSearch switches', async () => {
-    const res = await testUser1Org.put('/api/v1/settings/organization/test_org1', {
+    const res = await testUser1Org.put('/api/v1/settings/organization/test_datafair_org1', {
       catalogSearch: { indexSchemaLabels: false, indexEnumValues: true }
     })
     assert.deepEqual(res.data.catalogSearch, { indexSchemaLabels: false, indexEnumValues: true })
-    const fetched = (await testUser1Org.get('/api/v1/settings/organization/test_org1')).data
+    const fetched = (await testUser1Org.get('/api/v1/settings/organization/test_datafair_org1')).data
     assert.deepEqual(fetched.catalogSearch, { indexSchemaLabels: false, indexEnumValues: true })
-    await assert.rejects(testUser1Org.put('/api/v1/settings/organization/test_org1', { catalogSearch: { unknown: true } }), { status: 400 })
+    await assert.rejects(testUser1Org.put('/api/v1/settings/organization/test_datafair_org1', { catalogSearch: { unknown: true } }), { status: 400 })
   })
 ```
 
@@ -818,8 +818,8 @@ git commit -m "feat(permissions): recompute the guarded search text when a datas
 
 ```ts
   test('enum values are searchable only when the organization opts in, and switches recompute existing datasets', async () => {
-    const u1Org = await axiosAuth('test_user1@test.com', 'test_org1')
-    const settings = async (catalogSearch: Record<string, boolean>) => u1Org.put('/api/v1/settings/organization/test_org1', { catalogSearch })
+    const u1Org = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
+    const settings = async (catalogSearch: Record<string, boolean>) => u1Org.put('/api/v1/settings/organization/test_datafair_org1', { catalogSearch })
     await settings({ indexSchemaLabels: true, indexEnumValues: false })
 
     // dataset1.csv has an `adr` column whose few distinct values include "bureau"
@@ -981,7 +981,7 @@ Open `tests/features/ui/dataset-pages.e2e.spec.ts`, look at how an existing test
 
 ```ts
 test('edits the hidden search terms from the metadata form', async ({ page }) => {
-  const u1 = await axiosAuth('test_user1@test.com')
+  const u1 = await axiosAuth('test_datafair_user1@test.com')
   await u1.post('/api/v1/datasets/e2e-search-terms', { isMetaOnly: true, title: 'Bureaux de vote' })
   await page.goto('/data-fair/dataset/e2e-search-terms')
   await page.getByRole('tab', { name: /informations/i }).click()
@@ -1094,15 +1094,15 @@ Look at how `settings-page.e2e.spec.ts` opens the organization settings page and
 
 ```ts
 test('catalog search switches save with the metadata section', async ({ page }) => {
-  await page.goto('/data-fair/settings/organization/test_org1')
+  await page.goto('/data-fair/settings/organization/test_datafair_org1')
   await page.getByRole('tab', { name: /métadonnées/i }).click()
   const enumSwitch = page.getByLabel('Valeurs distinctes des colonnes à faible cardinalité')
   await expect(enumSwitch).toBeVisible()
   await expect(page.getByText(/quiconque peut lister le jeu de données/)).toBeVisible()
   await enumSwitch.check()
   await page.getByRole('button', { name: /enregistrer/i }).click()
-  const u1Org = await axiosAuth('test_user1@test.com', 'test_org1')
-  await expect.poll(async () => (await u1Org.get('/api/v1/settings/organization/test_org1')).data.catalogSearch?.indexEnumValues).toBe(true)
+  const u1Org = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
+  await expect.poll(async () => (await u1Org.get('/api/v1/settings/organization/test_datafair_org1')).data.catalogSearch?.indexEnumValues).toBe(true)
 })
 ```
 

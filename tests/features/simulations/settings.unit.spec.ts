@@ -79,7 +79,7 @@ test.describe('bridge provider settings', () => {
   })
 
   test('gives the admin role unlimited quota', () => {
-    // Simulations run as test_user1, an admin of test_org1. A quota-limited
+    // Simulations run as test_datafair_user1, an admin of test_datafair_org1. A quota-limited
     // admin role would fail a long case partway through and look like a product
     // failure in the transcript.
     assert.equal(bridgeSettings('sonnet', 'haiku').org.quotas.admin.unlimited, true)
@@ -117,10 +117,10 @@ test.describe('the conversations a run exports', () => {
     const { runConversations } = await import('../../../simulations/runner/settings.ts')
     const since = new Date('2026-10-08T09:57:45Z')
     const listed = [
-      { conversationId: 'earlier-case', userId: 'test_user1', startedAt: '2026-10-08T09:57:10Z' },
-      { conversationId: 'this-run', userId: 'test_user1', startedAt: '2026-10-08T09:57:46Z' },
-      { conversationId: 'someone-else', userId: 'test_user2', startedAt: '2026-10-08T09:57:50Z' }
+      { conversationId: 'earlier-case', userId: 'test_datafair_user1', startedAt: '2026-10-08T09:57:10Z' },
+      { conversationId: 'this-run', userId: 'test_datafair_user1', startedAt: '2026-10-08T09:57:46Z' },
+      { conversationId: 'someone-else', userId: 'test_datafair_user2', startedAt: '2026-10-08T09:57:50Z' }
     ]
-    assert.deepEqual(runConversations(listed, 'test_user1', since).map(c => c.conversationId), ['this-run'])
+    assert.deepEqual(runConversations(listed, 'test_datafair_user1', since).map(c => c.conversationId), ['this-run'])
   })
 })

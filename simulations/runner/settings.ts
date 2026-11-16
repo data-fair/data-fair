@@ -11,11 +11,11 @@ export const BRIDGE_URL = process.env.BRIDGE_URL ?? `http://localhost:${process.
 
 /** An org rather than a user: it is the account shape most Data Fair users work
  *  in, and `clean()` resets anything matching /^test_/ between runs. */
-export const OWNER = { type: 'organization', id: 'test_org1' } as const
+export const OWNER = { type: 'organization', id: 'test_datafair_org1' } as const
 /** Admin of OWNER per dev/resources/organizations.json. */
-export const OWNER_USER = 'test_user1'
+export const OWNER_USER = 'test_datafair_user1'
 /** Global admin, needed to write another owner's agent settings. */
-const SUPER_ADMIN = 'test_superadmin@test.com'
+const SUPER_ADMIN = 'test_datafair_superadmin@test.com'
 
 // the roles the agents settings schema accepts, and no other: a refused settings PUT fails every case
 export const MODEL_ROLES = ['assistant', 'tools', 'summarizer', 'moderator'] as const

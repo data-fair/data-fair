@@ -6,8 +6,8 @@ import { axios, axiosAuth, clean, checkPendingTasks, mockAppUrl } from '../../su
 import { setupMockRoute, clearMockRoutes } from '../../support/workers.ts'
 
 const anonymous = axios()
-const testSuperadmin = await axiosAuth('test_superadmin@test.com', undefined, true)
-const testUser3 = await axiosAuth('test_user3@test.com')
+const testSuperadmin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
+const testUser3 = await axiosAuth('test_datafair_user3@test.com')
 
 const geocoderApi = JSON.parse(readFileSync(path.resolve('./tests/resources/geocoder-api.json'), 'utf8'))
 

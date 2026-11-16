@@ -5,7 +5,7 @@ import Protobuf from 'pbf'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
 import { waitForFinalize, setConfig } from '../../../support/workers.ts'
 
-const testUser1 = await axiosAuth('test_user1@test.com')
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
 
 const countFeatures = (data: ArrayBuffer) => new VectorTile(new Protobuf(data)).layers.results.length
 

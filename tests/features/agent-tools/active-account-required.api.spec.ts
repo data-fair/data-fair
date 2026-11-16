@@ -9,8 +9,8 @@ import { axiosAuth, anonymousAx, clean, checkPendingTasks } from '../../support/
 
 const MESSAGE = 'This listing is limited to the active account and needs an authenticated session.'
 
-const user1 = await axiosAuth('test_user1@test.com', 'test_org1')
-const user3 = await axiosAuth('test_user3@test.com')
+const user1 = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
+const user3 = await axiosAuth('test_datafair_user3@test.com')
 
 // the message an agent gets in production; the dev API appends the stack after it
 const refusal = async (promise: Promise<any>, message = MESSAGE) => {

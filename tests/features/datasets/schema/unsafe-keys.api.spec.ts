@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks, waitForWorkerIdle } from '../../../support/axios.ts'
 import { patchRawDataset } from '../../../support/workers.ts'
 
-const u1 = await axiosAuth('test_user1@test.com')
+const u1 = await axiosAuth('test_datafair_user1@test.com')
 
 /**
  * Schema keys reaching the API are not normalized by any producer (the file workers, the UI and
