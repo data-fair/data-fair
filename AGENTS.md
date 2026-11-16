@@ -6,6 +6,8 @@ Data FAIR (Findable, Accessible, Interoperable, Reusable Data) is an open-source
 
 ## Dev environment
 
+Quick start without any tooling: `npm ci && npm run dev` (fixed ports from `dev/default.env`, overridden by `.env`), then `npm test`.
+
 The user starts the dev environment of a checkout with `npm run dev-zellij` (zellij >= 0.44, session named after the checkout directory). Agents never start or kill the session, and act on processes and containers only through `df-dev`:
 
 ```bash

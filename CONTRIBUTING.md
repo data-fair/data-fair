@@ -9,22 +9,25 @@ Switch to the appropriate nodejs version:
 
     nvm use
 
-Install nodejs dependencies and set the checkout up (`.env` with free ports, native modules, types, UI build):
+Install the dependencies and start the development environment (docker is required: mongo, elasticsearch, s3, simple-directory and nginx run in containers; the mock server, api and ui run in the terminal):
 
     npm ci
+    npm run dev
+
+The dev server is available at <http://localhost:5600/data-fair/>; log in with an account of `dev/resources/users.template.json`. `npm run dev-deps` only starts the containers (extra arguments go to docker compose, e.g. `npm run dev-deps -- --profile events`). The default ports (5600-5649) are in `dev/default.env`, copied to `.env` the first time: `.env` overrides `dev/default.env` and is never overwritten.
+
+Alternative with random free ports per checkout, panes and agent-friendly status (zellij >= 0.44):
+
     npx --no df-dev setup
-
-Start the development environment (zellij >= 0.44; core containers + ui, api, mock):
-
     npm run dev-zellij
     npm run dev-zellij -- --services events,agents   # with optional containers
 
-The footer shows the dev URL; log in with an account of `dev/resources/users.template.json` (`users.json` is rendered from it, with the checkout's host and port, by `dev/render-users.mjs`, run by `df-dev setup` and before the containers start). From another terminal: `npx --no df-dev status`, `npx --no df-dev logs <pane>`, `npx --no df-dev restart <pane>`, `npx --no df-dev up <service>`.
+From another terminal: `npx --no df-dev status`, `npx --no df-dev logs <pane>`, `npx --no df-dev restart <pane>`, `npx --no df-dev up <service>`.
 
 Run test suite:
 
 ```
-npm run test
+npm test
 ```
 
 ## Working with Git Worktrees

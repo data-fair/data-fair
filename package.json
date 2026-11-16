@@ -22,6 +22,8 @@
     "simulate:line-edition-report": "dotenv -- node --experimental-strip-types --disable-warning=ExperimentalWarning simulations/line-edition-report.ts",
     "dev-benchmark": "MODE=server_worker npm -w api run dev-benchmark",
     "dev-benchmark-prof": "MODE=server_worker npm -w api run dev-benchmark-prof",
+    "dev": "bash dev/run.sh",
+    "dev-deps": "bash dev/deps.sh",
     "dev-zellij": "df-dev zellij",
     "build": "npm --prefix ui run build",
     "build-parsers": "npm run build-parser-where && npm run build-parser-select && npm run build-parser-order-by && npm run build-parser-group-by && npm run build-parser-aliases && npm run build-parser-refine",
