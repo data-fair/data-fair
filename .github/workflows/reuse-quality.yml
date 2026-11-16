@@ -168,9 +168,9 @@ jobs:
     - name: Init .env
       run: cp dev/default.env .env
 
-    # the dev scripts read .env themselves; here every later step needs it too
+    # the dev scripts read .env themselves; here every later step needs it too (comments of default.env filtered out)
     - name: Export .env to the next steps
-      run: cat .env >> "$GITHUB_ENV"
+      run: grep -vE '^\s*(#|$)' .env >> "$GITHUB_ENV" # GITHUB_ENV accepts only NAME=value lines, no comments
 
     # every profile, not only the core services: e2e pages need events, registry, agents and
     # capture (each optional service has its own profile, see dev/dev.json "optional").
