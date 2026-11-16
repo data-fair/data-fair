@@ -2,6 +2,9 @@ import log from '@data-fair/lib-node/log.js'
 import config from '#config'
 import elasticsearch, { type ClientOptions, type Client } from '@elastic/elasticsearch'
 
+// the ingest pipeline is cluster-wide: one per indices prefix so that several data-fair instances can share an ES
+export const attachmentPipelineId = (indicesPrefix: string) => `attachment-${indicesPrefix}`
+
 export class DfEs {
   private _client?: Client
 
@@ -39,6 +42,8 @@ export class DfEs {
     if (!clusterSettings.persistent['indices.id_field_data.enabled'] || clusterSettings.persistent['action.destructive_requires_name'] !== 'false') {
       log.info('patch some ES cluster settings', { clusterSettings })
       clusterSettings.persistent['indices.id_field_data.enabled'] = 'true'
+      // WARNING: this setting is cluster-wide. On an ES shared by several data-fair instances,
+      // a wildcard index deletion must always include config.indicesPrefix.
       clusterSettings.persistent['action.destructive_requires_name'] = 'false'
       await client.cluster.putSettings(clusterSettings)
     }
@@ -48,7 +53,7 @@ export class DfEs {
   async init () {
     await this.connect()
     await this.client.ingest.putPipeline({
-      id: 'attachment',
+      id: attachmentPipelineId(config.indicesPrefix),
       body: {
         description: 'Extract information from attached files',
         processors: [{
