@@ -43,12 +43,12 @@ router.delete('/', async (req, res, next) => {
     // collect test-owned dataset IDs before deleting them (for ES index cleanup)
     const testDatasets = await mongo.datasets.find(testOwnerFilter, { projection: { id: 1 } }).toArray()
 
-    // delete ES indices for test-owned datasets
+    // delete ES indices for test-owned datasets: exactly theirs (indexPrefix carries a hash of the id), not
+    // those of another dataset whose id starts with the same characters. The aliases, draft ones
+    // included, go with their indices.
     if (testDatasets.length > 0) {
-      const indexPatterns = testDatasets.flatMap(d => [
-        config.indicesPrefix + '-' + d.id + '*',
-        config.indicesPrefix + '_draft-' + d.id + '*'
-      ])
+      const { indexPrefix } = await import('../../datasets/es/manage-indices.ts')
+      const indexPatterns = testDatasets.map(d => `${indexPrefix(d)}-*`)
       await es.client.indices.delete({ index: indexPatterns.join(','), ignore_unavailable: true }).catch(() => {})
 
       // REST datasets also own per-dataset mongo collections (lines and revisions); left
