@@ -1,0 +1,64 @@
+diff --git a/node_modules/expr-eval-fork/dist/bundle.js b/node_modules/expr-eval-fork/dist/bundle.js
+index 108df45..3f40ad4 100644
+--- a/node_modules/expr-eval-fork/dist/bundle.js
++++ b/node_modules/expr-eval-fork/dist/bundle.js
+@@ -156,11 +156,18 @@
+     return newexpression;
+   }
+ 
++  // functions defined inside an expression (IFUNDEF): their body is evaluated in the same sandbox.
++  // Tracked by identity: registering them in expr.functions under 'lambda_' + __counter++ used an
++  // uninitialised counter, so every definition overwrote the same 'lambda_NaN' slot of the
++  // parser-wide functions and only the last defined function stayed allowed.
++  var definedFunctions = new WeakSet();
++
+   /**
+    * Checks if a function reference 'f' is explicitly allowed to be executed.
+    * This logic is the core security allowance gate.
+    */
+   function isAllowedFunc(f, expr, values) {
++    if (definedFunctions.has(f)) return true;
+     // function definition is included in registered functions
+     if (Object.values(expr.functions).includes(f)) return true;
+ 
+@@ -316,7 +323,7 @@
+             }
+             return evaluate(n2, expr, scope);
+           };
+-          expr.functions['lambda_' + expr.functions.__counter++] = f;
++          definedFunctions.add(f);
+           values[n1] = f;
+           return f;
+         })());
+diff --git a/node_modules/expr-eval-fork/dist/index.mjs b/node_modules/expr-eval-fork/dist/index.mjs
+index 04c1687..a0db302 100644
+--- a/node_modules/expr-eval-fork/dist/index.mjs
++++ b/node_modules/expr-eval-fork/dist/index.mjs
+@@ -150,11 +150,18 @@ function substitute(tokens, variable, expr) {
+   return newexpression;
+ }
+ 
++// functions defined inside an expression (IFUNDEF): their body is evaluated in the same sandbox.
++// Tracked by identity: registering them in expr.functions under 'lambda_' + __counter++ used an
++// uninitialised counter, so every definition overwrote the same 'lambda_NaN' slot of the
++// parser-wide functions and only the last defined function stayed allowed.
++var definedFunctions = new WeakSet();
++
+ /**
+  * Checks if a function reference 'f' is explicitly allowed to be executed.
+  * This logic is the core security allowance gate.
+  */
+ function isAllowedFunc(f, expr, values) {
++  if (definedFunctions.has(f)) return true;
+   // function definition is included in registered functions
+   if (Object.values(expr.functions).includes(f)) return true;
+ 
+@@ -310,7 +317,7 @@ function evaluate(tokens, expr, values) {
+           }
+           return evaluate(n2, expr, scope);
+         };
+-        expr.functions['lambda_' + expr.functions.__counter++] = f;
++        definedFunctions.add(f);
+         values[n1] = f;
+         return f;
+       })());
