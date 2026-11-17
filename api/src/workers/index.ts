@@ -267,13 +267,9 @@ export const processResourceTask = (type: ResourceType, resource: any, task: Tas
     // level ('worker-task') for every failure, including the retried and bad input ones
     if (events.listenerCount('error')) events.emit('error', err)
   } finally {
-    // the task stays pending until its lock is released: an idle worker (test-env pending-tasks)
-    // then means that the resource can be locked again by a request
-    try {
-      await locks.release(`${type}:${id}`)
-    } finally {
-      delete pendingTasks[task.worker][taskFullKey]
-    }
+    // the task stays pending until its lock is released, even if the release fails: an idle worker
+    // (test-env pending-tasks) then means that the resource can be locked again by a request
+    await locks.release(`${type}:${id}`).finally(() => { delete pendingTasks[task.worker][taskFullKey] })
   }
 })
 
