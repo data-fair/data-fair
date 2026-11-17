@@ -266,7 +266,10 @@ const DUMMY_ANALYZERS = { search: '', index: '' }
 // Legacy shape: `analyzers.search` alone is `.text`'s analyzer, as `defaultAnalyzer` was.
 export const esProperty = (prop: any, analyzers: { search: string, index: string }, shape: IndexShape = NEW_INDEX_SHAPE): any => {
   const capabilities = prop['x-capabilities'] || {}
-  const isFullTextString = prop.type === 'string' && (prop.format === 'uri-reference' || !prop.format)
+  // dates are the only string formats with a dedicated mapping; every other one
+  // (uri-reference, email, uri, ...) is a plain keyword. Falling through to an empty
+  // mapping broke the index creation ("No type specified for field [email]").
+  const isFullTextString = prop.type === 'string' && prop.format !== 'date' && prop.format !== 'date-time'
   // Add inner text field to almost everybody so that even dates, numbers, etc can be matched textually as well as exactly.
   // Emission rules for `.text_standard`: dates keep it everywhere (year search); numeric columns lose it
   // under noNumericText (their `q` matching uses the main long/double field); full-text strings lose it
