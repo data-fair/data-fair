@@ -1,11 +1,9 @@
-import { test, expect } from '../../fixtures/diagnostics.ts'
+import { test, expect } from '../../fixtures/login.ts'
 import { axiosAuth, clean } from '../../support/axios.ts'
 import { clearPublicationSitesCache, waitForFinalize } from '../../support/workers.ts'
 
 const DEV_HOST = process.env.DEV_HOST!
-const NGINX_PORT = process.env.NGINX_PORT!
 const NGINX_PORT2 = process.env.NGINX_PORT2!
-const baseUrl1 = `http://${DEV_HOST}:${NGINX_PORT}`
 const baseUrl2 = `http://${DEV_HOST}:${NGINX_PORT2}`
 
 test.describe('new-dataset wizard — virtual dataset from master-data on a secondary-domain back-office', () => {
@@ -13,7 +11,7 @@ test.describe('new-dataset wizard — virtual dataset from master-data on a seco
     await clean()
   })
 
-  test('initializes virtual dataset schema from a master-data child of the main domain', async ({ page, context }) => {
+  test('initializes virtual dataset schema from a master-data child of the main domain', async ({ page, goToWithAuth }) => {
     // 1) main-domain master-data dataset, owned by another org (test_org3) but
     //    explicitly shared with test_org1 so the corresponding remote-service is
     //    surfaced by /api/v1/remote-services?privateAccess=organization:test_org1.
@@ -51,34 +49,11 @@ test.describe('new-dataset wizard — virtual dataset from master-data on a seco
     })
     await clearPublicationSitesCache()
 
-    // 3) cookies (i18n + cache bypass) — set per-port; session cookies will be
-    //    issued during login below
-    await context.addCookies([
-      { name: 'i18n_lang', value: 'fr', url: baseUrl1 },
-      { name: 'cache_bypass', value: '1', url: baseUrl1 },
-      { name: 'i18n_lang', value: 'fr', url: baseUrl2 },
-      { name: 'cache_bypass', value: '1', url: baseUrl2 }
-    ])
-
-    // 4) login through simple-directory on the main domain. The session
-    //    cookie is host-scoped (not port-scoped) so it also applies on
-    //    NGINX_PORT2.
-    const mainTarget = `${baseUrl1}/data-fair/`
-    const loginUrl = `${baseUrl1}/simple-directory/login?redirect=${encodeURIComponent(mainTarget)}`
-    await page.goto(loginUrl)
-    await page.getByLabel('Adresse mail').fill('test_user1@test.com')
-    await page.getByLabel('Mot de passe', { exact: true }).fill('passwd')
-    await page.getByRole('button', { name: 'Se connecter' }).click()
-    await page.waitForURL(/\/data-fair\/(\?|$|#)/, { timeout: 10000 })
-
-    // 5) switch from personal account to test_org1 context (org context is
-    //    stored in the session cookie too, so it carries over to NGINX_PORT2)
-    await page.getByRole('button', { name: /Ouvrez le menu personnel/ }).click()
-    await page.getByRole('listitem').filter({ hasText: 'Test Org 1' }).click()
-    await page.waitForURL(/\/data-fair\/(\?|$|#)/, { timeout: 10000 })
-
-    // 6) navigate to the new-dataset wizard on the secondary domain
-    await page.goto(`${baseUrl2}/data-fair/new-dataset`)
+    // 3) session of test_user1 on test_org1, opened through simple-directory's API rather than
+    //    its login form, whose wording is not ours. The cookies (session, language, cache bypass)
+    //    are host-scoped, not port-scoped, so they also apply on NGINX_PORT2: go straight to the
+    //    new-dataset wizard of the secondary domain
+    await goToWithAuth(`${baseUrl2}/data-fair/new-dataset`, 'test_user1', { org: 'test_org1' })
 
     const virtualCard = page.locator('.v-card-title', { hasText: 'Virtuel' })
     await expect(virtualCard).toBeVisible({ timeout: 10000 })
@@ -109,13 +84,13 @@ test.describe('new-dataset wizard — virtual dataset from master-data on a seco
     await expect(createBtn).toBeEnabled({ timeout: 5000 })
     await createBtn.click()
 
-    // 7) redirect to the new dataset page
+    // 4) redirect to the new dataset page
     await expect(page).toHaveURL(/\/dataset\/[^/]+/, { timeout: 30000 })
     const match = page.url().match(/\/dataset\/([^/?#]+)/)
     expect(match).not.toBeNull()
     const datasetId = match![1]
 
-    // 8) regression check: the new virtual dataset's schema must contain the
+    // 5) regression check: the new virtual dataset's schema must contain the
     //    master-data columns. Pre-fix, the wizard fetched each child via
     //    GET /api/v1/datasets/:id which 404'd through getByUniqueRef on a
     //    secondary-domain back-office, so this assertion fails on master.

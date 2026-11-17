@@ -22,12 +22,10 @@ async function slowSaves (page: any, ms: number, onlyKey?: string) {
   })
 }
 
-async function goToSettingsOrg (page: any, goToWithAuth: any, user = 'test_user1', orgLabel = 'Test Org 1') {
-  await goToWithAuth('/data-fair/', user)
-  await page.getByRole('button', { name: /Ouvrez le menu personnel/ }).click()
-  await page.getByRole('listitem').filter({ hasText: orgLabel }).click()
-  await page.waitForURL(`${baseUrl}/data-fair/`, { timeout: 10000 })
-  await page.goto(`${baseUrl}/data-fair/settings`)
+// the session is opened on the organization: switching from the personal menu reloads the page,
+// sometimes twice, and a navigation started right after the switch was interrupted by the reload
+async function goToSettingsOrg (page: any, goToWithAuth: any, user = 'test_user1', org = 'test_org1') {
+  await goToWithAuth('/data-fair/settings', user, { org })
   await expect(page.locator('#info')).toBeVisible({ timeout: 15000 })
 }
 

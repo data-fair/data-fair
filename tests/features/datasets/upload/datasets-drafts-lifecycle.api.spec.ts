@@ -2,7 +2,7 @@ import { test } from '../../../fixtures/diagnostics.ts'
 import assert from 'node:assert/strict'
 import fs from 'fs-extra'
 import FormData from 'form-data'
-import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
+import { axiosAuth, clean, checkPendingTasks, waitForWorkerIdle } from '../../../support/axios.ts'
 import { waitForFinalize, waitForDatasetError, fileExists, clearMockRoutes, datasetEsIndicesCount, datasetEsAliasName, datasetEsMappingProperties, getRawDataset, waitForJournalEvent } from '../../../support/workers.ts'
 import { collectNotifs, expectNotifPair } from '../../../support/notifications.ts'
 
@@ -387,6 +387,8 @@ test.describe('datasets in draft mode - lifecycle', () => {
     schema[0].pattern = '^[a-z]+$'
     await ax.patch('/api/v1/datasets/' + dataset.id, { schema })
     await waitForJournalEvent(dataset.id, 'validate-end')
+    // validate-end is logged before the task releases the dataset lock, the upload would get a 409
+    assert.ok(await waitForWorkerIdle(), 'the worker is still busy after the validation')
 
     // upload a new file
     const datasetFd2 = fs.readFileSync('./tests/resources/datasets/dataset1-invalid.csv')
@@ -415,6 +417,8 @@ test.describe('datasets in draft mode - lifecycle', () => {
     schema[0].pattern = '^[a-z]+$'
     await ax.patch('/api/v1/datasets/' + dataset.id, { schema })
     await waitForJournalEvent(dataset.id, 'validate-end')
+    // validate-end is logged before the task releases the dataset lock, the upload would get a 409
+    assert.ok(await waitForWorkerIdle(), 'the worker is still busy after the validation')
 
     // upload a new file
     const datasetFd2 = fs.readFileSync('./tests/resources/datasets/dataset1-invalid.csv')
