@@ -201,7 +201,7 @@ services:
   openapi-viewer:
     profiles:
       - openapi-viewer
-    image: ghcr.io/data-fair/openapi-viewer:feat-implement-serialize-query-params
+    image: ${OAV_IMAGE:-ghcr.io/data-fair/openapi-viewer:master}
     network_mode: host
     environment:
       - PORT=${OAV_PORT}
