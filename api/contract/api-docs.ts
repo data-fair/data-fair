@@ -13,6 +13,7 @@ import { oauth2Scheme, applyOauth2Security, agentSecurity } from './scopes-secur
 import publicationSitesSchema from './publication-sites.js'
 import pJson from './p-json.js'
 import { root as xAgentRoot, operations as xAgent, datasetSchemaKeyHint, datasetSchemaCalculatedHint, withDatasetLabels } from './x-agent.ts'
+import { consistencyGuide } from './consistency-guide.ts'
 
 // a publication site as the settings return it: the fields of the settings schema a publication uses
 const publicationSiteSchema = (() => {
@@ -145,7 +146,7 @@ Les opérations spécifiques à une application particulière (configuration, jo
 Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous pouvez créer dans vos paramètres personnels ou dans les paramètres d'une organisation dont vous êtes administrateur.
 
 Pour des exemples simples de publication de données vous pouvez consulter la <a href="https://data-fair.github.io/4/interoperate/api" target="_blank">documentation sur ce sujet</a>.
-`,
+` + consistencyGuide(),
       version: pJson.version,
       'x-api-id': 'data-fair',
       ...config.info

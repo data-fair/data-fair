@@ -139,6 +139,28 @@ test.describe('Cache headers', () => {
     assert.equal(res.headers['cache-control'], 'must-revalidate, public, max-age=' + config.cache.publicMaxAge)
   })
 
+  test('The API docs describe the cache of the dataset actual visibility', async () => {
+    const ax = testUser1
+    const dataset = await createDataset(ax)
+    const id = dataset.id
+
+    const descriptions = async () => [
+      (await ax.get(`/api/v1/datasets/${id}/api-docs.json`)).data.info.description,
+      (await ax.get(`/api/v1/datasets/${id}/private-api-docs.json`)).data.info.description
+    ]
+
+    for (const description of await descriptions()) {
+      assert.ok(description.includes("ce jeu de données n'est pas public"), description)
+      assert.ok(!description.includes('ce jeu de données est public'))
+    }
+
+    await ax.put(`/api/v1/datasets/${id}/permissions`, [{ classes: ['read'] }])
+    for (const description of await descriptions()) {
+      assert.ok(description.includes('ce jeu de données est public'), description)
+      assert.ok(!description.includes("n'est pas public"))
+    }
+  })
+
   test('Supports caching of lists', async () => {
     const ax = testUser1
     await createDataset(ax)

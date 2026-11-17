@@ -12,11 +12,13 @@ import * as utils from './utils.js'
 import pJson from './p-json.js'
 import { getColumnFilters, maxQLength } from '../src/datasets/es/commons.ts'
 import { gettingStartedGuide, type GettingStartedInputs } from './getting-started-guide.ts'
+import { consistencyGuide } from './consistency-guide.ts'
 import { operations as xAgent, datasetRoot as xAgentRoot } from './x-agent.ts'
 
 type DatasetApiDocsSettings = (Pick<Settings, 'info' | 'compatODS'> & Record<string, any>) | null | undefined
 
-type DatasetApiDocsOptions = { merged?: boolean }
+// publicData: an anonymous caller may read the data (see consistency-guide.ts)
+type DatasetApiDocsOptions = { merged?: boolean, publicData?: boolean }
 
 const dataFiles = datasetSchema.properties.storage.properties.dataFiles
 
@@ -1605,7 +1607,7 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
   // The private doc discards this description and re-appends the guide after its own contextual
   // filter — same reason: it must reflect what the caller can actually call.
   const gettingStartedInputs: GettingStartedInputs = { aggField: valuesProperties[0]?.key, hasBbox }
-  if (!merged) api.info.description += gettingStartedGuide(api, gettingStartedInputs)
+  if (!merged) api.info.description += gettingStartedGuide(api, gettingStartedInputs) + (api.paths['/lines'] ? consistencyGuide(options?.publicData) : '')
 
   return { api, userApiRate, anonymousApiRate, bulkLineSchema, gettingStartedInputs }
 }

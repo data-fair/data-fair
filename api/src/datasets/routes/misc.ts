@@ -32,6 +32,10 @@ import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
 import { reqPublicationSite, reqMainPublicationSite } from '../../misc/utils/publication-sites.ts'
 
 const validateUserNotification = ajv.compile(userNotificationSchema)
+
+// an anonymous caller may read the data: the same test as the shared (public) vs private
+// Cache-Control of the data routes, so the doc's cache section describes what the reader gets
+const isPublicData = (dataset: any) => permissions.can('datasets', dataset, 'readLines', { lang: 'fr' })
 const sendUserNotificationPermissions = permissions.middleware('sendUserNotification', 'write')
 const sendUserNotificationPublicPermissions = permissions.middleware('sendUserNotificationPublic', 'write')
 
@@ -47,7 +51,7 @@ export const registerMiscRoutes = (router: Router) => {
     const dataset = reqDataset(req)
     const settings = await mongo.db.collection('settings')
       .findOne(rootSettingsFilter(dataset.owner), { projection: { info: 1, compatODS: 1 } })
-    res.send(datasetAPIDocs(dataset, reqPublicBaseUrl(req), settings, reqPublicationSite(req)).api)
+    res.send(datasetAPIDocs(dataset, reqPublicBaseUrl(req), settings, reqPublicationSite(req), { publicData: isPublicData(dataset) }).api)
   })
 
   router.get('/:datasetId/private-api-docs.json', readDataset({ noCache: true }), apiKeyMiddlewareRead, rateLimiting.middleware, permissions.middleware('readPrivateApiDoc', 'readAdvanced'), cacheHeaders.noCache, async (req, res) => {
@@ -60,7 +64,7 @@ export const registerMiscRoutes = (router: Router) => {
     const filterOperations = sessionState.user?.adminMode
       ? undefined
       : permissions.list('datasets', dataset, sessionState, bypass)
-    res.send(privateDatasetAPIDocs(dataset, reqPublicBaseUrl(req), sessionState, settings, { filterOperations }))
+    res.send(privateDatasetAPIDocs(dataset, reqPublicBaseUrl(req), sessionState, settings, { filterOperations, publicData: isPublicData(dataset) }))
   })
 
   router.get('/:datasetId/journal', readDataset({ acceptInitialDraft: true }), apiKeyMiddlewareRead, rateLimiting.middleware, permissions.middleware('readJournal', 'readAdvanced'), cacheHeaders.noCache, async (req, res) => {

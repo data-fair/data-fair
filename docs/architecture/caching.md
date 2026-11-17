@@ -238,6 +238,34 @@ Related top-level keys: `remoteAttachmentCacheDuration`, `extensionUpdateDelay`,
   the `getDatasetFresh` validation path and the `?updatedAt=`/`?finalizedAt=` bypass.
 - **Slug changes** bump `finalizedAt` (`datasets/utils/patch.ts`, right after `updatedAt` is stamped) —
   see below.
+### Consistency across requests
+
+Each URL is cached on its own clock, so plain requests to a **public** dataset made around a data
+update can mix versions (private responses are `max-age=0`, revalidated on every request):
+a URL stored a few minutes before the update returns the old data, one fetched after it the new
+data. That is inherent to TTL caching (bounded by `publicMaxAge`) and is documented as such to API
+consumers (`api/contract/consistency-guide.ts`, appended to the root API doc and to the
+per-dataset docs exposing `/lines`).
+
+What `?finalizedAt=` guarantees, and what that guide promises: a request carrying the `finalizedAt`
+just read from `GET /datasets/{id}` (`noCache`) **never returns data older than that version**,
+while getting the long `max-age` (`public`, or `private` for a private dataset: then only the
+caller's own HTTP cache keeps it). An entry under that URL can only be created once the value exists,
+i.e. at or after that finalization; a replica whose 30 s copy is older re-reads the dataset when the
+query value is ahead of it (`readDataset`), and since `e262e632c` an older value gets the plain
+`max-age`. `finalizedAt` is meant to move forward: consumers re-read it at the start of each series
+of requests; it is not a way to read a past version.
+
+What it does not guarantee: that all responses of a series come from the same version. The data
+goes live **before** `finalizedAt` moves — the ES alias switches at status `indexed` (re-index) or
+`validated` (draft validation), a REST line write is live when `commitLines` returns — and only the
+finalize task, seconds later, moves it. A response fetched in that window holds the new data under
+the previous value (and keeps its week-long `max-age`, harmless to consumers that move forward).
+`Last-Modified` cannot tell it apart either, so it is not offered to consumers as a check. Closing
+the window would take a marker written right after the data goes live, used as the validator
+together with `finalizedAt` — not done, as the exposure is seconds per update (more often on REST
+datasets under continuous writes).
+
 ### Freshness after a REST line write
 
 A line edit is live in the ES alias as soon as `commitLines` returns, but `/lines` revalidates
