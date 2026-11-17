@@ -297,7 +297,7 @@ test.describe('fragments UI', () => {
     const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}`
     const fullUrl = `${baseUrl}/data-fair/datasets?showAll=true&q=listedfragment`
     await page.goto(`${baseUrl}/simple-directory/login?redirect=${encodeURIComponent(fullUrl)}&adminMode=true`)
-    await page.getByLabel('Adresse mail').fill('test_superadmin@test.com')
+    await page.getByLabel(/Adresse e?mail/).fill('test_superadmin@test.com')
     await page.getByLabel('Mot de passe', { exact: true }).fill('passwd')
     await page.getByRole('button', { name: 'Se connecter' }).click()
     await page.waitForURL(fullUrl, { timeout: 10000 })
