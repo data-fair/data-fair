@@ -44,6 +44,25 @@ export default (defaultTimezone) => {
     in: true
   })
 
+  // expr-eval-fork lets a function defined in an expression (`f(x) = ...`) pass its allow-list by
+  // registering it as parser.functions['lambda_' + parser.functions.__counter++], but it never
+  // initialises __counter: every definition lands in 'lambda_NaN' and only the last one stays
+  // callable ("Variable references an unallowed function"). Give it a counter, and remove the
+  // registered functions after each evaluation so that they do not pile up in this shared parser
+  // and a closure over one line cannot be reached by another evaluation.
+  Object.defineProperty(parser.functions, '__counter', { value: 0, writable: true, enumerable: false })
+  /** @param {any} parsedExpression @param {any} data */
+  const evaluate = (parsedExpression, data) => {
+    try {
+      return parsedExpression.evaluate(data)
+    } finally {
+      for (const key of Object.keys(parser.functions)) {
+        if (key.startsWith('lambda_')) delete parser.functions[key]
+      }
+      parser.functions.__counter = 0
+    }
+  }
+
   parser.functions.CONCAT = parser.functions.CONCATENATE = function () {
     let result = ''
     for (let i = 0; i < arguments.length; i++) {
@@ -269,7 +288,7 @@ export default (defaultTimezone) => {
        * @param {any} data
        */
       return (data) => {
-        let result = parsedExpression.evaluate(data)
+        let result = evaluate(parsedExpression, data)
         if (property.separator && typeof result === 'string') {
           result = result.split(property.separator.trim()).map(part => part.trim())
         }

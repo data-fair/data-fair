@@ -76,26 +76,32 @@ bla bla`
   })
 
   test('should allow several locally defined functions in one expression', () => {
+    const num = { key: 'out', type: 'number' }
+    const str = { key: 'out', type: 'string' }
     // a function defined in the expression stays callable after another one is defined
-    assert.equal(parser.parse('f(x) = x + 1; g(y) = y * 2; f(a)').evaluate({ a: 1 }), 2)
+    assert.equal(compile('f(x) = x + 1; g(y) = y * 2; f(a)', num)({ a: 1 }), 2)
     // and can be called, or passed to fold/map, from the body of another local function
-    assert.equal(parser.parse('f(x) = x + 1; g(y) = f(y) * 2; g(a)').evaluate({ a: 1 }), 4)
-    assert.equal(parser.parse('inc(x) = x + 1; incAll(l) = map(inc, l); JOIN(incAll(SPLIT(a, ",")), ",")').evaluate({ a: '1,2' }), '2,3')
+    assert.equal(compile('f(x) = x + 1; g(y) = f(y) * 2; g(a)', num)({ a: 1 }), 4)
+    assert.equal(compile('inc(x) = x + 1; incAll(l) = map(inc, l); JOIN(incAll(SPLIT(a, ",")), ",")', str)({ a: '1,2' }), '2,3')
 
     // keep the last word of a column when it contains a digit
     const keepLastNumberedWord = compile(
       'digit(acc, c) = acc or (c >= "0" and c <= "9"); keep(g) = fold(digit, false, SPLIT(g, "")) ? g : ""; ' +
       'keep(GET(SPLIT(a, " "), (length SPLIT(a, " ")) - 1))',
-      { key: 'out', type: 'string' }
+      str
     )
     assert.equal(keepLastNumberedWord({ a: 'DUPONT Jean 123456' }), '123456')
     assert.equal(keepLastNumberedWord({ a: 'DUPONT Jean' }), null)
-    // the definitions of one row do not prevent the next row from evaluating
+    // the definitions of one line do not prevent the next line from evaluating
     assert.equal(keepLastNumberedWord({ a: 'MARTIN 42' }), '42')
 
-    // a defined function is not registered in the parser-wide functions, where any later
-    // expression could reach it (it used to be stored under 'lambda_NaN')
-    assert.deepEqual(Object.keys(parser.functions).filter(k => k.startsWith('lambda_') || k === '__counter'), [])
-    assert.throws(() => parser.parse('lambda_NaN(1)').evaluate({}), { message: 'undefined variable: lambda_NaN' })
+    // the functions defined by an evaluation do not stay in the shared parser,
+    // where another evaluation could reach them
+    assert.deepEqual(Object.keys(parser.functions).filter(k => k.startsWith('lambda_')), [])
+    assert.throws(() => compile('lambda_0(1)', num)({}), { message: 'undefined variable: lambda_0' })
+    assert.throws(() => compile('lambda_NaN(1)', num)({}), { message: 'undefined variable: lambda_NaN' })
+    // and an evaluation that fails cleans up too
+    assert.throws(() => compile('f(x) = x; f(UNKNOWN_FN(a))', num)({ a: 1 }))
+    assert.deepEqual(Object.keys(parser.functions).filter(k => k.startsWith('lambda_')), [])
   })
 })
