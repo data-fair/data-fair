@@ -2,6 +2,7 @@ import './env.ts'
 import { URL } from 'node:url'
 import { axiosAuth } from '@data-fair/lib-node/axios-auth.js'
 import type { AxiosInstance } from 'axios'
+import { seedSdFixtures } from '../../tests/support/sd-fixtures.ts'
 
 // The harness auto-discovers the dev environment from the repo .env (loaded by
 // ./env.ts): DEV_HOST + NGINX_PORT give the reverse-proxy base URL.
@@ -39,6 +40,7 @@ async function authenticate (): Promise<any> {
  */
 export async function init (): Promise<void> {
   console.log(`[setup] connecting to ${baseUrl}`)
+  await seedSdFixtures()
   ax = await authenticate()
 
   const sdOrigin = new URL(directoryUrl).origin

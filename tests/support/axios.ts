@@ -6,7 +6,7 @@ const slug = _slug as unknown as (str: string, opts?: Record<string, any>) => st
 
 /**
  * Test users and orgs are those of data-fair's test sub-space in simple-directory (prefix test_datafair_),
- * defined in ./sd-fixtures.ts and seeded by tests/state-setup.ts. All use password 'passwd'.
+ * defined in ./sd-fixtures.ts and seeded by tests/global-setup.ts. All use password 'passwd'.
  */
 
 export const directoryUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}/simple-directory`

@@ -21,6 +21,7 @@
 import { axiosAuth } from '@data-fair/lib-node/axios-auth.js'
 import { readFileSync } from 'node:fs'
 import FormData from 'form-data'
+import { postSdSeed } from '../tests/support/sd-fixtures.ts'
 import { generateTablePerfCsv, tablePerfDatasetBody, chunkCsv, TABLE_PERF_ID } from './table-perf-fixture.ts'
 
 const root = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}`
@@ -1002,7 +1003,7 @@ async function seedBrouillonErreur () {
  * (envs seeded while the fixture was public get repaired).
  * The dev config caps every request body at 160KB per dataset and every account at 200KB:
  * the lines go in CSV chunks to a REST dataset, and the test_demo_org org gets unlimited
- * storage (re-applied on every run: the simulations' clean() wipes all limits).
+ * storage (re-applied on every run, a --reset removes the limits with the world).
  * An incomplete dataset (interrupted run) is deleted and seeded again. */
 async function seedTablePerf () {
   const id = TABLE_PERF_ID
@@ -1042,15 +1043,7 @@ async function main () {
     console.log(`demo world ${demoWorld.prefix} deleted`)
   }
   // the accounts of the demo world (upsert by id)
-  const seed = () => fetch(`${sdTestEnv}/seed`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(demoWorld) })
-  let seedRes = await seed()
-  if (seedRes.status === 409) {
-    // simple-directory creates the accounts of its ADMINS at start, with a generated id: the same email under
-    // another id. Only the world's accounts are recreated, what they own in data-fair is kept (same owner ids).
-    await fetch(`${sdTestEnv}?prefix=${demoWorld.prefix}`, { method: 'DELETE' })
-    seedRes = await seed()
-  }
-  if (!seedRes.ok) throw new Error(`simple-directory refused dev/resources/demo-world.json: HTTP ${seedRes.status} ${await seedRes.text()}`)
+  await postSdSeed(sdTestEnv, demoWorld)
 
   dfAx = await axiosAuth({ ...creds, org: 'test_demo_org', axiosOpts: { baseURL: dfBaseURL } })
   // admin-mode global-admin session writes any owner's agent settings; base is

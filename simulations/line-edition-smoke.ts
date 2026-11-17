@@ -16,6 +16,7 @@
 import { Client } from '@modelcontextprotocol/sdk/client/index.js'
 import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js'
 import { axiosAuth, clean, waitForWorkerIdle } from '../tests/support/axios.ts'
+import { seedSdFixtures } from '../tests/support/sd-fixtures.ts'
 import { ROOT, OWNER, OWNER_USER } from './runner/settings.ts'
 import { registerId, seedLineEditionDatasets } from './runner/line-edition-fixtures.ts'
 
@@ -33,6 +34,7 @@ function report (check: string, pass: boolean | 'info', evidence: string) {
 }
 const short = (text: string, max = 600) => text.length > max ? `${text.slice(0, max)}…` : text
 
+await seedSdFixtures()
 const owner = await axiosAuth(`${OWNER_USER}@test.com`, OWNER.id)
 const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
 

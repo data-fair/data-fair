@@ -9,7 +9,11 @@ import { seedSdFixtures, sdTestEnvUrl } from './support/sd-fixtures.ts'
  */
 export default async function globalSetup () {
   try {
-    await fetch(`${sdTestEnvUrl()}/ping`)
+    const ping = await fetch(`${sdTestEnvUrl()}/ping`)
+    if (!ping.ok) {
+      console.log(`simple-directory test API answers HTTP ${ping.status} at ${sdTestEnvUrl()}, test accounts not seeded`)
+      return
+    }
   } catch {
     console.log(`simple-directory is not reachable at ${sdTestEnvUrl()}, test accounts not seeded`)
     return
