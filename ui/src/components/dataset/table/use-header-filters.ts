@@ -23,6 +23,9 @@ export const useHeaderFilters = (header: Ref<TableHeaderWithProperty>, localEnum
 
   const enumDense = computed(() => showEnum.value && fullEnum.value?.length && fullEnum.value?.length > 4)
 
+  // every string format but the dates is a keyword string, as in the api's isKeywordString
+  const isKeywordString = computed(() => header.value.property.type === 'string' && header.value.property.format !== 'date' && header.value.property.format !== 'date-time')
+
   // mirrors resolveExistsFields in the API: existence needs SOME indexed representation of the
   // column — the main field (exact index or doc values), or, when both are turned off as on a long
   // text column, one of its analyzed / case-insensitive sub-fields
@@ -31,15 +34,14 @@ export const useHeaderFilters = (header: Ref<TableHeaderWithProperty>, localEnum
     if (property['x-refersTo'] === 'https://purl.org/geojson/vocab#geometry') return false
     const capabilities = property['x-capabilities'] ?? {}
     if (capabilities.index !== false || capabilities.values !== false) return true
-    // every string format but the dates is a keyword string, as in the api's isKeywordString
-    if (property.type !== 'string' || property.format === 'date' || property.format === 'date-time') return false
+    if (!isKeywordString.value) return false
     return capabilities.text !== false || capabilities.textStandard !== false || capabilities.insensitive !== false || !!capabilities.wildcard
   })
 
   const showEquals = computed(() => {
     if (header.value.property['x-capabilities'] && header.value.property['x-capabilities'].index === false) return false
     if (header.value.property['x-refersTo'] === 'https://purl.org/geojson/vocab#geometry') return false
-    if (header.value.property.type === 'string' && header.value.property.format !== 'date' && header.value.property.format !== 'date-time') return true
+    if (isKeywordString.value) return true
     if (header.value.property.type === 'integer') return true
     return false
   })
@@ -62,8 +64,7 @@ export const useHeaderFilters = (header: Ref<TableHeaderWithProperty>, localEnum
   })
   const showSearch = computed(() => {
     if (header.value.property['x-labels']) return false
-    if (header.value.property.type !== 'string') return false
-    if (header.value.property.format === 'date' || header.value.property.format === 'date-time') return false
+    if (!isKeywordString.value) return false
     if (header.value.property['x-refersTo'] === 'https://purl.org/geojson/vocab#geometry') return false
     if (!header.value.property['x-capabilities'] || header.value.property['x-capabilities'].text !== false || header.value.property['x-capabilities'].textStandard !== false) return true
     return false
