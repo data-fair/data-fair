@@ -225,6 +225,32 @@ export const extractError = (err: any): ExtractedError => {
   return { message: parts.join(' - '), status }
 }
 
+// The error a failed bulk indexing request ends the indexing task with. It keeps the elasticsearch
+// reason (read-only index after the disk flood-stage watermark, circuit breaker, unreachable
+// node...): the journal is the only place a dataset owner reads it, and such a reason usually
+// names a cluster problem that a retry does not solve.
+export const bulkIndexingError = (err: any) => {
+  let reason = ''
+  if (err?.name === 'TimeoutError' || err?.name === 'RequestAbortedError') {
+    // extractError words these for the search request of a user ("This request is too long...",
+    // "client disconnected"), which says nothing true about a bulk request
+    reason = err.message
+  } else if (err) {
+    const extracted = extractError(err)
+    reason = extracted === tooLongError ? 'Time exceeded' : extracted.message
+    // extractError finds nothing in a body whose error is a plain string, and stringifies an
+    // error without message into '{}'
+    if (!reason || reason === '{}') {
+      const bodyError = err.meta?.body?.error ?? err.body?.error
+      reason = typeof bodyError === 'string' ? bodyError : (err.message || '')
+    }
+    // a response without an elasticsearch error body (empty 413, proxy page...): its status is the reason
+    const statusCode = err.meta?.statusCode
+    if (reason === 'Response Error' && statusCode) reason = `elasticsearch responded with status ${statusCode}`
+  }
+  return new Error(reason ? `Failure while indexing a batch of data: ${reason}` : 'Failure while indexing a batch of data.', { cause: err })
+}
+
 // The mapping-emission shape esProperty / buildIndexMappings produce, persisted per dataset as
 // `_indexShape` when its index is (re)built. Absent = legacy (uniform polarity).
 export interface IndexShape {
