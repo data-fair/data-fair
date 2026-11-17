@@ -154,6 +154,12 @@ test.describe('Cache headers', () => {
       assert.ok(!description.includes('ce jeu de données est public'))
     }
 
+    for (const doc of [(await ax.get(`/api/v1/datasets/${id}/api-docs.json`)).data, (await ax.get(`/api/v1/datasets/${id}/private-api-docs.json`)).data]) {
+      for (const path of ['/lines', '/values_agg']) {
+        assert.ok(doc.paths[path].get.parameters.some((p: any) => p.name === 'finalizedAt' && p.in === 'query'), path)
+      }
+    }
+
     await ax.put(`/api/v1/datasets/${id}/permissions`, [{ classes: ['read'] }])
     for (const description of await descriptions()) {
       assert.ok(description.includes('ce jeu de données est public'), description)

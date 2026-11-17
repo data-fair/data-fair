@@ -1588,6 +1588,21 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
     }
   }
 
+  // The documented data read routes validated on finalizedAt (cacheHeaders.resourceBased('finalizedAt')) accept it
+  // as a version timestamp — see docs/architecture/caching.md, "Consistency across requests". Added
+  // on copies: some operations are module level objects shared between docs.
+  const finalizedAtParam = {
+    in: 'query',
+    name: 'finalizedAt',
+    description: "La valeur, telle quelle, de la propriété `finalizedAt` des informations du jeu de données. La réponse contient alors des données au moins aussi récentes que cette version et peut être conservée plus longtemps par les caches. Les données servies restent les données courantes : ce paramètre ne permet pas de consulter une version antérieure, et une valeur plus récente que la version courante est refusée (erreur 400). Voir la section \"Cache et fraîcheur des données\" de la description de l'API.",
+    schema: { title: 'Version des données', type: 'string', format: 'date-time' }
+  }
+  for (const path of ['/lines', '/values_agg', '/values/{field}', '/values-labels/{field}', '/metric_agg', '/simple_metrics_agg', '/geo_agg', '/words_agg']) {
+    const op = api.paths[path]?.get
+    if (!op) continue
+    api.paths[path] = { ...api.paths[path], get: { ...op, parameters: [...(op.parameters ?? []), finalizedAtParam] } }
+  }
+
   // Explicit tag order — drives the navigation drawer order in the openapi-viewer.
   // Only tags that are actually used by at least one operation are listed.
   const usedTags = new Set<string>(

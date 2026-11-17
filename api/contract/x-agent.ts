@@ -31,6 +31,8 @@ const queryParams: Record<string, AgentParamOverride> = {
   q_mode: { exclude: true },
   q_ignored: { exclude: true },
   q_fields: { exclude: true },
+  // a cache timestamp (see the dataset API doc): agents gain nothing from it, and a wrong value is a 400
+  finalizedAt: { exclude: true },
   filters: { description: filtersDescription }
 }
 
