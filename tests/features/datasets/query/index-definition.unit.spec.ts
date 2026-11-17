@@ -156,6 +156,18 @@ test.describe('esProperty shapes', () => {
     const pDateNew = esProperty({ key: 'd', type: 'string', format: 'date' }, { search: 'S', index: 'I' }, NEW_INDEX_SHAPE)
     assert.equal(pDateNew.fields.text_standard.analyzer, 'standard')
   })
+  test('a string format that is not a date is mapped as a keyword', () => {
+    // a string column with an unknown format used to fall through to an empty mapping,
+    // which made the whole index creation fail ("No type specified for field [email]")
+    for (const format of ['email', 'uri', 'time']) {
+      const p = esProperty({ key: 'f', type: 'string', format }, { search: 'S', index: 'I' }, NEW_INDEX_SHAPE)
+      assert.equal(p.type, 'keyword')
+      assert.equal(p.fields.text.analyzer, 'I')
+    }
+    // dates keep their dedicated mapping
+    assert.equal(esProperty({ key: 'f', type: 'string', format: 'date-time' }, { search: 'S', index: 'I' }).type, 'date')
+  })
+
   test('search disabled: no analyzed field at all under the new shape', () => {
     const p = esProperty({ key: 'a', type: 'string', 'x-capabilities': { text: false, textStandard: false } }, { search: 'S', index: 'I' })
     assert.equal(p.fields.text, undefined)

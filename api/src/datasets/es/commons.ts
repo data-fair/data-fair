@@ -22,6 +22,7 @@ import {
   isBoostEligible,
   hasManyQSearchFields,
   getFilterableFields,
+  isKeywordString,
   buildQClauses,
   hasNumericLenientRouting,
   textAnalyzers,
@@ -113,7 +114,7 @@ export const parseSort = (sortStr: string | undefined, fields: string[], dataset
     if (capabilities.values === false && capabilities.insensitive === false) {
       throw missingCapabilityError('sort', key, 'values', field)
     }
-    if (capabilities.insensitive !== false && field && field.type === 'string' && (field.format === 'uri-reference' || !field.format)) {
+    if (capabilities.insensitive !== false && field && isKeywordString(field)) {
       // ignore_unmapped is necessary to maintain compatibility with older indices
       result.push({ [key + '.keyword_insensitive']: { order, unmapped_type: 'long' } })
     }
@@ -456,10 +457,10 @@ export const prepareQuery = (dataset: any, query: Record<string, any>, qFields?:
     } else if (filterSuffix === '_contains') {
       filter.push({ wildcard: { [`${prop.key}.wildcard`]: `*${query[queryKey]}*` } })
     } else if (filterSuffix === '_search') {
-      // only plain/uri-reference strings ever carry `.text`; other analyzed types only ever get
+      // only keyword strings ever carry `.text`; other analyzed types only ever get
       // `.text_standard`. Targeting an unmapped subfield would make simple_query_string return
       // zero results silently instead of the intended 400.
-      const isPlainString = prop.type === 'string' && (!prop.format || prop.format === 'uri-reference')
+      const isPlainString = isKeywordString(prop)
       const isNumeric = prop.type === 'integer' || prop.type === 'number'
       // same predicate as buildQClauses (see hasNumericLenientRouting) so the two `q` entry points
       // can never drift: on a mixed-fleet virtual dataset a rebuilt descendant already routes here

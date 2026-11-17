@@ -28,8 +28,13 @@ export const hasCapability = (prop: any, capability: string = 'index'): boolean 
 // field silently miss them. See docs/architecture/load-management.md.
 export const KEYWORD_IGNORE_ABOVE = 200
 
-// A property mapped as `{type:keyword, ignore_above:200}` by esProperty — a plain or uri-reference
-// string. Only these are exposed to the ignore_above truncation problem.
+// A string mapped as a keyword with its text sub-fields: every format but the dates
+// (plain, uri-reference, email, uri, time...).
+export const isKeywordString = (prop: any): boolean =>
+  prop?.type === 'string' && prop.format !== 'date' && prop.format !== 'date-time'
+
+// A property mapped as `{type:keyword, ignore_above:200}` by esProperty — a keyword string.
+// Only these are exposed to the ignore_above truncation problem.
 // Fields with `x-capabilities.nativeWildcard: true` are mapped as ES `wildcard` type and have no
 // ignore_above limit, so they are excluded.
 // Geometry-refersTo string fields are mapped as `{type:keyword, index:false}` (no ignore_above), so
@@ -37,7 +42,7 @@ export const KEYWORD_IGNORE_ABOVE = 200
 // nothing rather than 400.
 const GEOMETRY_REFERS_TO = 'https://purl.org/geojson/vocab#geometry'
 export const isLengthLimitedKeyword = (prop: any): boolean =>
-  prop?.type === 'string' && (prop.format === 'uri-reference' || !prop.format) &&
+  isKeywordString(prop) &&
   prop?.['x-capabilities']?.nativeWildcard !== true &&
   prop?.['x-refersTo'] !== GEOMETRY_REFERS_TO
 
@@ -77,7 +82,7 @@ export const resolveExistsFields = (prop: any, flagged: boolean): string[] => {
   const mainField = mainFieldAnswersExists(prop) ? [prop.key] : []
   if (mainField.length && !(isLengthLimitedKeyword(prop) && flagged)) return mainField
   if (hasCapability(prop, 'wildcard')) return [prop.key + '.wildcard']
-  // only plain/uri-reference strings carry the analyzed and case-insensitive sub-fields
+  // only keyword strings carry the analyzed and case-insensitive sub-fields
   if (!isLengthLimitedKeyword(prop)) return mainField
   const fields = [...mainField]
   if (hasCapability(prop, 'textStandard')) fields.push(prop.key + '.text_standard')
@@ -266,7 +271,7 @@ const DUMMY_ANALYZERS = { search: '', index: '' }
 // Legacy shape: `analyzers.search` alone is `.text`'s analyzer, as `defaultAnalyzer` was.
 export const esProperty = (prop: any, analyzers: { search: string, index: string }, shape: IndexShape = NEW_INDEX_SHAPE): any => {
   const capabilities = prop['x-capabilities'] || {}
-  const isFullTextString = prop.type === 'string' && (prop.format === 'uri-reference' || !prop.format)
+  const isFullTextString = isKeywordString(prop)
   // Add inner text field to almost everybody so that even dates, numbers, etc can be matched textually as well as exactly.
   // Emission rules for `.text_standard`: dates keep it everywhere (year search); numeric columns lose it
   // under noNumericText (their `q` matching uses the main long/double field); full-text strings lose it
