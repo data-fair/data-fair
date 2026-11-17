@@ -63,9 +63,11 @@ middlewares. The matching contract is exercised by `tests/features/datasets/quer
 4. **Visibility** from `req.publicOperation` (set by `permissions.ts`). Public ⇒ `X-Accel-Buffering:
    yes` so the proxy buffers & caches; private ⇒ `X-Accel-Buffering: no`.
 5. **`Cache-Control`**:
-   - If the request carries a `finalizedAt`/`updatedAt` **query parameter** ≤ the resource date,
-     the URL is "timestamped" — its content can never change ⇒ `must-revalidate, <public|private>,
-     max-age=timestampedPublicMaxAge` (1 week). The UI deliberately adds `?finalizedAt=…` to
+   - If the request carries a `finalizedAt`/`updatedAt` **query parameter** exactly equal (to the
+     millisecond) to the resource date, the URL is "timestamped" — it designates the current
+     version of the content ⇒ `must-revalidate, <public|private>, max-age=timestampedPublicMaxAge`
+     (1 week). An **older** timestamp is served the current content, which must not be pinned for
+     a week under a URL naming another version: it gets the plain rule below. The UI deliberately adds `?finalizedAt=…` to
      map/lines requests (`ui/src/composables/dataset/lines.ts`, `ui/src/components/dataset/map/dataset-map.vue`)
      so repeated views are free, while a new finalization produces a new URL = new cache entry.
    - If the query timestamp is **greater** than the resource date ⇒ `400` + `log.warn` (the

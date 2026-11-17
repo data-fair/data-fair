@@ -124,6 +124,21 @@ test.describe('Cache headers', () => {
     await assert.rejects(ax.get(`/api/v1/datasets/${id}/lines`, { headers: { 'x-cache-bypass': '0', 'if-modified-since': res.headers['last-modified'] } }), (err: any) => err.status === 304)
   })
 
+  test('Only the exact current finalizedAt gets the long max-age', async () => {
+    const ax = testUser1
+    const dataset = await createDataset(ax)
+    const id = dataset.id
+    await ax.put(`/api/v1/datasets/${id}/permissions`, [{ classes: ['read'] }])
+
+    let res = await anonymous.get(`/api/v1/datasets/${id}/lines`, { params: { finalizedAt: dataset.finalizedAt } })
+    assert.equal(res.headers['cache-control'], 'must-revalidate, public, max-age=' + config.cache.timestampedPublicMaxAge)
+
+    // an older timestamp is served the current data: it expires like a plain URL
+    const older = new Date(new Date(dataset.finalizedAt).getTime() - 60000).toISOString()
+    res = await anonymous.get(`/api/v1/datasets/${id}/lines`, { params: { finalizedAt: older } })
+    assert.equal(res.headers['cache-control'], 'must-revalidate, public, max-age=' + config.cache.publicMaxAge)
+  })
+
   test('Supports caching of lists', async () => {
     const ax = testUser1
     await createDataset(ax)
