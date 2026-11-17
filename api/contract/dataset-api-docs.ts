@@ -7,7 +7,7 @@ import * as masterData from './master-data.js'
 import { datasetContext, isDatasetOperationApplicable } from '@data-fair/data-fair-shared/permissions/operations.ts'
 import capabilities from './capabilities.js'
 import * as datasetUtils from '../src/datasets/utils/index.ts'
-import { acceptedMetricAggs } from '../src/datasets/es/operations.ts'
+import { acceptedMetricAggs, isKeywordString } from '../src/datasets/es/operations.ts'
 import * as utils from './utils.js'
 import pJson from './p-json.js'
 import { getColumnFilters, maxQLength } from '../src/datasets/es/commons.ts'
@@ -124,7 +124,7 @@ export default (
   }
 
   const stringProperties = schema
-    .filter((p: any) => !p['x-calculated'] && p.type === 'string' && (!p.format || p.format === 'uri-reference'))
+    .filter((p: any) => !p['x-calculated'] && isKeywordString(p))
   const textSearchProperties = stringProperties
     .filter((p: any) => !p['x-capabilities'] || p['x-capabilities'].text !== false || p['x-capabilities'].textStandard !== false)
   // textAgg is an opt-in (default false) capability: only columns that explicitly declare it

@@ -31,14 +31,15 @@ export const useHeaderFilters = (header: Ref<TableHeaderWithProperty>, localEnum
     if (property['x-refersTo'] === 'https://purl.org/geojson/vocab#geometry') return false
     const capabilities = property['x-capabilities'] ?? {}
     if (capabilities.index !== false || capabilities.values !== false) return true
-    if (property.type !== 'string' || (property.format && property.format !== 'uri-reference')) return false
+    // every string format but the dates is a keyword string, as in the api's isKeywordString
+    if (property.type !== 'string' || property.format === 'date' || property.format === 'date-time') return false
     return capabilities.text !== false || capabilities.textStandard !== false || capabilities.insensitive !== false || !!capabilities.wildcard
   })
 
   const showEquals = computed(() => {
     if (header.value.property['x-capabilities'] && header.value.property['x-capabilities'].index === false) return false
     if (header.value.property['x-refersTo'] === 'https://purl.org/geojson/vocab#geometry') return false
-    if (header.value.property.type === 'string' && (!header.value.property.format || header.value.property.format === 'uri-reference')) return true
+    if (header.value.property.type === 'string' && header.value.property.format !== 'date' && header.value.property.format !== 'date-time') return true
     if (header.value.property.type === 'integer') return true
     return false
   })
@@ -62,7 +63,7 @@ export const useHeaderFilters = (header: Ref<TableHeaderWithProperty>, localEnum
   const showSearch = computed(() => {
     if (header.value.property['x-labels']) return false
     if (header.value.property.type !== 'string') return false
-    if (header.value.property.format && header.value.property.format !== 'uri-reference') return false
+    if (header.value.property.format === 'date' || header.value.property.format === 'date-time') return false
     if (header.value.property['x-refersTo'] === 'https://purl.org/geojson/vocab#geometry') return false
     if (!header.value.property['x-capabilities'] || header.value.property['x-capabilities'].text !== false || header.value.property['x-capabilities'].textStandard !== false) return true
     return false
