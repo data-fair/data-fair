@@ -240,41 +240,6 @@ const platformTag = (tag: Record<string, any>, title: string, warnings: string[]
   return out
 }
 
-/** Keywords only a form renderer (vjsf) or a schema build reads: they weigh on every tool definition and say nothing to an agent. */
-const uiKeywords = ['layout', 'patternPropertiesLayout', 'oneOfLayout', 'x-exports']
-const schemaMaps = ['properties', 'patternProperties', '$defs', 'definitions', 'dependentSchemas']
-const schemaValues = ['items', 'additionalProperties', 'not', 'if', 'then', 'else', 'contains', 'propertyNames', 'unevaluatedItems', 'unevaluatedProperties', 'additionalItems']
-const schemaLists = ['allOf', 'anyOf', 'oneOf', 'prefixItems']
-const hasRef = (value: unknown, accept: (ref: string) => boolean = () => true): boolean => Array.isArray(value)
-  ? value.some(v => hasRef(v, accept))
-  : isObject(value) && Object.entries(value).some(([k, v]) => (k === '$ref' && typeof v === 'string' && accept(v)) || hasRef(v, accept))
-
-/**
- * Removes the UI keywords of a schema in place, at schema positions only: a property, a default or
- * an example named `layout` is data. With `deadDefs`, `$defs` and `$id` go too when nothing in the
- * schema is a `$ref`: the resolved schemas carry their definitions inlined, and the `$defs` beside
- * them are dead copies. Only for a document whose every `$ref` names a component, since a ref by URI
- * may point into a schema that has none of its own.
- */
-export const stripUiKeywords = (schema: unknown, deadDefs = false): void => {
-  if (Array.isArray(schema)) { for (const s of schema) stripUiKeywords(s, deadDefs); return }
-  if (!isObject(schema)) return
-  for (const key of uiKeywords) delete schema[key]
-  if (deadDefs && !hasRef(schema)) { delete schema.$defs; delete schema.$id }
-  for (const key of schemaMaps) if (isObject(schema[key])) for (const s of Object.values(schema[key])) stripUiKeywords(s, deadDefs)
-  for (const key of [...schemaValues, ...schemaLists]) stripUiKeywords(schema[key], deadDefs)
-}
-
-const stripContent = (content: unknown, deadDefs: boolean) => {
-  if (isObject(content)) for (const media of Object.values(content)) if (isObject(media)) stripUiKeywords(media.schema, deadDefs)
-}
-/** strips the schemas of the parameters, request bodies and responses of an operation */
-const stripOperationSchemas = (op: Record<string, any>, deadDefs: boolean) => {
-  if (Array.isArray(op.parameters)) for (const p of op.parameters) if (isObject(p)) stripUiKeywords(p.schema, deadDefs)
-  if (isObject(op.requestBody)) stripContent(op.requestBody.content, deadDefs)
-  if (isObject(op.responses)) for (const r of Object.values(op.responses)) if (isObject(r)) stripContent(r.content, deadDefs)
-}
-
 export function prepareFragment (service: PlatformService, sourceDoc: any): { fragment: PreparedFragment } | { refused: string } {
   if (!isObject(sourceDoc) || typeof sourceDoc.openapi !== 'string' || !/^3\.[01]\./.test(sourceDoc.openapi) || !isObject(sourceDoc.paths)) {
     return { refused: 'not an OpenAPI 3.0 or 3.1 document with paths' }
@@ -317,15 +282,6 @@ export function prepareFragment (service: PlatformService, sourceDoc: any): { fr
     warnings.push('the root security is not a list of requirements, its operations require the cookie session')
     rootSecurity = [{ sdCookie: [] }]
   }
-  // the platform document is read by openapi-mcp only (the human document keeps the keywords openapi-viewer renders)
-  const deadDefs = !hasRef(doc, ref => !ref.startsWith('#/components/'))
-  for (const { op } of operations) stripOperationSchemas(op, deadDefs)
-  if (isObject(doc.components)) {
-    if (isObject(doc.components.schemas)) for (const s of Object.values(doc.components.schemas)) stripUiKeywords(s, deadDefs)
-    if (isObject(doc.components.parameters)) for (const p of Object.values(doc.components.parameters)) if (isObject(p)) stripUiKeywords(p.schema, deadDefs)
-    for (const kind of ['requestBodies', 'responses']) if (isObject(doc.components[kind])) for (const item of Object.values(doc.components[kind])) if (isObject(item)) stripContent(item.content, deadDefs)
-  }
-
   for (const { path, method, op } of operations) {
     const at = `${method.toUpperCase()} ${path}`
     delete op.servers

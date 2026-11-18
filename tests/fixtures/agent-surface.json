@@ -107,9 +107,6 @@
           "title": {
             "type": "string",
             "title": "Title",
-            "x-i18n-title": {
-              "fr": "Titre"
-            },
             "description": "Short title of the dataset"
           }
         },
@@ -918,6 +915,11 @@
           "configuration": {
             "anyOf": [
               {
+                "x-exports": [
+                  "types",
+                  "validate",
+                  "resolvedSchema"
+                ],
                 "title": "App config",
                 "type": "object",
                 "description": "A free format configuration object used by applications. A minimal common structure is used to ensure proper linking between applications and datasets and remote services",
@@ -1016,6 +1018,10 @@
                 "title": "Topics list",
                 "items": {
                   "title": "Topic",
+                  "x-exports": [
+                    "types",
+                    "schema"
+                  ],
                   "type": "object",
                   "required": [
                     "title"
@@ -1028,21 +1034,12 @@
                     },
                     "title": {
                       "type": "string",
-                      "title": "Title",
-                      "x-i18n-title": {
-                        "fr": "Titre"
-                      }
+                      "title": "Title"
                     },
                     "icon": {
                       "type": "object",
                       "title": "Icon",
-                      "x-i18n-title": {
-                        "fr": "Icône"
-                      },
                       "description": "You can easily browse the list of available icons on <a href='https://pictogrammers.com/library/mdi/' target='_blank'>this website</a>.<br>Start typing to search through the complete collection of icons. Only a few icons are loaded initially for better performance.",
-                      "x-i18n-description": {
-                        "fr": "Il est possible de consulter plus facilement la liste des icônes disponibles sur <a href='https://pictogrammers.com/library/mdi/' target='_blank'>ce site</a>.<br>Commencez à taper pour rechercher dans la collection complète d'icônes. Seules quelques icônes sont chargées initialement pour de meilleures performances."
-                      },
                       "required": [
                         "name"
                       ],
@@ -1060,10 +1057,7 @@
                     },
                     "color": {
                       "type": "string",
-                      "title": "Color",
-                      "x-i18n-title": {
-                        "fr": "Couleur"
-                      }
+                      "title": "Color"
                     }
                   }
                 }
@@ -1460,6 +1454,12 @@
           },
           "filters": {
             "type": "object",
+            "patternPropertiesLayout": {
+              "messages": {
+                "addItem": "Ajouter un filtre"
+              },
+              "help": "Filtres structurés sur colonne.\n\nLe nom est constitué de la clé de la colonne concaténée avec un suffixe par type de filtre (par exemple `ma_colonne_eq`, `ma_colonne_in`, etc.).\n\nLes types de filtres disponibles peuvent varier par colonne.\n\n  - `_eq` : égal à une valeur\n  - `_neq` : différent d'une valeur\n  - `_in` : appartient à une liste de valeurs (séparées par des virgules)\n  - `_nin` : n'appartient pas à une liste de valeurs (séparées par des virgules)\n  - `_gt` : strictement supérieur à une valeur\n  - `_gte` : supérieur ou égal à une valeur\n  - `_lt` : strictement inférieur à une valeur\n  - `_lte` : inférieur ou égal à une valeur\n  - `_starts` : commence par une série de caractères\n  - `_contains` : contient une série de caractères\n  - `_search` : effectue une recherche textuelle simple\n  - `_exists` : la colonne contient une valeur\n  - `_nexists` : la colonne ne contient pas une valeur\n  "
+            },
             "patternProperties": {
               ".*": {
                 "type": "string",
@@ -1576,6 +1576,12 @@
           },
           "filters": {
             "type": "object",
+            "patternPropertiesLayout": {
+              "messages": {
+                "addItem": "Ajouter un filtre"
+              },
+              "help": "Filtres structurés sur colonne.\n\nLe nom est constitué de la clé de la colonne concaténée avec un suffixe par type de filtre (par exemple `ma_colonne_eq`, `ma_colonne_in`, etc.).\n\nLes types de filtres disponibles peuvent varier par colonne.\n\n  - `_eq` : égal à une valeur\n  - `_neq` : différent d'une valeur\n  - `_in` : appartient à une liste de valeurs (séparées par des virgules)\n  - `_nin` : n'appartient pas à une liste de valeurs (séparées par des virgules)\n  - `_gt` : strictement supérieur à une valeur\n  - `_gte` : supérieur ou égal à une valeur\n  - `_lt` : strictement inférieur à une valeur\n  - `_lte` : inférieur ou égal à une valeur\n  - `_starts` : commence par une série de caractères\n  - `_contains` : contient une série de caractères\n  - `_search` : effectue une recherche textuelle simple\n  - `_exists` : la colonne contient une valeur\n  - `_nexists` : la colonne ne contient pas une valeur\n  "
+            },
             "patternProperties": {
               ".*": {
                 "type": "string",
@@ -1697,6 +1703,12 @@
           },
           "filters": {
             "type": "object",
+            "patternPropertiesLayout": {
+              "messages": {
+                "addItem": "Ajouter un filtre"
+              },
+              "help": "Filtres structurés sur colonne.\n\nLe nom est constitué de la clé de la colonne concaténée avec un suffixe par type de filtre (par exemple `ma_colonne_eq`, `ma_colonne_in`, etc.).\n\nLes types de filtres disponibles peuvent varier par colonne.\n\n  - `_eq` : égal à une valeur\n  - `_neq` : différent d'une valeur\n  - `_in` : appartient à une liste de valeurs (séparées par des virgules)\n  - `_nin` : n'appartient pas à une liste de valeurs (séparées par des virgules)\n  - `_gt` : strictement supérieur à une valeur\n  - `_gte` : supérieur ou égal à une valeur\n  - `_lt` : strictement inférieur à une valeur\n  - `_lte` : inférieur ou égal à une valeur\n  - `_starts` : commence par une série de caractères\n  - `_contains` : contient une série de caractères\n  - `_search` : effectue une recherche textuelle simple\n  - `_exists` : la colonne contient une valeur\n  - `_nexists` : la colonne ne contient pas une valeur\n  "
+            },
             "patternProperties": {
               ".*": {
                 "type": "string",
@@ -1822,6 +1834,12 @@
           },
           "filters": {
             "type": "object",
+            "patternPropertiesLayout": {
+              "messages": {
+                "addItem": "Ajouter un filtre"
+              },
+              "help": "Filtres structurés sur colonne.\n\nLe nom est constitué de la clé de la colonne concaténée avec un suffixe par type de filtre (par exemple `ma_colonne_eq`, `ma_colonne_in`, etc.).\n\nLes types de filtres disponibles peuvent varier par colonne.\n\n  - `_eq` : égal à une valeur\n  - `_neq` : différent d'une valeur\n  - `_in` : appartient à une liste de valeurs (séparées par des virgules)\n  - `_nin` : n'appartient pas à une liste de valeurs (séparées par des virgules)\n  - `_gt` : strictement supérieur à une valeur\n  - `_gte` : supérieur ou égal à une valeur\n  - `_lt` : strictement inférieur à une valeur\n  - `_lte` : inférieur ou égal à une valeur\n  - `_starts` : commence par une série de caractères\n  - `_contains` : contient une série de caractères\n  - `_search` : effectue une recherche textuelle simple\n  - `_exists` : la colonne contient une valeur\n  - `_nexists` : la colonne ne contient pas une valeur\n  "
+            },
             "patternProperties": {
               ".*": {
                 "type": "string",
@@ -1940,6 +1958,12 @@
           },
           "filters": {
             "type": "object",
+            "patternPropertiesLayout": {
+              "messages": {
+                "addItem": "Ajouter un filtre"
+              },
+              "help": "Filtres structurés sur colonne.\n\nLe nom est constitué de la clé de la colonne concaténée avec un suffixe par type de filtre (par exemple `ma_colonne_eq`, `ma_colonne_in`, etc.).\n\nLes types de filtres disponibles peuvent varier par colonne.\n\n  - `_eq` : égal à une valeur\n  - `_neq` : différent d'une valeur\n  - `_in` : appartient à une liste de valeurs (séparées par des virgules)\n  - `_nin` : n'appartient pas à une liste de valeurs (séparées par des virgules)\n  - `_gt` : strictement supérieur à une valeur\n  - `_gte` : supérieur ou égal à une valeur\n  - `_lt` : strictement inférieur à une valeur\n  - `_lte` : inférieur ou égal à une valeur\n  - `_starts` : commence par une série de caractères\n  - `_contains` : contient une série de caractères\n  - `_search` : effectue une recherche textuelle simple\n  - `_exists` : la colonne contient une valeur\n  - `_nexists` : la colonne ne contient pas une valeur\n  "
+            },
             "patternProperties": {
               ".*": {
                 "type": "string",

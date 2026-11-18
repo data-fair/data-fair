@@ -119,47 +119,6 @@ test.describe('platform api docs', () => {
     assert.equal(fragment.paths['/simple-directory/a'].get.servers, undefined)
   })
 
-  // the platform document is read by openapi-mcp only: vjsf layouts and dead $defs only weighed on the tool definitions
-  test('UI keywords and dead $defs are stripped at schema positions, data named like them kept', () => {
-    const body = {
-      $id: 'https://x/body',
-      'x-exports': ['types'],
-      type: 'object',
-      layout: { cols: 6 },
-      properties: {
-        layout: { type: 'string', layout: 'none', default: 'grid', examples: [{ layout: 'kept' }] },
-        filters: { type: 'object', patternPropertiesLayout: { help: 'h' }, patternProperties: { '.*': { type: 'string', layout: { placeholder: 'p' } } } },
-        list: { anyOf: [{ type: 'array', items: { type: 'object', layout: { itemTitle: 't' }, properties: { a: { type: 'string' } } } }, { type: 'null' }] }
-      },
-      $defs: { thing: { type: 'string' } }
-    }
-    const fragment = prepared(sd, {
-      openapi: '3.1.0',
-      paths: { '/a': { post: { operationId: 'a', parameters: [{ in: 'query', name: 'f', schema: { type: 'string', layout: 'x' } }], requestBody: { content: { 'application/json': { schema: body } } }, responses: ok200 } } },
-      components: { schemas: { c: { type: 'object', oneOfLayout: {}, properties: { b: { $ref: '#/components/schemas/d' } } }, d: { type: 'string' } } }
-    })
-    const op = fragment.paths['/simple-directory/a'].post
-    assert.deepEqual(op.parameters[0].schema, { type: 'string' })
-    assert.deepEqual(op.requestBody.content['application/json'].schema, {
-      type: 'object',
-      properties: {
-        layout: { type: 'string', default: 'grid', examples: [{ layout: 'kept' }] },
-        filters: { type: 'object', patternProperties: { '.*': { type: 'string' } } },
-        list: { anyOf: [{ type: 'array', items: { type: 'object', properties: { a: { type: 'string' } } } }, { type: 'null' }] }
-      }
-    })
-    assert.deepEqual(fragment.components.schemas.sd_c, { type: 'object', properties: { b: { $ref: '#/components/schemas/sd_d' } } })
-  })
-
-  test('$defs are kept in a document with a $ref that names no component', () => {
-    const schema = { $id: 'https://x/s', type: 'object', properties: { a: { $ref: '#/$defs/a' } }, $defs: { a: { type: 'string' } } }
-    const fragment = prepared(sd, {
-      openapi: '3.1.0',
-      paths: { '/a': { post: { operationId: 'a', requestBody: { content: { 'application/json': { schema } } }, responses: ok200 } } }
-    })
-    assert.deepEqual(fragment.paths['/simple-directory/a'].post.requestBody.content['application/json'].schema, schema)
-  })
-
   test('x-agent on an operation without operationId is reported', () => {
     const fragment = prepared(sd, { openapi: '3.1.0', paths: { '/a': { get: { 'x-agent': { name: 'a' }, responses: ok200 } } } })
     assert.deepEqual(fragment.warnings, ['x-agent on GET /a that has no operationId'])
