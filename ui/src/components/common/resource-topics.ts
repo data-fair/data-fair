@@ -22,6 +22,7 @@ const resourceTitles: Record<string, Record<string, string>> = {
     'dataset-structure-updated': 'La structure du jeu de données a été mise à jour',
     'dataset-error': 'Le jeu de données a rencontré une erreur',
     'dataset-breaking-change': 'Le jeu de données rencontre une rupture de compatibilité',
+    'dataset-delete': 'Le jeu de données a été supprimé',
     'application-error': 'La visualisation a rencontré une erreur'
   },
   en: {
@@ -30,6 +31,7 @@ const resourceTitles: Record<string, Record<string, string>> = {
     'dataset-structure-updated': 'Structure of this dataset was updated',
     'dataset-error': 'This dataset encountered an error',
     'dataset-breaking-change': 'This dataset has a breaking compatibility change',
+    'dataset-delete': 'This dataset was deleted',
     'application-error': 'This visualization encountered an error'
   }
 }
