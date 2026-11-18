@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { Parser } from 'expr-eval-fork'
+import { Parser } from '@koumoul/expr-eval'
 import md5 from 'md5'
 import dayjs from 'dayjs'
 import customParseFormat from 'dayjs/plugin/customParseFormat.js'
