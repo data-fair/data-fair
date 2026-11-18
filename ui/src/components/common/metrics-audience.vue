@@ -2,6 +2,7 @@
   <!-- the audience of one resource, served by the metrics service: the iframe grows with its content -->
   <d-frame
     :src="src"
+    sync-params
     @notif="(e: any) => sendUiNotif(frameNotifArg(e.detail))"
   />
 </template>
