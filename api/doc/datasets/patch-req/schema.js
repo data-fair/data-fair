@@ -7,7 +7,8 @@ export const patchKeys = [
   'virtual', 'rest', 'extras', 'attachmentsAsImage', 'projection', 'attachments',
   'topics', 'relatedDatasets', 'thumbnails', 'masterData', 'primaryKey', 'exports', 'spatial',
   'temporal', 'frequency', 'creator', 'modified', 'keywords', 'searchTerms', 'conformsTo', 'analysis',
-  'readApiKey', 'nonBlockingValidation', 'customMetadata', 'constraints', 'partOf'
+  'readApiKey', 'nonBlockingValidation', 'customMetadata', 'constraints', 'partOf',
+  'x-i18n-title', 'x-i18n-summary', 'x-i18n-description', 'x-i18n-creator', 'x-i18n-spatial', 'x-i18n-keywords', 'x-i18n-customMetadata'
 ]
 const body = jsonSchema(datasetSchema)
   .makePatchSchema(patchKeys)

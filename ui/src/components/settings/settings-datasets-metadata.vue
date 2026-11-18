@@ -60,13 +60,15 @@ import { type Settings, completenessCriteria } from '#api/types'
 import equal from 'fast-deep-equal'
 import Vjsf, { type Options as VjsfOptions } from '@koumoul/vjsf'
 import { fieldGroup } from '~/utils/metadata-groups'
+import { restoreI18n, stripI18n } from '~/composables/dataset/metadata-i18n'
 import { fromMetadataForm, localizedMetadata, metadataFormSchema, standardMetadata, standardMetadataItems, toMetadataForm } from '~/utils/settings-metadata-form'
 
 const datasetsMetadata = defineModel<Settings['datasetsMetadata']>()
 const valid = defineModel<boolean>('valid', { default: true })
 const editDatasetsMetadata = ref<Record<string, any>>()
 // both sides go through the form: an activation stored at its default, by an older version, is no edit either
-const sameMetadata = (form: Record<string, any>) => equal(fromMetadataForm(form), fromMetadataForm(toMetadataForm(datasetsMetadata.value)))
+// MOCKUP i18n: the translations of the custom metadata are not in the form, they are compared without them and put back
+const sameMetadata = (form: Record<string, any>) => equal(stripI18n(fromMetadataForm(form)), stripI18n(fromMetadataForm(toMetadataForm(datasetsMetadata.value))))
 watchDeepDiff(datasetsMetadata, () => {
   // a new model resets vjsf and closes the edit dialog: its own changes are not sent back
   if (editDatasetsMetadata.value && sameMetadata(editDatasetsMetadata.value)) return
@@ -79,7 +81,11 @@ watchDeepDiff(editDatasetsMetadata, () => {
     editDatasetsMetadata.value = { ...editDatasetsMetadata.value, groups: groups.map(g => g.key ? g : { ...g, key: Math.random().toString(36).slice(2, 10) }) }
     return
   }
-  if (!sameMetadata(editDatasetsMetadata.value!)) datasetsMetadata.value = fromMetadataForm(editDatasetsMetadata.value!) as Settings['datasetsMetadata']
+  if (!sameMetadata(editDatasetsMetadata.value!)) {
+    const next: any = fromMetadataForm(editDatasetsMetadata.value!)
+    if (next?.custom) next.custom = restoreI18n(next.custom, (datasetsMetadata.value as any)?.custom, 'key')
+    datasetsMetadata.value = next as Settings['datasetsMetadata']
+  }
 }, {})
 const { t, locale } = useI18n()
 

@@ -299,6 +299,15 @@ export const getDatasetsMetadata = async (params: SettingsParams) => {
   return result && isMainSettings(result) && result.datasetsMetadata ? result.datasetsMetadata : {}
 }
 
+// MOCKUP: activated at the organization level, departments inherit it; locales starts with the default one
+export const getMetadataI18n = async (params: SettingsParams) => {
+  const result = await mongo.settings.findOne(rootSettingsFilter(params.owner), { projection: { _id: 0, metadataI18n: 1 } })
+  const i18n = result && isMainSettings(result) ? result.metadataI18n : undefined
+  if (!i18n?.active) return { active: false }
+  const defaultLocale = i18n.defaultLocale ?? 'fr'
+  return { active: true, defaultLocale, locales: [defaultLocale, ...(i18n.locales ?? []).filter(l => l !== defaultLocale)] }
+}
+
 export const getAgentChat = async (params: SettingsParams, sessionState: SessionStateAuthenticated) => {
   // the AI assistant is activated at the organization level only, departments inherit the activation
   const result = await mongo.settings.findOne(rootSettingsFilter(params.owner), { projection: { _id: 0, agentChat: 1, agentChatAudience: 1 } })

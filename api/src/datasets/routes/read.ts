@@ -32,6 +32,7 @@ import { nextLinkHref, linkHeaderValue } from './lines-body.ts'
 import { getCountMode, parseQMode, DEFAULT_Q_MODE } from '../es/operations.ts'
 import { approxTotal } from '../es/approx-count.ts'
 import { runAdaptivePreflight } from '../es/adaptive-q.ts'
+import { localizeSchema, reqLang } from '../utils/metadata-i18n.ts'
 
 // Formats that consume a streamed ES source (serialize row-by-row, then send the assembled body). json/csv
 // and geojson qualify: each hit maps independently to output (geojson's bbox is a separate agg). shp still
@@ -637,8 +638,10 @@ export const registerReadRoutes = (router: Router) => {
     const dataset = reqDataset(req)
     res.throttleEnd()
     let result
-    const field: any = (dataset.schema ?? []).find(p => p.key === req.params.fieldKey)
+    let field: any = (dataset.schema ?? []).find(p => p.key === req.params.fieldKey)
     if (!field) throw httpError(400, `field "${req.params.fieldKey}" is unknown`)
+    const lang = reqLang(req.query)
+    if (lang) field = localizeSchema([{ ...field }], lang)[0]
     if (field['x-labels'] && field['x-labelsRestricted']) {
       // this shortcut answers from the schema without querying the index at all, so it has to
       // apply the same value-level narrowing itself — otherwise the very same request answers

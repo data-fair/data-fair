@@ -11,7 +11,9 @@ const typesDir = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '../
 const overridesWithoutFr = (node: unknown, at: string, found: string[]) => {
   if (!node || typeof node !== 'object') return
   for (const [key, value] of Object.entries(node)) {
-    if (key.startsWith('x-i18n-') && value && typeof value === 'object' && !('fr' in value)) found.push(`${at}.${key}`)
+    // under properties, an x-i18n-* key is a property holding translations, not an override
+    const isOverride = key.startsWith('x-i18n-') && !at.endsWith('.properties')
+    if (isOverride && value && typeof value === 'object' && !('fr' in value)) found.push(`${at}.${key}`)
     else overridesWithoutFr(value, `${at}.${key}`, found)
   }
 }

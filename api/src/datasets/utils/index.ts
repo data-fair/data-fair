@@ -20,6 +20,7 @@ import { reqBypassPermissions } from '../../misc/utils/req-context.ts'
 import compatOdsEscapeKey from '../../api-compat/ods/escape-key.ts'
 import { RESPONSE_EXCLUDED_FIELD_NAMES } from '../../misc/utils/text-search/index.ts'
 import { trimDataset } from '../operations.ts'
+import { localizeDataset, reqLang } from './metadata-i18n.ts'
 import type { Db } from 'mongodb'
 import type { Request, Dataset } from '#types'
 import type { SessionState } from '@data-fair/lib-express'
@@ -161,24 +162,28 @@ export const clean = (req: Request, dataset: any, draft = false, sessionState?: 
     dataset.userPermissions = permissions.list('datasets', dataset, effectiveSession, reqBypassPermissions(req))
     const thumbnail = query.thumbnail || '300x200'
     if (draft) mergeDraft(dataset)
+    // the markdown cache is keyed by resource, a localized text needs its own entry
+    const lang = reqLang(query)
+    if (lang) localizeDataset(dataset, lang)
+    const markdownKey = lang ? `dataset:${lang}:${dataset.id}` : `dataset:${dataset.id}`
     if (!select.includes('-public')) dataset.public = permissions.isPublic('datasets', dataset)
     if (!select.includes('-visibility')) dataset.visibility = visibilityUtils.visibility(dataset)
     if (!query.select || select.includes('description')) {
       dataset.description = dataset.description || ''
-      dataset.description = prepareMarkdownContent(dataset.description, query.html, query.truncate, 'dataset:' + dataset.id, dataset.updatedAt)
+      dataset.description = prepareMarkdownContent(dataset.description, query.html, query.truncate, markdownKey, dataset.updatedAt)
     }
 
     if (dataset.schema) {
       for (const field of dataset.schema) {
         field.description = field.description || ''
-        field.description = prepareMarkdownContent(field.description, query.html, null, `dataset:${dataset.id}:${field.key}`, dataset.updatedAt)
+        field.description = prepareMarkdownContent(field.description, query.html, null, `${markdownKey}:${field.key}`, dataset.updatedAt)
       }
     }
     if (dataset.attachments) {
       for (let i = 0; i < dataset.attachments.length; i++) {
         const attachment = dataset.attachments[i]
         attachment.description = attachment.description || ''
-        attachment.description = prepareMarkdownContent(attachment.description, query.html, null, `dataset:${dataset.id}:attachment-${i}`, dataset.updatedAt)
+        attachment.description = prepareMarkdownContent(attachment.description, query.html, null, `${markdownKey}:attachment-${i}`, dataset.updatedAt)
         if (attachment.type === 'file' || attachment.type === 'remoteFile') {
           attachment.url = `${publicUrl}/api/v1/datasets/${dataset.id}/metadata-attachments/${attachment.name}`
         }

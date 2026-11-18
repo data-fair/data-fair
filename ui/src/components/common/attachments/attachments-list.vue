@@ -1,6 +1,6 @@
 <template>
   <attachments-dialog
-    v-if="canAdd"
+    v-if="canAdd && !trLocale"
     :type="type"
     :attachment="{}"
     :index="-1"
@@ -36,7 +36,12 @@
             :href="attachmentUrl(attachment)"
             download
           >
-            {{ attachment.title || attachment.name }}
+            <span
+              v-if="trLocale && !translated(attachment, 'title')"
+              class="font-italic text-medium-emphasis"
+              :title="t('notTranslated')"
+            >{{ attachment.title || attachment.name }}</span>
+            <template v-else>{{ (trLocale && translated(attachment, 'title')) || attachment.title || attachment.name }}</template>
           </a>
         </v-card-title>
 
@@ -55,7 +60,7 @@
           </div>
 
           <div v-if="type === 'dataset' && attachment.description">
-            {{ attachment.description }}
+            {{ (trLocale && translated(attachment, 'description')) || attachment.description }}
           </div>
         </v-card-text>
 
@@ -135,6 +140,7 @@ fr:
   thumbnailConfirm: Remplacer
   thumbnailSuccess: La vignette a été mise à jour
   thumbnailError: Erreur lors de la mise à jour de la vignette
+  notTranslated: Pas encore traduit
 en:
   noAttachment: You have not added any attachments yet.
   thumbnailDataset: Use as dataset thumbnail
@@ -151,10 +157,12 @@ en:
   thumbnailConfirm: Replace
   thumbnailSuccess: Thumbnail has been updated
   thumbnailError: Error while updating the thumbnail
+  notTranslated: Not translated yet
 </i18n>
 
 <script setup lang="ts">
 import { mdiImage } from '@mdi/js'
+import { useMetadataI18n } from '~/composables/dataset/metadata-i18n'
 
 interface AttachmentItem {
   title?: string
@@ -182,6 +190,11 @@ const props = defineProps<{
 
 const { t, locale } = useI18n()
 const { sendUiNotif } = useUiNotif()
+
+// MOCKUP i18n: the dataset attachments in the editing locale, the default one dimmed when not translated yet
+const i18n = useMetadataI18n()
+const trLocale = computed(() => props.type === 'dataset' && i18n && !i18n.isDefault.value ? i18n.editLocale.value : null)
+const translated = (attachment: any, k: string): string | undefined => attachment[`x-i18n-${k}`]?.[trLocale.value!]
 
 const attachmentUrl = (attachment: AttachmentItem) => {
   return attachment.url || `${props.uploadUrl}/${attachment.name}`

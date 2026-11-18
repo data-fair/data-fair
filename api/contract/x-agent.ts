@@ -80,7 +80,8 @@ export const datasetSchemaCalculatedHint: AgentProperty = { hint: 'computed by t
  * field of the body is in exactly one list, so a field added to the API is placed deliberately.
  */
 export const datasetPatchFields = {
-  write: ['slug', 'title', 'summary', 'description', 'image', 'spatial', 'temporal', 'keywords', 'searchTerms', 'frequency', 'creator', 'modified', 'attachments', 'primaryKey', 'schema', 'projection', 'conformsTo', 'license', 'origin', 'constraints', 'extensions', 'requestedPublicationSites', 'attachmentsAsImage', 'virtual', 'rest', 'topics', 'relatedDatasets', 'thumbnails', 'extras', 'customMetadata', 'analysis', 'nonBlockingValidation'],
+  write: ['slug', 'title', 'summary', 'description', 'image', 'spatial', 'temporal', 'keywords', 'searchTerms', 'frequency', 'creator', 'modified', 'attachments', 'primaryKey', 'schema', 'projection', 'conformsTo', 'license', 'origin', 'constraints', 'extensions', 'requestedPublicationSites', 'attachmentsAsImage', 'virtual', 'rest', 'topics', 'relatedDatasets', 'thumbnails', 'extras', 'customMetadata', 'analysis', 'nonBlockingValidation',
+    'x-i18n-title', 'x-i18n-summary', 'x-i18n-description', 'x-i18n-creator', 'x-i18n-spatial', 'x-i18n-keywords', 'x-i18n-customMetadata'],
   manage: ['publications', 'publicationSites', 'readApiKey', 'masterData', 'partOf']
 }
 

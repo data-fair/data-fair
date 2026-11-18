@@ -25,6 +25,7 @@ import { RESPONSE_EXCLUDED_FIELD_NAMES, assignIndexFields, mergeIndexUpdate } fr
 import { datasetsTextSearch, datasetsStats } from '../misc/utils/text-search/collections.ts'
 import assertImmutable from '../misc/utils/assert-immutable.ts'
 import { curateDataset, titleFromFileName } from './utils/index.ts'
+import { cleanDatasetTranslations, i18nSelect, reqLang } from './utils/metadata-i18n.ts'
 import { computeModified } from './utils/compute-modified.ts'
 import { getDatasetCacheKey, datasetFreshnessProjection, isCachedDatasetFresh } from './operations.ts'
 import * as integrityOps from '../integrity/operations.ts'
@@ -169,7 +170,8 @@ export const findDatasets = async (db: Db, locale: string, publicationSite: any,
   for (const [k, v] of Object.entries(rawSort)) {
     sort[k === 'modified' ? '_modified' : k] = v
   }
-  const project = findUtils.project(reqQuery.select, ['_modified', '_searchText', ...RESPONSE_EXCLUDED_FIELD_NAMES], reqQuery.raw === 'true')
+  const select = reqQuery.select && reqLang(reqQuery) ? i18nSelect(reqQuery.select) : reqQuery.select
+  const project = findUtils.project(select, ['_modified', '_searchText', ...RESPONSE_EXCLUDED_FIELD_NAMES], reqQuery.raw === 'true')
   const [skip, size] = findUtils.pagination(reqQuery)
 
   const t0 = Date.now()
@@ -337,6 +339,7 @@ export const createDataset = async (db: Db, es: Client, locale: string, sessionS
     checkConstraints(await datasetUtils.extendedSchema(db, dataset), dataset.constraints, dataset)
   }
   curateDataset(dataset)
+  cleanDatasetTranslations(dataset, false)
   permissions.initResourcePermissions(dataset)
   if (dataset.partOf) {
     // a fragment carries the ACL derived from its parent, never the creation defaults (spec §3.7)
@@ -671,7 +674,7 @@ export const applyPatch = async (dataset: any, patch: any, removedRestProps?: an
   // the completeness score is recomputed with the index, so its metadata trigger it too
   const touchesIndexedContent = Object.keys(patch).some(key => INDEXED_TOP_LEVEL.has(key)) ||
     [...scoredFields, 'customMetadata'].some(key => key in patch) ||
-    !!patch.schema || !!patch.permissions
+    !!patch.schema || !!patch.permissions || Object.keys(patch).some(key => key.startsWith('x-i18n-'))
   const searchIndexUpdate = touchesIndexedContent && !dataset.draftReason && !patch.draftReason
     ? await indexAndCompletenessPatch({ ...dataset, ...patch })
     : undefined

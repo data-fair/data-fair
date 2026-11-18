@@ -45,6 +45,11 @@ router.get('/:type/:id/datasets-metadata', allowAnyScope, isOwnerMember, async (
   res.status(200).send(await service.getDatasetsMetadata(reqSettingsParams(req)))
 })
 
+// MOCKUP: metadata i18n settings, read from the root organization settings
+router.get('/:type/:id/metadata-i18n', allowAnyScope, isOwnerMember, cacheHeaders.noCache, async (req, res) => {
+  res.status(200).send(await service.getMetadataI18n(reqSettingsParams(req)))
+})
+
 // Get agent chat setting as member
 router.get('/:type/:id/agent-chat', allowAnyScope, isOwnerMember, cacheHeaders.noCache, async (req, res) => {
   res.status(200).send(await service.getAgentChat(reqSettingsParams(req), reqSessionAuthenticated(req)))

@@ -729,6 +729,10 @@ export default {
               }]
             },
             properties: {
+              // MOCKUP i18n: translations of the label, the help and the labels of the list values
+              'x-i18n-title': { type: 'object', readOnly: true, additionalProperties: { type: 'string' }, layout: 'none' },
+              'x-i18n-description': { type: 'object', readOnly: true, additionalProperties: { type: 'string' }, layout: 'none' },
+              'x-i18n-enum': { type: 'object', readOnly: true, additionalProperties: { type: 'object', additionalProperties: { type: 'string' } }, layout: 'none' },
               key: {
                 title: 'Key',
                 'x-i18n-title': { fr: 'Clé' },
@@ -802,6 +806,18 @@ export default {
       title: 'ODS compatibility',
       description: 'Enables the compatibility with the ODS API',
       default: false
+    },
+    // MOCKUP i18n of the datasets metadata
+    metadataI18n: {
+      type: 'object',
+      title: 'Multilingual metadata',
+      description: 'Datasets metadata entered in a default language and translated into other ones (x-i18n-* properties of the datasets and of their columns)',
+      additionalProperties: false,
+      properties: {
+        active: { type: 'boolean', default: false },
+        defaultLocale: { type: 'string', pattern: '^[a-z]{2,3}$', default: 'fr', description: 'Language of the base texts, the fallback of a missing translation' },
+        locales: { type: 'array', uniqueItems: true, items: { type: 'string', pattern: '^[a-z]{2,3}$' }, description: 'The other supported languages' }
+      }
     },
     agentChat: {
       type: 'boolean',

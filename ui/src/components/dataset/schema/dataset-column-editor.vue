@@ -18,9 +18,10 @@
         :text="t('labelHelp')"
       >
         <v-text-field
-          v-model="column.title"
-          :placeholder="column['x-originalName'] || ''"
-          :label="t('label')"
+          v-model="columnTitle"
+          :placeholder="trLocale ? (column.title || column['x-originalName'] || '') : (column['x-originalName'] || '')"
+          :persistent-placeholder="!!trLocale"
+          :label="trLocale ? `${t('label')} (${trLocale.toUpperCase()})` : t('label')"
           :disabled="!editable"
           variant="outlined"
           density="comfortable"
@@ -35,10 +36,11 @@
         class="mt-6"
       >
         <markdown-editor
-          v-model="column.description"
-          :label="t('description')"
+          :key="`${trLocale ?? 'default'}-${column.key}`"
+          v-model="columnDescription"
+          :label="trLocale ? `${t('description')} (${trLocale.toUpperCase()})` : t('description')"
           :disabled="!editable"
-          :easy-mde-options="{ minHeight: '150px' }"
+          :easy-mde-options="trLocale && column.description ? { minHeight: '150px', placeholder: column.description } : { minHeight: '150px' }"
           :locale="locale"
           :csp-nonce="$cspNonce"
           :input-props="{ class: 'flex-grow-1' }"
@@ -58,7 +60,7 @@
         v-if="editable && dataset"
         class="d-flex justify-end ga-1 mb-2"
       >
-        <template v-if="columnActionsEditable">
+        <template v-if="columnActionsEditable && !trLocale">
           <confirm-menu
             v-if="dataset?.isRest && !column['x-extension'] && !column['x-calculated']"
             :title="t('deleteColumnTitle')"
@@ -70,11 +72,12 @@
           />
         </template>
         <dataset-property-capabilities
+          v-if="!trLocale"
           :property="column"
           :editable="columnActionsEditable"
           :derived-from="derivedFrom"
         />
-        <template v-if="columnActionsEditable">
+        <template v-if="columnActionsEditable && !trLocale">
           <dataset-property-transform
             v-if="dataset?.file && !column['x-calculated'] && !column['x-extension']"
             :property="column"
@@ -142,7 +145,7 @@
         <v-autocomplete
           :model-value="column['x-refersTo'] ?? undefined"
           :label="t('concept')"
-          :disabled="!(editable ?? false) || (dataset?.isVirtual ?? false) || !columnEditable"
+          :disabled="!(editable ?? false) || (dataset?.isVirtual ?? false) || !columnEditable || !!trLocale"
           :items="filteredVocabularyItems"
           :custom-filter="conceptFilter"
           item-value="value"
@@ -167,7 +170,7 @@
         v-if="column?.['x-refersTo'] === 'http://schema.org/DigitalDocument' && !dataset?.isVirtual"
         :model-value="!!attachmentsAsImage"
         :label="t('attachmentsAsImage')"
-        :disabled="!editable || !dataset?.userPermissions?.includes('writeDescriptionBreaking')"
+        :disabled="!editable || !dataset?.userPermissions?.includes('writeDescriptionBreaking') || !!trLocale"
         density="compact"
         class="mb-2"
         hide-details
@@ -182,7 +185,7 @@
         <v-select
           :model-value="(column as any).separator ?? undefined"
           :label="t('sep')"
-          :disabled="!(editable ?? false) || (dataset?.isVirtual ?? false) || !columnEditable"
+          :disabled="!(editable ?? false) || (dataset?.isVirtual ?? false) || !columnEditable || !!trLocale"
           :items="[', ', '; ', ' - ', ' / ', ' | ']"
           density="comfortable"
           class="mb-2"
@@ -200,7 +203,7 @@
         <v-select
           v-model="displayFormat"
           :label="t('xDisplay')"
-          :disabled="!editable || !columnEditable"
+          :disabled="!editable || !columnEditable || !!trLocale"
           :items="displayFormatItems"
           class="mb-2"
           density="comfortable"
@@ -216,7 +219,7 @@
         <v-combobox
           :model-value="(column as any)['x-group'] ?? undefined"
           :label="t('group')"
-          :disabled="!(editable ?? false)"
+          :disabled="!(editable ?? false) || !!trLocale"
           :items="groups"
           class="mb-2"
           density="comfortable"
@@ -285,6 +288,7 @@ en:
 </i18n>
 
 <script setup lang="ts">
+import { useMetadataI18n, getI18nText, setI18nText } from '~/composables/dataset/metadata-i18n'
 /* eslint-disable vue/no-mutating-props */
 import type { SchemaProperty } from '#api/types'
 import { MarkdownEditor } from '@koumoul/vjsf-markdown'
@@ -307,6 +311,23 @@ const emit = defineEmits<{
   remove: [key: string]
   'update:attachmentsAsImage': [value: boolean]
 }>()
+
+// MOCKUP i18n: outside the default locale, title and description edit their x-i18n translations
+const i18n = useMetadataI18n()
+const trLocale = computed(() => i18n && !i18n.isDefault.value ? i18n.editLocale.value : null)
+const textModel = (k: 'title' | 'description') => computed({
+  get: () => {
+    if (!props.column) return ''
+    return trLocale.value ? getI18nText(props.column, k, trLocale.value, i18n!.config.value!.defaultLocale) : props.column[k]
+  },
+  set: (v: any) => {
+    if (!props.column) return
+    if (trLocale.value) setI18nText(props.column, k, trLocale.value, i18n!.config.value!.defaultLocale, v)
+    else props.column[k] = v
+  }
+})
+const columnTitle = textModel('title')
+const columnDescription = textModel('description')
 
 const currentFileColumn = computed(() => {
   if (!props.column || !dataset.value?.file?.schema) return null
