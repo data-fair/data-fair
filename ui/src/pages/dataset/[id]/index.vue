@@ -26,6 +26,10 @@
       :svg="buildingSvg"
     >
       <template #actions>
+        <dataset-edit-locale
+          :counts="l => countSchemaTranslations(structureEditFetch.data.value?.schema, l)"
+          translate-prompt="structure"
+        />
         <confirm-menu
           v-if="structureHasRealDiff"
           :btn-props="{ color: 'warning', variant: 'tonal' }"
@@ -165,6 +169,11 @@
           v-if="metadataEditFetch.data.value"
           :dataset="metadataEditFetch.data.value"
           :datasets-metadata="datasetsMetadata"
+        />
+        <dataset-edit-locale
+          class="ml-2"
+          :counts="l => countMetadataTranslations(metadataEditFetch.data.value, l, datasetsMetadata)"
+          translate-prompt="metadata"
         />
         <confirm-menu
           v-if="metadataEditFetch.hasDiff.value"
@@ -881,6 +890,8 @@ import { fieldGroup, modifiedGroups, usedGroups } from '~/utils/metadata-groups'
 import { useAgentDatasetSummaryTools } from '~/composables/dataset/agent-summary-tools'
 import { useAgentDatasetDescriptionTools } from '~/composables/dataset/agent-description-tools'
 import { useAgentDatasetMetadataTools } from '~/composables/dataset/agent-metadata-tools'
+import { provideMetadataI18n, countMetadataTranslations, countSchemaTranslations } from '~/composables/dataset/metadata-i18n'
+import { useAgentTranslationTools } from '~/composables/dataset/agent-translation-tools'
 import { useAgentDatasetChangesSummaryTools } from '~/composables/dataset/agent-changes-summary-tools'
 import { useAgentExpressionTools } from '~/composables/dataset/agent-expression-tools'
 import { useAgentState, emitAgentEvent } from '@data-fair/lib-vue-agents'
@@ -923,6 +934,8 @@ const store = useDatasetStore()
 const { dataset, journal, journalFetch, taskProgress, taskProgressFetch, applicationsFetch, publishedDatasetFetch, datasetsMetadataFetch, digitalDocumentField, imageField, can, id, remove, permissions, permissionsFetch, savePermissions, applyEditFetchSnapshot, fragments, nbFragments, hasMoreFragments, loadMoreFragments, detach } = store
 
 const datasetsMetadata = datasetsMetadataFetch.data
+// MOCKUP i18n: the editing locale shared by the metadata and structure sections
+const metadataI18n = provideMetadataI18n(computed(() => dataset.value?.owner))
 // only needed when the topics left the first tab, always shown
 const ownerTopicsFetch = useFetch<any[]>(() => {
   const o = dataset.value?.owner
@@ -1030,6 +1043,7 @@ useAgentExpressionTools(locale, structureEditFetch.data, (extensionIndex, expr) 
 })
 useAgentSchemaAnnotationTools(locale, structureEditFetch.data, vocabularyArray.data as any, mutateSchema)
 useAgentColumnLabelsTools(locale, structureEditFetch.data, mutateSchema)
+useAgentTranslationTools(locale, metadataI18n, metadataEditFetch.data, structureEditFetch.data, mutateSchema)
 useAgentAddColumnTools(locale, structureEditFetch.data, mutateSchema)
 useAgentSchemaOrderTools(locale, structureEditFetch.data, (schema) => {
   if (structureEditFetch.data.value) structureEditFetch.data.value.schema = schema

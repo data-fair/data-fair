@@ -26,13 +26,23 @@
 import { useWindowSize } from '@vueuse/core'
 import { provideDatasetStore } from '~/composables/dataset/dataset-store'
 import { parseInteractions } from '~/composables/dataset/interactions'
+import { localizeSchema } from '~/composables/dataset/metadata-i18n'
 
 const { height: windowHeight } = useWindowSize()
 
 const route = useRoute<'/embed/dataset/[id]/table'>()
 const draft = useBooleanSearchParam('draft')
 
-provideDatasetStore(route.params.id, draft.value ?? undefined, true)
+const { dataset } = provideDatasetStore(route.params.id, draft.value ?? undefined, true)
+
+// MOCKUP i18n: the schema texts in the user's locale, applied once per load, outside the table's hot path
+const { locale } = useI18n()
+watch(() => dataset.value?.schema, (schema) => {
+  if (!schema) return
+  localizeSchema(schema, locale.value)
+  const title = dataset.value?.['x-i18n-title']?.[locale.value]
+  if (title) dataset.value!.title = title
+}, { immediate: true })
 
 const cols = useStringsArraySearchParam('cols')
 const display = useStringSearchParam('display', 'table')

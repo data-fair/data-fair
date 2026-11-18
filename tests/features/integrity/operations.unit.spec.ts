@@ -500,7 +500,9 @@ const COVERED_TOP_LEVEL = [
   // detected. No `_` prefix, so coveredPatchKeys already covers it by default; its only writer
   // is the metadata PATCH route, which goes through applyPatch's coveredPatchKeys gate — no
   // worker or sweep writes it raw, so covering it creates no false-breach risk.
-  'searchTerms'
+  'searchTerms',
+  // translations of the metadata texts, written by the metadata PATCH route only like them
+  'x-i18n-title', 'x-i18n-summary', 'x-i18n-description', 'x-i18n-creator', 'x-i18n-spatial', 'x-i18n-keywords', 'x-i18n-customMetadata'
 ]
 
 test('every dataset-schema property is consciously classified for integrity coverage', () => {

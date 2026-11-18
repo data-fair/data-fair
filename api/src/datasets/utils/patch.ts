@@ -12,6 +12,7 @@ import * as extensions from './extensions.ts'
 import { checkConstraints } from './constraints.ts'
 import * as schemaUtils from './data-schema.ts'
 import * as virtualDatasetsUtils from './virtual.ts'
+import { cleanDatasetTranslations } from './metadata-i18n.ts'
 import * as wsEmitter from '@data-fair/lib-node/ws-emitter.js'
 import catalogsPublicationQueue from '../../misc/utils/catalogs-publication-queue.ts'
 import type { SessionStateAuthenticated } from '@data-fair/lib-express'
@@ -28,6 +29,7 @@ export const preparePatch = async (app: any, patch: any, dataset: any, sessionSt
   patch.slug = patch.slug || dataset.slug
   datasetUtils.setUniqueRefs(patch)
   datasetUtils.curateDataset(patch)
+  cleanDatasetTranslations(patch, true)
 
   // `constraints: null` is the documented "unset" idiom (makePatchSchema allows it), meaning
   // "remove all constraints". Normalize it to `[]` as early as possible so that every consumer

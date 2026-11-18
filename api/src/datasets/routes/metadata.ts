@@ -43,6 +43,7 @@ import { filterByContextualCardinality, filterByUniqueValues, createEsRequestOpt
 import { manageESError } from './_es-error.ts'
 import { updateTotalStorage } from '../utils/storage.ts'
 import { prepareCustomMetadata } from '../utils/custom-metadata.ts'
+import { localizeSchema, reqLang } from '../utils/metadata-i18n.ts'
 
 const clean = datasetUtils.clean
 const debugBreakingChanges = debugModule('breaking-changes')
@@ -50,6 +51,8 @@ const debugBreakingChanges = debugModule('breaking-changes')
 // retrieve only the schema.. Mostly useful for easy select fields
 const sendSchema = async (req: Request, res: Response, schema: any, contextualCardinality = false) => {
   const reqQuery = req.query as Record<string, string>
+  const lang = reqLang(reqQuery)
+  if (lang) localizeSchema(schema, lang)
   const filtered = hasDataFilters(reqQuery)
   const uniqueValues = reqQuery.uniqueValues === 'true'
   const contextualMaxCardinality = !!reqQuery.maxCardinality && filtered

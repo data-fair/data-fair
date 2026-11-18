@@ -367,6 +367,16 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 | **Tools** | `read_dataset_info`, `set_dataset_metadata` |
 | **Source** | `ui/src/composables/dataset/agent-summary-tools.ts` (skill), `ui/src/composables/dataset/agent-metadata-tools.ts` (write tool), `ui/src/components/dataset/metadata/dataset-metadata-form.vue` (action button) |
 
+### 4.18 Translate Dataset Metadata (mockup)
+
+| | |
+|---|---|
+| **Action ID** | `translate-dataset` |
+| **Skill** | `translate-dataset` — translate the metadata card texts and the schema texts (column titles, descriptions, value labels) from the owner's default locale into a supported one, never the data values |
+| **Pattern** | Shown next to the editing-locale selector of the metadata and structure sections when a non-default locale is selected. `read_dataset_translations` lists the source texts with their current translation, `set_dataset_translations` writes `x-i18n-*` into both edit forms and switches the editing locale to the target. Nothing is saved. |
+| **Tools** | `read_dataset_translations`, `set_dataset_translations` |
+| **Source** | `ui/src/composables/dataset/agent-translation-tools.ts`, `ui/src/components/dataset/dataset-edit-locale.vue` (selector and action button) |
+
 ### Active-account scope of the listing tools
 
 The back-office `list_datasets` and `list_applications` send `shared=false`

@@ -12,6 +12,8 @@ export default {
   //   }]
   // },
   properties: {
+    // MOCKUP i18n: title translations, copied with the topic on datasets and applications
+    'x-i18n-title': { type: 'object', readOnly: true, additionalProperties: { type: 'string' } },
     id: {
       type: 'string',
       readOnly: true
