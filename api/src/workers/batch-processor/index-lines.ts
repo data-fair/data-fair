@@ -6,7 +6,7 @@ import pump from '../../misc/utils/pipe.ts'
 import * as es from '../../datasets/es/index.ts'
 import esClient from '#es'
 import { initDatasetIndex, switchAlias } from '../../datasets/es/manage-indices.ts'
-import { NEW_INDEX_SHAPE } from '../../datasets/es/operations.ts'
+import { NEW_INDEX_SHAPE, writeErrorReason } from '../../datasets/es/operations.ts'
 import getIndexStream from '../../datasets/es/index-stream.ts'
 import * as datasetUtils from '../../datasets/utils/index.ts'
 import { updateStorage } from '../../datasets/utils/storage.ts'
@@ -83,8 +83,7 @@ export default async function (dataset: DatasetInternal) {
       indexName = await initDatasetIndex(dataset)
     } catch (err) {
       log.warn('failed to initialize an elasticsearch index', { code: 'es-init-index', err })
-      const { message } = es.extractError(err)
-      throw new Error(message)
+      throw new Error(writeErrorReason(err), { cause: err })
     }
     debug(`Initialize new dataset index ${indexName}`)
   }
