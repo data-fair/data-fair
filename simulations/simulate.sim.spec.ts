@@ -31,7 +31,7 @@ import {
 const TURN_CEILING_MS = 5 * 60 * 1000
 
 const ASSISTANT_MODEL = process.env.SIM_ASSISTANT_MODEL ?? 'sonnet'
-// The tools, compaction and moderation roles, pinned separately and lower:
+// The compaction and moderation roles, pinned separately and lower:
 // that is where a deployment puts a small model, so that is where the product
 // has to work. See BACKGROUND_ROLES in runner/settings.ts.
 const TOOLS_MODEL = process.env.SIM_TOOLS_MODEL ?? 'haiku'
