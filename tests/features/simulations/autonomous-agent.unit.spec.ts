@@ -39,8 +39,8 @@ test.describe('calledTool', () => {
   })
 
   test('takes a test of the bare tool name, for tool families', () => {
-    const exports = exportWith([{ type: 'dynamic-tool', toolName: 'datafair-write__datafair_edit_line_saveForm', input: { id: 'x' } }])
-    assert.equal(calledTool(exports, name => name.startsWith('datafair_edit_line_')), true)
+    const exports = exportWith([{ type: 'dynamic-tool', toolName: 'datafair-write__form_saveForm', input: { form: 'datafair_edit_line', id: 'x' } }])
+    assert.equal(calledTool(exports, name => name.startsWith('form_')), true)
     assert.equal(calledTool(exports, name => name.startsWith('datafair-write'), input => input.id === 'x'), false)
     assert.equal(calledTool(exports, name => name.endsWith('_saveForm'), input => input.id === 'y'), false)
   })

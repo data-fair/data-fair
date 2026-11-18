@@ -165,7 +165,8 @@ export const lineEditionCases: LineEditionCase[] = [
 /** A write of a line through the tools of the arm, on a register of a run (never on the referential). */
 export const writeTools: Record<LineEditionArm, (name: string) => boolean> = {
   json: name => ['datafair_write_line', 'datafair_patch_line', 'datafair_bulk_lines'].includes(name),
-  editor: name => (name.startsWith('datafair_create_line_') || name.startsWith('datafair_edit_line_')) && name.endsWith('saveForm')
+  // the platform's one form group (openapi-mcp 0.14): the line forms are its `form` argument, the register its `id`
+  editor: name => name === 'form_saveForm'
 }
 
 /**

@@ -51,12 +51,12 @@ test('the premise holds only for a write tool of the run\'s own arm, on a regist
     assert.equal(json.premise!.holds(exportWith(tool, { id: register })), true, tool)
     assert.equal(editor.premise!.holds(exportWith(tool, { id: register })), false, tool)
   }
-  for (const tool of ['datafair_create_line_saveForm', 'mcp__datafair_edit_line_saveForm']) {
-    assert.equal(editor.premise!.holds(exportWith(tool, { id: register, lineId: 'lieu-2' })), true, tool)
+  for (const tool of ['form_saveForm', 'mcp__form_saveForm']) {
+    assert.equal(editor.premise!.holds(exportWith(tool, { form: 'datafair_edit_line', id: register, lineId: 'lieu-2' })), true, tool)
     assert.equal(json.premise!.holds(exportWith(tool, { id: register })), false, tool)
   }
   // filling a form is not writing, nor is writing to another dataset
-  assert.equal(editor.premise!.holds(exportWith('datafair_create_line_setFieldValue', { id: register })), false)
+  assert.equal(editor.premise!.holds(exportWith('form_setFieldValue', { form: 'datafair_create_line', id: register })), false)
   assert.equal(json.premise!.holds(exportWith('datafair_write_line', { id: 'sim-communes-agglo' })), false)
   assert.equal(json.premise!.holds(exportWith('datafair_read_line', { id: register })), false)
 })

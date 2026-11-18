@@ -119,6 +119,47 @@ test.describe('platform api docs', () => {
     assert.equal(fragment.paths['/simple-directory/a'].get.servers, undefined)
   })
 
+  // the platform document is read by openapi-mcp only: vjsf layouts and dead $defs only weighed on the tool definitions
+  test('UI keywords and dead $defs are stripped at schema positions, data named like them kept', () => {
+    const body = {
+      $id: 'https://x/body',
+      'x-exports': ['types'],
+      type: 'object',
+      layout: { cols: 6 },
+      properties: {
+        layout: { type: 'string', layout: 'none', default: 'grid', examples: [{ layout: 'kept' }] },
+        filters: { type: 'object', patternPropertiesLayout: { help: 'h' }, patternProperties: { '.*': { type: 'string', layout: { placeholder: 'p' } } } },
+        list: { anyOf: [{ type: 'array', items: { type: 'object', layout: { itemTitle: 't' }, properties: { a: { type: 'string' } } } }, { type: 'null' }] }
+      },
+      $defs: { thing: { type: 'string' } }
+    }
+    const fragment = prepared(sd, {
+      openapi: '3.1.0',
+      paths: { '/a': { post: { operationId: 'a', parameters: [{ in: 'query', name: 'f', schema: { type: 'string', layout: 'x' } }], requestBody: { content: { 'application/json': { schema: body } } }, responses: ok200 } } },
+      components: { schemas: { c: { type: 'object', oneOfLayout: {}, properties: { b: { $ref: '#/components/schemas/d' } } }, d: { type: 'string' } } }
+    })
+    const op = fragment.paths['/simple-directory/a'].post
+    assert.deepEqual(op.parameters[0].schema, { type: 'string' })
+    assert.deepEqual(op.requestBody.content['application/json'].schema, {
+      type: 'object',
+      properties: {
+        layout: { type: 'string', default: 'grid', examples: [{ layout: 'kept' }] },
+        filters: { type: 'object', patternProperties: { '.*': { type: 'string' } } },
+        list: { anyOf: [{ type: 'array', items: { type: 'object', properties: { a: { type: 'string' } } } }, { type: 'null' }] }
+      }
+    })
+    assert.deepEqual(fragment.components.schemas.sd_c, { type: 'object', properties: { b: { $ref: '#/components/schemas/sd_d' } } })
+  })
+
+  test('$defs are kept in a document with a $ref that names no component', () => {
+    const schema = { $id: 'https://x/s', type: 'object', properties: { a: { $ref: '#/$defs/a' } }, $defs: { a: { type: 'string' } } }
+    const fragment = prepared(sd, {
+      openapi: '3.1.0',
+      paths: { '/a': { post: { operationId: 'a', requestBody: { content: { 'application/json': { schema } } }, responses: ok200 } } }
+    })
+    assert.deepEqual(fragment.paths['/simple-directory/a'].post.requestBody.content['application/json'].schema, schema)
+  })
+
   test('x-agent on an operation without operationId is reported', () => {
     const fragment = prepared(sd, { openapi: '3.1.0', paths: { '/a': { get: { 'x-agent': { name: 'a' }, responses: ok200 } } } })
     assert.deepEqual(fragment.warnings, ['x-agent on GET /a that has no operationId'])
@@ -607,8 +648,9 @@ test.describe('platform api docs', () => {
     const doc = mergePlatformDoc('https://example.test', [{ service: processings, fragment: result.fragment, status: 'ok' }], { version: '1.0.0', oauth2Description: 'tokens' })
     const toolSet = await load(doc, { lint: 'error' })
     const names = (scopes?: string[]) => (scopes ? toolsForScopes(toolSet, scopes) : toolSet).tools.map(tool => tool.name)
-    assert.deepEqual(names().filter(name => !name.startsWith('processings_')), [])
-    assert.ok(names().includes('processings_processing_config_saveForm'))
+    // the editor joins the platform's one form group (openapi-mcp 0.14)
+    assert.deepEqual(names().filter(name => !name.startsWith('processings_') && !name.startsWith('form_')), [])
+    assert.deepEqual(toolSet.tools.find(t => t.name === 'form_saveForm')?.inputSchema.properties.form.enum, ['processings_processing_config'])
     assert.deepEqual(names(['processings:read']).sort(), ['processings_describe_processing', 'processings_describe_run', 'processings_list_processings', 'processings_list_runs'])
     assert.ok(!names(['processings:write']).includes('processings_delete_processing'))
   })
@@ -625,9 +667,8 @@ test.describe('platform api docs', () => {
     const doc = mergePlatformDoc('https://example.test', [{ service: catalogs, fragment: result.fragment, status: 'ok' }], { version: '1.0.0', oauth2Description: 'tokens' })
     const toolSet = await load(doc, { lint: 'error' })
     const names = (scopes?: string[]) => (scopes ? toolsForScopes(toolSet, scopes) : toolSet).tools.map(tool => tool.name)
-    assert.deepEqual(names().filter(name => !name.startsWith('catalogs_')), [])
-    assert.ok(names().includes('catalogs_catalog_configuration_saveForm'))
-    assert.ok(names().includes('catalogs_import_configuration_saveForm'))
+    assert.deepEqual(names().filter(name => !name.startsWith('catalogs_') && !name.startsWith('form_')), [])
+    assert.deepEqual([...toolSet.tools.find(t => t.name === 'form_saveForm')!.inputSchema.properties.form.enum].sort(), ['catalogs_catalog_configuration', 'catalogs_import_configuration'])
     assert.deepEqual(names(['catalogs:read']).sort(), ['catalogs_browse_remote_resources', 'catalogs_describe_catalog', 'catalogs_describe_catalog_plugin', 'catalogs_describe_import', 'catalogs_describe_publication', 'catalogs_list_catalogs', 'catalogs_list_imports', 'catalogs_list_publications'])
     assert.ok(names(['catalogs:write']).includes('catalogs_create_publication'))
     assert.ok(!names(['catalogs:write']).includes('catalogs_create_catalog'))

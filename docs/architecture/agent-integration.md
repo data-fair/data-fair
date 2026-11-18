@@ -692,7 +692,8 @@ the platform document side (the switch, the two tool sets) is under
   sets it back to `null` when it ends.
 - **Tool sets.** Reading tools are the same in both arms. Arm `json` adds `datafair_write_line`,
   `datafair_patch_line`, `datafair_bulk_lines`; arm `editor` adds the `create_line` and
-  `edit_line` groups (`datafair_create_line_*`, `datafair_edit_line_*`, ending in `saveForm`).
+  `edit_line` forms to the platform's one group of form tools (openapi-mcp 0.14: `form_<verb>`,
+  `form: "datafair_create_line"` or `"datafair_edit_line"`, a write ending in `form_saveForm`).
   `datafair_delete_line` is in both, and the cost report counts it as a write in both. The runner
   waits until the agent holds exactly its arm's tools before the first message.
 - **Agent.** `sim-lines` (`LINES_AGENT`), acting as its own NHI `test_org1_lines_nhi`, beside the existing
