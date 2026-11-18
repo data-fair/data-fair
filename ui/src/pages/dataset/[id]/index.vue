@@ -1450,7 +1450,8 @@ const sections = computedDeepDiff(() => {
   if ($uiConfig.eventsIntegration && can('readJournal').value) {
     activityTabs.push({ key: 'traceability', title: t('traceability'), icon: mdiClipboardTextClock, agentDesc: 'Audit trail of user actions on this dataset (who did what, when).' })
   }
-  if ($uiConfig.metricsIntegration && can('readJournal').value) {
+  // the audience is reserved to the admins and contributors of the active account (metrics checks it too)
+  if ($uiConfig.metricsIntegration && can('readJournal').value && canContribDep.value) {
     activityTabs.push({ key: 'audience', title: t('audience'), icon: mdiChartBar, agentDesc: 'Audience of this dataset over a period, from the metrics service: downloads, downloaded volume, API calls, their history, and the requests by visualization, calling site, user category and consumer.' })
   }
   if ($uiConfig.eventsIntegration) {

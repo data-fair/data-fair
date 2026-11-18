@@ -667,6 +667,10 @@ import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 import { useAgentApplicationMetadataTools } from '~/composables/application/agent-metadata-tools'
 import { useAgentApplicationPageGuidance } from '~/composables/application/agent-page-guidance-tools'
 import { $uiConfig, $apiPath } from '~/context'
+import { usePermissions } from '~/composables/use-permissions'
+
+// the audience is reserved to the admins and contributors of the active account (metrics checks it too)
+const { canContribDep } = usePermissions()
 
 const { t, locale } = useI18n()
 const route = useRoute<'/application/[id]/'>()
@@ -878,7 +882,7 @@ const sections = computedDeepDiff(() => {
   if ($uiConfig.eventsIntegration && can('readJournal')) {
     activityTabs.push({ key: 'traceability', title: t('traceability'), icon: mdiClipboardTextClock, agentDesc: 'Audit trail of user actions on this application (who did what, when).' })
   }
-  if ($uiConfig.metricsIntegration && can('readJournal')) {
+  if ($uiConfig.metricsIntegration && can('readJournal') && canContribDep.value) {
     activityTabs.push({ key: 'audience', title: t('audience'), icon: mdiChartBar, agentDesc: 'Audience of this application over a period, from the metrics service: openings, API calls sent from its pages and the volume they loaded, their history, the datasets it reads, and the openings by calling site, user category and consumer.' })
   }
   if ($uiConfig.eventsIntegration) {
