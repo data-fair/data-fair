@@ -124,6 +124,49 @@ test.describe('Cache headers', () => {
     await assert.rejects(ax.get(`/api/v1/datasets/${id}/lines`, { headers: { 'x-cache-bypass': '0', 'if-modified-since': res.headers['last-modified'] } }), (err: any) => err.status === 304)
   })
 
+  test('Only the exact current finalizedAt gets the long max-age', async () => {
+    const ax = testUser1
+    const dataset = await createDataset(ax)
+    const id = dataset.id
+    await ax.put(`/api/v1/datasets/${id}/permissions`, [{ classes: ['read'] }])
+
+    let res = await anonymous.get(`/api/v1/datasets/${id}/lines`, { params: { finalizedAt: dataset.finalizedAt } })
+    assert.equal(res.headers['cache-control'], 'must-revalidate, public, max-age=' + config.cache.timestampedPublicMaxAge)
+
+    // an older timestamp is served the current data: it expires like a plain URL
+    const older = new Date(new Date(dataset.finalizedAt).getTime() - 60000).toISOString()
+    res = await anonymous.get(`/api/v1/datasets/${id}/lines`, { params: { finalizedAt: older } })
+    assert.equal(res.headers['cache-control'], 'must-revalidate, public, max-age=' + config.cache.publicMaxAge)
+  })
+
+  test('The API docs describe the cache of the dataset actual visibility', async () => {
+    const ax = testUser1
+    const dataset = await createDataset(ax)
+    const id = dataset.id
+
+    const descriptions = async () => [
+      (await ax.get(`/api/v1/datasets/${id}/api-docs.json`)).data.info.description,
+      (await ax.get(`/api/v1/datasets/${id}/private-api-docs.json`)).data.info.description
+    ]
+
+    for (const description of await descriptions()) {
+      assert.ok(description.includes("ce jeu de données n'est pas public"), description)
+      assert.ok(!description.includes('ce jeu de données est public'))
+    }
+
+    for (const doc of [(await ax.get(`/api/v1/datasets/${id}/api-docs.json`)).data, (await ax.get(`/api/v1/datasets/${id}/private-api-docs.json`)).data]) {
+      for (const path of ['/lines', '/values_agg']) {
+        assert.ok(doc.paths[path].get.parameters.some((p: any) => p.name === 'finalizedAt' && p.in === 'query'), path)
+      }
+    }
+
+    await ax.put(`/api/v1/datasets/${id}/permissions`, [{ classes: ['read'] }])
+    for (const description of await descriptions()) {
+      assert.ok(description.includes('ce jeu de données est public'), description)
+      assert.ok(!description.includes("n'est pas public"))
+    }
+  })
+
   test('Supports caching of lists', async () => {
     const ax = testUser1
     await createDataset(ax)
