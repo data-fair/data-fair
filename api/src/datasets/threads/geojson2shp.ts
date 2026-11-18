@@ -32,7 +32,8 @@ export default async (params: Params) => {
   // thus the shapefile) is unchanged.
   let geojsonStr: string
   if (params.rawBuffer) {
-    const { geojson } = rawEsBuffer2geojson(params.rawBuffer, params.dataset)
+    // shapefile has no list field type (GDAL >= 3.13 aborts on it): join multi-valued columns with their separator
+    const { geojson } = rawEsBuffer2geojson(params.rawBuffer, params.dataset, false)
     geojson.bbox = params.bbox // appended LAST — matches the old main-thread key order (type/total/features/bbox)
     geojsonStr = JSON.stringify(geojson)
   } else {
