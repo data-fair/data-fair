@@ -61,7 +61,8 @@ export const datasetRoot: AgentRoot = {}
 export const root: AgentRoot = {
   skills: [{
     name: 'workflow',
-    description: 'How to explore the data published on a portal: find datasets, read their schema, then search rows, aggregate or compute metrics. Read it before querying data.',
+    // Served by both mcp servers (no tools: it is not bound to one listing): the body names only the tools both have.
+    description: 'How to explore datasets: find them, read their schema, then search rows, aggregate or compute metrics. Read it before querying data.',
     // the body is agent-skills/workflow.md, served next to this document
     href: 'agents/skills/workflow.md'
   }]
