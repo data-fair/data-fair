@@ -562,7 +562,7 @@ drops its premise and the case stops testing anything) types into the real
 chat drawer in a real browser; the assistant under test runs on
 `SIM_ASSISTANT_MODEL` (default `sonnet`) through a local Claude Code bridge
 configured as an `openai-compatible` provider on the agents service. The
-background roles — the tools role (memory consolidation), compaction, the moderation guard — run on
+background roles — compaction and the moderation guard — run on
 `SIM_TOOLS_MODEL` (default `haiku`) instead, matching where a deployment puts a
 small model: a background prompt only a large model can follow reads as working
 until the cheap tier runs it. A baseline also runs the cases with

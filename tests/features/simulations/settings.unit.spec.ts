@@ -35,21 +35,20 @@ test.describe('bridge provider settings', () => {
   })
 
   test('runs the background roles on the cheaper model, as a real deployment would', () => {
-    // The tools role, the compaction summariser and the moderation guard are the
+    // The compaction summariser and the moderation guard are the
     // roles a deployment puts on a small model. Running them on the assistant's
     // model costs more per case and hides the failures a real user would hit —
     // a background prompt only a large model can follow still reads as working.
     const { org } = bridgeSettings('sonnet', 'haiku')
     assert.equal(org.modelMapping.assistant.id, 'sonnet')
-    assert.equal(org.modelMapping.tools.id, 'haiku')
     assert.equal(org.modelMapping.summarizer.id, 'haiku')
     assert.equal(org.modelMapping.moderator.id, 'haiku')
   })
 
   test('declares exactly the roles the agents service accepts', () => {
-    // the agents settings schema refuses any other role (an "evaluator" role was dropped there), and
+    // the agents settings schema refuses any other role ("evaluator" and "tools" were dropped there), and
     // a refused settings PUT fails every case at setup
-    assert.deepEqual([...MODEL_ROLES].sort(), ['assistant', 'moderator', 'summarizer', 'tools'])
+    assert.deepEqual([...MODEL_ROLES].sort(), ['assistant', 'moderator', 'summarizer'])
     for (const entry of bridgeSettings('sonnet', 'haiku').superadmin.models) {
       for (const role of entry.usage) assert.ok((MODEL_ROLES as readonly string[]).includes(role), role)
     }

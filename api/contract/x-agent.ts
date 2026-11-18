@@ -19,7 +19,9 @@ import { agentSecurity } from './scopes-security.ts'
 
 export const filtersDescription = 'Column filters as key-value pairs: column_key + suffix, all values strings. Example: { "ville_eq": "Paris", "age_lte": "30", "nom_search": "Jean" }. Suffixes: _eq, _neq, _in, _nin, _gt, _gte, _lt, _lte, _starts, _exists, _nexists, _search (free-text word search, default choice for text), _contains (only when enabled). If a suffix is rejected the 400 error lists what the column supports — read it and adapt. Never prefix with _c_.'
 
-const datasetId: AgentParamOverride = { name: 'datasetId', description: 'The exact dataset ID from the "id" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug.' }
+const datasetId: AgentParamOverride = { name: 'datasetId', description: 'The exact dataset ID from the "id" field in datafair_list_account_datasets results. Do not use the title or slug.' }
+/** The account's resources on given portals: the back-office answer to "what does this portal publish", whatever site the call is made on. */
+const publicationSitesFilter = (resources: string): AgentParamOverride => ({ description: `Keep only the ${resources} published on these portals: their keys from datafair_list_publication_sites, e.g. ["data-fair-portals:abc123"].` })
 
 /** Geo and temporal filters, shared by every query operation. */
 const queryParams: Record<string, AgentParamOverride> = {
@@ -59,7 +61,8 @@ export const datasetRoot: AgentRoot = {}
 export const root: AgentRoot = {
   skills: [{
     name: 'workflow',
-    description: 'How to explore the data published on a portal: find datasets, read their schema, then search rows, aggregate or compute metrics. Read it before querying data.',
+    // Served by both mcp servers (no tools: it is not bound to one listing): the body names only the tools both have.
+    description: 'How to explore datasets: find them, read their schema, then search rows, aggregate or compute metrics. Read it before querying data.',
     // the body is agent-skills/workflow.md, served next to this document
     href: 'agents/skills/workflow.md'
   }]
@@ -129,6 +132,7 @@ export const operations = {
     description: 'List the datasets owned by the active account (its department included), with optional text search. Without q it lists all of them, page by page (count is the total): prefer that for an inventory, since a keyword can miss a dataset worded differently. Returns id, title, status, row count, and last update.',
     params: {
       q: { description: 'French keywords for full-text search (simple terms, not sentences). Examples: "élus", "DPE", "entreprises"' },
+      publicationSites: publicationSitesFilter('datasets'),
       size: { default: 10, maximum: 50 },
       page: { default: 1 },
       mine: { exclude: true },
@@ -332,6 +336,7 @@ export const operations = {
     params: {
       q: { description: 'Keywords for full-text search.' },
       dataset: { description: 'Restrict to the applications using these datasets (ids from datafair_list_account_datasets).' },
+      publicationSites: publicationSitesFilter('applications'),
       size: { default: 10, maximum: 50 },
       page: { default: 1 },
       mine: { exclude: true },

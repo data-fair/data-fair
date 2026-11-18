@@ -10,6 +10,13 @@
             "type": "string",
             "description": "French keywords for full-text search (simple terms, not sentences). Examples: \"élus\", \"DPE\", \"entreprises\""
           },
+          "publicationSites": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Keep only the datasets published on these portals: their keys from datafair_list_publication_sites, e.g. [\"data-fair-portals:abc123\"]."
+          },
           "page": {
             "type": "integer",
             "default": 1,
@@ -245,7 +252,7 @@
         "properties": {
           "datasetId": {
             "type": "string",
-            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
+            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets results. Do not use the title or slug."
           },
           "response_format": {
             "type": "string",
@@ -318,7 +325,7 @@
         "properties": {
           "datasetId": {
             "type": "string",
-            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
+            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets results. Do not use the title or slug."
           },
           "file": {
             "type": "string",
@@ -390,7 +397,7 @@
         "properties": {
           "datasetId": {
             "type": "string",
-            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
+            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets results. Do not use the title or slug."
           },
           "datasetTitle": {
             "type": "string",
@@ -444,7 +451,7 @@
         "properties": {
           "datasetId": {
             "type": "string",
-            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
+            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets results. Do not use the title or slug."
           },
           "body": {
             "type": "object",
@@ -512,7 +519,7 @@
         "properties": {
           "datasetId": {
             "type": "string",
-            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
+            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets results. Do not use the title or slug."
           },
           "body": {
             "type": "object",
@@ -578,6 +585,13 @@
               "type": "string"
             },
             "description": "Restrict to the applications using these datasets (ids from datafair_list_account_datasets)."
+          },
+          "publicationSites": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Keep only the applications published on these portals: their keys from datafair_list_publication_sites, e.g. [\"data-fair-portals:abc123\"]."
           },
           "page": {
             "type": "integer",
@@ -1464,7 +1478,7 @@
         "properties": {
           "datasetId": {
             "type": "string",
-            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
+            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets results. Do not use the title or slug."
           },
           "after": {
             "type": "string",
@@ -1593,7 +1607,7 @@
         "properties": {
           "datasetId": {
             "type": "string",
-            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
+            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets results. Do not use the title or slug."
           },
           "size": {
             "default": 10000,
@@ -1718,7 +1732,7 @@
         "properties": {
           "datasetId": {
             "type": "string",
-            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
+            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets results. Do not use the title or slug."
           },
           "fieldKey": {
             "type": "string",
@@ -1849,7 +1863,7 @@
         "properties": {
           "datasetId": {
             "type": "string",
-            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
+            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets results. Do not use the title or slug."
           },
           "groupByColumns": {
             "type": "array",
@@ -1983,7 +1997,7 @@
         "properties": {
           "datasetId": {
             "type": "string",
-            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
+            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets results. Do not use the title or slug."
           },
           "metric": {
             "type": "string",
@@ -2111,7 +2125,7 @@
         "properties": {
           "datasetId": {
             "type": "string",
-            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
+            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets results. Do not use the title or slug."
           }
         },
         "additionalProperties": false,
@@ -2175,7 +2189,7 @@
         "properties": {
           "datasetId": {
             "type": "string",
-            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
+            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets results. Do not use the title or slug."
           }
         },
         "additionalProperties": false,
@@ -2239,7 +2253,7 @@
         "properties": {
           "datasetId": {
             "type": "string",
-            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
+            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets results. Do not use the title or slug."
           }
         },
         "additionalProperties": false,
@@ -2284,7 +2298,7 @@
         "properties": {
           "datasetId": {
             "type": "string",
-            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
+            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets results. Do not use the title or slug."
           },
           "body": {
             "$id": "https://github.com/data-fair/data-fair/permissions-resolved",
@@ -2461,8 +2475,8 @@
   "skills": [
     {
       "name": "datafair-workflow",
-      "description": "How to explore the data published on a portal: find datasets, read their schema, then search rows, aggregate or compute metrics. Read it before querying data.",
-      "digest": "sha256:6f055f91878e04dc91d54ca38a055944dbf8225c521871605ec2a6c1dbffa548"
+      "description": "How to explore datasets: find them, read their schema, then search rows, aggregate or compute metrics. Read it before querying data.",
+      "digest": "sha256:f781c157354b04d6389df887f1b11bbea4a859cd7edd47145dd0923e06236243"
     }
   ],
   "guides": []

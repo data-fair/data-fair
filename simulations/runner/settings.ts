@@ -18,7 +18,7 @@ export const OWNER_USER = 'test_user1'
 const SUPER_ADMIN = 'test_superadmin@test.com'
 
 // the roles the agents settings schema accepts, and no other: a refused settings PUT fails every case
-export const MODEL_ROLES = ['assistant', 'tools', 'summarizer', 'moderator'] as const
+export const MODEL_ROLES = ['assistant', 'summarizer', 'moderator'] as const
 
 const provider = {
   id: 'bridge',
@@ -41,13 +41,13 @@ const quotas = {
 }
 
 /**
- * Roles a deployment puts on a small model: tools (memory consolidation),
- * compaction, the moderation guard. Running them on the assistant's model would
+ * Roles a deployment puts on a small model: compaction and the moderation guard (memory
+ * consolidation runs on the assistant's model since agents dropped its `tools` role, agents #98). Running them on the assistant's model would
  * both cost more per case and flatter the product — a background prompt that only
  * a large model can follow reads as working until a real deployment runs it on the
  * cheap tier.
  */
-const BACKGROUND_ROLES = ['tools', 'summarizer', 'moderator'] as const
+const BACKGROUND_ROLES = ['summarizer', 'moderator'] as const
 
 /**
  * The two bodies the agents API takes since settings were split by author:
