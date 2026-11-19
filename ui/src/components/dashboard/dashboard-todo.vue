@@ -129,7 +129,7 @@ type FacetsRes = { count: number, facets: Record<string, { value: string }[]> }
 type PortalsRes = { facets: { requestedPortals: Record<string, number> } }
 
 const sitesFilter = computed(() => publicationSites?.map(p => `${p.type}:${p.id}`).join(','))
-const sum = (counts?: Record<string, number>) => counts && Object.values(counts).reduce((a, b) => a + b, 0)
+const sum = (counts?: Record<string, number>) => counts && Object.values(counts).reduce((a, b) => a + (typeof b === 'number' ? b : 0), 0)
 
 const datasetsErrorFetch = useFetch<{ count: number }>(() => canContribDep.value ? `${$apiPath}/datasets?size=0&shared=false&status=error` : null)
 // the facet stays per status whatever the filters, "count" only follows them through a shallow copy in the processings router
@@ -151,9 +151,9 @@ const extraItems = ($uiConfig.extraTodoItems ?? []).map(extra => ({
 }))
 
 // only the known sites: the facet also lists the other sites requested by the same resources
-const requestedSitesQuery = (res?: FacetsRes | null) => ({ requestedPublicationSites: res?.facets.requestedPublicationSites.map(f => f.value).filter(v => sitesFilter.value?.split(',').includes(v)).join(',') })
+const requestedSitesQuery = (res?: FacetsRes | null) => ({ requestedPublicationSites: res?.facets?.requestedPublicationSites?.map(f => f.value).filter(v => sitesFilter.value?.split(',').includes(v)).join(',') })
 
-const requestedPortalsLink = (path: string, res?: PortalsRes | null) => ({ path, query: { requestedPortal: Object.keys(res?.facets.requestedPortals ?? {}).join(',') } })
+const requestedPortalsLink = (path: string, res?: PortalsRes | null) => ({ path, query: { requestedPortal: Object.keys(res?.facets?.requestedPortals ?? {}).join(',') } })
 
 // the fullest of the stored and indexed spaces, a line from 80 %
 const storagePercent = computed(() => {
@@ -183,8 +183,8 @@ const items = computed(() => {
     })),
     { key: 'datasetsDraft', count: datasetsDraftFetch.data.value?.count, icon: mdiFileDocumentEdit, color: 'warning', to: { path: '/datasets', query: { draftStatus: 'finalized' } } }
   ]
-  // a line without permission or integration has no fetch, so no count
-  return lines.filter(line => line.count).map(line => {
+  // a line without permission or integration has no fetch, so no count; another service's unexpected answer hides its line
+  return lines.filter(line => typeof line.count === 'number' && line.count > 0).map(line => {
     const title = line.title || t(line.key, { n: line.count }, line.count!)
     // the storage line carries its percentage in its title
     return { ...line, title, label: line.key === 'storage' ? title : `${line.count} · ${title}` }
