@@ -78,4 +78,18 @@ test.describe('field sniffer unit tests', () => {
     assert.equal(sniffer.escapeKey('Température normale lissée (°C)', 'compat-ods'), 'temperature_normale_lissee_degc')
     assert.equal(sniffer.escapeKey('Thermosensibilité moyenne (kWh DJU)', 'compat-ods'), 'thermosensibilite_moyenne_kwh_dju')
   })
+
+  test('Declared types win over sniffed ones', () => {
+    // codes with leading zeros declared as strings stay strings
+    assert.deepEqual(sniffer.sniffDeclared(['01001', '02002'], [], { type: 'string' }), { type: 'string', codeLike: true })
+    // floats with integer values stay numbers
+    assert.deepEqual(sniffer.sniffDeclared(['1.0', '2.0'], [], { type: 'number' }), { type: 'number' })
+    // same type as sniffed: the sniffed details are kept
+    assert.deepEqual(sniffer.sniffDeclared(['2024-01-31T10:30:00'], [], { type: 'string', format: 'date-time' }), { type: 'string', format: 'date-time', dateTimeFormat: 'YYYY-MM-DDTHH:mm:ss' })
+    // a plain string column keeps what sniffing finds among strings
+    assert.deepEqual(sniffer.sniffDeclared(['2024-01-31'], [], { type: 'string' }), { type: 'string', format: 'date' })
+    assert.deepEqual(sniffer.sniffDeclared(['a;b', 'c'], [], { type: 'string', separator: ';' }), { type: 'string', separator: ';' })
+    assert.deepEqual(sniffer.sniffDeclared(['1;2'], [], { type: 'integer', separator: ';' }), { type: 'integer', separator: ';' })
+    assert.deepEqual(sniffer.sniffDeclared([], [], { type: 'integer' }), { type: 'empty' })
+  })
 })

@@ -33,6 +33,9 @@ export default async function (dataset: FileDataset) {
   debug('sniff csv sample')
   const sniffResult = await csvSniffer.sniff(decodedSample)
 
+  // types declared by a typed source file (parquet), set by the normalizer
+  const declaredSchema = datasetUtils.parquetTypes.has(dataset.originalFile?.mimetype) ? dataset.file.schema : undefined
+
   dataset.file.schema = sniffResult.labels
     .map((field, i) => ({
       key: fieldsSniffer.escapeKey(field, dataset?.analysis?.escapeKeyAlgorithm),
@@ -67,7 +70,10 @@ export default async function (dataset: FileDataset) {
     const fileField = dataset.file.schema.find(f => f.key === escapedKey)
     if (fileField) {
       const existingField = dataset.schema && dataset.schema.find(f => f.key === escapedKey)
-      Object.assign(fileField, fieldsSniffer.sniff([...sampleValues[field]], attachments, existingField))
+      const declared = declaredSchema?.find(f => f.key === escapedKey)
+      Object.assign(fileField, declared
+        ? fieldsSniffer.sniffDeclared([...sampleValues[field]], attachments, declared)
+        : fieldsSniffer.sniff([...sampleValues[field]], attachments, existingField))
     } else {
       if (sampleValues[field].size) {
         throw httpError(400, `[noretry] Field ${field} is present in the data but missing from the initial analysis of the file`)

@@ -29,6 +29,7 @@ fr:
   OpenDocument: Format de fichier ouvert pour les applications bureautique de type tableur
   XLSX: Format de fichier tableur Office Open XML
   XLS: Format de fichier tableur Excel
+  Parquet: Format de fichier binaire colonnaire pour données tabulaires typées
   JSON: Données tabulaires au format JSON
   GeoJSON: Format de données géospatiales simples utilisant la norme JSON
   KMLKMZ: Format de données géospatiales basé sur le formalisme XML
@@ -46,6 +47,7 @@ en:
   OpenDocument: Open file format for spreadsheet type office applications
   XLSX: Spreadsheet file format Office Open XML
   XLS: Excel spreadsheet file format
+  Parquet: Columnar binary file format for typed tabular data
   JSON: Tabular data in JSON format
   GeoJSON: Format for simple geospatial data using the JSON standard
   KMLKMZ: Format for geospatial data using the XML standard
@@ -76,6 +78,9 @@ const formats = [
   }, {
     type: 'XLS',
     format: '.xls'
+  }, {
+    type: 'Parquet',
+    format: '.parquet'
   }, {
     type: 'JSON',
     format: '.json, .ndjson'

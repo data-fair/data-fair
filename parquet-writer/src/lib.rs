@@ -6,6 +6,7 @@ use std::any::Any;
 use std::panic::{catch_unwind, AssertUnwindSafe};
 
 mod buffer_writer;
+mod parquet_reader;
 mod parquet_writer;
 mod schema;
 
@@ -55,4 +56,36 @@ impl JsParquetWriter {
     let data = catch_unwind(AssertUnwindSafe(|| writer.finish())).map_err(panic_to_error)?;
     BufferSlice::from_data(&env, data)
   }
+}
+
+pub struct ParquetToCsvTask {
+  input_path: String,
+  output_path: String,
+}
+
+impl Task for ParquetToCsvTask {
+  type Output = parquet_reader::ParquetToCsvResult;
+  type JsValue = parquet_reader::ParquetToCsvResult;
+
+  fn compute(&mut self) -> Result<Self::Output> {
+    catch_unwind(AssertUnwindSafe(|| {
+      parquet_reader::parquet_to_csv(&self.input_path, &self.output_path)
+    }))
+    .map_err(panic_to_error)?
+    .map_err(napi::Error::from_reason)
+  }
+
+  fn resolve(&mut self, _env: Env, output: Self::Output) -> Result<Self::JsValue> {
+    Ok(output)
+  }
+}
+
+// Convert a parquet file into a csv file, on the libuv thread pool.
+// Returns the data-fair type of each column, as declared by the parquet schema.
+#[napi(ts_return_type = "Promise<ParquetToCsvResult>")]
+pub fn parquet_to_csv(input_path: String, output_path: String) -> AsyncTask<ParquetToCsvTask> {
+  AsyncTask::new(ParquetToCsvTask {
+    input_path,
+    output_path,
+  })
 }

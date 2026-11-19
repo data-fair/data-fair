@@ -282,7 +282,7 @@ export const operations = {
   postDataset: {
     name: 'create_dataset_from_file',
     title: { fr: 'Créer un jeu de données depuis un fichier', en: 'Create a dataset from a file' },
-    description: 'Create a dataset in the active account from a data file: CSV, TSV, XLSX, ODS, GeoJSON, a zipped shapefile… Its type is read from the extension of the file name. The title defaults to the file name. The dataset is analysed and indexed in the background, from seconds to minutes: its rows can be searched once its status is finalized (datafair_list_account_datasets shows it).',
+    description: 'Create a dataset in the active account from a data file: CSV, TSV, XLSX, ODS, Parquet, GeoJSON, a zipped shapefile… Its type is read from the extension of the file name. The title defaults to the file name. The dataset is analysed and indexed in the background, from seconds to minutes: its rows can be searched once its status is finalized (datafair_list_account_datasets shows it).',
     bodyFields: ['file', 'title'],
     bodyRequired: ['file']
   },
