@@ -273,6 +273,19 @@ test.describe('Many case of special file datasets', () => {
     assert.ok(errorEvent.data.includes('Unexpected'))
   })
 
+  test('Fails without retry when the parquet file is corrupted', async () => {
+    const form = new FormData()
+    form.append('file', 'not a parquet file', 'example.parquet')
+    const ax = testUser1
+    const res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
+    assert.equal(res.status, 201)
+    await waitForDatasetError(ax, res.data.id)
+    const journal = (await ax.get(`/api/v1/datasets/${res.data.id}/journal`)).data
+    const errorEvents = journal.filter((e: any) => e.type === 'error')
+    assert.equal(errorEvents.length, 1)
+    assert.ok(errorEvents[0].data.startsWith('Failed to read the parquet file'))
+  })
+
   const checkDateDataset = async (ext: any) => {
     const ax = testUser1
     const dataset = await sendDataset('datasets/dates.' + ext, ax)

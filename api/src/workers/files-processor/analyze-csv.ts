@@ -70,7 +70,7 @@ export default async function (dataset: FileDataset) {
     const fileField = dataset.file.schema.find(f => f.key === escapedKey)
     if (fileField) {
       const existingField = dataset.schema && dataset.schema.find(f => f.key === escapedKey)
-      const declared = declaredSchema?.find(f => f.key === escapedKey)
+      const declared = declaredSchema?.find(f => f['x-originalName'] === fileField['x-originalName'])
       Object.assign(fileField, declared
         ? fieldsSniffer.sniffDeclared([...sampleValues[field]], attachments, declared)
         : fieldsSniffer.sniff([...sampleValues[field]], attachments, existingField))

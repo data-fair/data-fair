@@ -61,6 +61,7 @@ impl JsParquetWriter {
 pub struct ParquetToCsvTask {
   input_path: String,
   output_path: String,
+  max_bytes: Option<i64>,
 }
 
 impl Task for ParquetToCsvTask {
@@ -69,7 +70,7 @@ impl Task for ParquetToCsvTask {
 
   fn compute(&mut self) -> Result<Self::Output> {
     catch_unwind(AssertUnwindSafe(|| {
-      parquet_reader::parquet_to_csv(&self.input_path, &self.output_path)
+      parquet_reader::parquet_to_csv(&self.input_path, &self.output_path, self.max_bytes)
     }))
     .map_err(panic_to_error)?
     .map_err(napi::Error::from_reason)
@@ -80,12 +81,17 @@ impl Task for ParquetToCsvTask {
   }
 }
 
-// Convert a parquet file into a csv file, on the libuv thread pool.
+// Convert a parquet file into a csv file of at most max_bytes, on the libuv thread pool.
 // Returns the data-fair type of each column, as declared by the parquet schema.
 #[napi(ts_return_type = "Promise<ParquetToCsvResult>")]
-pub fn parquet_to_csv(input_path: String, output_path: String) -> AsyncTask<ParquetToCsvTask> {
+pub fn parquet_to_csv(
+  input_path: String,
+  output_path: String,
+  max_bytes: Option<i64>,
+) -> AsyncTask<ParquetToCsvTask> {
   AsyncTask::new(ParquetToCsvTask {
     input_path,
     output_path,
+    max_bytes,
   })
 }

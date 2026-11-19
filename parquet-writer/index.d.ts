@@ -30,7 +30,7 @@ export interface ParquetField {
   separator?: string
 }
 
-export declare function parquetToCsv(inputPath: string, outputPath: string): Promise<ParquetToCsvResult>
+export declare function parquetToCsv(inputPath: string, outputPath: string, maxBytes?: number | undefined | null): Promise<ParquetToCsvResult>
 
 export interface ParquetToCsvResult {
   numRows: number

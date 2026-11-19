@@ -33,4 +33,19 @@ test.describe('parquet to csv conversion', () => {
   test('rejects a file that is not parquet', async () => {
     await assert.rejects(parquetToCsv('./tests/resources/datasets/dataset1.csv', tmpCsv()), /parquet|magic|footer/i)
   })
+
+  test('stops when the csv output exceeds max bytes', async () => {
+    await assert.rejects(parquetToCsv('./tests/resources/datasets/types.parquet', tmpCsv(), 10), { message: /^csv output exceeds the size limit/ })
+    assert.equal((await parquetToCsv('./tests/resources/datasets/types.parquet', tmpCsv(), 10000)).numRows, 3)
+  })
+
+  test('keeps a list column as plain strings when a value contains the separator', async () => {
+    const csvFile = tmpCsv()
+    const result = await parquetToCsv('./tests/resources/datasets/list-separator.parquet', csvFile)
+    assert.deepEqual(result.fields, [
+      { name: 'tags', type: 'string' },
+      { name: 'nombres', type: 'integer', separator: ';' }
+    ])
+    assert.equal(fs.readFileSync(csvFile, 'utf8'), '\uFEFFtags,nombres\na;b;c,1;2\n')
+  })
 })

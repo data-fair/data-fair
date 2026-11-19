@@ -12,6 +12,7 @@ import { displayBytes } from '../../misc/utils/bytes.ts'
 import { updateStorage } from '../../datasets/utils/storage.ts'
 import * as datasetUtils from '../../datasets/utils/index.ts'
 import * as fieldsSniffer from '../../datasets/utils/fields-sniffer.ts'
+import * as limits from '../../limits/service.ts'
 import * as datasetService from '../../datasets/service.ts'
 import { fsyncFile, tmpDir as mainTmpDir } from '../../datasets/utils/files.ts'
 import * as i18nUtils from '../../../i18n/utils.ts'
@@ -192,7 +193,19 @@ export default async function (dataset: FileDataset) {
       await pump((await filesStorage.readStream(originalFilePath)).body, createWriteStream(srcFile))
       await fsyncFile(srcFile)
       const csvFile = await tmp.tmpName({ tmpdir: tmpDir })
-      const { fields } = await parquetToCsv(srcFile, csvFile)
+      // parquet compresses without practical bound: stop the csv at the storage left to the owner
+      const maxBytes = [(await limits.remaining(dataset.owner)).storage, config.defaultLimits.datasetStorage]
+        .filter(limit => limit !== -1)
+        .reduce<number | undefined>((min, limit) => min === undefined ? limit : Math.min(min, limit), undefined)
+      let fields: Awaited<ReturnType<typeof parquetToCsv>>['fields']
+      try {
+        fields = (await parquetToCsv(srcFile, csvFile, maxBytes)).fields
+      } catch (err: any) {
+        if (err.message?.startsWith('csv output exceeds the size limit')) {
+          throw httpError(429, `[noretry] Once converted to CSV, this parquet file exceeds the remaining storage space (${displayBytes(maxBytes as number)}).`)
+        }
+        throw httpError(400, `[noretry] Failed to read the parquet file: ${err.message}`)
+      }
       const filePath = resolvePath(datasetUtils.dataFilesDir(dataset), baseName + '.csv')
       await filesStorage.moveFromFs(csvFile, filePath)
       const stats = await filesStorage.fileStats(filePath)
