@@ -31,4 +31,27 @@ test.describe('fs files-storage backend', () => {
     // a directory is not a file
     assert.equal(await backend.fileExists(join(dir, 'attachments')), false)
   })
+
+  test('readStream resolves ranges against the real file size (> 1 MB)', async () => {
+    const content = Buffer.alloc(2_000_000)
+    for (let i = 0; i < content.length; i++) content[i] = i % 251
+    const path = join(dir, 'attachments', 'big.bin')
+    await writeFile(path, content)
+    const read = async (range: string) => {
+      const res = await backend.readStream(path, undefined, range)
+      const chunks: Buffer[] = []
+      for await (const chunk of res.body) chunks.push(chunk)
+      return { ...res, data: Buffer.concat(chunks) }
+    }
+
+    const mid = await read('bytes=1500000-1500099')
+    assert.equal(mid.range, 'bytes 1500000-1500099/2000000')
+    assert.equal(mid.size, 100)
+    assert.deepEqual(mid.data, content.subarray(1500000, 1500100))
+
+    // suffix range, as used by parquet readers to fetch the footer
+    const suffix = await read('bytes=-8')
+    assert.equal(suffix.range, 'bytes 1999992-1999999/2000000')
+    assert.deepEqual(suffix.data, content.subarray(1999992))
+  })
 })
