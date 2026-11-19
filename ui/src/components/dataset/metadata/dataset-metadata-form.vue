@@ -2,6 +2,7 @@
   <v-defaults-provider :defaults="{ global: { hideDetails: 'auto' } }">
     <vjsf
       v-if="dataset"
+      :key="schemaVersion"
       :model-value="vjsfModel"
       :schema="schema"
       :options="vjsfOptions"

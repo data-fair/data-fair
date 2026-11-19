@@ -187,6 +187,33 @@ test.describe('dataset activable metadata fields', () => {
     await expect(metadata.locator('.CodeMirror')).toContainText('Une autre description')
   })
 
+  test('topics loaded after the form keep the typed title, before and after saving', async ({ page, goToWithAuth }) => {
+    const ax = await axiosAuth('test_user1@test.com')
+    await ax.put('/api/v1/settings/user/test_user1', { ...settings(), topics: [{ id: 'sante', title: 'Santé' }] })
+    try {
+      await ax.patch(`/api/v1/datasets/${datasetId}`, { title: 'topics title', topics: [{ id: 'sante', title: 'Santé' }] })
+      await page.route(/\/topics$/, async route => { await new Promise(resolve => setTimeout(resolve, 2000)); await route.continue() })
+      const topicsLoaded = page.waitForResponse(/\/topics$/, { timeout: 15000 })
+      await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+      const metadata = page.locator('#metadata')
+      await expect(metadata).toBeVisible({ timeout: 15000 })
+      await topicsLoaded
+      const topics = metadata.getByRole('combobox', { name: /Thématiques/ })
+      await expect(topics).toBeVisible()
+      const title = metadata.getByRole('textbox', { name: /^Titre/ })
+      await title.click()
+      await page.keyboard.press('End')
+      await page.keyboard.type(' edited')
+      await expect(topics).toBeVisible()
+      await metadata.getByRole('button', { name: /Enregistrer/ }).click()
+      await expect(metadata.getByRole('button', { name: /Enregistrer/ })).not.toBeVisible({ timeout: 10000 })
+      expect((await ax.get(`/api/v1/datasets/${datasetId}`)).data.title).toBe('topics title edited')
+      await expect(title).toHaveValue('topics title edited')
+    } finally {
+      await ax.put('/api/v1/settings/user/test_user1', settings())
+    }
+  })
+
   test('a type change empties the value and the form still saves', async ({ page, goToWithAuth }) => {
     const ax = await axiosAuth('test_user1@test.com')
     const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'stale', schema: [{ key: 'a', type: 'string' }], customMetadata: { ancien: 3 } })).data
