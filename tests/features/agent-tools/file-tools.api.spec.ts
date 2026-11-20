@@ -124,7 +124,8 @@ test.describe('file tools against the API', () => {
 
     const exported = await tool('export_data').execute({ datasetId: id, select: ['id', 'nb'] }, ctx)
     assert.equal(exported.resourceLink!.mimeType, 'text/csv')
-    assert.equal(exported.resourceLink!.name, `${id}-lines.csv`)
+    // openapi-mcp strips leading dashes from link names, and random ids can start with one
+    assert.equal(exported.resourceLink!.name, `${id.replace(/^-+/, '')}-lines.csv`)
     res = await fetch(exported.resourceLink!.uri, { headers: ctx.headers })
     assert.equal(res.status, 200)
     assert.match(res.headers.get('content-type') ?? '', /text\/csv/)
