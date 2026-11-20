@@ -339,7 +339,8 @@ test.describe('Applications', () => {
       await ax.get(captureUrl + '/api/v1/api-docs.json')
     } catch (err: any) {
       console.warn('capture is not available in this test environment')
-      assert.equal(err.status, 502)
+      // 502: a proxy route to a stopped capture, 404: no route at all
+      assert.ok([404, 502].includes(err.status), `unexpected status ${err.status}`)
       return
     }
 
@@ -431,7 +432,8 @@ test.describe('Applications', () => {
       await ax.get(captureUrl + '/api/v1/api-docs.json')
     } catch (err: any) {
       console.warn('capture is not available in this test environment')
-      assert.equal(err.status, 502)
+      // 502: a proxy route to a stopped capture, 404: no route at all
+      assert.ok([404, 502].includes(err.status), `unexpected status ${err.status}`)
       return
     }
 

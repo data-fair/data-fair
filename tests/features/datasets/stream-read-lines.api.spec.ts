@@ -13,7 +13,8 @@ import { waitForFinalize } from '../../support/workers.ts'
 const testUser1 = await axiosAuth('test_datafair_user1@test.com')
 
 const esHost = `localhost:${process.env.ES_PORT}`
-const indicesPrefix = 'dataset-development'
+// the API's config: INDICES_PREFIX, else dataset-<NODE_ENV>
+const indicesPrefix = process.env.INDICES_PREFIX || 'dataset-development'
 
 const N = 2500
 const id = 'streamlines'
