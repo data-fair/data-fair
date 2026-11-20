@@ -26,7 +26,9 @@ const testPrefixRegexp = /^test_[a-z0-9]+(?:_[a-z0-9]+)*_$/
 // Cleanup of a sub-space (DELETE /?prefix=test_<suite>_): delete the data owned by its accounts from
 // mongo/ES/filesystem, including the shared collections' documents keyed by the sub-space (remote services
 // and base applications identified under the prefix, locks and integrity state of its datasets), then
-// reset the caches and the tmp dir. The caches reset is global, harmless to the other sub-spaces.
+// reset the caches and the tmp dir. Both resets are global: the caches only cost a recomputation to the other
+// sub-spaces, but the tmp dir is wiped for all of them, so an upload or a worker task of another suite running
+// at the same time may lose its temporary files.
 router.delete('/', async (req, res, next) => {
   try {
     const prefix = req.query.prefix

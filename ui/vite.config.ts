@@ -14,7 +14,7 @@ import { commonjsDeps } from '@koumoul/vjsf/utils/build.js'
 // ports come from `dev/default.env`, overridden by `.env`, checked so a missing variable never becomes NaN
 const envPort = (name: string) => {
   const port = Number(process.env[name])
-  if (!Number.isInteger(port) || port <= 0) throw new Error(`missing or invalid ${name}, run "npm run dev-setup"`)
+  if (!Number.isInteger(port) || port <= 0) throw new Error(`missing or invalid ${name}, run "npm run dev-deps" to create .env from dev/default.env`)
   return port
 }
 
