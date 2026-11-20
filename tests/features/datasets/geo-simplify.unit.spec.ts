@@ -72,6 +72,11 @@ test.describe('simplifyToVertexBudget', () => {
     const mp = { type: 'MultiPolygon', coordinates: Array.from({ length: 10 }, () => [flat]) }
     assert.throws(() => simplifyToVertexBudget(mp as any, 5), /invalid polygon/)
   })
+  test('keeps an unclosed ring, which has an area: the geometry is still reported as invalid', () => {
+    const unclosed = [[20, 20], [20, 21], [21, 21], [21, 20]]
+    const mp = { type: 'MultiPolygon', coordinates: [circlePolygon(20000).coordinates, [unclosed]] }
+    assert.throws(() => simplifyToVertexBudget(mp as any, 5000), /first and last points not equal/)
+  })
   test('goes straight to the last tolerance when the budget is below the parts floor', () => {
     // 2000 small 5-point squares: rings keep 4 entries at least, the floor (8000) is above the budget
     const coordinates = Array.from({ length: 2000 }, (_, i) => [[[i, 0], [i, 0.5], [i, 1], [i + 0.5, 1], [i, 0]]])

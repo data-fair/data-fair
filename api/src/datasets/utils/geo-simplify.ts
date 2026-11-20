@@ -69,12 +69,16 @@ const minVertices = (geometry: Geometry): number => {
 // to fail the whole simplification and the feature lost its _geoshape. Polygons with a zero-area
 // outer ring and zero-area holes are dropped instead: they hold no surface, and only the derived
 // _geoshape is affected, the raw geometry column keeps them.
+// cleanCoords only removes duplicates and points lying exactly on the segment between their
+// neighbours, which keeps the area: fewer than 4 points left means none. Its other errors (an
+// unclosed ring, malformed coordinates) can come with a real area: the ring is kept, and
+// simplify still reports the geometry as invalid.
 const isZeroAreaRing = (ring: Position[]): boolean => {
   try {
     cleanCoords({ type: 'Polygon', coordinates: [ring] })
     return false
-  } catch {
-    return true
+  } catch (err: any) {
+    return typeof err?.message === 'string' && err.message.startsWith('invalid polygon, fewer than 4 points')
   }
 }
 // null when the outer ring itself has no area
