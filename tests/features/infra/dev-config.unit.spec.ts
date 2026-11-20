@@ -6,6 +6,7 @@ import path from 'node:path'
 import { execFileSync } from 'node:child_process'
 import { createRequire } from 'node:module'
 import { pathToFileURL } from 'node:url'
+import { devLogFile } from '../../support/dev-logs.ts'
 
 const configDir = path.resolve(import.meta.dirname, '../../../api/config')
 const configModule = pathToFileURL(createRequire(path.join(configDir, 'x.js')).resolve('config')).href
@@ -42,5 +43,22 @@ test.describe('development config', () => {
   test('production env variables override the dev defaults', () => {
     const config = loadConfig({ MONGO_URL: 'mongodb://localhost:1/x' })
     assert.equal(config.mongo.url, 'mongodb://localhost:1/x')
+  })
+
+  test('the dev logs are in dev/logs unless DEV_LOG_DIR and DEV_LOG_PREFIX say otherwise', () => {
+    const saved = { dir: process.env.DEV_LOG_DIR, prefix: process.env.DEV_LOG_PREFIX }
+    try {
+      delete process.env.DEV_LOG_DIR
+      delete process.env.DEV_LOG_PREFIX
+      assert.equal(devLogFile('api'), path.join('dev/logs', 'api.log'))
+      process.env.DEV_LOG_DIR = '/var/log/df'
+      process.env.DEV_LOG_PREFIX = 'df-'
+      assert.equal(devLogFile('mock'), '/var/log/df/df-mock.log')
+    } finally {
+      for (const [key, value] of [['DEV_LOG_DIR', saved.dir], ['DEV_LOG_PREFIX', saved.prefix]] as const) {
+        if (value === undefined) delete process.env[key]
+        else process.env[key] = value
+      }
+    }
   })
 })

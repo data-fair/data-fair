@@ -18,6 +18,8 @@ The dev server is available at <http://localhost:5600/data-fair/>; run `npm run 
 
 Each dev process has its own npm script and reads its settings from environment variables (every key of `dev/default.env` can be overridden from the environment or `.env`): `npm run dev-setup` (idempotent builds, no container), then `npm run dev:api`, `npm run dev:ui`, `npm run dev:mock` (and `npm run dev:bridge` with an agents service), each in its own terminal. An optional service (events, agents, registry, capture, openapi-viewer) is absent when its port variable is empty (for example `EVENTS_PORT=`); `npm run dev` blanks the ports of the optional containers that are not running.
 
+`DEV_LOG_DIR` (default `dev/logs`) sets where the dev processes write their logs (`api.log`, `mock.log`, `ui.log`, with an optional `DEV_LOG_PREFIX` before each name): `npm run dev` writes them there and the tests attach their last lines to a failure.
+
 Run test suite:
 
 ```

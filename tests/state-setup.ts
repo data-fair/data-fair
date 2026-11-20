@@ -3,6 +3,7 @@ import { axiosBuilder } from '@data-fair/lib-node/axios.js'
 import { test as setup } from '@playwright/test'
 import { apiUrl, clean } from './support/axios.ts'
 import { sdTestEnvUrl } from './support/sd-fixtures.ts'
+import { devLogFile } from './support/dev-logs.ts'
 
 const ax = axiosBuilder()
 
@@ -26,13 +27,13 @@ setup('Stateful tests setup', async () => {
     }
   }
   assert.equal(lastErr, undefined, `Dev API server did not become available at ${apiUrl} within ${apiReadyTimeoutMs}ms.
-If you are an agent, read dev/logs/api.log and report the problem to your user.
+If you are an agent, read ${devLogFile('api')} and report the problem to your user.
 Last error: ${lastErr instanceof Error ? lastErr.message : String(lastErr)}`)
 
   // Check that the mock server is up
   await assert.doesNotReject(
     ax.get(`${mockUrl}/geocoder/api-docs.json`),
-    `Mock server seems to be unavailable at ${mockUrl}. If you are an agent, read dev/logs/mock.log and report the problem to your user.`
+    `Mock server seems to be unavailable at ${mockUrl}. If you are an agent, read ${devLogFile('mock')} and report the problem to your user.`
   )
 
   // the accounts of the test sub-space were seeded in simple-directory by global-setup.ts (before the

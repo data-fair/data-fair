@@ -1,12 +1,13 @@
 import { test as base, expect } from '@playwright/test'
 import { readFile } from 'node:fs/promises'
 import { anonymousAx, apiUrl } from '../support/axios.ts'
+import { devLogFile } from '../support/dev-logs.ts'
 
 const apiStartedAt = async () => (await anonymousAx.get(`${apiUrl}/api/v1/test-env/started-at`)).data.startedAt as string
 
-// the last lines of a dev process log (dev/logs/<name>.log, written by `npm run dev`), or nothing
-const paneLogs = async (pane: string, lines: number) => {
-  const content = await readFile(`dev/logs/${pane}.log`, 'utf8').catch(() => '')
+// the last lines of a dev process log (dev/logs/<name>.log written by `npm run dev`, see devLogFile), or nothing
+const paneLogs = async (pane: 'api' | 'mock', lines: number) => {
+  const content = await readFile(devLogFile(pane), 'utf8').catch(() => '')
   return content.split('\n').slice(-lines).join('\n')
 }
 

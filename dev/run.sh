@@ -20,7 +20,10 @@ set -a
 . ./.env
 set +a
 
-mkdir -p dev/logs
+# where the processes write their logs, dev/logs by default
+log_dir=${DEV_LOG_DIR:-dev/logs}
+log_prefix=${DEV_LOG_PREFIX:-}
+mkdir -p "$log_dir"
 set -m
 pids=()
 cleanup () {
@@ -37,14 +40,14 @@ for entry in events:EVENTS_PORT agents:AGENTS_PORT registry:REGISTRY_PORT captur
   if ! grep -qx "${entry%%:*}" <<< "$running"; then export "${entry##*:}="; fi
 done
 
-npm run dev:mock < /dev/null > dev/logs/mock.log 2>&1 &
+npm run dev:mock < /dev/null > "$log_dir/${log_prefix}mock.log" 2>&1 &
 pids+=($!)
-npm run dev:api < /dev/null > dev/logs/api.log 2>&1 &
+npm run dev:api < /dev/null > "$log_dir/${log_prefix}api.log" 2>&1 &
 pids+=($!)
-npm run dev:ui < /dev/null > dev/logs/ui.log 2>&1 &
+npm run dev:ui < /dev/null > "$log_dir/${log_prefix}ui.log" 2>&1 &
 pids+=($!)
 
-echo "logs in dev/logs (mock.log, api.log, ui.log)"
+echo "logs in $log_dir (${log_prefix}mock.log, ${log_prefix}api.log, ${log_prefix}ui.log)"
 echo "dev server available at http://$DEV_HOST:$NGINX_PORT/data-fair/"
 # stop everything as soon as one process exits
 wait -n || true
