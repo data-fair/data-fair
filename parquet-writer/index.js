@@ -644,3 +644,4 @@ module.exports.__napiBindingTarget = __napiStampBindingTarget(nativeBinding, __n
 module.exports = nativeBinding
 module.exports.ParquetWriter = nativeBinding.ParquetWriter
 module.exports.JsParquetWriter = nativeBinding.JsParquetWriter
+module.exports.parquetToCsv = nativeBinding.parquetToCsv

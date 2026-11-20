@@ -22,3 +22,17 @@ export interface BasicSchemaProperty {
   format?: string
   required?: boolean
 }
+
+export interface ParquetField {
+  name: string
+  type: string
+  format?: string
+  separator?: string
+}
+
+export declare function parquetToCsv(inputPath: string, outputPath: string, maxBytes?: number | undefined | null): Promise<ParquetToCsvResult>
+
+export interface ParquetToCsvResult {
+  numRows: number
+  fields: Array<ParquetField>
+}

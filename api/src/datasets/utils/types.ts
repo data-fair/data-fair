@@ -18,6 +18,7 @@ export const geographicalTypes = new Set([
   'application/geopackage+sqlite3' // gpkg
 ])
 export const calendarTypes = new Set(['text/calendar'])
+export const parquetTypes = new Set(['application/vnd.apache.parquet'])
 export const csvTypes = [
   'text/csv',
   'text/plain', // txt often contains csv or tsv content

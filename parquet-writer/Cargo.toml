@@ -12,7 +12,9 @@ crate-type = ["cdylib"]
 napi = "3.0.0"
 napi-derive = "3.0.0"
 parquet = "56.2.0"
-arrow = {version = "56.2.0", features = []}
+arrow = {version = "56.2.0", features = ["json", "chrono-tz"]}
+csv = "1"
+serde_json = "1"
 arrow-schema = "56.2.0"
 arrow-array = "56.2.0"
 
