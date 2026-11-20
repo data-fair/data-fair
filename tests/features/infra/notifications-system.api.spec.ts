@@ -58,7 +58,7 @@ test.describe('infra - notification system', () => {
   // an api key session to originator.apiKey instead of a pseudo-user named after the key
   test('events emitted by an api key are attributed to the api key', async () => {
     // the originator is completed by the events queue, which the api only runs when events is up
-    test.skip(!await serviceUp('EVENTS_PORT'), 'needs the optional events service: npm run dev-zellij -- --services events')
+    test.skip(!await serviceUp('EVENTS_PORT'), 'needs the optional events service: npm run dev -- --profile events (or npm run dev-zellij -- --services events)')
     const settings = (await testUser1Org.put('/api/v1/settings/organization/test_datafair_org1', {
       apiKeys: [{ title: 'catalogs', scopes: ['datasets', 'applications'] }]
     })).data

@@ -37,11 +37,11 @@ for entry in events:EVENTS_PORT agents:AGENTS_PORT registry:REGISTRY_PORT captur
   if ! grep -qx "${entry%%:*}" <<< "$running"; then export "${entry##*:}="; fi
 done
 
-npm run dev:mock > dev/logs/mock.log 2>&1 &
+npm run dev:mock < /dev/null > dev/logs/mock.log 2>&1 &
 pids+=($!)
-npm run dev:api > dev/logs/api.log 2>&1 &
+npm run dev:api < /dev/null > dev/logs/api.log 2>&1 &
 pids+=($!)
-npm run dev:ui > dev/logs/ui.log 2>&1 &
+npm run dev:ui < /dev/null > dev/logs/ui.log 2>&1 &
 pids+=($!)
 
 echo "logs in dev/logs (mock.log, api.log, ui.log)"
