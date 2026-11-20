@@ -57,11 +57,7 @@ export default defineConfig({
       name: 'e2e',
       testMatch: /.*\.e2e\.spec\.ts/,
       dependencies: ['e2e-warmup'],
-      // the GPU-less CI runner only offers software rendering, which Firefox refuses for
-      // WebGL: without WebGL2 the dataset maps (MapLibre 6) do not render
-      use: process.env.TEST_BROWSER === 'firefox'
-        ? { ...browser, launchOptions: { firefoxUserPrefs: { 'webgl.force-enabled': true } } }
-        : { ...browser },
+      use: { ...browser },
     },
   ],
 })
