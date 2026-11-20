@@ -6,30 +6,45 @@ cd "$(dirname "$0")/.."
 
 bash dev/deps.sh "$@"
 
+# the global compose options (e.g. --profile events) given to dev/deps.sh also select the services seen here
+compose_args=()
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --scale) shift 2 ;;
+    --scale=*) shift ;;
+    *) compose_args+=("$1"); shift ;;
+  esac
+done
+
 set -a
 . ./.env
 set +a
 
 mkdir -p dev/logs
+set -m
 pids=()
 cleanup () {
   trap - EXIT INT TERM
-  for pid in "${pids[@]}"; do kill "$pid" 2>/dev/null || true; done
+  # each process runs in its own process group (set -m): stop npm and what it started
+  for pid in "${pids[@]}"; do kill -- "-$pid" 2>/dev/null || kill "$pid" 2>/dev/null || true; done
   wait 2>/dev/null || true
 }
 trap cleanup EXIT INT TERM
 
-# optional containers that do not run are unplugged from the config (dev/dev.json "optional")
-NODE_CONFIG=$(./node_modules/.bin/df-dev absent-config)
-export NODE_CONFIG
+# an optional service is absent when its port variable is empty: blank the ones whose container does not run
+running=$(docker compose ${compose_args[@]+"${compose_args[@]}"} ps --services --status running)
+for entry in events:EVENTS_PORT agents:AGENTS_PORT registry:REGISTRY_PORT capture:CAPTURE_PORT openapi-viewer:OAV_PORT; do
+  if ! grep -qx "${entry%%:*}" <<< "$running"; then export "${entry##*:}="; fi
+done
 
-FORCE_COLOR=1 node --experimental-strip-types --disable-warning=ExperimentalWarning dev/mock-server.ts > dev/logs/mock.log 2>&1 &
+npm run dev:mock > dev/logs/mock.log 2>&1 &
 pids+=($!)
-(cd api && FORCE_COLOR=1 MODE=server_worker NODE_ENV=development EVENTS_LOG_LEVEL=error exec ../node_modules/.bin/nodemon -e js,mjs,ts,json index.ts > ../dev/logs/api.log 2>&1) &
+npm run dev:api > dev/logs/api.log 2>&1 &
 pids+=($!)
-(cd ui && FORCE_COLOR=1 NODE_CONFIG_DIR=../api/config/ exec ../node_modules/.bin/vite --port "$DEV_UI_PORT" > ../dev/logs/ui.log 2>&1) &
+npm run dev:ui > dev/logs/ui.log 2>&1 &
 pids+=($!)
 
 echo "logs in dev/logs (mock.log, api.log, ui.log)"
 echo "dev server available at http://$DEV_HOST:$NGINX_PORT/data-fair/"
-wait
+# stop everything as soon as one process exits
+wait -n || true

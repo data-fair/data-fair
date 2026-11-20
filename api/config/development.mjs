@@ -3,7 +3,10 @@ import dotenv from 'dotenv'
 // no import.meta in a config file: playwright compiles it to CommonJS when a unit spec loads the config
 dotenv.config({ path: ['.env', '../.env'], quiet: true })
 
-if (!process.env.DEV_API_PORT) throw new Error('missing DEV_API_PORT env variable, run "npx --no df-dev setup" to create .env, then start the env with "npm run dev-zellij"')
+if (!process.env.DEV_API_PORT) throw new Error('missing DEV_API_PORT env variable, run "npm run dev-deps" to create .env from dev/default.env, then start the env with "npm run dev"')
+
+// optional services (events, agents, registry, capture, openapi-viewer): absent (null) when their port variable is empty
+const optionalUrl = (port) => port ? `http://localhost:${port}` : null
 
 export default {
   port: process.env.DEV_API_PORT,
@@ -48,11 +51,11 @@ export default {
   directoryUrl: `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}/simple-directory`,
   privateDirectoryUrl: `http://localhost:${process.env.SD_PORT}`,
   captureUrl: `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}/capture`,
-  privateCaptureUrl: `http://localhost:${process.env.CAPTURE_PORT}`,
-  privateEventsUrl: `http://localhost:${process.env.EVENTS_PORT}`,
-  privateAgentsUrl: `http://localhost:${process.env.AGENTS_PORT}`,
-  privateOpenapiViewerUrl: `http://localhost:${process.env.OAV_PORT}`,
-  privateRegistryUrl: `http://localhost:${process.env.REGISTRY_PORT}`,
+  privateCaptureUrl: optionalUrl(process.env.CAPTURE_PORT),
+  privateEventsUrl: optionalUrl(process.env.EVENTS_PORT),
+  privateAgentsUrl: optionalUrl(process.env.AGENTS_PORT),
+  privateOpenapiViewerUrl: optionalUrl(process.env.OAV_PORT),
+  privateRegistryUrl: optionalUrl(process.env.REGISTRY_PORT),
   brand: {
     // hidden: the injection is still checked by the tests, without taking room under fixed-height apps
     embed: '<div hidden>application embed</div>'

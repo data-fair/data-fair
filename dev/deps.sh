@@ -10,9 +10,7 @@ if [ ! -f .env ]; then
 fi
 
 # generated code, native module and ui build needed by the api, the ui and the tests, built once
-[ -d api/config/type/.type ] || npm run build-types
-ls parquet-writer/*.node > /dev/null 2>&1 || npm -w parquet-writer run build
-[ -f ui/dist/index.html ] || npm -w ui run build
+npm run dev-setup
 
 # --scale only applies to "up", the other arguments (e.g. --profile) are global compose options
 global_args=()
