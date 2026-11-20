@@ -139,6 +139,19 @@ only the Playwright browser binaries are cached between runs. The jobs split by 
 2.6 min / 23.9 min. e2e alone (~15-20 min against ~12 for api) is then halved. On a failure a job uploads `test-results/` and `dev/logs/` as
 an artifact. A new push on a pull request cancels its running checks.
 
+**Map tests expected to fail on Firefox in CI.** The embed map tests that need the map to
+render (`dataset-map.e2e.spec.ts` legend test, `dataset-map-popup.e2e.spec.ts`) are marked
+`test.fail()` when `TEST_BROWSER=firefox` runs in CI. MapLibre 6 requires WebGL2, and the
+headless Firefox of the GPU-less GitHub runner has none: the map shows "WebGL2 is required
+to display this map" and its error toast covers the page. Chromium (built-in software
+renderer) and WebKit pass there, and Firefox passes locally on a machine with a GPU, so the
+maps do work in Firefox; only that runner cannot render them. Forcing the
+`webgl.force-enabled` pref was tried and is not enough (2026-11).
+The tests still run: their failure is reported as expected and keeps the nightly green. If
+they start passing (a runner with WebGL2), Playwright fails them with "expected to fail, but
+passed": then remove the `test.fail()` lines and this paragraph. They are not marked outside
+CI: run them locally with `TEST_BROWSER=firefox` when touching the map.
+
 ### The smoke set
 
 Tests tagged `@smoke` (`test('...', { tag: '@smoke' }, ...)`) cover the core flows end to
