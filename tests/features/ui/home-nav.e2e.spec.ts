@@ -167,6 +167,8 @@ test.describe('navigation drawer', () => {
   })
 
   test('help group shows API doc link', async ({ page, goToWithAuth }) => {
+    // the link follows the openapi-viewer integration, off when its port is empty
+    test.skip(!process.env.OAV_PORT, 'needs the optional openapi-viewer integration (OAV_PORT)')
     await goToWithAuth('/data-fair/', 'test_datafair_user1')
     // Expand help group
     await expect(page.locator('nav').getByText('Aide')).toBeVisible({ timeout: 10000 })

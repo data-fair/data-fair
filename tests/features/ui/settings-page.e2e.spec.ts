@@ -517,6 +517,8 @@ test.describe('settings AI assistant audience', () => {
   })
 
   test('an org admin activates the assistant and restricts it to main organization admins', async ({ page, goToWithAuth }) => {
+    // the assistant settings follow the agents integration, off when its port is empty
+    test.skip(!process.env.AGENTS_PORT, 'needs the optional agents integration (AGENTS_PORT)')
     const ax = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
 
     await goToSettingsOrg(page, goToWithAuth)
