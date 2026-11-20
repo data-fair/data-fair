@@ -138,14 +138,14 @@ test.describe('GET /applications/:id/preview', () => {
     const html = `<html><head><title>Broken app</title><meta name="application-name" content="monapperror"><script>window.APPLICATION=%APPLICATION%;</script></head><body>Broken app
 <script>fetch(window.APPLICATION.href + '/error', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ message: 'column "missing" not found' }) })
   .finally(() => setTimeout(() => window.triggerCapture && window.triggerCapture(), 50))</script></body></html>`
-    await setupMockRoute({ path: '/monapperror/index.html', body: html, contentType: 'text/html' })
-    await setupMockRoute({ path: '/monapperror/config-schema.json', body: {} })
+    await setupMockRoute({ path: '/test_datafair_monapperror/index.html', body: html, contentType: 'text/html' })
+    await setupMockRoute({ path: '/test_datafair_monapperror/config-schema.json', body: {} })
     try {
       const superadmin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
-      await superadmin.post('/api/v1/base-applications', { url: mockAppUrl('monapperror') })
-      await superadmin.patch(`/api/v1/base-applications/${mockAppId('monapperror')}`, { public: true })
+      await superadmin.post('/api/v1/base-applications', { url: mockAppUrl('test_datafair_monapperror') })
+      await superadmin.patch(`/api/v1/base-applications/${mockAppId('test_datafair_monapperror')}`, { public: true })
       const ax = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
-      const { data: app } = await ax.post('/api/v1/applications', { url: mockAppUrl('monapperror'), title: 'preview-error' })
+      const { data: app } = await ax.post('/api/v1/applications', { url: mockAppUrl('test_datafair_monapperror'), title: 'preview-error' })
       await ax.put(`/api/v1/applications/${app.id}/config`, {})
       const res = await ax.get(`/api/v1/applications/${app.id}/preview`)
       assert.equal(res.status, 200)

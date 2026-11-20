@@ -156,13 +156,13 @@ test.describe('fragments UI', () => {
   test('creating a sub-application fragment is only offered on base apps that embed applications', async ({ page, goToWithAuth }) => {
     // a dashboard-like base app declaring that it embeds other applications
     await setupMockRoute({
-      path: '/dashapp/index.html',
+      path: '/test_datafair_dashapp/index.html',
       contentType: 'text/html',
       body: '<html><head><title>Dashboard</title><meta name="application-name" content="dashapp"><meta name="df:use-apps" content="true"></head><body>dashboard</body></html>'
     })
     const superadmin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
-    await superadmin.post('/api/v1/base-applications', { url: mockAppUrl('dashapp') })
-    const dashboard = (await ax.post('/api/v1/applications', { url: mockAppUrl('dashapp'), title: 'a dashboard' })).data
+    await superadmin.post('/api/v1/base-applications', { url: mockAppUrl('test_datafair_dashapp') })
+    const dashboard = (await ax.post('/api/v1/applications', { url: mockAppUrl('test_datafair_dashapp'), title: 'a dashboard' })).data
     const plain = (await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'a plain app' })).data
 
     const fragmentsTab = page.locator('#render').getByRole('tab', { name: 'Fragments' })

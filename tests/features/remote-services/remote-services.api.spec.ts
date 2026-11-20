@@ -31,7 +31,8 @@ test.describe('remote-services', () => {
   test('Post a minimal external API, read it, update it and delete it', async () => {
     const ax = testSuperadmin
     geocoderApi.info['x-api-id'] = 'geocoder2'
-    let res = await ax.post('/api/v1/remote-services', { apiDoc: geocoderApi, apiKey: { in: 'header', name: 'x-apiKey' }, public: true })
+    // under the suite's prefix, so that the cleanup removes it if the test stops halfway
+    let res = await ax.post('/api/v1/remote-services', { id: 'test_datafair_geocoder2', apiDoc: geocoderApi, apiKey: { in: 'header', name: 'x-apiKey' }, public: true })
     assert.equal(res.status, 201)
     const eaId = res.data.id
     res = await ax.get('/api/v1/remote-services')

@@ -24,8 +24,9 @@ const router = express.Router()
 const testPrefixRegexp = /^test_[a-z0-9]+(?:_[a-z0-9]+)*_$/
 
 // Cleanup of a sub-space (DELETE /?prefix=test_<suite>_): delete the data owned by its accounts from
-// mongo/ES/filesystem, then reset the shared state (locks, integrity collections, caches, remote services,
-// base applications, tmp dir). Resetting the shared state assumes one suite at a time against a data-fair.
+// mongo/ES/filesystem, including the shared collections' documents keyed by the sub-space (remote services
+// and base applications identified under the prefix, locks and integrity state of its datasets), then
+// reset the caches and the tmp dir. The caches reset is global, harmless to the other sub-spaces.
 router.delete('/', async (req, res, next) => {
   try {
     const prefix = req.query.prefix
@@ -42,6 +43,7 @@ router.delete('/', async (req, res, next) => {
 
     // collect test-owned dataset IDs before deleting them (for ES index cleanup)
     const testDatasets = await mongo.datasets.find(testOwnerFilter, { projection: { id: 1 } }).toArray()
+    const testApplications = await mongo.applications.find(testOwnerFilter, { projection: { id: 1 } }).toArray()
 
     // delete ES indices for test-owned datasets: exactly theirs (indexPrefix carries a hash of the id), not
     // those of another dataset whose id starts with the same characters. The aliases, draft ones
@@ -69,17 +71,31 @@ router.delete('/', async (req, res, next) => {
       mongo.settings.deleteMany(testIdFilter),
       mongo.limits.deleteMany(testIdFilter),
       mongo.applicationsKeys.deleteMany(testOwnerFilter),
-      // shared state, without owner (blanket delete)
-      mongo.db.collection('locks').deleteMany({}),
-      mongo.db.collection('integrity-purge').deleteMany({}),
+      // locks of the sub-space's resources (`<type>:<id>`, `datasets:slug:<owner type>:<owner id>:<slug>`),
+      // the global task locks are released by their task
+      mongo.db.collection<{ _id: string }>('locks').deleteMany({
+        $or: [
+          { _id: { $in: [...testDatasets.map(d => `datasets:${d.id}`), ...testApplications.map(a => `applications:${a.id}`)] } },
+          { _id: { $regex: new RegExp('^datasets:slug:[a-z]+:' + prefix) } }
+        ]
+      }),
+      // integrity watermarks keyed by revision prefix (data-fair/<owner type>-<owner id>/<dataset id>/)
+      mongo.db.collection<{ _id: string }>('integrity-purge').deleteMany({ _id: { $regex: new RegExp('^data-fair/[a-z]+-' + prefix) } }),
       // the storage-accounting measure of still-locked test revisions would otherwise keep
       // counting into the freshly-reset limits and starve the next tests' storage quota
-      mongo.db.collection('integrity-storage').deleteMany({}),
+      mongo.db.collection('integrity-storage').deleteMany(testOwnerFilter),
       mongo.db.collection('extensions-cache').deleteMany({}),
       mongo.db.collection('thumbnails-cache').deleteMany({}),
-      mongo.remoteServices.deleteMany({}),
-      mongo.baseApplications.deleteMany({})
+      // remote services declared under the prefix, or mirroring a master data dataset of the sub-space
+      mongo.remoteServices.deleteMany({ $or: [testIdFilter, { 'virtualDatasets.parent.owner.id': { $regex: prefixRegexp } }] }),
+      // base applications served under the prefix (http://host/<prefix>…)
+      mongo.baseApplications.deleteMany({ url: { $regex: new RegExp('^[a-z]+://[^/]+/' + prefix) } })
     ])
+
+    // the other remote services and base applications (from the config) lose the sub-space's accounts
+    const privateAccessPull = { $pull: { privateAccess: { id: { $regex: prefixRegexp } } } } as any
+    await mongo.remoteServices.updateMany({ 'privateAccess.id': { $regex: prefixRegexp } }, privateAccessPull)
+    await mongo.baseApplications.updateMany({ 'privateAccess.id': { $regex: prefixRegexp } }, privateAccessPull)
 
     // selective directory deletion: only remove the owner dirs of the sub-space
     for (const ownerType of ['user', 'organization']) {

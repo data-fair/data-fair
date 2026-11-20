@@ -59,7 +59,7 @@ test.describe('Applications', () => {
     assert.equal(res.status, 200)
     assert.equal(res.data.count, 3)
     await adminAx.patch(`/api/v1/base-applications/${mockAppId('monapp2')}`, {
-      privateAccess: [{ type: 'user', id: 'test_datafair_user1' }, { type: 'user', id: 'another' }]
+      privateAccess: [{ type: 'user', id: 'test_datafair_user1' }, { type: 'user', id: 'test_datafair_another' }]
     })
     assert.equal(res.status, 200)
 
@@ -279,7 +279,7 @@ test.describe('Applications', () => {
   test('Point the site theme resources of a proxied application to hashed or overridden URLs', async () => {
     // the canonical references of an application following the theme of its site
     await setupMockRoute({
-      path: '/themeapp/index.html',
+      path: '/test_datafair_themeapp/index.html',
       contentType: 'text/html',
       body: `<html><head>
         <meta name="application-name" content="themeapp">
@@ -288,12 +288,12 @@ test.describe('Applications', () => {
         <script>window.APPLICATION=%APPLICATION%;</script>
       </head><body>themed app</body></html>`
     })
-    await setupMockRoute({ path: '/themeapp/config-schema.json', body: {} })
+    await setupMockRoute({ path: '/test_datafair_themeapp/config-schema.json', body: {} })
     try {
-      await testSuperadmin.post('/api/v1/base-applications', { url: mockAppUrl('themeapp') })
-      await testSuperadmin.patch(`/api/v1/base-applications/${mockAppId('themeapp')}`, { public: true })
+      await testSuperadmin.post('/api/v1/base-applications', { url: mockAppUrl('test_datafair_themeapp') })
+      await testSuperadmin.patch(`/api/v1/base-applications/${mockAppId('test_datafair_themeapp')}`, { public: true })
       const ax = testUser1
-      const themeApp = (await ax.post('/api/v1/applications', { url: mockAppUrl('themeapp'), title: 'themed' })).data
+      const themeApp = (await ax.post('/api/v1/applications', { url: mockAppUrl('test_datafair_themeapp'), title: 'themed' })).data
       const plainApp = (await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'plain' })).data
       const hashes = (await anonymous.get(`${directoryUrl}/api/sites/_hashes`)).data
 
