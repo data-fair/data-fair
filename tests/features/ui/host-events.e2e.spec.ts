@@ -61,7 +61,7 @@ test.describe('host events published to the assistant', () => {
 
   test('the layout publishes where the user is, and republishes it on navigation', async ({ page, goToWithAuth }) => {
     // the assistant's tools and host events are only on with the agents integration
-    test.skip(!await serviceUp('AGENTS_PORT'), 'needs the optional agents service: npm run dev-zellij -- --services agents')
+    test.skip(!await serviceUp('AGENTS_PORT'), 'needs the optional agents service: npm run dev -- --profile agents')
     await page.addInitScript(collectEvents)
     await goToWithAuth('/data-fair/datasets', 'test_datafair_user1')
 

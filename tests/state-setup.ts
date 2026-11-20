@@ -26,13 +26,13 @@ setup('Stateful tests setup', async () => {
     }
   }
   assert.equal(lastErr, undefined, `Dev API server did not become available at ${apiUrl} within ${apiReadyTimeoutMs}ms.
-If you are an agent, read its logs with "npx --no df-dev logs api" and report the problem to your user (or "npx --no df-dev restart api" if the pane exited).
+If you are an agent, read dev/logs/api.log and report the problem to your user.
 Last error: ${lastErr instanceof Error ? lastErr.message : String(lastErr)}`)
 
   // Check that the mock server is up
   await assert.doesNotReject(
     ax.get(`${mockUrl}/geocoder/api-docs.json`),
-    `Mock server seems to be unavailable at ${mockUrl}. If you are an agent, read its logs with "npx --no df-dev logs mock" (or "npx --no df-dev restart mock" if the pane exited).`
+    `Mock server seems to be unavailable at ${mockUrl}. If you are an agent, read dev/logs/mock.log and report the problem to your user.`
   )
 
   // the accounts of the test sub-space were seeded in simple-directory by global-setup.ts (before the

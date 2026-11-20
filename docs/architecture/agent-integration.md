@@ -585,10 +585,9 @@ dispatched reports the previous run's verdict as its own; the skill sequences
 that, `npm run simulate` is only the browser half.
 
 **Prerequisites**, each of which fails confusingly if missing: the dev stack up
-(`npx --no df-dev status`, with the optional `agents` container: `npx --no df-dev up agents`),
-the UI built (`ui/dist/index.html`, done by `npx --no df-dev setup`), and the bridge
-running. The bridge has its own `bridge` pane in the zellij layout, suspended until
-the maintainer presses Enter in it — optional because only simulations need it. The runner checks it and says so.
+(`npm run dev -- --profile agents`),
+the UI built (`ui/dist/index.html`, done by `npm run dev-setup`), and the bridge
+running (`npm run dev:bridge`, started by the maintainer) — optional because only simulations need it. The runner checks it and says so.
 
 **Layout.** `playwright.sim.config.ts` is a separate config so a bare
 `playwright test` can never reach the cases and spend quota. `simulations/cases/`

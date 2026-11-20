@@ -5,7 +5,7 @@
  * `test_demo_org` org of the demo world: the prefixed sub-space test_demo_, seeded
  * and cleaned like the test suite's own (test_datafair_), whose cleanup never touches it.
  *
- * Run it (dev env must be up — `npx --no df-dev status`):
+ * Run it (dev env must be up — `npm run dev`):
  *   npm run dev-fixtures
  *
  * Idempotent: datasets that already exist are skipped; settings are upserted.

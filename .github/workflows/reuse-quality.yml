@@ -173,7 +173,7 @@ jobs:
       run: grep -vE '^\s*(#|$)' .env >> "$GITHUB_ENV" # GITHUB_ENV accepts only NAME=value lines, no comments
 
     # every profile, not only the core services: e2e pages need events, registry, agents and
-    # capture (each optional service has its own profile, see dev/dev.json "optional").
+    # capture (each optional service has its own compose profile).
     # dev/deps.sh starts the containers and, once they are healthy, runs the
     # s3-init one-shot (kept out of the wait: it exits at once, which --wait reports as a failure).
     # mcp reads the platform document from the dev API, which only starts in a later step: it
@@ -184,16 +184,13 @@ jobs:
     - name: Start mock server
       run: mkdir -p dev/logs && node --experimental-strip-types --disable-warning=ExperimentalWarning dev/mock-server.ts > dev/logs/mock.log 2>&1 &
 
-    # same commands as the api and ui panes of .zellij.kdl, logs in dev/logs for the upload below
+    # same commands as the dev:api and dev:ui scripts, logs in dev/logs for the upload below
     - name: Start dev API
       run: |
-        export NODE_CONFIG=$(./node_modules/.bin/df-dev absent-config)
         cd api && MODE=server_worker NODE_ENV=development EVENTS_LOG_LEVEL=error node index.ts > ../dev/logs/api.log 2>&1 &
 
-    # vite hashes the API's ui-config to link it: same absent-config as the API
     - name: Start dev UI
       run: |
-        export NODE_CONFIG=$(./node_modules/.bin/df-dev absent-config)
         cd ui && NODE_CONFIG_DIR=../api/config/ ../node_modules/.bin/vite --port $DEV_UI_PORT > ../dev/logs/ui.log 2>&1 &
 
     # the e2e-warmup project then pays vite's first-request transforms

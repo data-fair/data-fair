@@ -18,13 +18,7 @@ The dev server is available at <http://localhost:5600/data-fair/>; run `npm run 
 
 Each dev process has its own npm script and reads its settings from environment variables (every key of `dev/default.env` can be overridden from the environment or `.env`): `npm run dev-setup` (idempotent builds, no container), then `npm run dev:api`, `npm run dev:ui`, `npm run dev:mock` (and `npm run dev:bridge` with an agents service), each in its own terminal. An optional service (events, agents, registry, capture, openapi-viewer) is absent when its port variable is empty (for example `EVENTS_PORT=`); `npm run dev` blanks the ports of the optional containers that are not running.
 
-Alternative with random free ports per checkout, panes and agent-friendly status (zellij >= 0.44):
-
-    npx --no df-dev setup
-    npm run dev-zellij
-    npm run dev-zellij -- --services events,agents   # with optional containers
-
-From another terminal: `npx --no df-dev status`, `npx --no df-dev logs <pane>`, `npx --no df-dev restart <pane>`, `npx --no df-dev up <service>`.
+Teams that run several services together do so outside this repository, through these npm scripts and their environment variables.
 
 Run test suite:
 

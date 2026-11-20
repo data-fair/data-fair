@@ -2,8 +2,8 @@ import { test } from 'node:test'
 import assert from 'node:assert/strict'
 import { preflightMessage, assertComplete } from './command.ts'
 
-test('unreachable stack points to df-dev status', () => {
-  assert.match(preflightMessage({ reachable: false })!, /df-dev status/)
+test('unreachable stack points to npm run dev', () => {
+  assert.match(preflightMessage({ reachable: false })!, /npm run dev/)
 })
 
 test('missing fixture points to dev-fixtures', () => {

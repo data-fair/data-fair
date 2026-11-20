@@ -272,13 +272,13 @@ services:
       # and index creation hangs (cluster red), a dev or CI ES has no disk to protect
       - cluster.routing.allocation.disk.threshold_enabled=false
       # heap starts at 64m and grows up to 512m (pre-touching a fixed 512m cost ~360m per idle stack);
-      # an agent that needs more sets ES_HEAP=1g in .env (df-dev never overwrites it)
+      # an agent that needs more sets ES_HEAP=1g in .env (`.env` is never overwritten)
       - ES_JAVA_OPTS=-Xms64m -Xmx${ES_HEAP:-512m}
     volumes:
       - elasticsearch-data:/usr/share/elasticsearch/data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9200"]
-      # 2 s probes while starting (df-dev wait-deps gives up after 3 min), then one per minute
+      # 2 s probes while starting (the start period is 3 min), then one per minute
       interval: 60s
       timeout: 10s
       retries: 3

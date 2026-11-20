@@ -106,8 +106,7 @@ tests/
 ### On a failure
 
 Each failed api or e2e test gets attachments in its trace (`npx playwright show-trace
-test-results/<test>/trace.zip`): the last lines of the `api` and `mock` panes (`df-dev logs`,
-nothing in CI where `dev/logs/` is uploaded instead), the worker's pending tasks, and, when the
+test-results/<test>/trace.zip`): the last lines of `dev/logs/api.log` and `dev/logs/mock.log`, the worker's pending tasks, and, when the
 API restarted during the test (nodemon reacting to an edit in the checkout), an attachment named
 "the API restarted during this test, re-run it: not a regression", printed under the failure.
 - Tests interact with the API via HTTP (no direct DB access from tests)
