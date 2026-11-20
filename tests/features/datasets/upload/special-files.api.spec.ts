@@ -5,7 +5,7 @@ import path from 'node:path'
 import FormData from 'form-data'
 import moment from 'moment-timezone'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
-import { waitForFinalize, sendDataset, waitForDatasetError } from '../../../support/workers.ts'
+import { waitForFinalize, sendDataset, waitForDatasetError, setServerEnv } from '../../../support/workers.ts'
 
 const testUser1 = await axiosAuth('test_user1@test.com')
 
@@ -339,5 +339,31 @@ test.describe('Many case of special file datasets', () => {
     assert.equal(res.status, 200)
     assert.equal(res.data.total, 1)
     assert.equal(res.data.results[0].col1, 'val1')
+  })
+
+  test('should reject a geojson feature with too many vertices during analysis, without retry', async () => {
+    const ax = testUser1
+    // 200 001 vertices (~5MB): one over the per-feature limit, after a small valid feature
+    const ring = Array.from({ length: 200_000 }, (_, i) => [9 + Math.cos(i / 31831) * 0.3, 42 + Math.sin(i / 31831) * 0.3])
+    ring.push(ring[0])
+    const small = { type: 'Feature', properties: { id: 1 }, geometry: { type: 'Point', coordinates: [9, 42] } }
+    const big = { type: 'Feature', properties: { id: 2 }, geometry: { type: 'Polygon', coordinates: [ring] } }
+    const form = new FormData()
+    form.append('file', Buffer.from(JSON.stringify({ type: 'FeatureCollection', features: [small, big] })), 'big-feature.geojson')
+    // the file is above the test storage quota
+    await setServerEnv('NO_STORAGE_CHECK', 'true')
+    let dataset
+    try {
+      const res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
+      dataset = await waitForDatasetError(ax, res.data.id)
+    } finally {
+      await setServerEnv('NO_STORAGE_CHECK')
+    }
+    assert.equal(dataset.status, 'error')
+    const journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
+    const errorEvent = journal.find((e: any) => e.type === 'error')
+    assert.ok(errorEvent.data.includes('feature n°2 of the file has more than 200,000 vertices'), errorEvent.data)
+    assert.ok(!errorEvent.data.includes('[noretry]'))
+    assert.ok(!journal.some((e: any) => e.type === 'error-retry'), 'a too large feature is not retried')
   })
 })

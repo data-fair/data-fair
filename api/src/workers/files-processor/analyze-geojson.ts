@@ -8,6 +8,7 @@ import * as datasetsService from '../../datasets/service.ts'
 import * as fieldsSniffer from '../../datasets/utils/fields-sniffer.ts'
 import projections from '../../../contract/projections.js'
 import { sampleValues as getSampleValues } from '../../datasets/utils/data-streams.ts'
+import { createFeatureVertexCounter, MAX_FEATURE_VERTICES } from '../../datasets/utils/geojson-feature-size.ts'
 import type { DatasetInternal, FileDataset, SchemaProperty } from '#types'
 
 // Analyze geojson dataset data, check validity and detect schema
@@ -35,7 +36,15 @@ export default async function (dataset: FileDataset) {
     'x-originalName': 'geometry',
     'x-refersTo': 'https://purl.org/geojson/vocab#geometry'
   }]
-  const sampleValues = await getSampleValues(dataset, ['geometry'], (decodedData: any) => crsParser.write(decodedData))
+  // checked on the text, before the feature parser holds an oversized feature in memory
+  const vertexCounter = createFeatureVertexCounter(MAX_FEATURE_VERTICES)
+  const sampleValues = await getSampleValues(dataset, ['geometry'], (decodedData: any) => {
+    const oversized = vertexCounter.write(decodedData)
+    if (oversized) {
+      throw httpError(400, `[noretry] The feature n°${oversized.index + 1} of the file has more than ${MAX_FEATURE_VERTICES.toLocaleString('en')} vertices, it is too large to be processed. Split it into smaller features (for example one feature per polygon of a multipolygon, with "ogr2ogr -explodecollections") or simplify it before loading the file.`)
+    }
+    crsParser.write(decodedData)
+  })
   crsParser.end()
 
   // keep track of the original name behind each key to detect collisions

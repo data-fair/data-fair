@@ -370,7 +370,12 @@ export const sampleValues = async (dataset: Dataset, ignoreKeys?: string[], onDe
       streams.splice(decodeStreamIndex + 1, 0,
         new Transform({
           transform (chunk, encoding, callback) {
-            onDecodedData(chunk)
+            // a throw aborts the read before the chunk reaches the parsers
+            try {
+              onDecodedData(chunk)
+            } catch (err: any) {
+              return callback(err)
+            }
             callback(null, chunk)
           }
         })
