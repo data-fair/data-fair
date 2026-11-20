@@ -11,7 +11,7 @@ import microTemplate from '@data-fair/lib-utils/micro-template.js'
 import { autoImports, settingsPath } from '@data-fair/lib-vuetify/vite.js'
 import { commonjsDeps } from '@koumoul/vjsf/utils/build.js'
 
-// ports come from the .env from `.env` (dev/default.env), checked so a missing variable never becomes NaN
+// ports come from `dev/default.env`, overridden by `.env`, checked so a missing variable never becomes NaN
 const envPort = (name: string) => {
   const port = Number(process.env[name])
   if (!Number.isInteger(port) || port <= 0) throw new Error(`missing or invalid ${name}, run "npm run dev-setup"`)

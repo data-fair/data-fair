@@ -18,8 +18,6 @@ The dev server is available at <http://localhost:5600/data-fair/>; run `npm run 
 
 Each dev process has its own npm script and reads its settings from environment variables (every key of `dev/default.env` can be overridden from the environment or `.env`): `npm run dev-setup` (idempotent builds, no container), then `npm run dev:api`, `npm run dev:ui`, `npm run dev:mock` (and `npm run dev:bridge` with an agents service), each in its own terminal. An optional service (events, agents, registry, capture, openapi-viewer) is absent when its port variable is empty (for example `EVENTS_PORT=`); `npm run dev` blanks the ports of the optional containers that are not running.
 
-Teams that run several services together do so outside this repository, through these npm scripts and their environment variables.
-
 Run test suite:
 
 ```
@@ -28,7 +26,7 @@ npm test
 
 ## Working with Git Worktrees
 
-From the main checkout, `npx --no df-worktree <branch-name>` creates `../data-fair_<branch-name>` with its own `.env`, docker compose project and ports; `npx --no df-worktree-delete <branch-name>` removes it with its containers and volumes. Branch names: letters, digits, `.`, `_`, `-`, at most 60 characters, no `/`.
+The dev environment uses the fixed ports of `dev/default.env`, so one environment runs per machine. If you work in several checkouts with plain `git worktree`, stop the environment of one (`docker compose down`) before starting the one of another.
 
 ## Docker image
 

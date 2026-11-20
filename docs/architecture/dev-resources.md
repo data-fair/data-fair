@@ -34,9 +34,8 @@ dev servers above all, which have been seen at 5.8 GiB resident each.
 
 ### vite dev server — memory cap
 
-The dev server (`npm run dev:ui`) should run inside a transient systemd user scope with `MemoryMax=4G`
-(`systemd-run --user --scope -p MemoryMax=4G npm run dev:ui`); this repository does not apply it, whoever
-orchestrates the dev processes does. When it is exceeded the *cgroup* OOM killer kills
+The dev server (`npm run dev:ui`) is best run inside a transient systemd user scope with `MemoryMax=4G`. `npm run dev` applies no memory cap;
+to apply one, start the ui yourself with a prefix: `systemd-run --user --scope -p MemoryMax=4G npm run dev:ui`. When it is exceeded the *cgroup* OOM killer kills
 that process only: the host never reaches the global OOM path, so nothing else on
 the machine is touched. Normal peak for this app is ~2 GiB, and the runaways that
 prompted this were 4.3–5.8 GiB, so 4G separates the two. Where `systemd-run` is unavailable (macOS, non-systemd), run it without the scope.
