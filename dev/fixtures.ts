@@ -1054,9 +1054,15 @@ async function main () {
   // (reqAdminMode). Same test_demo_org org context as dfAx, but elevated.
   dfAdminAx = await axiosAuth({ ...creds, org: 'test_demo_org', adminMode: true, axiosOpts: { baseURL: dfBaseURL } })
 
-  await agentsAx.put('/agents/api/settings/organization/test_demo_org', agentSettings)
-  await agentsAx.put('/agents/api/settings/organization/test_demo_org/org', agentOrgSettings)
-  console.log('agent settings written (mock provider) for organization/test_demo_org')
+  // the agents service is optional: absent when its port is empty
+  const withAgents = !!process.env.AGENTS_PORT
+  if (withAgents) {
+    await agentsAx.put('/agents/api/settings/organization/test_demo_org', agentSettings)
+    await agentsAx.put('/agents/api/settings/organization/test_demo_org/org', agentOrgSettings)
+    console.log('agent settings written (mock provider) for organization/test_demo_org')
+  } else {
+    console.log('no agents service (AGENTS_PORT is empty): agent settings skipped')
+  }
 
   // activate the AI assistant on the data-fair org settings (the agentChat flag
   // gates the assistant UI). PATCH merges, so it preserves any other settings.
@@ -1095,8 +1101,10 @@ async function main () {
   }
   console.log('  (the integrity panel on the "intégrité" datasets requires admin mode)')
   console.log(`  table perf:      ${dfBaseURL}/embed/dataset/${TABLE_PERF_ID}/table  (see benchmark/README.md)`)
-  console.log(`  agents config:   ${dfBaseURL}/admin/agents`)
-  console.log(`  agents activity: ${dfBaseURL}/agents-activity`)
+  if (withAgents) {
+    console.log(`  agents config:   ${dfBaseURL}/admin/agents`)
+    console.log(`  agents activity: ${dfBaseURL}/agents-activity`)
+  }
 }
 
 main().then(() => {
