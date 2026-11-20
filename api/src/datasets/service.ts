@@ -517,20 +517,33 @@ export const changeDatasetOwner = async (ctx: { sessionState: SessionStateAuthen
   const indexedDataset = { ...datasetFull, owner: patch.owner, permissions: patch.permissions }
   // the score follows the new owner's settings
   const changeOwnerUpdate: any = mergeIndexUpdate({ $set: patch }, await indexAndCompletenessPatch(indexedDataset))
-  const patchedDataset: any = await mongo.db.collection('datasets')
-    .findOneAndUpdate({ id: dataset.id }, changeOwnerUpdate, { returnDocument: 'after' })
 
-  // Move all files: the published version and a pending draft each have their own directory, move
-  // both whichever of the two views the transfer was requested on
+  // Copy, save, then remove the old files, so a failure never leaves the dataset pointing at missing files.
+  // The published version and a pending draft each have their own directory, whichever view was requested.
+  const moves: { srcDir: string, dstDir: string }[] = []
   for (const draftReason of [undefined, 'draft']) {
     const srcDir = dir({ id: dataset.id, owner: dataset.owner, draftReason })
-    const dstDir = dir({ id: dataset.id, owner: patchedDataset.owner, draftReason })
-    if (srcDir === dstDir || !await filesStorage.pathExists(srcDir)) continue
-    try {
-      await filesStorage.moveDir(srcDir, dstDir)
-    } catch (err) {
-      log.warn('error while moving dataset directory', { code: 'dataset-move-dir', err })
+    const dstDir = dir({ id: dataset.id, owner: newOwner, draftReason })
+    if (srcDir !== dstDir && await filesStorage.pathExists(srcDir)) moves.push({ srcDir, dstDir })
+  }
+  const removeCopies = async () => {
+    for (const { dstDir } of moves) {
+      await filesStorage.removeDir(dstDir)
+        .catch(err => log.warn('error while removing a partial dataset copy', { code: 'dataset-move-dir', err }))
     }
+  }
+  let patchedDataset: any
+  try {
+    for (const { srcDir, dstDir } of moves) await filesStorage.copyDir(srcDir, dstDir)
+    patchedDataset = await mongo.db.collection('datasets')
+      .findOneAndUpdate({ id: dataset.id }, changeOwnerUpdate, { returnDocument: 'after' })
+  } catch (err) {
+    await removeCopies()
+    throw err
+  }
+  for (const { srcDir } of moves) {
+    await filesStorage.removeDir(srcDir)
+      .catch(err => log.warn('error while removing the previous owner dataset directory', { code: 'dataset-move-dir', err }))
   }
 
   const arrowStr = `${dataset.owner.name} (${dataset.owner.type}:${dataset.owner.id}) -> ${patch.owner.name} (${patch.owner.type}:${patch.owner.id})`
