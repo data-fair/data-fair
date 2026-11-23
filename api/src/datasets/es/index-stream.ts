@@ -8,7 +8,7 @@ import debugLib from 'debug'
 import es, { attachmentPipelineId } from '#es'
 import log from '@data-fair/lib-node/log.js'
 import type { Dataset } from '#types'
-import { lineBytes, lineBytesSpec, type LineBytesSpec } from './operations.ts'
+import { bulkIndexingError, lineBytes, lineBytesSpec, type LineBytesSpec } from './operations.ts'
 
 const debug = debugLib('index-stream')
 
@@ -195,7 +195,7 @@ class IndexStream extends Transform {
       this.bulkChars = 0
     } catch (err) {
       log.warn('elasticsearch bulk indexing failed', { code: 'es-bulk-index', err })
-      throw new Error('Failure while indexing a batch of data.')
+      throw bulkIndexingError(err)
     }
   }
 

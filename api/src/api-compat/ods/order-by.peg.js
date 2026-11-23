@@ -7,7 +7,7 @@
 
 import { invalidGeometryError } from './errors.ts'
 
-import { requiredCapability } from '../../datasets/es/operations.ts'
+import { requiredCapability, isKeywordString } from '../../datasets/es/operations.ts'
 import { unknownFieldError, missingCapabilityError } from '../../datasets/utils/field-errors.ts'
 import { notNumericError } from './errors.ts'
 
@@ -396,7 +396,7 @@ function peg$parse(input, options) {
       if (capabilities.values === false && capabilities.insensitive === false) {
         throw missingCapabilityError('sort', prop.key, 'values')
       }
-      if (capabilities.insensitive !== false && prop.type === 'string' && (prop.format === 'uri-reference' || !prop.format)) {
+      if (capabilities.insensitive !== false && isKeywordString(prop)) {
         return { key: prop.key, insensitive: true }
       }
     }

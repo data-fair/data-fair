@@ -129,7 +129,7 @@ type FacetsRes = { count: number, facets: Record<string, { value: string }[]> }
 type PortalsRes = { facets: { requestedPortals: Record<string, number> } }
 
 const sitesFilter = computed(() => publicationSites?.map(p => `${p.type}:${p.id}`).join(','))
-const sum = (counts?: Record<string, number>) => counts && Object.values(counts).reduce((a, b) => a + b, 0)
+const sum = (counts?: Record<string, number>) => counts && Object.values(counts).reduce((a, b) => a + (typeof b === 'number' ? b : 0), 0)
 
 const datasetsErrorFetch = useFetch<{ count: number }>(() => canContribDep.value ? `${$apiPath}/datasets?size=0&shared=false&status=error` : null)
 // the facet stays per status whatever the filters, "count" only follows them through a shallow copy in the processings router
@@ -151,9 +151,9 @@ const extraItems = ($uiConfig.extraTodoItems ?? []).map(extra => ({
 }))
 
 // only the known sites: the facet also lists the other sites requested by the same resources
-const requestedSitesQuery = (res?: FacetsRes | null) => ({ requestedPublicationSites: res?.facets.requestedPublicationSites.map(f => f.value).filter(v => sitesFilter.value?.split(',').includes(v)).join(',') })
+const requestedSitesQuery = (res?: FacetsRes | null) => ({ requestedPublicationSites: res?.facets?.requestedPublicationSites?.map(f => f.value).filter(v => sitesFilter.value?.split(',').includes(v)).join(',') })
 
-const requestedPortalsLink = (path: string, res?: PortalsRes | null) => ({ path, query: { requestedPortal: Object.keys(res?.facets.requestedPortals ?? {}).join(',') } })
+const requestedPortalsLink = (path: string, res?: PortalsRes | null) => ({ path, query: { requestedPortal: Object.keys(res?.facets?.requestedPortals ?? {}).join(',') } })
 
 // the fullest of the stored and indexed spaces, a line from 80 %
 const storagePercent = computed(() => {
@@ -163,16 +163,17 @@ const storagePercent = computed(() => {
 })
 
 // failures and quotas first, then publications to validate grouped by kind, then people waiting on you, drafts
-const items = computed(() => {
-  const lines: Line[] = [
-    { key: 'datasetsError', count: datasetsErrorFetch.data.value?.count, icon: mdiAlertCircle, color: 'error', to: { path: '/datasets', query: { status: 'error' } } },
-    { key: 'processingsError', count: processingsErrorFetch.data.value?.facets?.statuses?.error, icon: mdiCogTransferOutline, color: 'error', to: { path: '/processings', query: { status: 'error' } } },
-    { key: 'storage', count: storagePercent.value, icon: mdiHarddisk, color: 'warning', to: '/storage' },
-    { key: 'datasetsPublications', count: datasetsPublicationsFetch.data.value?.count, icon: mdiShareVariant, color: 'warning', to: { path: '/datasets', query: requestedSitesQuery(datasetsPublicationsFetch.data.value) } },
-    { key: 'applicationsPublications', count: applicationsPublicationsFetch.data.value?.count, icon: mdiImageMultiple, color: 'warning', to: { path: '/applications', query: requestedSitesQuery(applicationsPublicationsFetch.data.value) } },
-    { key: 'reusesPublications', count: sum(reusesPublicationsFetch.data.value?.facets?.requestedPortals), icon: mdiPageNext, color: 'warning', to: requestedPortalsLink('/reuses', reusesPublicationsFetch.data.value) },
-    { key: 'pagesPublications', count: sum(pagesPublicationsFetch.data.value?.facets?.requestedPortals), icon: mdiViewDashboardEdit, color: 'warning', to: requestedPortalsLink('/pages', pagesPublicationsFetch.data.value) },
-    ...extraItems.map(({ extra, fetch }) => ({
+// each line is built on its own: an unexpected answer of one service only drops its line and counts as a failed check
+const lines = computed(() => {
+  const builders: (() => Line)[] = [
+    () => ({ key: 'datasetsError', count: datasetsErrorFetch.data.value?.count, icon: mdiAlertCircle, color: 'error', to: { path: '/datasets', query: { status: 'error' } } }),
+    () => ({ key: 'processingsError', count: processingsErrorFetch.data.value?.facets?.statuses?.error, icon: mdiCogTransferOutline, color: 'error', to: { path: '/processings', query: { status: 'error' } } }),
+    () => ({ key: 'storage', count: storagePercent.value, icon: mdiHarddisk, color: 'warning', to: '/storage' }),
+    () => ({ key: 'datasetsPublications', count: datasetsPublicationsFetch.data.value?.count, icon: mdiShareVariant, color: 'warning', to: { path: '/datasets', query: requestedSitesQuery(datasetsPublicationsFetch.data.value) } }),
+    () => ({ key: 'applicationsPublications', count: applicationsPublicationsFetch.data.value?.count, icon: mdiImageMultiple, color: 'warning', to: { path: '/applications', query: requestedSitesQuery(applicationsPublicationsFetch.data.value) } }),
+    () => ({ key: 'reusesPublications', count: sum(reusesPublicationsFetch.data.value?.facets?.requestedPortals), icon: mdiPageNext, color: 'warning', to: requestedPortalsLink('/reuses', reusesPublicationsFetch.data.value) }),
+    () => ({ key: 'pagesPublications', count: sum(pagesPublicationsFetch.data.value?.facets?.requestedPortals), icon: mdiViewDashboardEdit, color: 'warning', to: requestedPortalsLink('/pages', pagesPublicationsFetch.data.value) }),
+    ...extraItems.map(({ extra, fetch }) => () => ({
       key: extra.id,
       count: (extra.countPath ?? 'count').split('.').reduce((obj: any, k) => obj?.[k], fetch.data.value) as number | undefined,
       icon: extra.icon ?? mdiFaceAgent,
@@ -181,20 +182,32 @@ const items = computed(() => {
       href: extra.href,
       title: resolveTitle(extra.title, locale.value)
     })),
-    { key: 'datasetsDraft', count: datasetsDraftFetch.data.value?.count, icon: mdiFileDocumentEdit, color: 'warning', to: { path: '/datasets', query: { draftStatus: 'finalized' } } }
+    () => ({ key: 'datasetsDraft', count: datasetsDraftFetch.data.value?.count, icon: mdiFileDocumentEdit, color: 'warning', to: { path: '/datasets', query: { draftStatus: 'finalized' } } })
   ]
-  // a line without permission or integration has no fetch, so no count
-  return lines.filter(line => line.count).map(line => {
-    const title = line.title || t(line.key, { n: line.count }, line.count!)
-    // the storage line carries its percentage in its title
-    return { ...line, title, label: line.key === 'storage' ? title : `${line.count} · ${title}` }
-  })
+  const items: (Line & { label: string })[] = []
+  let broken = false
+  for (const build of builders) {
+    try {
+      const line = build()
+      // a line without permission or integration has no fetch, so no count
+      if (line.count === undefined || line.count === 0) continue
+      if (typeof line.count !== 'number' || !(line.count > 0)) throw new Error(`unexpected count for ${line.key}`)
+      const title = line.title || t(line.key, { n: line.count }, line.count)
+      // the storage line carries its percentage in its title
+      items.push({ ...line, title, label: line.key === 'storage' ? title : `${line.count} · ${title}` })
+    } catch (err) {
+      console.error('dashboard to do line', err)
+      broken = true
+    }
+  }
+  return { items, broken }
 })
+const items = computed(() => lines.value.items)
 
 // a failed fetch counts as loaded, so a missing service does not leave the card loading forever
 const fetches = [...sharedFetches, datasetsErrorFetch, processingsErrorFetch, datasetsPublicationsFetch, applicationsPublicationsFetch, reusesPublicationsFetch, pagesPublicationsFetch, datasetsDraftFetch, ...extraItems.map(e => e.fetch)]
 const loaded = computed(() => fetches.every(f => !f.loading.value))
-const failed = computed(() => fetches.some(f => f.error.value))
+const failed = computed(() => lines.value.broken || fetches.some(f => f.error.value))
 </script>
 
 <style>

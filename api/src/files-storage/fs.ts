@@ -66,7 +66,7 @@ export class FsBackend implements FileBackend {
       throw httpError(304)
     }
     if (range) {
-      const ranges = parseRange(1000000, range)
+      const ranges = parseRange(stats.size, range)
       if (Array.isArray(ranges) && ranges.length === 1 && ranges.type === 'bytes') {
         const range = ranges[0]
         return {

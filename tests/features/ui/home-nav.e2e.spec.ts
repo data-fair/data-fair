@@ -97,6 +97,15 @@ test.describe('home dashboard', () => {
     await expect(page.getByText('Certaines vérifications n\'ont pas abouti.')).toBeVisible()
   })
 
+  test('to do card keeps its other lines when one answer is unexpected', async ({ page, goToWithAuth }) => {
+    await page.route('**/data-fair/api/v1/datasets?*status=error*', route => route.fulfill({ json: { count: 3, results: [] } }))
+    await page.route('**/data-fair/api/v1/datasets?*draftStatus=finalized*', route => route.fulfill({ json: { count: 'oops' } }))
+    await goToWithAuth('/data-fair/', 'test_datafair_user1')
+    await expect(page.getByRole('link', { name: /en erreur/i })).toBeVisible({ timeout: 10000 })
+    await expect(page.getByText('Certaines vérifications n\'ont pas abouti.')).toBeVisible()
+    await expect(page.getByRole('link', { name: /brouillon/i })).not.toBeVisible()
+  })
+
   test('to do card lists the datasets in error', async ({ page, goToWithAuth }) => {
     await page.route('**/data-fair/api/v1/datasets?*status=error*', route => route.fulfill({ json: { count: 3, results: [] } }))
     await goToWithAuth('/data-fair/', 'test_datafair_user1')

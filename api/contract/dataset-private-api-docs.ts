@@ -4,6 +4,7 @@ import type { Dataset, Settings } from '#types'
 import config from '#config'
 import datasetAPIDocs, { mergedSampleDataset } from './dataset-api-docs.ts'
 import { gettingStartedGuide } from './getting-started-guide.ts'
+import { consistencyGuide } from './consistency-guide.ts'
 import { resolvedSchema as datasetPatch } from '../doc/datasets/patch-req/index.js'
 import journalSchema from './journal.js'
 import { visibility } from '../src/misc/utils/visibility.ts'
@@ -15,7 +16,8 @@ import { oauth2Scheme, applyOauth2Security } from './scopes-security.ts'
 import * as datasetUtils from '../src/datasets/utils/index.ts'
 
 type DatasetApiDocsSettings = (Pick<Settings, 'info' | 'compatODS'> & Record<string, any>) | null | undefined
-type DatasetApiDocsOptions = { merged?: boolean, filterOperations?: string[] }
+// publicData: an anonymous caller may read the data (see consistency-guide.ts)
+type DatasetApiDocsOptions = { merged?: boolean, filterOperations?: string[], publicData?: boolean }
 
 /**
  * Tag remapping for the merged root doc:
@@ -990,7 +992,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
 
   // Last, so the guide is built from the paths that survived the contextual filter above: a caller
   // restricted to metadata must not be pointed at /lines or /full.
-  if (!merged) api.info.description += gettingStartedGuide(api, gettingStartedInputs)
+  if (!merged) api.info.description += gettingStartedGuide(api, gettingStartedInputs) + (api.paths['/lines'] ? consistencyGuide(options?.publicData) : '')
 
   return api
 }

@@ -2,6 +2,14 @@ import { test, expect } from '../../fixtures/login.ts'
 import { axiosAuth, clean } from '../../support/axios.ts'
 import { sendDataset, waitForFinalize } from '../../support/workers.ts'
 
+// the table is the last focusable element of the embed page, and Tab from the last element
+// does not leave the document in Playwright's Firefox: give Tab somewhere to go
+const addFocusTargetAfter = (page: any) => page.evaluate(() => {
+  const button = document.createElement('button')
+  button.id = 'focus-target-after'
+  document.body.appendChild(button)
+})
+
 test.describe('embed dataset table — accessibility (RGAA)', () => {
   test.beforeEach(async () => {
     await clean()
@@ -146,8 +154,10 @@ test.describe('embed dataset table — accessibility (RGAA)', () => {
       await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_datafair_user1')
       await expect(page.locator('.dataset-table tbody td').first()).toBeVisible({ timeout: 15000 })
 
+      await addFocusTargetAfter(page)
       await page.locator('[role="search"] input').first().focus()
-      for (let i = 0; i < 15 && !(await activeCell(page)).inTable; i++) await page.keyboard.press('Tab')
+      // Firefox also stops on the scroll wrapper of the table before its cells
+      for (let i = 0; i < 15 && !(await activeCell(page)).isCell; i++) await page.keyboard.press('Tab')
       expect(await activeCell(page)).toMatchObject({ inTable: true, isCell: true, row: 1, col: 0 })
 
       await page.keyboard.press('ArrowRight')
@@ -156,7 +166,7 @@ test.describe('embed dataset table — accessibility (RGAA)', () => {
 
       // one Tab leaves the table, Shift+Tab comes back to the same cell
       await page.keyboard.press('Tab')
-      expect((await activeCell(page)).inTable).toBe(false)
+      await expect(page.locator('#focus-target-after')).toBeFocused()
       await page.keyboard.press('Shift+Tab')
       expect(await activeCell(page)).toMatchObject({ isCell: true, row: 2, col: 1 })
     })
@@ -558,6 +568,7 @@ test.describe('embed dataset table — accessibility (RGAA)', () => {
       await expect(list.locator('.dataset-table-card').first()).toBeVisible({ timeout: 15000 })
       await expect(list.locator('[tabindex="0"]')).toHaveCount(1)
 
+      await addFocusTargetAfter(page)
       await page.locator('[role="search"] input').first().focus()
       for (let i = 0; i < 15 && !(await activeField(page)).inList; i++) await page.keyboard.press('Tab')
       expect(await activeField(page)).toMatchObject({ isField: true, card: 0, field: 0 })
@@ -572,7 +583,7 @@ test.describe('embed dataset table — accessibility (RGAA)', () => {
       expect(field).toBe(2)
       // one Tab leaves the list, Shift+Tab comes back to the same field
       await page.keyboard.press('Tab')
-      expect((await activeField(page)).inList).toBe(false)
+      await expect(page.locator('#focus-target-after')).toBeFocused()
       await page.keyboard.press('Shift+Tab')
       expect(await activeField(page)).toMatchObject({ isField: true, card: 0, field })
 

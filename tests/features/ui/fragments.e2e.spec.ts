@@ -290,17 +290,11 @@ test.describe('fragments UI', () => {
     await expect(page.locator('#metadata .v-card').filter({ hasText: 'shared sub app' }).locator('.v-icon.text-warning')).toHaveCount(0)
   })
 
-  test('a super admin can list fragments from the datasets list', async ({ page }) => {
+  test('a super admin can list fragments from the datasets list', async ({ page, goToWithAuth }) => {
     const parent = (await ax.post('/api/v1/datasets', { isVirtual: true, title: 'listing parent' })).data
     await sendDataset('datasets/dataset1.csv', ax, {}, { title: 'listedfragment', partOf: { type: 'dataset', id: parent.id } })
 
-    const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}`
-    const fullUrl = `${baseUrl}/data-fair/datasets?showAll=true&q=listedfragment`
-    await page.goto(`${baseUrl}/simple-directory/login?redirect=${encodeURIComponent(fullUrl)}&adminMode=true`)
-    await page.getByLabel(/^Adresse (e-?)?mail/).fill('test_datafair_superadmin@test.com')
-    await page.getByLabel('Mot de passe', { exact: true }).fill('passwd')
-    await page.getByRole('button', { name: 'Se connecter' }).click()
-    await page.waitForURL(fullUrl, { timeout: 10000 })
+    await goToWithAuth('/data-fair/datasets?showAll=true&q=listedfragment', 'test_datafair_superadmin', { adminMode: true })
 
     // hidden by default, even with every owner shown
     await expect(page.getByText('Aucun résultat ne correspond à la recherche.')).toBeVisible({ timeout: 15000 })

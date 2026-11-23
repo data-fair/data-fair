@@ -19,7 +19,6 @@
       return-object
       hide-no-data
     />
-    {{ search }}
   </div>
 </template>
 

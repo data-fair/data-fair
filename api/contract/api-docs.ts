@@ -13,6 +13,7 @@ import { oauth2Scheme, applyOauth2Security, agentSecurity } from './scopes-secur
 import publicationSitesSchema from './publication-sites.js'
 import pJson from './p-json.js'
 import { root as xAgentRoot, operations as xAgent, datasetSchemaKeyHint, datasetSchemaCalculatedHint, withDatasetLabels } from './x-agent.ts'
+import { consistencyGuide } from './consistency-guide.ts'
 
 // a publication site as the settings return it: the fields of the settings schema a publication uses
 const publicationSiteSchema = (() => {
@@ -145,7 +146,7 @@ Les opérations spécifiques à une application particulière (configuration, jo
 Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous pouvez créer dans vos paramètres personnels ou dans les paramètres d'une organisation dont vous êtes administrateur.
 
 Pour des exemples simples de publication de données vous pouvez consulter la <a href="https://data-fair.github.io/4/interoperate/api" target="_blank">documentation sur ce sujet</a>.
-`,
+` + consistencyGuide(),
       version: pJson.version,
       'x-api-id': 'data-fair',
       ...config.info
@@ -267,6 +268,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
             utils.filterParam('topics', 'Identifiants de thématiques', 'Restreindre les jeux de données sur un ou plusieurs identifiants de thématiques.'),
             utils.filterParam('field-type', 'Restreindre sur les types de colonnes'),
             utils.filterParam('field-format', 'Restreindre sur les formats des colonnes textes'),
+            utils.filterParam('publicationSites', 'Portails de publication', 'Restreindre aux jeux de données publiés sur un ou plusieurs portails (clés `<type>:<id>`).'),
             utils.booleanParam('file', 'Restreindre aux jeux avec fichiers attachés'),
             utils.booleanParam('rest', 'Restreindre aux jeux éditables'),
             utils.booleanParam('bbox', 'Restreindre aux jeux géographiques'),
@@ -415,6 +417,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
             utils.selectParam(Object.keys(application.properties)),
             utils.filterParam('ids', 'Restreindre sur les identifiants'),
             utils.filterParam('dataset', 'Restreindre sur les jeux de données utilisés'),
+            utils.filterParam('publicationSites', 'Portails de publication', 'Restreindre aux applications publiées sur un ou plusieurs portails (clés `<type>:<id>`).'),
             ...utils.paginationParams,
             ...utils.visibilityParams
           ],

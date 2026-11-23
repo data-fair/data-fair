@@ -16,7 +16,9 @@ test.describe('embed dataset map page with category param', () => {
     await clean()
   })
 
-  test('shows a legend and toggles filters from it', async ({ page, goToWithAuth }) => {
+  test('shows a legend and toggles filters from it', async ({ page, goToWithAuth, browserName }) => {
+    // expected to fail: no WebGL2 in the headless Firefox of the CI runner, see docs/architecture/testing.md
+    test.fail(browserName === 'firefox' && !!process.env.CI, 'no WebGL2 in Firefox on the CI runner')
     const ax = await axiosAuth('test_datafair_user1@test.com')
     const dataset = await sendDataset('datasets/Antennes du CD22.csv', ax, undefined, geoBody)
 

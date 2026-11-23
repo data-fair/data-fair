@@ -28,8 +28,13 @@ export const hasCapability = (prop: any, capability: string = 'index'): boolean 
 // field silently miss them. See docs/architecture/load-management.md.
 export const KEYWORD_IGNORE_ABOVE = 200
 
-// A property mapped as `{type:keyword, ignore_above:200}` by esProperty — a plain or uri-reference
-// string. Only these are exposed to the ignore_above truncation problem.
+// A string mapped as a keyword with its text sub-fields: every format but the dates
+// (plain, uri-reference, email, uri, time...).
+export const isKeywordString = (prop: any): boolean =>
+  prop?.type === 'string' && prop.format !== 'date' && prop.format !== 'date-time'
+
+// A property mapped as `{type:keyword, ignore_above:200}` by esProperty — a keyword string.
+// Only these are exposed to the ignore_above truncation problem.
 // Fields with `x-capabilities.nativeWildcard: true` are mapped as ES `wildcard` type and have no
 // ignore_above limit, so they are excluded.
 // Geometry-refersTo string fields are mapped as `{type:keyword, index:false}` (no ignore_above), so
@@ -37,7 +42,7 @@ export const KEYWORD_IGNORE_ABOVE = 200
 // nothing rather than 400.
 const GEOMETRY_REFERS_TO = 'https://purl.org/geojson/vocab#geometry'
 export const isLengthLimitedKeyword = (prop: any): boolean =>
-  prop?.type === 'string' && (prop.format === 'uri-reference' || !prop.format) &&
+  isKeywordString(prop) &&
   prop?.['x-capabilities']?.nativeWildcard !== true &&
   prop?.['x-refersTo'] !== GEOMETRY_REFERS_TO
 
@@ -77,7 +82,7 @@ export const resolveExistsFields = (prop: any, flagged: boolean): string[] => {
   const mainField = mainFieldAnswersExists(prop) ? [prop.key] : []
   if (mainField.length && !(isLengthLimitedKeyword(prop) && flagged)) return mainField
   if (hasCapability(prop, 'wildcard')) return [prop.key + '.wildcard']
-  // only plain/uri-reference strings carry the analyzed and case-insensitive sub-fields
+  // only keyword strings carry the analyzed and case-insensitive sub-fields
   if (!isLengthLimitedKeyword(prop)) return mainField
   const fields = [...mainField]
   if (hasCapability(prop, 'textStandard')) fields.push(prop.key + '.text_standard')
@@ -179,7 +184,8 @@ export const extractError = (err: any): ExtractedError => {
   // on a read path (see es/abort.js) the elasticsearch client throws RequestAbortedError when our
   // AbortSignal fires - the only thing that aborts it is the http client going away - and TimeoutError
   // when the per-request client timeout elapses
-  if (err) {
+  if (err == null) return { message: 'Unknown elasticsearch error', status: 500 }
+  if (typeof err === 'object') {
     if (err.name === 'RequestAbortedError' || err.name === 'AbortError') {
       // 499 = "client closed request" (nginx convention) - the http response, if any, won't reach
       // anyone; callers must treat this as a quiet no-op (no error log, no error metric)
@@ -187,16 +193,15 @@ export const extractError = (err: any): ExtractedError => {
     }
     if (err.name === 'TimeoutError') return tooLongError
   }
-  const status = err.status ?? err.statusCode ?? 500
+  const status = err.status ?? err.statusCode ?? err.meta?.statusCode ?? 500
   if (typeof err === 'string') return { message: err, status }
   // an i18n http error thrown by our own code (a query builder...) keeps its message key
   if (err.i18n) return { message: err.message, status, i18n: err.i18n }
   let errBody = (err.body && err.body.error) || (err.meta && err.meta.body && err.meta.body.error) || err.error
+  // a plain string error body ("no handler found for uri...")
+  if (typeof errBody === 'string') return { message: errBody, status }
   if (!errBody && !!err.reason) errBody = err
-  if (!errBody) {
-    if (err.message) return { message: err.message, status }
-    else return { message: JSON.stringify(err), status }
-  }
+  if (!errBody) return { message: fallbackErrorMessage(err), status }
   const parts: string[] = []
   if (errBody.reason) {
     parts.push(errBody.reason)
@@ -222,8 +227,36 @@ export const extractError = (err: any): ExtractedError => {
   if (parts.includes('Time exceeded')) {
     return tooLongError
   }
+  if (!parts.length) parts.push(errBody.type ?? fallbackErrorMessage(err))
   return { message: parts.join(' - '), status }
 }
+
+// the message of an error without a usable elasticsearch error body - never empty
+const fallbackErrorMessage = (err: any): string => {
+  // 'Response Error' is the client's generic message for a response without error body (empty 413,
+  // proxy page...): its status says more
+  if (err.message && err.message !== 'Response Error') return err.message
+  const statusCode = err.statusCode ?? err.meta?.statusCode
+  if (statusCode) return `elasticsearch responded with status ${statusCode}`
+  const json = JSON.stringify(err)
+  return json && json !== '{}' ? json : 'Unknown elasticsearch error'
+}
+
+/**
+ * The reason of a failed elasticsearch write request (index creation, bulk indexing...).
+ * extractError words a timeout or an abort for the search request of a user ("This request is too
+ * long...", "client disconnected"), which says nothing true about a write: keep the client message.
+ */
+export const writeErrorReason = (err: any): string => {
+  if (err?.name === 'TimeoutError' || err?.name === 'RequestAbortedError') return err.message
+  return extractError(err).message
+}
+
+// The error a failed bulk indexing request ends the indexing task with. It keeps the elasticsearch
+// reason (read-only index after the disk flood-stage watermark, circuit breaker, unreachable
+// node...): the journal is the only place a dataset owner reads it.
+export const bulkIndexingError = (err: any) =>
+  new Error(`Failure while indexing a batch of data: ${writeErrorReason(err)}`, { cause: err })
 
 // The mapping-emission shape esProperty / buildIndexMappings produce, persisted per dataset as
 // `_indexShape` when its index is (re)built. Absent = legacy (uniform polarity).
@@ -266,7 +299,7 @@ const DUMMY_ANALYZERS = { search: '', index: '' }
 // Legacy shape: `analyzers.search` alone is `.text`'s analyzer, as `defaultAnalyzer` was.
 export const esProperty = (prop: any, analyzers: { search: string, index: string }, shape: IndexShape = NEW_INDEX_SHAPE): any => {
   const capabilities = prop['x-capabilities'] || {}
-  const isFullTextString = prop.type === 'string' && (prop.format === 'uri-reference' || !prop.format)
+  const isFullTextString = isKeywordString(prop)
   // Add inner text field to almost everybody so that even dates, numbers, etc can be matched textually as well as exactly.
   // Emission rules for `.text_standard`: dates keep it everywhere (year search); numeric columns lose it
   // under noNumericText (their `q` matching uses the main long/double field); full-text strings lose it

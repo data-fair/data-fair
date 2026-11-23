@@ -267,6 +267,10 @@ export default {
                 title: 'A dataset has a breaking change',
                 'x-i18n-title': { fr: 'Un jeu de données rencontre une rupture de compatibilité' }
               }, {
+                const: 'dataset-delete',
+                title: 'A dataset has been deleted',
+                'x-i18n-title': { fr: 'Un jeu de données a été supprimé' }
+              }, {
                 const: 'dataset-finalize-end',
                 title: 'A dataset has been finalized',
                 'x-i18n-title': { fr: 'Un jeu de données a été finalisé' }

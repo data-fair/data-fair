@@ -502,6 +502,9 @@ export const router = (resourceType: ResourceType, resourceName: string, onPubli
   return router
 }
 
+// the resolved schema has its items inlined: its $defs are a dead copy, and $id / x-exports are build annotations
+const { $id: _id, $defs: _defs, 'x-exports': _exports, ...permissionsDocSchema } = permissionsSchema as Record<string, any>
+
 export const apiDoc = {
   get: {
     summary: 'List permissions',
@@ -514,7 +517,7 @@ export const apiDoc = {
         description: 'List of permissions.',
         content: {
           'application/json': {
-            schema: permissionsSchema
+            schema: permissionsDocSchema
           }
         }
       }
@@ -531,7 +534,7 @@ export const apiDoc = {
       required: true,
       content: {
         'application/json': {
-          schema: permissionsSchema
+          schema: permissionsDocSchema
         }
       }
     },
@@ -540,7 +543,7 @@ export const apiDoc = {
         description: 'List of permissions.',
         content: {
           'application/json': {
-            schema: permissionsSchema
+            schema: permissionsDocSchema
           }
         }
       }

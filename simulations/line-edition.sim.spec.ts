@@ -26,8 +26,8 @@ import { checkRows } from './runner/row-check.ts'
 
 const SUPER_ADMIN = 'test_datafair_superadmin@test.com'
 
-/** Every tool of the editor groups, whatever the group. */
-const isEditorTool = (name: string) => name.startsWith('datafair_create_line_') || name.startsWith('datafair_edit_line_')
+/** Every tool of the platform's form group: in arm `json` no other service of the dev stack declares a form. */
+const isEditorTool = (name: string) => name.startsWith('form_')
 
 /** The tools the agent must have and must not have in each arm: reading tools are the same in both. */
 const ARM_TOOLS: Record<LineEditionArm, { present: string[], absent: AbsentTool[] }> = {
@@ -36,7 +36,7 @@ const ARM_TOOLS: Record<LineEditionArm, { present: string[], absent: AbsentTool[
     absent: [isEditorTool]
   },
   editor: {
-    present: ['datafair_create_line_saveForm', 'datafair_edit_line_saveForm', 'datafair_create_line_getFieldSuggestions'],
+    present: ['form_saveForm', 'form_getFieldSuggestions'],
     absent: ['datafair_write_line', 'datafair_patch_line', 'datafair_bulk_lines']
   }
 }

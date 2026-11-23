@@ -192,20 +192,8 @@ test.describe('owner facet filtering', () => {
     await checkPendingTasks()
   })
 
-  /**
-   * Helper: switch to org context via the personal menu
-   */
-  async function switchToOrg (page: any, goToWithAuth: any) {
-    const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}`
-    await goToWithAuth('/data-fair/', 'test_datafair_user1')
-    await page.getByRole('button', { name: /Ouvrez le menu personnel/ }).click()
-    await page.getByRole('listitem').filter({ hasText: 'Test Org 1' }).click()
-    await page.waitForURL(`${baseUrl}/data-fair/`, { timeout: 10000 })
-    await page.goto(`${baseUrl}/data-fair/datasets`)
-  }
-
   test('owner facet displays names, not [object Object]', async ({ page, goToWithAuth }) => {
-    await switchToOrg(page, goToWithAuth)
+    await goToWithAuth('/data-fair/datasets', 'test_datafair_user1', { org: 'test_datafair_org1' })
     await expect(page.locator('.v-container .v-card').first()).toBeVisible({ timeout: 10000 })
 
     const navRight = page.locator('#navigation-right-local')
@@ -227,7 +215,7 @@ test.describe('owner facet filtering', () => {
   })
 
   test('selecting owner facet updates URL with correct string format', async ({ page, goToWithAuth }) => {
-    await switchToOrg(page, goToWithAuth)
+    await goToWithAuth('/data-fair/datasets', 'test_datafair_user1', { org: 'test_datafair_org1' })
     await expect(page.locator('.v-container .v-card').first()).toBeVisible({ timeout: 10000 })
 
     const navRight = page.locator('#navigation-right-local')
@@ -281,13 +269,7 @@ test.describe('publication sites facet', () => {
   })
 
   test('publication sites facet shows portal names without null or IDs', async ({ page, goToWithAuth }) => {
-    // Switch to org context and go to datasets page
-    const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}`
-    await goToWithAuth('/data-fair/', 'test_datafair_user1')
-    await page.getByRole('button', { name: /Ouvrez le menu personnel/ }).click()
-    await page.getByRole('listitem').filter({ hasText: 'Test Org 1' }).click()
-    await page.waitForURL(`${baseUrl}/data-fair/`, { timeout: 10000 })
-    await page.goto(`${baseUrl}/data-fair/datasets`)
+    await goToWithAuth('/data-fair/datasets', 'test_datafair_user1', { org: 'test_datafair_org1' })
 
     await expect(page.locator('.v-container .v-card').first()).toBeVisible({ timeout: 10000 })
 

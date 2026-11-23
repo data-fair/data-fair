@@ -10,9 +10,11 @@ test.describe('dataset event subscriptions', () => {
       'data-fair:dataset-data-updated:ds1',
       'data-fair:dataset-structure-updated:ds1',
       'data-fair:dataset-error:ds1',
-      'data-fair:dataset-breaking-change:ds1'
+      'data-fair:dataset-breaking-change:ds1',
+      'data-fair:dataset-delete:ds1'
     ])
     assert.equal(webhooks[0].title, 'Les données du jeu de données ont été mises à jour')
+    assert.equal(webhooks[4].title, 'Le jeu de données a été supprimé')
     assert.ok(webhooks.every(t => t.title && t.title !== 'Webhooks check'))
 
     // REST line operations signal data-updated to webhooks only

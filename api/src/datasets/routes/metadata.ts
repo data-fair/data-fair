@@ -7,7 +7,7 @@ import debugModule from 'debug'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import log from '@data-fair/lib-node/log.js'
 import { resourceLogFields } from '../../misc/utils/log-fields.ts'
-import { session, reqSession, reqSessionAuthenticated } from '@data-fair/lib-express'
+import { reqSession, reqSessionAuthenticated } from '@data-fair/lib-express'
 import config from '#config'
 import mongo from '#mongo'
 import { readDataset, reqDataset, reqDatasetFull, lockDataset, assertWriteBodyPermissions } from '../middlewares.ts'
@@ -354,14 +354,7 @@ export const registerMetadataRoutes = (router: Router) => {
     }
 
     log.info(`dataset deleted ${dataset.slug} (${dataset.id})`, { code: 'df.datasets.delete', ...resourceLogFields('datasets', dataset) })
-    const sessionState = await session.req(req)
-    await notifications.send({
-      ...notifications.eventTexts('datasets.delete', { title: dataset.title, full: `${dataset.title} (${dataset.slug})` }),
-      topic: {
-        key: `data-fair:dataset-delete:${dataset.id}`
-      },
-      sender: dataset.owner
-    }, sessionState)
+    await notifications.sendResourceEvent('datasets', datasetFull, reqSessionAuthenticated(req), 'delete')
 
     await syncRemoteService({ ...datasetFull, masterData: null })
     await updateTotalStorage(datasetFull.owner)

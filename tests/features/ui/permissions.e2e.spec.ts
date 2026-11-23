@@ -393,16 +393,11 @@ test.describe('permissions editor', () => {
       expect(dataset.owner.department).toBe('dep1')
     })
 
-    // Same reason as the access-control tests below: the id_token_dep cookie shortcut in
-    // goToWithAuth does not reliably switch the active account on a first login, so use the
-    // personal menu — otherwise the dataset renders the "wrong active account" error page.
+    // the session is opened on the department (simple-directory login with org and dep): switching
+    // from the personal menu reloads the page, sometimes twice, and a navigation started right
+    // after the switch was interrupted by the reload
     async function goToDepPermissions (page: any, goToWithAuth: any) {
-      const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}`
-      await goToWithAuth('/data-fair/', 'test_datafair_user4')
-      await page.getByRole('button', { name: /Ouvrez le menu personnel/ }).click()
-      await page.getByRole('listitem').filter({ hasText: 'department 1' }).click()
-      await page.waitForURL(`${baseUrl}/data-fair/`, { timeout: 10000 })
-      await page.goto(`${baseUrl}/data-fair/dataset/${depDatasetId}`)
+      await goToWithAuth(`/data-fair/dataset/${depDatasetId}`, 'test_datafair_user4', { org: 'test_datafair_org1', dep: 'dep1' })
       await expect(page.locator('#share')).toBeVisible({ timeout: 15000 })
       await page.locator('#share').scrollIntoViewIfNeeded()
       await page.getByRole('tab', { name: /Permissions/i }).click()
@@ -507,16 +502,11 @@ test.describe('permissions editor', () => {
   // ===== Test Group 6: Access Control =====
 
   test.describe('access control', () => {
-    // Uses the UI org-switch (personal-menu click) rather than the cookie shortcut
-    // in goToWithAuth: contributor-role tests have shown intermittent failures in
-    // the full e2e suite when relying on the cookie alone for first-time login.
+    // The sessions are opened on the organization (simple-directory login with org): switching
+    // from the personal menu reloads the page, sometimes twice, and a navigation started right
+    // after the switch was interrupted by the reload.
     test('non-admin cannot see permissions tab', async ({ page, goToWithAuth }) => {
-      const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}`
-      await goToWithAuth('/data-fair/', 'test_datafair_user5')
-      await page.getByRole('button', { name: /Ouvrez le menu personnel/ }).click()
-      await page.getByRole('listitem').filter({ hasText: 'Test Org 1' }).click()
-      await page.waitForURL(`${baseUrl}/data-fair/`, { timeout: 10000 })
-      await page.goto(`${baseUrl}/data-fair/dataset/${datasetId}`)
+      await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_datafair_user5', { org: 'test_datafair_org1' })
       await expect(page.locator('#share')).toBeVisible({ timeout: 15000 })
       await expect(page.getByRole('tab', { name: /Permissions/i })).not.toBeVisible()
     })
@@ -526,7 +516,6 @@ test.describe('permissions editor', () => {
     // read-api-key tab (managing the key needs setReadApiKey, admin-only) and
     // must not request /task-progress or /journal (readAdvanced) on load.
     test('basic-read user: no read-api-key tab, no readJournal request', async ({ page, goToWithAuth }) => {
-      const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}`
       // Share the dataset with the whole org so test_datafair_user8 (role "user") can read it.
       await ax.put(`/api/v1/datasets/${datasetId}/permissions`, [
         { type: 'organization', id: 'test_datafair_org1', name: 'Test Org 1', operations: [], classes: ['list', 'read'] }
@@ -540,11 +529,7 @@ test.describe('permissions editor', () => {
         }
       })
 
-      await goToWithAuth('/data-fair/', 'test_datafair_user8')
-      await page.getByRole('button', { name: /Ouvrez le menu personnel/ }).click()
-      await page.getByRole('listitem').filter({ hasText: 'Test Org 1' }).click()
-      await page.waitForURL(`${baseUrl}/data-fair/`, { timeout: 10000 })
-      await page.goto(`${baseUrl}/data-fair/dataset/${datasetId}`)
+      await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_datafair_user8', { org: 'test_datafair_org1' })
 
       // Share section is visible (publication-sites + integration tabs remain).
       await expect(page.locator('#share')).toBeVisible({ timeout: 15000 })
@@ -661,12 +646,7 @@ test.describe('permissions editor', () => {
     })
 
     test('the department scope and labels hold on an application too', async ({ page, goToWithAuth }) => {
-      const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}`
-      await goToWithAuth('/data-fair/', 'test_datafair_user4')
-      await page.getByRole('button', { name: /Ouvrez le menu personnel/ }).click()
-      await page.getByRole('listitem').filter({ hasText: 'department 1' }).click()
-      await page.waitForURL(`${baseUrl}/data-fair/`, { timeout: 10000 })
-      await page.goto(`${baseUrl}/data-fair/application/${appId}`)
+      await goToWithAuth(`/data-fair/application/${appId}`, 'test_datafair_user4', { org: 'test_datafair_org1', dep: 'dep1' })
       await expect(page.locator('#share')).toBeVisible({ timeout: 15000 })
       await page.locator('#share').scrollIntoViewIfNeeded()
       await page.getByRole('tab', { name: /Permissions/i }).click()
