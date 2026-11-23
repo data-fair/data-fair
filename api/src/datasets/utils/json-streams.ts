@@ -1,3 +1,6 @@
+// Streams of json values read from and written to a json text: jsonStreamScanner reads the children
+// of the container at a path of keys, jsonStreamStringifier writes values as the elements of a text.
+// They replace JSONStream's parse and stringify, with the same values and output.
 import { Transform } from 'node:stream'
 import Parser from 'jsonparse'
 

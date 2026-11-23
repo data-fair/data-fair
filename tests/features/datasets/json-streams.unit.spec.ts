@@ -4,7 +4,7 @@ import { readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import { Readable } from 'node:stream'
 import { text as streamText } from 'node:stream/consumers'
-import { createJsonStreamScanner, jsonStreamStringifier } from '../../../api/src/datasets/utils/json-stream-scanner.ts'
+import { createJsonStreamScanner, jsonStreamStringifier } from '../../../api/src/datasets/utils/json-streams.ts'
 
 const scan = (text: Buffer, chunkSize: number, path = ['features']) => {
   const scanner = createJsonStreamScanner({ path })

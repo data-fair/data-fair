@@ -8,7 +8,7 @@ import type { Transform } from 'node:stream'
 import { parse as csvParse } from 'csv-parse'
 import { stringify as csvStringify } from 'csv-stringify'
 import ndjson from 'ndjson'
-import { jsonStreamScanner, jsonStreamStringifier } from './json-stream-scanner.ts'
+import { jsonStreamScanner, jsonStreamStringifier } from './json-streams.ts'
 
 export type MimeTypeStreams = { parser: () => Transform, serializer: () => Transform }
 

@@ -6,7 +6,7 @@ import * as fieldsSniffer from '../../datasets/utils/fields-sniffer.ts'
 import projections from '../../../contract/projections.js'
 import { sampleValues as getSampleValues } from '../../datasets/utils/data-streams.ts'
 import { createFeatureVertexCounter, MAX_FEATURE_VERTICES } from '../../datasets/utils/geojson-feature-size.ts'
-import { createJsonStreamScanner } from '../../datasets/utils/json-stream-scanner.ts'
+import { createJsonStreamScanner } from '../../datasets/utils/json-streams.ts'
 import type { DatasetInternal, FileDataset, SchemaProperty } from '#types'
 
 // Analyze geojson dataset data, check validity and detect schema
