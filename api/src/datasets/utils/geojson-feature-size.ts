@@ -1,9 +1,10 @@
-// Largest feature (in vertices) a geojson file may contain. The indexing worker holds several full
-// copies of a feature at once (parsed object, the copy geometry2fields works on, simplification
-// passes, serialized line): measured peak heap ~270MB at 200k vertices, out of the 512MB its thread
-// shares with other tasks, and out of memory around 1M. The simplification of _geoshape runs on the
-// full geometry, so a feature cannot be accepted on the grounds that it would be simplified later.
-export const MAX_FEATURE_VERTICES = 200_000
+// Largest feature (in vertices) a geojson file may contain. The indexing worker holds a feature
+// whole, as parsed by the read stream, then as the copy geometry2fields parses and simplifies: the
+// smallest heap that indexes one feature (worst of several runs) is ~224MB at 400k vertices, ~290MB
+// at 500k and ~420MB at 1M, out of the 512MB the worker thread shares with other tasks. The
+// simplification of _geoshape runs on the full geometry, so a feature cannot be accepted on the
+// grounds that it would be simplified later.
+export const MAX_FEATURE_VERTICES = 400_000
 
 const OPEN_OBJECT = 123 // {
 const CLOSE_OBJECT = 125 // }
