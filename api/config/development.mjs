@@ -6,6 +6,7 @@ dotenv.config({ path: ['.env', '../.env'], quiet: true })
 if (!process.env.DEV_API_PORT) throw new Error('missing DEV_API_PORT env variable, run "npm run dev-deps" to create .env from dev/default.env, then start the env with "npm run dev"')
 
 // optional services (events, agents, registry, capture, openapi-viewer): absent (null) when their port variable is empty
+/** @param {string | undefined} port */
 const optionalUrl = (port) => port ? `http://localhost:${port}` : null
 
 export default {
