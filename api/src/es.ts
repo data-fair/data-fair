@@ -3,7 +3,7 @@ import config from '#config'
 import elasticsearch, { type ClientOptions, type Client } from '@elastic/elasticsearch'
 
 // the ingest pipeline is cluster-wide: one per indices prefix so that several data-fair instances can share an ES
-export const attachmentPipelineId = (indicesPrefix: string) => `attachment-${indicesPrefix}`
+export const attachmentPipelineId = `attachment-${config.indicesPrefix}`
 
 export class DfEs {
   private _client?: Client
@@ -53,7 +53,7 @@ export class DfEs {
   async init () {
     await this.connect()
     await this.client.ingest.putPipeline({
-      id: attachmentPipelineId(config.indicesPrefix),
+      id: attachmentPipelineId,
       body: {
         description: 'Extract information from attached files',
         processors: [{

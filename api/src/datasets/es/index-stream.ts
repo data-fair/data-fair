@@ -155,7 +155,7 @@ class IndexStream extends Transform {
     }
     try {
       // Use the ingest plugin to parse attached files
-      if (this.options.attachments) bulkOpts.pipeline = attachmentPipelineId(config.indicesPrefix)
+      if (this.options.attachments) bulkOpts.pipeline = attachmentPipelineId
       const res: any = await es.client.bulk(bulkOpts)
       debug('Bulk sent OK')
       const rejected = new Set<number>()
