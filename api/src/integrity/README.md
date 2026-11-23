@@ -193,4 +193,4 @@ against, not only the happy path.
   `index-check-stale`, cleared only on a definitive index pass — the two-sources-one-event
   pattern of `integrity-renewal-failed`. If you add a new verdict member that can be
   individually `unknown` while the overall check stays definitive, give it its own clock the
-  same way. Design: `docs/plans/2026-07-23-integrity-per-verdict-freshness-design.md`.
+  same way.

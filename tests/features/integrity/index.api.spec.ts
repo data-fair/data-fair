@@ -269,8 +269,7 @@ test('index reindex action journals the evidence, repairs, and the next check is
 // ---------------------------------------------------------------------------------------------
 // Per-verdict freshness clock: a pinned-unknown index verdict cannot silently accumulate —
 // integrity-check-stale fires off integrity.lastDefinitiveIndexCheck even while the overall
-// check stays definitive (the residual limit of the A1 wave, now closed — see
-// docs/plans/2026-07-23-integrity-per-verdict-freshness-design.md)
+// check stays definitive (the residual limit of the A1 wave, now closed)
 // ---------------------------------------------------------------------------------------------
 
 test('a pinned-unknown index verdict fires integrity-check-stale despite a fresh overall clock', async () => {

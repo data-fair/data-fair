@@ -57,7 +57,7 @@ Phase B reuses `extensionsUtils.extend()` with an `onLineError(absoluteIndex, er
 
 ### Why a single worker
 
-Originally the design had two workers (`validate-file.ts` then `extend.ts`) writing to two separate diagnostic files. The follow-up spec (`docs/superpowers/specs/2026-05-05-process-file-merge-design.md`) merged them so that **schema and extension errors from the same processing attempt land in the same CSV**. The internal stream classes (`ValidateStream`, `ExtensionsStream`) were kept; only the worker that owns them was unified.
+Originally the design had two workers (`validate-file.ts` then `extend.ts`) writing to two separate diagnostic files. A follow-up merged them so that **schema and extension errors from the same processing attempt land in the same CSV**. The internal stream classes (`ValidateStream`, `ExtensionsStream`) were kept; only the worker that owns them was unified.
 
 ### Status transitions
 
@@ -353,8 +353,3 @@ Scope, deliberately narrow:
 - Only keys **absent from the dataset's current schema** are checked, so datasets predating the gate stay patchable.
 - `x-calculated` and `x-extension` properties are exempt: they legitimately use `_` prefixes and dots (an extension key is `propertyPrefix.field`, and `buildIndexMappings` maps it to a real nested object).
 - **Virtual datasets are exempt**: their schema is derived from their children by `prepareVirtualDatasetPatch`, never from the request.
-
-## Related design specs
-
-- `docs/superpowers/specs/2026-04-29-extension-validation-design.md` — original mandatory-extension + diagnostic-file design (partly superseded).
-- `docs/superpowers/specs/2026-05-05-process-file-merge-design.md` — the worker-merge follow-up that produced `process-file.ts`.

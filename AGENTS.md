@@ -106,6 +106,8 @@ npm run build-parsers    # Build PEG.js parsers (where, select, order-by, etc.)
 
 ## Architecture Documentation
 
+Design specs and implementation plans are not kept in this repository; durable architecture docs live in `docs/architecture/`.
+
 In-depth documentation for complex subsystems lives in `docs/architecture/`:
 
 - [Dataset Drafts](docs/architecture/dataset-drafts.md) — draft lifecycle, API mechanics, UI section visibility for file-new vs file-updated

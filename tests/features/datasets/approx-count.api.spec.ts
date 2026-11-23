@@ -5,8 +5,7 @@ import { waitForFinalize, setConfig } from '../../support/workers.ts'
 
 const testUser1 = await axiosAuth('test_datafair_user1@test.com')
 
-// Approximate counts for ranked text searches (see load-management.md §9 and
-// docs/superpowers/plans/2026-07-30-approx-count-ranked-search.md). The invariant under
+// Approximate counts for ranked text searches (see load-management.md §9). The invariant under
 // test: searches totalling under the cap behave exactly as today; above it the total
 // becomes a `_rand`-sampled estimate described by meta.totalMarginPct, while the top hits
 // stay identical to the exact behaviour.

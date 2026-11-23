@@ -1,6 +1,6 @@
 /**
  * The dev-only line edition arms of the experiment comparing two ways an autonomous agent writes
- * dataset lines (docs/superpowers/specs/2026-10-28-line-edition-arms-design.md): plain JSON tools
+ * dataset lines: plain JSON tools
  * (arm json) or json-layout editor groups (arm editor). Switched off, the platform document is the
  * one served today, without a single line tool.
  */

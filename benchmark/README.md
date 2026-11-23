@@ -3,8 +3,7 @@
 An Elasticsearch query evaluation harness for data-fair. Measures per-query ES cost on
 large, realistically-shaped datasets and runs A/B comparisons of query variants.
 
-See [`../docs/superpowers/specs/2026-05-22-es-query-evaluation-harness-design.md`](../docs/superpowers/specs/2026-05-22-es-query-evaluation-harness-design.md)
-for the design and [`INVESTIGATIONS.md`](./INVESTIGATIONS.md) for the follow-up backlog.
+See [`INVESTIGATIONS.md`](./INVESTIGATIONS.md) for the follow-up backlog.
 
 ## Setup
 

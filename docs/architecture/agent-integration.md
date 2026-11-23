@@ -681,8 +681,7 @@ taking the cases it owns.
 
 A one-off experiment, off by default, comparing two ways an autonomous agent writes dataset
 lines through the mcp server: plain JSON tools (arm `json`) against json-layout editor groups
-(arm `editor`). The design is `docs/superpowers/specs/2026-10-28-line-edition-arms-design.md`;
-the platform document side (the switch, the two tool sets) is under
+(arm `editor`). The platform document side (the switch, the two tool sets) is under
 [Line edition arms (dev-only experiment)](#line-edition-arms-dev-only-experiment) in section 11.
 
 - **Switch.** `POST /api/v1/test-env/line-edition-arm` with `{ arm }`; with it off (`null`) the
@@ -883,7 +882,7 @@ accepts it. The distance sort is described in the `workflow` skill, not in the p
 ### Line edition arms (dev-only experiment)
 
 No line-writing operation is annotated: the served surface has no line tool. For the experiment
-comparing how an autonomous agent writes lines (`docs/superpowers/specs/2026-10-28-line-edition-arms-design.md`),
+comparing how an autonomous agent writes lines,
 `POST /api/v1/test-env/line-edition-arm` with `{ arm: 'json' | 'editor' | null }` annotates the
 line operations of the merged document (`api/contract/x-agent-line-edition.ts`) and answers 204
 once the platform document is refreshed. Arm `json`: `read_line`, `delete_line`, `write_line`,

@@ -1,7 +1,7 @@
 # ES query optimization — investigation backlog
 
 Follow-up work that builds on the evaluation harness (see
-`docs/superpowers/specs/2026-05-22-es-query-evaluation-harness-design.md`). Each item
+[`README.md`](./README.md)). Each item
 below is a self-contained investigation: run the named experiment on a large seeded
 dataset, read the A/B comparison, and write the finding where indicated.
 
@@ -306,9 +306,8 @@ drift), not a low cap. Recorded in §5 R4 (and reframes the load-management.md �
 `experiment-2026-05-28T07-36-25-089Z.json`.
 
 > **Status update (2026-07-30):** the cap + `_rand`-sampled-total design below is
-> **implemented** on this branch (see `docs/superpowers/plans/2026-07-30-approx-count-ranked-search.md`
-> Tasks 1–5 and `load-management.md` §9); the `q_mode=or|and|adapt` extension (§12-C)
-> is the remaining planned work (Tasks 6–8).
+> **implemented** on this branch (see `load-management.md` §9); the `q_mode=or|and|adapt` extension (§12-C)
+> is the remaining planned work.
 
 ## 11. Split hits/count — transparent alternative to capping `track_total_hits`
 
@@ -1153,4 +1152,4 @@ agg-popularity 0 ms rows are cache reads, ignore them).
 Harness runs save JSON to `benchmark/results/` tagged with the git commit. When an
 investigation reaches a conclusion, summarise the numbers in
 `docs/architecture/load-management.md` and, if it implies a behaviour change, open a
-dedicated spec under `docs/superpowers/specs/`.
+dedicated issue.

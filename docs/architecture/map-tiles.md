@@ -89,5 +89,4 @@ filter params. Ineligible fields (dates, multivalued, geometry, calculated,
 `x-cardinality` > 50) degrade to the uncategorized map plus a warning chip.
 
 This is the first of the "simple preview params" family (flat, documented
-query params usable from portal iframes and AI-agent links — no JSON configs);
-see `docs/plans/2026-07-22-map-category-param-design.md`.
+query params usable from portal iframes and AI-agent links — no JSON configs).

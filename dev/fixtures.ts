@@ -166,7 +166,7 @@ async function tamperFile (id: string) {
 
 /** Target 3 (editable-dataset lines). Wait until the per-line backfill/relay has drained: the
  * dataset-level `_needsHistorizingLines` hint clears once every stamped line's revision has
- * shipped (docs/plans/2026-07-20-integrity-target3-lines-design.md §2-3). Before it drains, a
+ * shipped (see docs/architecture/integrity.md). Before it drains, a
  * check correctly reports `status: 'unknown'` rather than risk a false verdict, so this must be
  * awaited before tampering or checking. */
 async function waitForLinesDrained (id: string, timeoutMs = 60000) {
