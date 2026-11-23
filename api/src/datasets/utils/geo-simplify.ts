@@ -116,7 +116,10 @@ export const simplifyToVertexBudget = (geometry: Geometry, maxVertices: number):
   // (~40s on 2.5M vertices) to end at its last tolerance: go there directly, same result
   let tol = minVertices(input) > maxVertices ? LAST_TOLERANCE : BASE_TOLERANCE
   while (countVertices(out) > maxVertices && tol <= MAX_TOLERANCE) {
-    out = simplify(input as any, { tolerance: tol, highQuality: false, mutate: false })
+    // mutate on a shallow wrapper: turf then skips its deep clone of the geometry (the largest memory
+    // cost of indexing a large one) and only reassigns the wrapper's coordinates, with new arrays
+    // referencing the input positions: the input is left untouched for the next tolerance
+    out = simplify({ type: input.type, coordinates: (input as any).coordinates } as any, { tolerance: tol, highQuality: false, mutate: true })
     tol *= 4
   }
   return out
