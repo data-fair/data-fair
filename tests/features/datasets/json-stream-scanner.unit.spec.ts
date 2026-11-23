@@ -3,18 +3,18 @@ import assert from 'node:assert/strict'
 import { readdirSync, readFileSync } from 'node:fs'
 import path from 'node:path'
 import JSONStream from 'JSONStream'
-import { createGeojsonFeaturesScanner } from '../../../api/src/datasets/utils/geojson-features-stream.ts'
+import { createJsonStreamScanner } from '../../../api/src/datasets/utils/json-stream-scanner.ts'
 
-const scan = (text: Buffer, chunkSize: number) => {
-  const scanner = createGeojsonFeaturesScanner()
+const scan = (text: Buffer, chunkSize: number, path = ['features']) => {
+  const scanner = createJsonStreamScanner({ path })
   const values: unknown[] = []
   for (let i = 0; i < text.length; i += chunkSize) values.push(...scanner.write(text.subarray(i, i + chunkSize)))
   return values
 }
 
-const jsonStream = (text: Buffer) => new Promise<unknown[]>((resolve, reject) => {
+const jsonStream = (text: Buffer, path = ['features']) => new Promise<unknown[]>((resolve, reject) => {
   const values: unknown[] = []
-  const parser = JSONStream.parse('features.*')
+  const parser = JSONStream.parse([...path, '*'].join('.'))
   parser.on('data', (v: unknown) => values.push(v))
   parser.on('error', reject)
   parser.on('end', () => resolve(values))
@@ -22,16 +22,16 @@ const jsonStream = (text: Buffer) => new Promise<unknown[]>((resolve, reject) =>
 })
 
 // the scanner must read the same values as JSONStream, whatever the chunks
-const assertSameAsJSONStream = async (text: string | Buffer) => {
+const assertSameAsJSONStream = async (text: string | Buffer, path = ['features']) => {
   const bytes = Buffer.from(text)
-  const expected = await jsonStream(bytes)
+  const expected = await jsonStream(bytes, path)
   for (const chunkSize of [1, 2, 3, 7, 64, bytes.length || 1]) {
-    assert.deepEqual(scan(bytes, chunkSize), expected, `chunks of ${chunkSize} bytes`)
+    assert.deepEqual(scan(bytes, chunkSize, path), expected, `chunks of ${chunkSize} bytes`)
   }
   return expected
 }
 
-test.describe('geojson features stream', () => {
+test.describe('json stream scanner', () => {
   test('reads the test resources like JSONStream', async () => {
     const dirs = ['tests/resources/geo', 'tests/resources/datasets']
     let files = 0
@@ -81,5 +81,32 @@ test.describe('geojson features stream', () => {
 
   test('fails on an invalid feature', async () => {
     assert.throws(() => scan(Buffer.from('{"features":[{"a":1},{"b":oops}]}'), 5))
+  })
+
+  test('reads the children of the root value, like JSONStream.parse(\'*\')', async () => {
+    assert.deepEqual(await assertSameAsJSONStream('[{"a":1}, 2 ,"x",null,[3],{"features":[1]}]', []), [{ a: 1 }, 2, 'x', [3], { features: [1] }])
+    assert.deepEqual(await assertSameAsJSONStream('{"a":{"b":1},"c":"d","e":12345678901234567890,"f":null, "g" : [1] }', []), [{ b: 1 }, 'd', '12345678901234567890', [1]])
+    assert.deepEqual(await assertSameAsJSONStream('[1,2] [3]', []), [1, 2, 3])
+  })
+
+  test('reads the values of an object at the path, like JSONStream', async () => {
+    assert.deepEqual(await assertSameAsJSONStream('{"features":{"a":{"x":1},"b":"features","c":[2]}}'), [{ x: 1 }, 'features', [2]])
+  })
+
+  test('follows a path of several keys, like JSONStream', async () => {
+    const text = '{"marches":{"x":{"marche":[0]},"marche":[{"id":1},{"id":2}],"y":[{"marche":[9]}]},"marche":[3]}'
+    assert.deepEqual(await assertSameAsJSONStream(text, ['marches', 'marche']), [{ id: 1 }, { id: 2 }])
+    assert.deepEqual(await assertSameAsJSONStream('{"marches":[{"marche":[1]}]}', ['marches', 'marche']), [])
+  })
+
+  test('keeps the values of root keys', () => {
+    const text = Buffer.from('{"type":"FeatureCollection","crs":{"type":"name","properties":{"name":"EPSG:2154"}},"features":[{"crs":1}],"bbox":[1,2,3,4],"name":"n"}')
+    for (const chunkSize of [1, 5, text.length]) {
+      const scanner = createJsonStreamScanner({ path: ['features'], rootKeys: ['crs', 'name'] })
+      const children = []
+      for (let i = 0; i < text.length; i += chunkSize) children.push(...scanner.write(text.subarray(i, i + chunkSize)))
+      assert.deepEqual(children, [{ crs: 1 }])
+      assert.deepEqual(scanner.rootValues, { crs: { type: 'name', properties: { name: 'EPSG:2154' } }, name: 'n' })
+    }
   })
 })

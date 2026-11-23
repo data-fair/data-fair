@@ -90,3 +90,13 @@ declare module 'mongo-escape' {
   }
   export default mongoEscape
 }
+
+declare module 'jsonparse' {
+  class Parser {
+    stack: unknown[]
+    onValue: (this: Parser, value: any) => void
+    onError: (err: Error) => void
+    write (buffer: Buffer | string): void
+  }
+  export default Parser
+}
