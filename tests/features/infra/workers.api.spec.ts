@@ -74,9 +74,9 @@ test.describe('workers', () => {
   })
 
   test('Manage expected failure in children processes', async () => {
-    const datasetFd = fs.readFileSync('./tests/resources/geo/geojson-broken.geojson')
+    const datasetFd = fs.readFileSync('./tests/resources/geo/geojson-unrepairable.geojson')
     const form = new FormData()
-    form.append('file', datasetFd, 'geojson-broken2.geojson')
+    form.append('file', datasetFd, 'geojson-unrepairable2.geojson')
     const ax = testUser1
     const headers = { 'Content-Length': form.getLengthSync(), ...form.getHeaders() }
     let res = await ax.post('/api/v1/datasets', form, { headers })

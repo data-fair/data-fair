@@ -1,13 +1,12 @@
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import { parser as streamJsonParser } from 'stream-json/parser.js'
-import { pick as streamJsonPick } from 'stream-json/filters/pick.js'
-import { streamValues } from 'stream-json/streamers/stream-values.js'
 import * as datasetUtils from '../../datasets/utils/index.ts'
 import { updateStorage } from '../../datasets/utils/storage.ts'
 import * as datasetsService from '../../datasets/service.ts'
 import * as fieldsSniffer from '../../datasets/utils/fields-sniffer.ts'
 import projections from '../../../contract/projections.js'
 import { sampleValues as getSampleValues } from '../../datasets/utils/data-streams.ts'
+import { createFeatureVertexCounter, MAX_FEATURE_VERTICES } from '../../datasets/utils/geojson-feature-size.ts'
+import { createJsonStreamScanner } from '../../datasets/utils/json-streams.ts'
 import type { DatasetInternal, FileDataset, SchemaProperty } from '#types'
 
 // Analyze geojson dataset data, check validity and detect schema
@@ -17,17 +16,8 @@ export default async function (dataset: FileDataset) {
   const attachments = await datasetUtils.lsAttachments(dataset)
 
   // the stream is mainly read to get the features, but we also support extracting the crs property if it is present
-  const crsParser = streamJsonParser.asStream()
-  crsParser.on('error', () => {
-    // ignore invalid json errors at this stage, it will be handled later
-  })
-  const crsPipeline = crsParser
-    .pipe(streamJsonPick.asStream({ filter: 'crs' }))
-    .pipe(streamValues.asStream())
-  let crs: any
-  crsPipeline.on('data', (data) => {
-    crs = data.value
-  })
+  const crsScanner = createJsonStreamScanner({ rootKeys: ['crs'] })
+  let crsError = false
 
   const schema: SchemaProperty[] = [{
     type: 'string',
@@ -35,8 +25,23 @@ export default async function (dataset: FileDataset) {
     'x-originalName': 'geometry',
     'x-refersTo': 'https://purl.org/geojson/vocab#geometry'
   }]
-  const sampleValues = await getSampleValues(dataset, ['geometry'], (decodedData: any) => crsParser.write(decodedData))
-  crsParser.end()
+  // checked on the text, before the feature parser holds an oversized feature in memory
+  const vertexCounter = createFeatureVertexCounter(MAX_FEATURE_VERTICES)
+  const sampleValues = await getSampleValues(dataset, ['geometry'], (decodedData: any) => {
+    const oversized = vertexCounter.write(decodedData)
+    if (oversized) {
+      throw httpError(400, `[noretry] The feature n°${oversized.index + 1} of the file has more than ${MAX_FEATURE_VERTICES.toLocaleString('en')} vertices, it is too large to be processed. Split it into smaller features (for example one feature per polygon of a multipolygon, with "ogr2ogr -explodecollections") or simplify it before loading the file.`)
+    }
+    if (!crsError) {
+      try {
+        crsScanner.write(typeof decodedData === 'string' ? Buffer.from(decodedData) : decodedData)
+      } catch {
+        // ignore invalid json errors at this stage, it will be handled later
+        crsError = true
+      }
+    }
+  })
+  const crs: any = crsScanner.rootValues.crs
 
   // keep track of the original name behind each key to detect collisions
   // (e.g. properties "ID" and "id" both escape to "id")
