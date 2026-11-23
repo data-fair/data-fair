@@ -212,3 +212,25 @@ export const jsonStreamScanner = (options: JsonStreamScannerOptions) => {
     }
   })
 }
+
+// Writes a stream of values as the elements of a JSON text, like JSONStream.stringify: open before
+// the first value, sep between values, close at the end (open and close alone without any value).
+export const jsonStreamStringifier = (open = '[\n', sep = '\n,\n', close = '\n]\n') => {
+  let first = true
+  return new Transform({
+    writableObjectMode: true,
+    transform (value, encoding, callback) {
+      let json: string
+      try {
+        json = JSON.stringify(value)
+      } catch (err) {
+        return callback(err as Error)
+      }
+      callback(null, (first ? open : sep) + json)
+      first = false
+    },
+    flush (callback) {
+      callback(null, first ? open + close : close)
+    }
+  })
+}

@@ -2,8 +2,7 @@ import fs from 'fs-extra'
 import { flatten } from 'flat'
 import { Writable, Transform } from 'stream'
 import csv from 'csv-parser'
-import JSONStream from 'JSONStream'
-import { jsonStreamScanner } from './json-stream-scanner.ts'
+import { jsonStreamScanner, jsonStreamStringifier } from './json-stream-scanner.ts'
 import { stringify as csvStrStream } from 'csv-stringify'
 import tmp from 'tmp-promise'
 import { mimeTypeStream } from './mime-type-stream.ts'
@@ -345,7 +344,7 @@ export const writeExtendedStreams = async (dataset: Dataset, extensions: any[]):
       },
       objectMode: true
     }))
-    transforms.push(JSONStream.stringify(`{
+    transforms.push(jsonStreamStringifier(`{
   "type": "FeatureCollection",
   "features": [
     `, `,
