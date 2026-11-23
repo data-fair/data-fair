@@ -132,6 +132,11 @@ const projCoordinates = (projection: { proj4: string }, coordinates: any[]): voi
 }
 
 export const geometry2fields = async (dataset: Dataset, doc: Record<string, any>): Promise<Record<string, any>> => {
+  // Yield first: the line reaches us synchronously from the read stream, whose frames still reference
+  // the geometry as parsed (JSONStream, and a stale interpreter register of the transform that
+  // stringified it). Awaiting unwinds them, so that object can be collected before we parse and
+  // simplify our own copy: ~230MB of heap less at 1M vertices.
+  await Promise.resolve()
   const schema = dataset.schema ?? []
   let geometry: any, capabilities: any
 
