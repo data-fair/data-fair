@@ -1,7 +1,7 @@
 // Session cookies of the dev user, for the private fixtures-table-perf dataset.
 // The fixture cannot be public: the test suites run against the same dev API and count
 // every dataset a user can read, so a public dataset breaks them.
-// Same credentials and account as dev/fixtures.ts (dev/resources/users.json).
+// Same credentials and account as dev/fixtures.ts (dev/resources/demo-world.json).
 
 export interface Cookie { name: string, value: string, url: string, httpOnly: boolean, sameSite?: 'Strict' | 'Lax' | 'None' }
 
@@ -26,7 +26,7 @@ export async function loginCookies (origin: string): Promise<Cookie[]> {
   const res = await fetch(`${directoryUrl}/api/auth/password?redirect=${encodeURIComponent(directoryUrl)}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email: 'alban.mouton@koumoul.com', password: 'passwd', org: 'dev_fixtures' })
+    body: JSON.stringify({ email: 'test_demo_dev@example.org', password: 'passwd', org: 'test_demo_org' })
   })
   if (!res.ok) throw new Error(`dev user login failed: HTTP ${res.status} ${await res.text()}`)
   const callbackUrl = (await res.text()).replace(/^"|"$/g, '')

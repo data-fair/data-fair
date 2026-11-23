@@ -3,7 +3,7 @@
  */
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
-import { readFileSync } from 'node:fs'
+import { sdFixtures } from '../../support/sd-fixtures.ts'
 import { calledTool, toolMatches, DEFAULT_SIMULATED_AGENT } from '../../../simulations/runner/autonomous-agent.ts'
 
 const exportWith = (parts: any[]) => [{ conversationId: 'c', messages: [{ seq: 1, role: 'assistant', parts }], runs: [], blobs: new Map() }] as any
@@ -54,7 +54,7 @@ test('toolMatches accepts the bare name and server-prefixed forms only', () => {
 
 test('the default agent reads only, through its identity\'s scopes', () => {
   assert.deepEqual(DEFAULT_SIMULATED_AGENT.mcpServers, [])
-  const users = JSON.parse(readFileSync(new URL('../../../dev/resources/users.template.json', import.meta.url), 'utf8'))
+  const { users } = sdFixtures({})
   const identity = users.map((u: any) => u.nhi).find((n: any) => n?.subject === 'autonomous-agent:sim-mcp')
   assert.deepEqual(identity?.scopes, ['all:read'])
 })

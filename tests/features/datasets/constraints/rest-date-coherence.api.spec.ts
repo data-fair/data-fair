@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { axiosAuth, clean } from '../../../support/axios.ts'
 import { waitForFinalize } from '../../../support/workers.ts'
 
-const testUser1 = await axiosAuth('test_user1@test.com')
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
 
 const conceptSchema = [
   { key: 'deb', type: 'string', format: 'date', 'x-refersTo': 'https://schema.org/startDate', title: 'Début' },

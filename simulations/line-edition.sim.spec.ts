@@ -24,7 +24,7 @@ import { seedAutonomousAgent, waitForAgentTools, LINES_AGENT, type AbsentTool } 
 import { runAgentCase, ASSISTANT_MODEL, TOOLS_MODEL } from './runner/agent-conversation.ts'
 import { checkRows } from './runner/row-check.ts'
 
-const SUPER_ADMIN = 'test_superadmin@test.com'
+const SUPER_ADMIN = 'test_datafair_superadmin@test.com'
 
 /** Every tool of the platform's form group: in arm `json` no other service of the dev stack declares a form. */
 const isEditorTool = (name: string) => name.startsWith('form_')

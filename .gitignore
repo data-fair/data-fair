@@ -33,5 +33,3 @@ dev/profiles/
 /docs/superpowers/
 /simulations/tmp/
 
-# rendered from users.template.json by dev/render-users.mjs
-/dev/resources/users.json

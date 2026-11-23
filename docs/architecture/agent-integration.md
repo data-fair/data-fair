@@ -585,10 +585,9 @@ dispatched reports the previous run's verdict as its own; the skill sequences
 that, `npm run simulate` is only the browser half.
 
 **Prerequisites**, each of which fails confusingly if missing: the dev stack up
-(`npx --no df-dev status`, with the optional `agents` container: `npx --no df-dev up agents`),
-the UI built (`ui/dist/index.html`, done by `npx --no df-dev setup`), and the bridge
-running. The bridge has its own `bridge` pane in the zellij layout, suspended until
-the maintainer presses Enter in it — optional because only simulations need it. The runner checks it and says so.
+(`npm run dev -- --profile agents`),
+the UI built (`ui/dist/index.html`, done by `npm run dev-setup`), and the bridge
+running (`npm run dev:bridge`, started by the maintainer) — optional because only simulations need it. The runner checks it and says so.
 
 **Layout.** `playwright.sim.config.ts` is a separate config so a bare
 `playwright test` can never reach the cases and spend quota. `simulations/cases/`
@@ -608,14 +607,14 @@ before speaking over it. This also retired the reading that a judged run had
 "missed the click by ten seconds": the person acted fourteen seconds after the
 timeout released the turn, which was the first moment they could.
 
-**Isolation.** Every run calls `clean()` and re-seeds `organization/test_org1`
+**Isolation.** Every run calls `clean()` and re-seeds `organization/test_datafair_org1`
 from `simulations/resources/*.csv` plus one REST register built in code
 (`seedRestRegister`: a subsidy-request dataset with columns, history and two
 rows, one carrying a deliberate decimal slip for the data-entry case to fix), so
-no case inherits another run's state and no case can dirty the `dev_fixtures`
-demo data. `clean()` resets the dev
-environment's whole test state, not just `test_`-owned datasets: it also wipes
-the `limits`, `applicationsKeys`, `remoteServices`, `baseApplications`,
+no case inherits another run's state and no case can dirty the `test_demo_org`
+demo data. `clean()` resets the test
+sub-space `test_datafair_` (its datasets, applications, limits, application keys...)
+and the dev environment's shared state: it wipes the `remoteServices`, `baseApplications`,
 `extensions-cache`, `thumbnails-cache`, `locks` and integrity collections
 unfiltered, and removes the tmp directory — this is pre-existing `clean()`
 behaviour shared with `npm test`, not something the simulation suite adds.
@@ -651,23 +650,22 @@ one subscription. An invalid run must never be judged, and
 
 `simulations/autonomous-agent.sim.spec.ts` drives the other way the stack exposes
 data-fair's tools: an **autonomous agent** of the agents service, owned by
-`test_org1`, acting as its own non-human identity and calling the **mcp server**,
+`test_datafair_org1`, acting as its own non-human identity and calling the **mcp server**,
 whose tools are composed from the `x-agent` annotations of the platform
 document (`/api/v1/platform/api-docs.json`, see [platform-api-docs.md](./platform-api-docs.md)).
 Until the mcp server reads that document these cases cannot run. The back-office
 drawer and its in-page tools are not involved.
 
-- The NHI `test_org1_agent_nhi` is declared in simple-directory's file storage
-  (`dev/resources/users.template.json`, rendered into `users.json` by
-  `dev/render-users.mjs` with the host and port of `.env`, which its issuer names). Its
+- The NHI `test_datafair_org1_agent_nhi` is one of the test accounts seeded in simple-directory
+  (`tests/support/sd-fixtures.ts`, its issuer named with the host and port of `.env`). Its
   subject `autonomous-agent:sim-mcp` pins the agent id, so the runner seeds the agent
   through the agents test-env route, available because the dev stack runs the agents
   image with `NODE_ENV=development`.
 - The agent reaches the mcp server as a server built into every agent with an identity
   (`PRIVATE_MCP_URL` in `docker-compose.yaml`), not as a catalog entry: what it offers is the
   identity's scopes, and the simulated agent calls it as its own session.
-- Every case runs beside public decoys of `test_org3` (`seedDecoys`), close to
-  `test_org1`'s datasets, so a run shows whether the agent keeps to its organization.
+- Every case runs beside public decoys of `test_datafair_org3` (`seedDecoys`), close to
+  `test_datafair_org1`'s datasets, so a run shows whether the agent keeps to its organization.
 - Before any model call the runner asks the agent's tool diagnostic for the tools the
   cases need: a broken NHI exchange or an mcp server that composed nothing fails the
   run with its cause.
@@ -683,8 +681,7 @@ taking the cases it owns.
 
 A one-off experiment, off by default, comparing two ways an autonomous agent writes dataset
 lines through the mcp server: plain JSON tools (arm `json`) against json-layout editor groups
-(arm `editor`). The design is `docs/superpowers/specs/2026-10-28-line-edition-arms-design.md`;
-the platform document side (the switch, the two tool sets) is under
+(arm `editor`). The platform document side (the switch, the two tool sets) is under
 [Line edition arms (dev-only experiment)](#line-edition-arms-dev-only-experiment) in section 11.
 
 - **Switch.** `POST /api/v1/test-env/line-edition-arm` with `{ arm }`; with it off (`null`) the
@@ -696,10 +693,10 @@ the platform document side (the switch, the two tool sets) is under
   `form: "datafair_create_line"` or `"datafair_edit_line"`, a write ending in `form_saveForm`).
   `datafair_delete_line` is in both, and the cost report counts it as a write in both. The runner
   waits until the agent holds exactly its arm's tools before the first message.
-- **Agent.** `sim-lines` (`LINES_AGENT`), acting as its own NHI `test_org1_lines_nhi`, beside the existing
+- **Agent.** `sim-lines` (`LINES_AGENT`), acting as its own NHI `test_datafair_org1_lines_nhi`, beside the existing
   `sim-mcp` agent, which is untouched. Each run writes into a register of its own, seeded from
   `simulations/runner/line-edition-fixtures.ts`; the communes referential stays private to
-  `test_org1`, so the editor's master-data suggestions only work if its fetch carries the
+  `test_datafair_org1`, so the editor's master-data suggestions only work if its fetch carries the
   caller's credentials.
 - **Cases and measure.** `simulations/cases/line-edition.ts`: `saisie-courriel`, `import-tableur`,
   `corrections`, each run per arm and repeat (`SIM_ARMS`, default `json,editor`; `SIM_REPEAT`,
@@ -885,7 +882,7 @@ accepts it. The distance sort is described in the `workflow` skill, not in the p
 ### Line edition arms (dev-only experiment)
 
 No line-writing operation is annotated: the served surface has no line tool. For the experiment
-comparing how an autonomous agent writes lines (`docs/superpowers/specs/2026-10-28-line-edition-arms-design.md`),
+comparing how an autonomous agent writes lines,
 `POST /api/v1/test-env/line-edition-arm` with `{ arm: 'json' | 'editor' | null }` annotates the
 line operations of the merged document (`api/contract/x-agent-line-edition.ts`) and answers 204
 once the platform document is refreshed. Arm `json`: `read_line`, `delete_line`, `write_line`,

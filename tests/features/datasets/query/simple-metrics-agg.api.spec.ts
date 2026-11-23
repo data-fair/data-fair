@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { axiosAuth, clean } from '../../../support/axios.ts'
 import { waitForFinalize } from '../../../support/workers.ts'
 
-const ax = await axiosAuth('test_user1@test.com')
+const ax = await axiosAuth('test_datafair_user1@test.com')
 
 // dataset mixing a geometry column (mapped without doc_values in ES) with regular columns —
 // the shape that used to make the default fields list blow up with "all shards failed"

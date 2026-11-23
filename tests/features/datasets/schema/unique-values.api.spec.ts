@@ -3,8 +3,8 @@ import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
 import { waitForFinalize } from '../../../support/workers.ts'
 
-const testUser1 = await axiosAuth('test_user1@test.com')
-const testUser3 = await axiosAuth('test_user3@test.com')
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
+const testUser3 = await axiosAuth('test_datafair_user3@test.com')
 
 const keysOf = (res: any) => res.data.map((p: any) => p.key).sort()
 
@@ -93,7 +93,7 @@ test.describe('Schema uniqueValues filter', () => {
     await testUser1.post('/api/v1/datasets/rest-unique-perm/_bulk_lines', [{ email: 'secret@test.com', city: 'A' }, { email: 'other@test.com', city: 'A' }])
     await waitForFinalize(testUser1, 'rest-unique-perm')
     await testUser1.put('/api/v1/datasets/rest-unique-perm/permissions', [
-      { type: 'user', id: 'test_user3', operations: ['readDescription', 'readSchema'] }
+      { type: 'user', id: 'test_datafair_user3', operations: ['readDescription', 'readSchema'] }
     ])
     await assert.rejects(
       testUser3.get('/api/v1/datasets/rest-unique-perm/schema', { params: { email_starts: 'secret', uniqueValues: 'true' } }),

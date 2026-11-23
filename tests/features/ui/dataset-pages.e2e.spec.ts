@@ -7,13 +7,13 @@ test.describe('dataset detail pages', () => {
 
   test.beforeAll(async () => {
     await clean()
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
     datasetId = dataset.id
   })
 
   test('dataset home page shows all sections, tabs, record count and editable metadata', { tag: '@smoke' }, async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_datafair_user1')
 
     // Top-level sections
     await expect(page.locator('#informations')).toBeVisible({ timeout: 10000 })
@@ -52,7 +52,7 @@ test.describe('dataset detail pages', () => {
   })
 
   test('dataset /table route loads table view', { tag: '@smoke' }, async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}/table`, 'test_user1')
+    await goToWithAuth(`/data-fair/dataset/${datasetId}/table`, 'test_datafair_user1')
     await expect(page.locator('.dataset-table')).toBeAttached({ timeout: 15000 })
   })
 
@@ -62,7 +62,7 @@ test.describe('dataset detail pages', () => {
   // internal to dataset-table), the other models were left unbound and stayed local to the page.
   test('dataset /table route syncs cols, sort and display with the URL', async ({ page, goToWithAuth }) => {
     // state is restored from the URL: a single column, sorted descending
-    await goToWithAuth(`/data-fair/dataset/${datasetId}/table?cols=id&sort=-id`, 'test_user1')
+    await goToWithAuth(`/data-fair/dataset/${datasetId}/table?cols=id&sort=-id`, 'test_datafair_user1')
     await expect(page.locator('.dataset-table')).toBeAttached({ timeout: 15000 })
     await expect(page.locator('thead th').filter({ hasText: 'id' })).toBeVisible()
     await expect(page.locator('thead th').filter({ hasText: 'adr' })).toHaveCount(0)
@@ -75,13 +75,13 @@ test.describe('dataset detail pages', () => {
   })
 
   test('dataset api-doc page loads', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}/api-doc`, 'test_user1')
+    await goToWithAuth(`/data-fair/dataset/${datasetId}/api-doc`, 'test_datafair_user1')
     // d-frame is a custom element that renders hidden until loaded; check it's in the DOM
     await expect(page.locator('d-frame')).toBeAttached({ timeout: 10000 })
   })
 
   test('structure section shows dataset properties', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_datafair_user1')
     await expect(page.locator('#structure')).toBeVisible({ timeout: 10000 })
     const structureSection = page.locator('#structure')
     await expect(structureSection.getByRole('heading', { name: /colonne|column/i })).toBeVisible()
@@ -92,7 +92,7 @@ test.describe('dataset detail pages', () => {
   })
 
   test('leave guard warns when navigating away with unsaved metadata changes', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_datafair_user1')
     await expect(page.locator('#metadata')).toBeVisible({ timeout: 10000 })
     const titleInput = page.locator('#metadata').getByRole('textbox', { name: /Titre|Title/ })
     await titleInput.click()
@@ -113,7 +113,7 @@ test.describe('dataset detail pages', () => {
   })
 
   test('leave guard warns when navigating away with unsaved schema changes', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_datafair_user1')
     await expect(page.locator('#structure')).toBeVisible({ timeout: 10000 })
     const adrButton = page.locator('#structure').getByRole('button').filter({ hasText: /adr/ })
     await adrButton.click()
@@ -132,7 +132,7 @@ test.describe('dataset detail pages', () => {
   })
 
   test('cancel metadata changes restores original values', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_datafair_user1')
     await expect(page.locator('#metadata')).toBeVisible({ timeout: 15000 })
     const titleInput = page.locator('#metadata').getByRole('textbox', { name: /Titre|Title/ })
     const originalTitle = await titleInput.inputValue()
@@ -151,7 +151,7 @@ test.describe('dataset detail pages', () => {
   })
 
   test('cancel schema changes restores original schema', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_datafair_user1')
     await expect(page.locator('#structure')).toBeVisible({ timeout: 10000 })
     const adrButton = page.locator('#structure').getByRole('button').filter({ hasText: /adr/ })
     await adrButton.click()
@@ -171,7 +171,7 @@ test.describe('dataset detail pages', () => {
 
   // Mutating tests last — these modify the dataset
   test('editing title shows save button and persists changes', { tag: '@smoke' }, async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_datafair_user1')
     await expect(page.locator('#metadata')).toBeVisible({ timeout: 10000 })
 
     // Find and edit the title field (use textbox role to avoid matching markdown editor buttons)
@@ -190,7 +190,7 @@ test.describe('dataset detail pages', () => {
     await expect(page.getByRole('button', { name: /Enregistrer|Save/ })).not.toBeVisible({ timeout: 10000 })
 
     // Verify via API that the title was actually persisted
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     const res = await ax.get(`/api/v1/datasets/${datasetId}`)
     expect(res.data.title).toBe('Modified Title E2E')
 
@@ -199,7 +199,7 @@ test.describe('dataset detail pages', () => {
   })
 
   test('editing a schema property label triggers diff and saves', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_datafair_user1')
     await expect(page.locator('#structure')).toBeVisible({ timeout: 10000 })
     const structureSection = page.locator('#structure')
     // Click on the "adr" property button
@@ -221,16 +221,16 @@ test.describe('dataset detail pages', () => {
     await expect(page.getByRole('button', { name: /Enregistrer|Save/ })).not.toBeVisible({ timeout: 10000 })
 
     // Verify via API
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     const res = await ax.get(`/api/v1/datasets/${datasetId}`)
     const adrProp = res.data.schema.find((p: any) => p.key === 'adr')
     expect(adrProp.title).toBe('Adresse complète')
   })
 
   test('edits the hidden search terms from the metadata form', async ({ page, goToWithAuth }) => {
-    const u1 = await axiosAuth('test_user1@test.com')
+    const u1 = await axiosAuth('test_datafair_user1@test.com')
     await u1.post('/api/v1/datasets/e2e-search-terms', { isMetaOnly: true, title: 'Bureaux de vote' })
-    await goToWithAuth('/data-fair/dataset/e2e-search-terms', 'test_user1')
+    await goToWithAuth('/data-fair/dataset/e2e-search-terms', 'test_datafair_user1')
     await expect(page.locator('#metadata')).toBeVisible({ timeout: 10000 })
     await page.locator('#metadata').getByRole('tab', { name: 'Informations complémentaires' }).click()
     const field = page.locator('#metadata').getByLabel('Termes de recherche associés')

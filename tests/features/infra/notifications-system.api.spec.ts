@@ -7,8 +7,8 @@ import { doAndWaitForFinalize, sendDataset, waitForFinalize } from '../../suppor
 import { serviceUp } from '../../support/optional-services.ts'
 import { collectNotifs, expectNotif, expectNotifPair } from '../../support/notifications.ts'
 
-const testUser1 = await axiosAuth('test_user1@test.com')
-const testUser1Org = await axiosAuth('test_user1@test.com', 'test_org1')
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
+const testUser1Org = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
 
 /**
  * Cross-cutting invariants of the notification system (see docs/architecture/notifications.md).
@@ -58,8 +58,8 @@ test.describe('infra - notification system', () => {
   // an api key session to originator.apiKey instead of a pseudo-user named after the key
   test('events emitted by an api key are attributed to the api key', async () => {
     // the originator is completed by the events queue, which the api only runs when events is up
-    test.skip(!await serviceUp('EVENTS_PORT'), 'needs the optional events service: npm run dev-zellij -- --services events')
-    const settings = (await testUser1Org.put('/api/v1/settings/organization/test_org1', {
+    test.skip(!await serviceUp('EVENTS_PORT'), 'needs the optional events service: npm run dev -- --profile events')
+    const settings = (await testUser1Org.put('/api/v1/settings/organization/test_datafair_org1', {
       apiKeys: [{ title: 'catalogs', scopes: ['datasets', 'applications'] }]
     })).data
     const apiKey = settings.apiKeys[0]
@@ -92,7 +92,7 @@ test.describe('infra - notification system', () => {
     expectApiKeyOriginator(expectNotif(captured, `data-fair:application-patched-properties:${application.id}`))
 
     // a user level key: its session user is the owner, the originator keeps the owner name but the key id
-    const userSettings = (await testUser1.put('/api/v1/settings/user/test_user1', {
+    const userSettings = (await testUser1.put('/api/v1/settings/user/test_datafair_user1', {
       apiKeys: [{ title: 'user key', scopes: ['datasets'] }]
     })).data
     const userKey = userSettings.apiKeys[0]
@@ -109,7 +109,7 @@ test.describe('infra - notification system', () => {
     captured = await notifs.waitFor(1, { keyPrefix: 'data-fair:dataset-patched-properties:' })
     const userNotif = expectNotif(captured, `data-fair:dataset-patched-properties:${dataset.id}`)
     assert.equal(userNotif.originator.apiKey, undefined)
-    assert.equal(userNotif.originator.user.id, 'test_user1')
-    assert.equal(userNotif.originator.organization.id, 'test_org1')
+    assert.equal(userNotif.originator.user.id, 'test_datafair_user1')
+    assert.equal(userNotif.originator.organization.id, 'test_datafair_org1')
   })
 })

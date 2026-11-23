@@ -20,7 +20,7 @@ const latestRevisionKey = async (prefix: string): Promise<string> => {
 }
 
 test('a healthy trail reports trail.status ok alongside the data verdict', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
   await waitForFlagCleared(dataset.id)
@@ -33,7 +33,7 @@ test('a healthy trail reports trail.status ok alongside the data verdict', async
 })
 
 test('a shadowed revision is a confirmed version-divergence anomaly', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
   await waitForFlagCleared(dataset.id)
@@ -57,7 +57,7 @@ test('a shadowed revision is a confirmed version-divergence anomaly', async () =
 })
 
 test('a marker-hidden line anchor resurfaces: data verdict stays ok, trail says altered', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const res = await admin.post('/api/v1/datasets', {
     isRest: true, title: `trail lines ${Date.now()}`, schema: [{ key: 'attr1', type: 'string' }]
   })
@@ -94,7 +94,7 @@ test('a marker-hidden line anchor resurfaces: data verdict stays ok, trail says 
 // ---------------------------------------------------------------------------------------------
 
 test('a shadowed `.who` sibling is a confirmed trail anomaly while it lives, without affecting the data verdict', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
   await waitForFlagCleared(dataset.id)
@@ -114,7 +114,7 @@ test('a shadowed `.who` sibling is a confirmed trail anomaly while it lives, wit
 })
 
 test('a delete-marker hiding a `.who` sibling is a confirmed trail anomaly while it lives', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
   await waitForFlagCleared(dataset.id)
@@ -131,7 +131,7 @@ test('a delete-marker hiding a `.who` sibling is a confirmed trail anomaly while
 })
 
 test('a fully purged, lapsed `.who` sibling leaves a clean trail verdict and a kept anchor', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
   await waitForFlagCleared(dataset.id)
@@ -164,7 +164,7 @@ test('a fully purged, lapsed `.who` sibling leaves a clean trail verdict and a k
 // ---------------------------------------------------------------------------------------------
 
 test('disable ends the trail with a terminal disable revision', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
   await waitForFlagCleared(dataset.id)
@@ -181,7 +181,7 @@ test('disable ends the trail with a terminal disable revision', async () => {
 })
 
 test('deleting an enrolled dataset ends the trail with a terminal delete revision', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
   await waitForFlagCleared(dataset.id)
@@ -193,7 +193,7 @@ test('deleting an enrolled dataset ends the trail with a terminal delete revisio
 })
 
 test('the scope audit flags an out-of-band integrity.active flip (alarm-kill)', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
   await waitForFlagCleared(dataset.id)
@@ -215,7 +215,7 @@ test('the scope audit flags an out-of-band integrity.active flip (alarm-kill)', 
 })
 
 test('crash residue (terminal latest on an active dataset) self-heals through the check', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
   await waitForFlagCleared(dataset.id)
@@ -246,7 +246,7 @@ test('crash residue (terminal latest on an active dataset) self-heals through th
 // ---------------------------------------------------------------------------------------------
 
 test('breach alert dedup lives in integrity.alerts and clears on recovery', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
   await waitForFlagCleared(dataset.id)
@@ -270,7 +270,7 @@ test('breach alert dedup lives in integrity.alerts and clears on recovery', asyn
 })
 
 test('a dataset stuck without a definitive verdict fires integrity-check-stale', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
   await waitForFlagCleared(dataset.id)
@@ -301,7 +301,7 @@ test('a dataset stuck without a definitive verdict fires integrity-check-stale',
 // ---------------------------------------------------------------------------------------------
 
 test('ack silences reviewed anomalies via a locked ackTrail revision; new tampering escapes it', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
   await waitForFlagCleared(dataset.id)
@@ -351,7 +351,7 @@ const restLinesDataset = async (admin: any) => {
 }
 
 test('_fix converges past a forged high-_i anchor (denial-of-remediation wedge)', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await restLinesDataset(admin)
 
   // step 1 — the attacker launders a forged write: content + inflated _i + stamp + hint, which
@@ -382,7 +382,7 @@ test('_fix converges past a forged high-_i anchor (denial-of-remediation wedge)'
 })
 
 test('the relay refuses an _i that overflows the key padding (trail ordering stays sound)', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await restLinesDataset(admin)
   const before = (await listIntegrityKeys(`${revisionsPrefix(dataset)}lines/`)).length
 

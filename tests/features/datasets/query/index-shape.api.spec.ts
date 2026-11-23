@@ -3,8 +3,8 @@ import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
 import { waitForFinalize, doAndWaitForFinalize, getRawDataset, patchRawDataset, datasetEsMappingProperties, clearDatasetCache } from '../../../support/workers.ts'
 
-const testUser1 = await axiosAuth('test_user1@test.com')
-const adminUser = await axiosAuth('test_superadmin@test.com', undefined, true)
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
+const adminUser = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
 
 // `_indexShape` (design §3) records the mapping shape a dataset's CURRENT index was built with.
 // It is stamped only when a fresh index is built, and every later emission — in particular the

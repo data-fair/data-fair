@@ -8,7 +8,7 @@ import { sendDataset, waitForFinalize, waitForDatasetError, doAndWaitForFinalize
 import { VectorTile } from '@mapbox/vector-tile'
 import Protobuf from 'pbf'
 
-const testUser1 = await axiosAuth('test_user1@test.com')
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
 
 test.describe('geo files support', () => {
   test.beforeAll(async () => {

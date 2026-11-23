@@ -1181,7 +1181,7 @@ type LineRevisionEntry = { i: number, sha256?: string, deleted?: boolean, date: 
 type LineRevisionDetail = { i: number, hash: { sha256?: string }, context: any, line: { _id: string, _i: number, _updatedAt?: string, deleted?: boolean }, payload?: Record<string, any>, current?: Record<string, any>, who?: WhoHint }
 
 // Attribution column (T6, design §3): raw ids only, no display-name resolution (GDPR
-// minimization, deliberate — see docs/plans/2026-07-22-integrity-attribution-design.md §3/§6.2).
+// minimization, deliberate).
 // Absent when the `.who` sibling never existed (worker/propagation write) or has aged out (normal
 // after the 180-day attribution retention, § design doc §1.2) — blank, not an error state.
 const formatWho = (who?: WhoHint): string => {

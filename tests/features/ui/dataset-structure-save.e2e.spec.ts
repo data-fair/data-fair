@@ -6,7 +6,7 @@ test.describe('dataset structure save', () => {
 
   test.beforeEach(async () => {
     await clean()
-    ax = await axiosAuth('test_user1@test.com')
+    ax = await axiosAuth('test_datafair_user1@test.com')
     await ax.put('/api/v1/datasets/structure-save', { isRest: true, title: 'structure save', schema: [{ key: 'nom', type: 'string', title: 'Nom' }] })
   })
 
@@ -16,7 +16,7 @@ test.describe('dataset structure save', () => {
     const patchBodies: Record<string, unknown>[] = []
     page.on('request', r => { if (r.method() === 'PATCH' && r.url().includes('/datasets/structure-save')) patchBodies.push(r.postDataJSON()) })
 
-    await goToWithAuth('/data-fair/dataset/structure-save', 'test_user1')
+    await goToWithAuth('/data-fair/dataset/structure-save', 'test_datafair_user1')
     const structure = page.locator('#structure')
     await expect(structure).toBeVisible({ timeout: 10000 })
     const saveBtn = structure.getByRole('button', { name: /Enregistrer|Save/ })

@@ -5,7 +5,7 @@ import { waitForFinalize, doAndWaitForFinalize, sendDataset, waitForDatasetError
 import FormData from 'form-data'
 import fs from 'fs-extra'
 
-const testUser1 = await axiosAuth('test_user1@test.com')
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
 
 test.describe('file datasets with transformation rules', () => {
   test.beforeEach(async () => {

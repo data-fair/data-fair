@@ -84,13 +84,13 @@ test('shouldWriteWho: only when a who is present AND the kill switch is not expl
 // ---------------------------------------------------------------------------------------------
 
 test('a user PATCH on an enrolled dataset writes a `.who` sibling with the user id and an ip', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   const prefix = revisionsPrefix(dataset)
   // enable is synchronous and superadmin-attributed: rev 0 already carries the enabling admin's who
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
   const who0 = await integrityTestStore.getWho(ops.whoKey(dataset.owner, dataset.id, 0))
-  expect(who0.user?.id).toBe('test_superadmin')
+  expect(who0.user?.id).toBe('test_datafair_superadmin')
   expect(who0.ip).toBeTruthy()
 
   // a metadata-only PATCH is a covered change → rev 1, references rev 0's payload (no new .file)
@@ -99,7 +99,7 @@ test('a user PATCH on an enrolled dataset writes a `.who` sibling with the user 
   await waitForFlagCleared(dataset.id)
 
   const who1 = await integrityTestStore.getWho(ops.whoKey(dataset.owner, dataset.id, 1))
-  expect(who1.user?.id).toBe('test_superadmin')
+  expect(who1.user?.id).toBe('test_datafair_superadmin')
   expect(who1.ip).toBeTruthy()
   expect(who1.date).toBeTruthy()
   // T7: a UI-session write (no API key involved) must never carry an `apiKey` field
@@ -107,7 +107,7 @@ test('a user PATCH on an enrolled dataset writes a `.who` sibling with the user 
 })
 
 test('a worker-origin re-anchor (no preceding request context) writes no `.who`', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   const prefix = revisionsPrefix(dataset)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
@@ -136,7 +136,7 @@ const uploadFile = async (ax: any, datasetId: string, fileName: string, params?:
 }
 
 test('an incompatible file upload validated by hand anchors with the uploader in `.who`, not an anonymous worker context', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   const prefix = revisionsPrefix(dataset)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
@@ -155,12 +155,12 @@ test('an incompatible file upload validated by hand anchors with the uploader in
   const rev1 = await integrityTestStore.getRevision(ops.revisionKey(dataset.owner, dataset.id, 1))
   expect(rev1.context.origin).toBe('user') // a user put those bytes there — not the pipeline
   const who1 = await integrityTestStore.getWho(ops.whoKey(dataset.owner, dataset.id, 1))
-  expect(who1.user?.id).toBe('test_superadmin')
+  expect(who1.user?.id).toBe('test_datafair_superadmin')
   expect(who1.ip).toBeTruthy()
 })
 
 test('a plain file replacement (draft auto-validated by the worker) carries the uploader through to the anchor too', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   const prefix = revisionsPrefix(dataset)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
@@ -175,11 +175,11 @@ test('a plain file replacement (draft auto-validated by the worker) carries the 
   const rev1 = await integrityTestStore.getRevision(ops.revisionKey(dataset.owner, dataset.id, 1))
   expect(rev1.context.origin).toBe('user')
   const who1 = await integrityTestStore.getWho(ops.whoKey(dataset.owner, dataset.id, 1))
-  expect(who1.user?.id).toBe('test_superadmin')
+  expect(who1.user?.id).toBe('test_datafair_superadmin')
 })
 
 test('_fix after an out-of-band tamper carries the fixing superadmin in `.who`', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   const prefix = revisionsPrefix(dataset)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
@@ -192,11 +192,11 @@ test('_fix after an out-of-band tamper carries the fixing superadmin in `.who`',
   const keys = await listIntegrityKeys(prefix)
   expect(keys).toContain(`${prefix}000000001`)
   const who1 = await integrityTestStore.getWho(ops.whoKey(dataset.owner, dataset.id, 1))
-  expect(who1.user?.id).toBe('test_superadmin')
+  expect(who1.user?.id).toBe('test_datafair_superadmin')
 })
 
 test('dedupe writes no new revision and no new `.who`, even when the hint carries a who', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   const prefix = revisionsPrefix(dataset)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
@@ -216,7 +216,7 @@ test('dedupe writes no new revision and no new `.who`, even when the hint carrie
 })
 
 test('a user PATCH drives the async relay to write the `.who` sibling with its OWN retain-until (attribution.retentionDays), distinct from the revision JSON\'s (retention.days)', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   const prefix = revisionsPrefix(dataset)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
@@ -265,8 +265,8 @@ test('a user PATCH drives the async relay to write the `.who` sibling with its O
 // ---------------------------------------------------------------------------------------------
 
 test('a dataset PATCH authenticated with an organization API key attaches who.apiKey with the key id, no key title leaks', async () => {
-  const axOrg = await axiosAuth('test_user1@test.com', 'test_org1')
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const axOrg = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', axOrg)
   const prefix = revisionsPrefix(dataset)
   // superadmin acts across orgs without needing membership (same pattern as lines.api.spec.ts)
@@ -274,7 +274,7 @@ test('a dataset PATCH authenticated with an organization API key attaches who.ap
   await waitForIntegrityRevisions(prefix, 2) // rev0 JSON + .file (enable, attributed to superadmin)
 
   const secretTitle = 'attribution-key-secret-title'
-  const settingsRes = await axOrg.put('/api/v1/settings/organization/test_org1', {
+  const settingsRes = await axOrg.put('/api/v1/settings/organization/test_datafair_org1', {
     apiKeys: [{ title: secretTitle, scopes: ['datasets'] }]
   })
   const apiKey = settingsRes.data.apiKeys[0]
@@ -302,8 +302,8 @@ test('a dataset PATCH authenticated with an organization API key attaches who.ap
 })
 
 test('an adminMode+asAccount API key write (the processings path) attaches who.apiKey with the key id', async () => {
-  const superadmin = await axiosAuth('test_superadmin@test.com', undefined, true)
-  const res = await superadmin.put('/api/v1/settings/user/test_user1', {
+  const superadmin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
+  const res = await superadmin.put('/api/v1/settings/user/test_datafair_user1', {
     apiKeys: [{ title: 'processing-admin-key', scopes: ['datasets'], adminMode: true, asAccount: true }]
   })
   const key = res.data.apiKeys[0]
@@ -313,7 +313,7 @@ test('an adminMode+asAccount API key write (the processings path) attaches who.a
     baseURL: apiUrl,
     headers: {
       'x-apiKey': key.clearKey,
-      'x-account': JSON.stringify({ type: 'organization', id: 'test_org1', name: encodeURIComponent('Test Org 1') })
+      'x-account': JSON.stringify({ type: 'organization', id: 'test_datafair_org1', name: encodeURIComponent('Test Org 1') })
     }
   })
 
@@ -346,14 +346,14 @@ test.describe('attribution kill switch (synchronous admin actions only — see l
   test.afterAll(async () => { await setConfig('integrity.attribution.active', true) })
 
   test('enable writes its revision but no `.who` while attribution is inactive', async () => {
-    const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+    const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
     const dataset = await sendDataset('datasets/dataset1.csv', admin)
     await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
     await expect(integrityTestStore.getWho(ops.whoKey(dataset.owner, dataset.id, 0))).rejects.toMatchObject({ name: 'NoSuchKey' })
   })
 
   test('_fix after a tamper writes its revision but no `.who` while attribution is inactive', async () => {
-    const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+    const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
     const dataset = await sendDataset('datasets/dataset1.csv', admin)
     await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
     await anonymousAx.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'corrupted bytes' })
@@ -381,8 +381,8 @@ const restDataset = async (ax: any, lines: Array<Record<string, any>>) => {
 }
 
 test('owner-admin (non-superadmin) reads the revisions listing and sees `who` (user id + ip) on the attributed item', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
-  const owner = await axiosAuth('test_superadmin@test.com', undefined, false) // same account, personal owner, no adminMode
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
+  const owner = await axiosAuth('test_datafair_superadmin@test.com', undefined, false) // same account, personal owner, no adminMode
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   const prefix = revisionsPrefix(dataset)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true }) // rev 0, attributed to the superadmin
@@ -390,12 +390,12 @@ test('owner-admin (non-superadmin) reads the revisions listing and sees `who` (u
 
   const res = (await owner.get(`/api/v1/datasets/${dataset.id}/_integrity/revisions`)).data
   expect(res.count).toBe(1)
-  expect(res.results[0].who).toMatchObject({ user: { id: 'test_superadmin' } })
+  expect(res.results[0].who).toMatchObject({ user: { id: 'test_datafair_superadmin' } })
   expect(res.results[0].who.ip).toBeTruthy()
 })
 
 test('a revision listing item with no `.who` sibling simply lacks `who`, response shape stable', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   const prefix = revisionsPrefix(dataset)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
@@ -412,23 +412,23 @@ test('a revision listing item with no `.who` sibling simply lacks `who`, respons
   expect(rev1).toBeTruthy()
   expect(rev1).not.toHaveProperty('who')
   const rev0 = res.results.find((r: any) => r.i === 0)
-  expect(rev0.who).toMatchObject({ user: { id: 'test_superadmin' } })
+  expect(rev0.who).toMatchObject({ user: { id: 'test_datafair_superadmin' } })
 })
 
 test('GET revisions/{i} includes `who` alongside the snapshot', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   const prefix = revisionsPrefix(dataset)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
   await waitForIntegrityRevisions(prefix, 2)
 
   const detail = (await admin.get(`/api/v1/datasets/${dataset.id}/_integrity/revisions/0`)).data
-  expect(detail.who).toMatchObject({ user: { id: 'test_superadmin' } })
+  expect(detail.who).toMatchObject({ user: { id: 'test_datafair_superadmin' } })
   expect(detail.who.ip).toBeTruthy()
 })
 
 test('GET revisions/{i} has no `who` when the sibling is absent, shape stable', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   const prefix = revisionsPrefix(dataset)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
@@ -442,8 +442,8 @@ test('GET revisions/{i} has no `who` when the sibling is absent, shape stable', 
 })
 
 test('owner-admin reads a line revision listing and sees `who` on the attributed item', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
-  const owner = await axiosAuth('test_superadmin@test.com', undefined, false)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
+  const owner = await axiosAuth('test_datafair_superadmin@test.com', undefined, false)
   const dataset = await restDataset(admin, [{ attr1: 'v1' }])
   await waitForFinalize(admin, dataset.id)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true }) // logged-in write → attributed
@@ -451,9 +451,9 @@ test('owner-admin reads a line revision listing and sees `who` on the attributed
 
   const list = (await owner.get(`/api/v1/datasets/${dataset.id}/_integrity/lines/line0/revisions`)).data
   expect(list.count).toBe(1)
-  expect(list.results[0].who).toMatchObject({ user: { id: 'test_superadmin' } })
+  expect(list.results[0].who).toMatchObject({ user: { id: 'test_datafair_superadmin' } })
   expect(list.results[0].who.ip).toBeTruthy()
 
   const detail = (await owner.get(`/api/v1/datasets/${dataset.id}/_integrity/lines/line0/revisions/${list.results[0].i}`)).data
-  expect(detail.who).toMatchObject({ user: { id: 'test_superadmin' } })
+  expect(detail.who).toMatchObject({ user: { id: 'test_datafair_superadmin' } })
 })

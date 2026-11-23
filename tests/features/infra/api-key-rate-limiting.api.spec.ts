@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { axios, axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
 import { sendDataset, setConfig, clearRateLimiting } from '../../support/workers.ts'
 
-const testUser1 = await axiosAuth('test_user1@test.com')
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms))
 
@@ -35,7 +35,7 @@ test.describe('API key rate limiting tier', () => {
     const dataset = await sendDataset('datasets/dataset1.csv', testUser1)
 
     // a datasets-scoped API key for the owner of the dataset
-    const res = await testUser1.put('/api/v1/settings/user/test_user1', {
+    const res = await testUser1.put('/api/v1/settings/user/test_datafair_user1', {
       apiKeys: [{ title: 'rl-key', scopes: ['datasets'] }]
     })
     const key = res.data.apiKeys[0].clearKey

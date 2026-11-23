@@ -1,6 +1,6 @@
 /**
  * Dev-only: the x-agent annotations of the line operations for the experiment comparing two ways
- * an autonomous agent writes dataset lines (docs/superpowers/specs/2026-10-28-line-edition-arms-design.md).
+ * an autonomous agent writes dataset lines (see docs/architecture/agent-integration.md).
  * Arm `json` offers plain JSON tools, arm `editor` json-layout editor groups; reading a line and
  * deleting one are the same plain tools in both. No arm is set by default, and then the line
  * operations carry no annotation at all: the platform document is the one served in production.

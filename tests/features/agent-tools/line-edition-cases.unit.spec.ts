@@ -34,11 +34,11 @@ test('every expected row field is a register column', () => {
   }
 })
 
-test('a run goes to the lines agent as a member of test_org1', () => {
+test('a run goes to the lines agent as a member of test_datafair_org1', () => {
   for (const run of expandRuns(lineEditionCases, ['json'], 1)) {
-    assert.equal(run.route, '/agents/organization/test_org1/chat?agentId=sim-lines')
+    assert.equal(run.route, '/agents/organization/test_datafair_org1/chat?agentId=sim-lines')
     assert.equal(run.surface, 'autonomous-agent')
-    assert.equal(run.user, 'test_user1')
+    assert.equal(run.user, 'test_datafair_user1')
     assert.ok(run.expected.rows.length > 0)
   }
 })

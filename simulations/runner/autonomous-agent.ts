@@ -1,23 +1,23 @@
 /**
- * The autonomous agent a case drives: owned by test_org1, acting as its own NHI, calling the mcp
+ * The autonomous agent a case drives: owned by test_datafair_org1, acting as its own NHI, calling the mcp
  * server's tools — the configuration production runs.
  *
- * The NHI is declared in simple-directory's file storage (dev/resources/users.template.json) with the
+ * The NHI is one of the test accounts seeded in simple-directory (tests/support/sd-fixtures.ts) with the
  * subject autonomous-agent:sim-mcp, which pins the agent id. The public creation route always
  * generates the id, so the agent is seeded through the agents test-env route (development mode only),
  * the same contract the agents repo's own simulations use.
  *
- * A second identity, sim-lines (NHI test_org1_lines_nhi, LINES_AGENT), belongs to the line edition
+ * A second identity, sim-lines (NHI test_datafair_org1_lines_nhi, LINES_AGENT), belongs to the line edition
  * experiment: it is allowed to write datasets, which sim-mcp is not.
  */
 import type { ParsedExport, SimulationCase } from '@data-fair/lib-agents-sim'
 import { ROOT, OWNER, OWNER_USER } from './settings.ts'
 
 export const SIM_AGENT_ID = 'sim-mcp'
-export const SIM_NHI = 'test_org1_agent_nhi'
+export const SIM_NHI = 'test_datafair_org1_agent_nhi'
 /** The line edition experiment's own identity (NHI subject autonomous-agent:sim-lines), allowed to write datasets. */
-export const LINES_AGENT = { id: 'sim-lines', nhi: 'test_org1_lines_nhi' }
-const SUPER_ADMIN = 'test_superadmin@test.com'
+export const LINES_AGENT = { id: 'sim-lines', nhi: 'test_datafair_org1_lines_nhi' }
+const SUPER_ADMIN = 'test_datafair_superadmin@test.com'
 
 export interface SimulatedAgentConfig {
   title?: string

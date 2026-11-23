@@ -1,0 +1,21 @@
+{
+  "prefix": "test_demo_",
+  "users": [{
+    "id": "test_demo_dev",
+    "firstName": "Dev",
+    "lastName": "User",
+    "email": "test_demo_dev@example.org",
+    "password": {
+      "clear": "passwd"
+    },
+    "defaultOrg": "test_demo_org"
+  }],
+  "organizations": [{
+    "id": "test_demo_org",
+    "name": "Fixtures Demo",
+    "members": [{
+      "id": "test_demo_dev",
+      "role": "admin"
+    }]
+  }]
+}

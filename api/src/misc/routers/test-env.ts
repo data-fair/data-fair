@@ -19,23 +19,40 @@ import { capturedNotifications } from '../utils/test-notif-buffer.ts'
 
 const router = express.Router()
 
-// Cleanup: delete test_* owned data from mongo/ES/filesystem, clear caches
+// Prefixed test sub-spaces: a test suite owns the accounts whose ids start with its own prefix (test_<suite>_)
+// and the data they own, cleaned without touching the other suites nor the unprefixed accounts
+const testPrefixRegexp = /^test_[a-z0-9]+(?:_[a-z0-9]+)*_$/
+
+// Cleanup of a sub-space (DELETE /?prefix=test_<suite>_): delete the data owned by its accounts from
+// mongo/ES/filesystem, including the shared collections' documents keyed by the sub-space (remote services
+// and base applications identified under the prefix, locks and integrity state of its datasets), then
+// reset the caches and the tmp dir. Both resets are global: the caches only cost a recomputation to the other
+// sub-spaces, but the tmp dir is wiped for all of them, so an upload or a worker task of another suite running
+// at the same time may lose its temporary files.
 router.delete('/', async (req, res, next) => {
   try {
+    const prefix = req.query.prefix
+    if (typeof prefix !== 'string' || !testPrefixRegexp.test(prefix)) {
+      return res.status(400).type('text/plain').send('invalid test prefix')
+    }
+    // the prefix only holds [a-z0-9_], safe in a regexp
+    const prefixRegexp = new RegExp('^' + prefix)
+
     await resetPing()
 
-    const testOwnerFilter = { 'owner.id': { $regex: /^test_/ } }
-    const testIdFilter = { id: { $regex: /^test_/ } }
+    const testOwnerFilter = { 'owner.id': { $regex: prefixRegexp } }
+    const testIdFilter = { id: { $regex: prefixRegexp } }
 
     // collect test-owned dataset IDs before deleting them (for ES index cleanup)
     const testDatasets = await mongo.datasets.find(testOwnerFilter, { projection: { id: 1 } }).toArray()
+    const testApplications = await mongo.applications.find(testOwnerFilter, { projection: { id: 1 } }).toArray()
 
-    // delete ES indices for test-owned datasets
+    // delete ES indices for test-owned datasets: exactly theirs (indexPrefix carries a hash of the id), not
+    // those of another dataset whose id starts with the same characters. The aliases, draft ones
+    // included, go with their indices.
     if (testDatasets.length > 0) {
-      const indexPatterns = testDatasets.flatMap(d => [
-        config.indicesPrefix + '-' + d.id + '*',
-        config.indicesPrefix + '_draft-' + d.id + '*'
-      ])
+      const { indexPrefix } = await import('../../datasets/es/manage-indices.ts')
+      const indexPatterns = testDatasets.map(d => `${indexPrefix(d)}-*`)
       await es.client.indices.delete({ index: indexPatterns.join(','), ignore_unavailable: true }).catch(() => {})
 
       // REST datasets also own per-dataset mongo collections (lines and revisions); left
@@ -54,27 +71,41 @@ router.delete('/', async (req, res, next) => {
       mongo.applications.deleteMany(testOwnerFilter),
       mongo.db.collection('journals').deleteMany(testOwnerFilter),
       mongo.settings.deleteMany(testIdFilter),
-      mongo.limits.deleteMany({}),
-      // collections without owner (blanket delete)
-      mongo.applicationsKeys.deleteMany({}),
-      mongo.db.collection('locks').deleteMany({}),
-      mongo.db.collection('integrity-purge').deleteMany({}),
+      mongo.limits.deleteMany(testIdFilter),
+      mongo.applicationsKeys.deleteMany(testOwnerFilter),
+      // locks of the sub-space's resources (`<type>:<id>`, `datasets:slug:<owner type>:<owner id>:<slug>`),
+      // the global task locks are released by their task
+      mongo.db.collection<{ _id: string }>('locks').deleteMany({
+        $or: [
+          { _id: { $in: [...testDatasets.map(d => `datasets:${d.id}`), ...testApplications.map(a => `applications:${a.id}`)] } },
+          { _id: { $regex: new RegExp('^datasets:slug:[a-z]+:' + prefix) } }
+        ]
+      }),
+      // integrity watermarks keyed by revision prefix (data-fair/<owner type>-<owner id>/<dataset id>/)
+      mongo.db.collection<{ _id: string }>('integrity-purge').deleteMany({ _id: { $regex: new RegExp('^data-fair/[a-z]+-' + prefix) } }),
       // the storage-accounting measure of still-locked test revisions would otherwise keep
       // counting into the freshly-reset limits and starve the next tests' storage quota
-      mongo.db.collection('integrity-storage').deleteMany({}),
+      mongo.db.collection('integrity-storage').deleteMany(testOwnerFilter),
       mongo.db.collection('extensions-cache').deleteMany({}),
       mongo.db.collection('thumbnails-cache').deleteMany({}),
-      mongo.remoteServices.deleteMany({}),
-      mongo.baseApplications.deleteMany({})
+      // remote services declared under the prefix, or mirroring a master data dataset of the sub-space
+      mongo.remoteServices.deleteMany({ $or: [testIdFilter, { 'virtualDatasets.parent.owner.id': { $regex: prefixRegexp } }] }),
+      // base applications served under the prefix (http://host/<prefix>…)
+      mongo.baseApplications.deleteMany({ url: { $regex: new RegExp('^[a-z]+://[^/]+/' + prefix) } })
     ])
 
-    // selective directory deletion: only remove test_* owner dirs
+    // the other remote services and base applications (from the config) lose the sub-space's accounts
+    const privateAccessPull = { $pull: { privateAccess: { id: { $regex: prefixRegexp } } } } as any
+    await mongo.remoteServices.updateMany({ 'privateAccess.id': { $regex: prefixRegexp } }, privateAccessPull)
+    await mongo.baseApplications.updateMany({ 'privateAccess.id': { $regex: prefixRegexp } }, privateAccessPull)
+
+    // selective directory deletion: only remove the owner dirs of the sub-space
     for (const ownerType of ['user', 'organization']) {
       const ownerTypeDir = path.join(dataDir, ownerType)
       if (await fs.pathExists(ownerTypeDir)) {
         const entries = await fs.readdir(ownerTypeDir)
         for (const entry of entries) {
-          if (entry.startsWith('test_')) {
+          if (entry.startsWith(prefix)) {
             await filesStorage.removeDir(path.join(ownerTypeDir, entry))
           }
         }
@@ -111,7 +142,7 @@ router.delete('/', async (req, res, next) => {
     const { init: initBaseApps } = await import('../../base-applications/router.ts')
     await initBaseApps()
 
-    res.status(200).json({ ok: true })
+    res.status(204).send()
   } catch (err) {
     next(err)
   }

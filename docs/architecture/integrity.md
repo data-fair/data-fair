@@ -8,8 +8,7 @@
 > audit, realerts — 2026-07-22), and the **ES index consistency verdict** (A1, third verdict
 > member `'index'` — count + seeded sampled windows nightly, exhaustive on demand, through the
 > alias, both dataset families — 2026-07-22). Coverage limits are **enrollment refusals, not caveats**: a
-> verdict never claims more than the snapshot protects (§5). Delivery history and decision
-> records live in the `docs/plans/2026-07-*-integrity-*` design docs; what remains
+> verdict never claims more than the snapshot protects (§5). What remains
 > deliberately out (applications/settings metadata, attachment bytes, above-gate fold,
 > generalization, log posture, central service) is in [§10](#10-delivery-state--what-remains)
 > and [§14](#14-deferred-scope--future-directions). A client-facing presentation (fr) lives in
@@ -432,8 +431,7 @@ what renewal ever sees (§3.1, README.md invariant 14).
 
 > **Dependency — resolved 2026-07-16:** lock prolongation is validated on Scaleway
 > (staging, fr-par; aws-cli spike covering inline and default-retention locks, with and
-> without version-id, Standard and Glacier classes — see
-> `docs/plans/2026-07-16-scaleway-lock-prolongation-spike-runbook.md`). Option B is
+> without version-id, Standard and Glacier classes ). Option B is
 > confirmed as the primary renewal model; Option A remains a documented fallback for
 > providers without prolongation.
 
@@ -619,7 +617,7 @@ is `true` with a 2-day revision retention and a 1-day attribution retention (del
 distinct windows, so tests can tell the two formulas apart), so the capability is on by default —
 but it is still opt-in **per dataset** (admin-mode `PUT /datasets/{id}/_integrity`).
 
-`npm run dev-fixtures` seeds **three** datasets in the `dev_fixtures` org that demonstrate the
+`npm run dev-fixtures` seeds **three** datasets in the `test_demo_org` org that demonstrate the
 feature end-to-end (each is documented in detail in the fixtures script itself):
 
 - `fixtures-integrite-ok` — enabled, organically re-anchored twice (file update + metadata
@@ -774,7 +772,7 @@ fixtures also feed the screenshots of the client-facing presentation
   counts live lines and **refuses above the gate** (`config.integrity.lines.maxLines`, default
   100 000 — the streamed check below is built for 1M, but the default stays until the
   measurement spec `tests/features/integrity/lines-scale.api.spec.ts` has been run at 1M and
-  its figures recorded here; design `docs/plans/2026-10-15-integrity-lines-scale-design.md` §6)
+  its figures recorded here)
   with a `409`; on success it anchors the joint metadata revision inline as today, then
   stamps every live line (`operation: 'enable'`) and sets the hint — the relay backfills
   asynchronously, and `GET …/_integrity` exposes `lines: { anchored, pending }` for progress until
@@ -1132,8 +1130,7 @@ not the number of revisions, and that size is metered into the owner's storage c
 ## 10. Delivery state & what remains
 
 Everything below the line is **delivered**; the per-iteration narratives, decision records and
-review findings live in the `docs/plans/2026-07-*-integrity-*` design/plan documents (spec →
-plan → build, test-first), not here.
+review findings are not kept here.
 
 | Iteration | Delivered | Design doc |
 |---|---|---|

@@ -150,7 +150,7 @@ class TestS3Storage {
   }
 }
 
-const testUser1 = await axiosAuth('test_user1@test.com')
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
 
 test.describe('S3 multipart copy', () => {
   let storage: TestS3Storage

@@ -19,7 +19,7 @@ const page = await context.newPage()
 // superadmin login with admin mode (the integrity write actions render in admin mode only)
 const firstTarget = `${baseUrl}/data-fair/dataset/fixtures-integrite-ok`
 await page.goto(`${baseUrl}/simple-directory/login?redirect=${encodeURIComponent(firstTarget)}&adminMode=true`)
-await page.locator('input[name=email]').fill('test_superadmin@test.com')
+await page.locator('input[name=email]').fill('test_datafair_superadmin@test.com')
 await page.locator('input[name=password]').fill('passwd')
 await page.getByRole('button', { name: 'Se connecter' }).click()
 await page.waitForURL('**/data-fair/**', { timeout: 20000 })

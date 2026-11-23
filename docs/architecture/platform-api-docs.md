@@ -1,6 +1,6 @@
 # Platform OpenAPI document
 
-`GET /data-fair/api/v1/platform/api-docs.json` serves one OpenAPI 3.1 document describing every service of the site: data-fair, simple-directory and, when configured, metrics, events, the registry, the portals manager and catalogs. It is public, identical for every caller of a site (no session is read) and marked `allowAnyScope`, so a scoped token reads it too. Design: `docs/superpowers/specs/2026-10-19-platform-api-docs-design.md`.
+`GET /data-fair/api/v1/platform/api-docs.json` serves one OpenAPI 3.1 document describing every service of the site: data-fair, simple-directory and, when configured, metrics, events, the registry, the portals manager and catalogs. It is public, identical for every caller of a site (no session is read) and marked `allowAnyScope`, so a scoped token reads it too.
 
 Code: `api/contract/platform-api-docs.ts` (pure: check, rewrite and merge), `api/src/platform-api-docs/service.ts` (fetching, caching, per-site memoization), the route in `api/src/misc/routers/root.ts`, `api/contract/scopes-security.ts` and `api/contract/x-agent.ts` (what data-fair contributes).
 

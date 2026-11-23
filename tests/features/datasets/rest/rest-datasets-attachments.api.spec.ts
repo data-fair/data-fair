@@ -5,9 +5,9 @@ import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
 import { waitForFinalize, lsAttachments } from '../../../support/workers.ts'
 
-const testUser1 = await axiosAuth('test_user1@test.com')
-const testUser3 = await axiosAuth('test_user3@test.com')
-const testUser5 = await axiosAuth('test_user5@test.com')
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
+const testUser3 = await axiosAuth('test_datafair_user3@test.com')
+const testUser5 = await axiosAuth('test_datafair_user5@test.com')
 
 test.describe('REST datasets - Attachments', () => {
   test.beforeEach(async () => {
@@ -333,34 +333,34 @@ test.describe('REST datasets - Attachments', () => {
     })
     assert.equal(res.status, 201)
     await testUser1.put('/api/v1/datasets/rest-att-owners/permissions', [
-      { type: 'user', id: 'test_user3', classes: ['manageOwnLines'], operations: ['readSafeSchema'] }
+      { type: 'user', id: 'test_datafair_user3', classes: ['manageOwnLines'], operations: ['readSafeSchema'] }
     ])
 
     const form = new FormData()
     form.append('attachment', fs.readFileSync('./tests/resources/datasets/files/dir1/test.pdf'), 'dir1/test.pdf')
     form.append('_id', 'victim')
     form.append('attr1', 10)
-    res = await testUser1.post('/api/v1/datasets/rest-att-owners/own/user:test_user1/lines', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
+    res = await testUser1.post('/api/v1/datasets/rest-att-owners/own/user:test_datafair_user1/lines', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
     assert.equal(res.status, 200)
     await waitForFinalize(testUser1, 'rest-att-owners')
     assert.equal((await lsAttachments('rest-att-owners')).length, 1)
 
     // another contributor reusing the _id of a line they do not own
     await assert.rejects(
-      testUser3.post('/api/v1/datasets/rest-att-owners/own/user:test_user3/lines', { _id: 'victim', attr1: 20 }),
+      testUser3.post('/api/v1/datasets/rest-att-owners/own/user:test_datafair_user3/lines', { _id: 'victim', attr1: 20 }),
       (err: any) => err.status === 403
     )
     assert.equal((await lsAttachments('rest-att-owners')).length, 1)
 
     // _id values resolving to the attachments root or to a nested folder
     for (const _id of ['.', 'victim/x']) {
-      await testUser3.post('/api/v1/datasets/rest-att-owners/own/user:test_user3/lines', { _id, attr1: 30 })
+      await testUser3.post('/api/v1/datasets/rest-att-owners/own/user:test_datafair_user3/lines', { _id, attr1: 30 })
       assert.equal((await lsAttachments('rest-att-owners')).length, 1)
       const form3 = new FormData()
       form3.append('attachment', fs.readFileSync('./tests/resources/datasets/files/dir1/test.pdf'), 'dir1/test.pdf')
       form3.append('_id', _id)
       await assert.rejects(
-        testUser3.post('/api/v1/datasets/rest-att-owners/own/user:test_user3/lines', form3, { headers: { 'Content-Length': form3.getLengthSync(), ...form3.getHeaders() } }),
+        testUser3.post('/api/v1/datasets/rest-att-owners/own/user:test_datafair_user3/lines', form3, { headers: { 'Content-Length': form3.getLengthSync(), ...form3.getHeaders() } }),
         (err: any) => err.status === 400
       )
     }

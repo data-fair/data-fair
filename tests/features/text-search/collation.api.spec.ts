@@ -2,7 +2,7 @@ import { test } from '../../fixtures/diagnostics.ts'
 import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks, mockAppUrl } from '../../support/axios.ts'
 
-const u1 = await axiosAuth('test_user1@test.com')
+const u1 = await axiosAuth('test_datafair_user1@test.com')
 
 // Titles chosen so that the two collations disagree on EVERY pair:
 //   simple (byte order): 'Zebra' (Z = 0x5a) < 'alpha' (a = 0x61) < 'Elan' with an accent (0xc3…)

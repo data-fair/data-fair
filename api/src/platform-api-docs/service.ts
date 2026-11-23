@@ -1,7 +1,7 @@
 // Fetching and caching of the platform document's fragments: every service's document is fetched
 // over its private URL at startup and every 5 minutes (conditional GETs), prepared once, and merged
 // per site on demand. A failing fetch keeps the last good fragment (stale).
-// Design: docs/superpowers/specs/2026-10-19-platform-api-docs-design.md
+// Design: docs/architecture/platform-api-docs.md
 import config from '#config'
 import log from '@data-fair/lib-node/log.js'
 import apiDocs from '../../contract/api-docs.ts'

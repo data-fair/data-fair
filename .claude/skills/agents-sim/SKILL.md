@@ -13,12 +13,11 @@ transcript.
 
 Three things must be true, and each fails confusingly if it is not:
 
-1. The dev stack is up — `npx --no df-dev status` (and the optional `agents` container: `npx --no df-dev up agents`).
+1. The dev stack is up — `npm run dev` (and the optional `agents` container: `npm run dev -- --profile agents`).
 2. The UI is built — `ls ui/dist/index.html`. If it is missing, e2e-style runs
    fail with "element not found".
-3. The bridge is running — it has a `bridge` pane in the zellij layout, and
-   the `bridge` pane starts suspended; the maintainer presses Enter in it. The runner
-   checks it and says so.
+3. The bridge is running — `npm run dev` does not start it: the maintainer runs
+   `npm run dev:bridge` in its own terminal. The runner checks it and says so.
 
 Ask the user to start anything that is down. Never start or stop dev processes yourself.
 

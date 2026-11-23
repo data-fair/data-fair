@@ -32,14 +32,13 @@ dev servers above all, which have been seen at 5.8 GiB resident each.
 
 ## The caps
 
-### vite dev server — `df-mem-cap` (`@data-fair/lib-dev`), used by the ui pane of `.zellij.kdl`
+### vite dev server — memory cap
 
-The dev server runs inside a transient systemd user scope with `MemoryMax=4G`
-(override with `DEV_MEMORY_MAX`). When it is exceeded the *cgroup* OOM killer kills
+The dev server (`npm run dev:ui`) is best run inside a transient systemd user scope with `MemoryMax=4G`. `npm run dev` applies no memory cap;
+to apply one, start the ui yourself with a prefix: `systemd-run --user --scope -p MemoryMax=4G npm run dev:ui`. When it is exceeded the *cgroup* OOM killer kills
 that process only: the host never reaches the global OOM path, so nothing else on
 the machine is touched. Normal peak for this app is ~2 GiB, and the runaways that
-prompted this were 4.3–5.8 GiB, so 4G separates the two. The wrapper no-ops where
-`systemd-run` is unavailable (macOS, non-systemd), so it is safe for every contributor.
+prompted this were 4.3–5.8 GiB, so 4G separates the two. Where `systemd-run` is unavailable (macOS, non-systemd), run it without the scope.
 
 **A V8 heap limit does not work here, which is worth knowing before you reach for
 one.** `NODE_OPTIONS=--max-old-space-size` was tried first and is useless for this
@@ -87,7 +86,7 @@ metaspace, thread stacks) so a runaway ES is killed *inside its container* rathe
 than contributing to a host-wide OOM.
 
 For a heavier workload (large benchmark datasets, say) set `ES_HEAP=1g` in `.env`
-(df-dev never overwrites it) and recreate ES with `docker compose up -d elasticsearch` — 1g
+(`.env` is never overwritten) and recreate ES with `docker compose up -d elasticsearch` — 1g
 still fits in the 2g limit. Remember the
 multiplier is the number of environments you have up.
 
@@ -123,15 +122,6 @@ via `CLAMD_CONF_DatabaseDirectory`), which holds a single EICAR body signature:
 ~30 MiB resident, and clamd starts in seconds. Detections report as
 `Eicar-Test-Signature.UNOFFICIAL FOUND`, which the API treats like any other `FOUND`.
 Real-world malware detection is therefore **not** exercised in dev or CI.
-
-### Idle stacks — `dev/idle-stacks.sh`
-
-The cheapest saving of all: a worktree you stopped working on leaves its whole
-compose stack up, ~2.5–4.5 GiB of RAM + swap holding nothing useful.
-`bash dev/idle-stacks.sh` lists every running compose project with its memory and
-whether its dev API is running (listening, or its nodemon supervisor up while it boots), and the command to stop it
-(`docker compose -p <project> stop` keeps the volumes; `npx --no df-dev zellij` brings it
-back). Read-only, like `npx --no df-dev status`.
 
 ### MCP servers — `.mcp.json`
 

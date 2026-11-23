@@ -3,8 +3,7 @@
 An Elasticsearch query evaluation harness for data-fair. Measures per-query ES cost on
 large, realistically-shaped datasets and runs A/B comparisons of query variants.
 
-See [`../docs/superpowers/specs/2026-05-22-es-query-evaluation-harness-design.md`](../docs/superpowers/specs/2026-05-22-es-query-evaluation-harness-design.md)
-for the design and [`INVESTIGATIONS.md`](./INVESTIGATIONS.md) for the follow-up backlog.
+See [`INVESTIGATIONS.md`](./INVESTIGATIONS.md) for the follow-up backlog.
 
 ## Setup
 
@@ -48,9 +47,9 @@ browser, a Playwright route answers the build's files from disk and lets API and
 requests through, so only the bundle differs. `ui/dist` is never written.
 
 Prerequisites:
-- the dev stack is up (`npx --no df-dev status`);
+- the dev stack is up (`npm run dev`);
 - the `fixtures-table-perf` dataset exists (`npm run dev-fixtures`). It has 50 columns and
-  10,000 rows, and belongs to the `dev_fixtures` org: open
+  10,000 rows, and belongs to the `test_demo_org` org: open
   `/data-fair/embed/dataset/fixtures-table-perf/table` in your dev session. The harness
   signs in as the dev user itself. The dataset is not public on purpose: the test suites run
   against the same API and count every dataset a user can read.

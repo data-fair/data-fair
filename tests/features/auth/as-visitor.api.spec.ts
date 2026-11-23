@@ -3,19 +3,19 @@ import assert from 'node:assert/strict'
 import { axios, axiosAuth, clean, checkPendingTasks, mockAppUrl } from '../../support/axios.ts'
 
 const anonymous = axios()
-const orgAdmin = await axiosAuth('test_user1@test.com', 'test_org1')
-const orgContrib = await axiosAuth('test_user5@test.com', 'test_org1')
-const user1Personal = await axiosAuth('test_user1@test.com')
-const user3 = await axiosAuth('test_user3@test.com')
-const depAdmin = await axiosAuth('test_user4@test.com', 'test_org1')
-depAdmin.setOrg('test_org1', 'dep1')
+const orgAdmin = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
+const orgContrib = await axiosAuth('test_datafair_user5@test.com', 'test_datafair_org1')
+const user1Personal = await axiosAuth('test_datafair_user1@test.com')
+const user3 = await axiosAuth('test_datafair_user3@test.com')
+const depAdmin = await axiosAuth('test_datafair_user4@test.com', 'test_datafair_org1')
+depAdmin.setOrg('test_datafair_org1', 'dep1')
 
 const orgMember = (id: string, role: string, department?: string) =>
   ['member', id, `${id}@test.com`, role, ...(department ? [department] : [])].join(':')
-const member8 = orgMember('test_user8', 'user')
-const member5 = orgMember('test_user5', 'contrib')
-const member6 = orgMember('test_user6', 'contrib', 'dep1')
-const member1 = orgMember('test_user1', 'admin')
+const member8 = orgMember('test_datafair_user8', 'user')
+const member5 = orgMember('test_datafair_user5', 'contrib')
+const member6 = orgMember('test_datafair_user6', 'contrib', 'dep1')
+const member1 = orgMember('test_datafair_user1', 'admin')
 const asMember = (visitor: string, extraParams: Record<string, string> = {}) =>
   ({ params: { asVisitor: visitor, ...extraParams } })
 
@@ -29,19 +29,19 @@ test.describe('asVisitor list override', () => {
   })
 
   test('org admin lists datasets as another member', async () => {
-    // dsA: explicit user permission for test_user8 (the PUT replaces the default contrib permissions)
+    // dsA: explicit user permission for test_datafair_user8 (the PUT replaces the default contrib permissions)
     const dsA = (await orgAdmin.post('/api/v1/datasets', { isRest: true, title: 'audit a' })).data
-    await orgAdmin.put(`/api/v1/datasets/${dsA.id}/permissions`, [{ type: 'user', id: 'test_user8', classes: ['list', 'read'] }])
+    await orgAdmin.put(`/api/v1/datasets/${dsA.id}/permissions`, [{ type: 'user', id: 'test_datafair_user8', classes: ['list', 'read'] }])
     // dsB: default permissions (org contribs can list/read/write)
     const dsB = (await orgAdmin.post('/api/v1/datasets', { isRest: true, title: 'audit b' })).data
     // dsC: permission granted by email only
     const dsC = (await orgAdmin.post('/api/v1/datasets', { isRest: true, title: 'audit c' })).data
-    await orgAdmin.put(`/api/v1/datasets/${dsC.id}/permissions`, [{ type: 'user', email: 'test_user8@test.com', classes: ['list', 'read'] }])
+    await orgAdmin.put(`/api/v1/datasets/${dsC.id}/permissions`, [{ type: 'user', email: 'test_datafair_user8@test.com', classes: ['list', 'read'] }])
     // noise outside the forced org scope: a public dataset and a shared-with-member dataset owned by another user
     const dsPublic = (await user3.post('/api/v1/datasets', { isRest: true, title: 'audit public' })).data
     await user3.put(`/api/v1/datasets/${dsPublic.id}/permissions`, [{ operations: ['readDescription', 'list'] }])
     const dsShared = (await user3.post('/api/v1/datasets', { isRest: true, title: 'audit shared' })).data
-    await user3.put(`/api/v1/datasets/${dsShared.id}/permissions`, [{ type: 'user', id: 'test_user8', classes: ['list', 'read'] }])
+    await user3.put(`/api/v1/datasets/${dsShared.id}/permissions`, [{ type: 'user', id: 'test_datafair_user8', classes: ['list', 'read'] }])
 
     // member with role "user": only the explicit + email grants, external noise excluded
     let res = await orgAdmin.get('/api/v1/datasets', asMember(member8))
@@ -70,7 +70,7 @@ test.describe('asVisitor list override', () => {
 
     // the forced org scope composes as AND with other filter params: an owner param pointing
     // outside the org cannot widen it...
-    res = await orgAdmin.get('/api/v1/datasets', asMember(member8, { owner: 'user:test_user3' }))
+    res = await orgAdmin.get('/api/v1/datasets', asMember(member8, { owner: 'user:test_datafair_user3' }))
     assert.equal(res.data.count, 0)
     // ...neither can shared=true (same count as without the param)
     res = await orgAdmin.get('/api/v1/datasets', asMember(member8, { shared: 'true' }))
@@ -97,7 +97,7 @@ test.describe('asVisitor list override', () => {
   test('an org API key is rejected by the gate even though it carries an admin accountRole', async () => {
     // every org API key session is minted with accountRole = adminRole regardless of its actual
     // scopes (readApiKey in api-key.ts), so the gate must reject isApiKey sessions explicitly
-    const res = await orgAdmin.put('/api/v1/settings/organization/test_org1', {
+    const res = await orgAdmin.put('/api/v1/settings/organization/test_datafair_org1', {
       apiKeys: [{ title: 'audit key', scopes: ['datasets'] }]
     })
     const apiKey = axios({ headers: { 'x-apiKey': res.data.apiKeys[0].clearKey } })
@@ -111,7 +111,7 @@ test.describe('asVisitor list override', () => {
   test('department admin is scoped to their department resources', async () => {
     const dsOrg = (await orgAdmin.post('/api/v1/datasets', { isRest: true, title: 'audit org level' })).data
     const dsDep = (await orgAdmin.post('/api/v1/datasets', { isRest: true, title: 'audit dep1' })).data
-    await orgAdmin.put(`/api/v1/datasets/${dsDep.id}/owner`, { type: 'organization', id: 'test_org1', name: 'Test Org 1', department: 'dep1' })
+    await orgAdmin.put(`/api/v1/datasets/${dsDep.id}/owner`, { type: 'organization', id: 'test_datafair_org1', name: 'Test Org 1', department: 'dep1' })
 
     // org admin auditing an org-level contrib sees both (default contrib permissions on both)
     let res = await orgAdmin.get('/api/v1/datasets', asMember(member5))
@@ -137,7 +137,7 @@ test.describe('asVisitor list override', () => {
 
   test('org admin lists applications as another member', async () => {
     const appA = (await orgAdmin.post('/api/v1/applications', { title: 'audit app a', url: mockAppUrl('monapp1') })).data
-    await orgAdmin.put(`/api/v1/applications/${appA.id}/permissions`, [{ type: 'user', id: 'test_user8', classes: ['list', 'read'] }])
+    await orgAdmin.put(`/api/v1/applications/${appA.id}/permissions`, [{ type: 'user', id: 'test_datafair_user8', classes: ['list', 'read'] }])
     // eslint-disable-next-line @typescript-eslint/no-unused-vars -- appB only needs to exist for the facet-count assertion below
     const appB = (await orgAdmin.post('/api/v1/applications', { title: 'audit app b', url: mockAppUrl('monapp1') })).data
     // public noise from another account, excluded by the forced org scope
@@ -166,7 +166,7 @@ test.describe('asVisitor list override', () => {
     const dsEmail = (await orgAdmin.post('/api/v1/datasets', { isRest: true, title: 'visitor email' })).data
     await orgAdmin.put(`/api/v1/datasets/${dsEmail.id}/permissions`, [{ type: 'user', email: 'someone@external.com', classes: ['list', 'read'] }])
     const dsPartner = (await orgAdmin.post('/api/v1/datasets', { isRest: true, title: 'visitor partner' })).data
-    await orgAdmin.put(`/api/v1/datasets/${dsPartner.id}/permissions`, [{ type: 'organization', id: 'test_org2', classes: ['list', 'read'] }])
+    await orgAdmin.put(`/api/v1/datasets/${dsPartner.id}/permissions`, [{ type: 'organization', id: 'test_datafair_org2', classes: ['list', 'read'] }])
     // default permissions: org contribs can list/read/write
     const dsContrib = (await orgAdmin.post('/api/v1/datasets', { isRest: true, title: 'visitor contrib' })).data
     // public noise outside the forced org scope
@@ -183,7 +183,7 @@ test.describe('asVisitor list override', () => {
     // a user designated by email
     assert.deepEqual(await listIds('email:someone@external.com'), [dsPublic.id, dsConnected.id, dsEmail.id].sort())
     // a member of a partner organization
-    assert.deepEqual(await listIds('partner:test_org2'), [dsPublic.id, dsConnected.id, dsPartner.id].sort())
+    assert.deepEqual(await listIds('partner:test_datafair_org2'), [dsPublic.id, dsConnected.id, dsPartner.id].sort())
     // any member of the org with a role
     assert.deepEqual(await listIds('role:contrib'), [dsPublic.id, dsConnected.id, dsContrib.id].sort())
     assert.equal((await listIds('role:admin')).length, 5)
@@ -192,7 +192,7 @@ test.describe('asVisitor list override', () => {
     assert.deepEqual(await listIds('anonymous', { can: 'read' }), [dsPublic.id])
     assert.deepEqual(await listIds('connected', { can: 'read' }), [dsPublic.id])
     // ...and so it does for a real anonymous caller (filterCan used to return an empty $or)
-    const anonRes = await anonymous.get('/api/v1/datasets', { params: { can: 'read', owner: 'organization:test_org1' } })
+    const anonRes = await anonymous.get('/api/v1/datasets', { params: { can: 'read', owner: 'organization:test_datafair_org1' } })
     assert.deepEqual(anonRes.data.results.map((r: any) => r.id), [dsPublic.id])
   })
 
@@ -200,8 +200,8 @@ test.describe('asVisitor list override', () => {
     const ds = (await orgAdmin.post('/api/v1/datasets', { isRest: true, title: 'visitor sources' })).data
     await orgAdmin.put(`/api/v1/datasets/${ds.id}/permissions`, [
       { classes: ['list'] },
-      { type: 'user', id: 'test_user8', classes: ['read'] },
-      { type: 'organization', id: 'test_org1', roles: ['contrib'], classes: ['write'] }
+      { type: 'user', id: 'test_datafair_user8', classes: ['read'] },
+      { type: 'organization', id: 'test_datafair_org1', roles: ['contrib'], classes: ['write'] }
     ])
 
     let res = await orgAdmin.get('/api/v1/datasets', asMember(member8))

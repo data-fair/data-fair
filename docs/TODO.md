@@ -1,7 +1,7 @@
 # Follow-ups & known bugs
 
 Forward-looking work distilled from the express-decoupling refactor series (Phases 0–7, complete —
-the per-phase plans lived in `docs/plans/` and are now in git history; the conventions they produced
+the per-phase plans are no longer kept; the conventions they produced
 live in [code-conventions.md](architecture/code-conventions.md)).
 
 These are **suspected bugs preserved bit-for-bit during the refactor** (each needs a failing test

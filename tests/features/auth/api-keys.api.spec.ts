@@ -5,13 +5,13 @@ import { axios, axiosAuth, clean, checkPendingTasks, config, directoryUrl, mockA
 import { sendDataset, waitForFinalize, clearRateLimiting, clearDatasetCache } from '../../support/workers.ts'
 
 const anonymous = axios()
-const testUser8Org = await axiosAuth('test_user8@test.com', 'test_org1')
-const testUser3 = await axiosAuth('test_user3@test.com')
-const testUser1 = await axiosAuth('test_user1@test.com')
-const testUser1Org = await axiosAuth('test_user1@test.com', 'test_org1')
-const testUser4 = await axiosAuth('test_user4@test.com')
-const testUser4Org = await axiosAuth('test_user4@test.com', 'test_org1')
-const testSuperadmin = await axiosAuth('test_superadmin@test.com', undefined, true)
+const testUser8Org = await axiosAuth('test_datafair_user8@test.com', 'test_datafair_org1')
+const testUser3 = await axiosAuth('test_datafair_user3@test.com')
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
+const testUser1Org = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
+const testUser4 = await axiosAuth('test_datafair_user4@test.com')
+const testUser4Org = await axiosAuth('test_datafair_user4@test.com', 'test_datafair_org1')
+const testSuperadmin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
 
 test.describe('API keys', () => {
   test.beforeEach(async () => {
@@ -29,21 +29,21 @@ test.describe('API keys', () => {
 
   test('Manage some invald input', async () => {
     // too far in the future
-    await assert.rejects(testUser1.put('/api/v1/settings/user/test_user1', {
+    await assert.rejects(testUser1.put('/api/v1/settings/user/test_datafair_user1', {
       apiKeys: [
         { title: 'key', scopes: ['stats'], expireAt: dayjs().add(4, 'year').format('YYYY-MM-DD') }
       ]
     }), { status: 400 })
 
     // id is readonly
-    await assert.rejects(testUser1.put('/api/v1/settings/user/test_user1', {
+    await assert.rejects(testUser1.put('/api/v1/settings/user/test_datafair_user1', {
       apiKeys: [
         { title: 'key', scopes: ['stats'], id: 'test' }
       ]
     }), { status: 400 })
 
     // api keys are immutable
-    const res = await testUser1.put('/api/v1/settings/user/test_user1', {
+    const res = await testUser1.put('/api/v1/settings/user/test_datafair_user1', {
       apiKeys: [
         { title: 'key', scopes: ['stats'] }
       ]
@@ -52,17 +52,17 @@ test.describe('API keys', () => {
     assert.ok(res.data.apiKeys[0].clearKey)
     assert.ok(res.data.apiKeys[0].id)
     assert.ok(!res.data.apiKeys[0].key)
-    await testUser1.put('/api/v1/settings/user/test_user1', {
+    await testUser1.put('/api/v1/settings/user/test_datafair_user1', {
       apiKeys: res.data.apiKeys
     })
-    await assert.rejects(testUser1.put('/api/v1/settings/user/test_user1', {
+    await assert.rejects(testUser1.put('/api/v1/settings/user/test_datafair_user1', {
       apiKeys: [
         { ...res.data.apiKeys[0], title: 'renamed api key' }
       ]
     }), { status: 400 })
 
     // adminMode can only created by a superadmin
-    await assert.rejects(testUser1.put('/api/v1/settings/user/test_user1', {
+    await assert.rejects(testUser1.put('/api/v1/settings/user/test_datafair_user1', {
       apiKeys: [
         { title: 'admin key', scopes: ['datasets'], adminMode: true, asAccount: true }
       ]
@@ -72,7 +72,7 @@ test.describe('API keys', () => {
   test('Create and use a User level api key', async () => {
     const yesterday = dayjs().add(-1, 'day').format('YYYY-MM-DD')
     const tomorrow = dayjs().add(1, 'day').format('YYYY-MM-DD')
-    const res = await testUser1.put('/api/v1/settings/user/test_user1', {
+    const res = await testUser1.put('/api/v1/settings/user/test_datafair_user1', {
       apiKeys: [
         { title: 'key1', scopes: ['stats'], expireAt: tomorrow },
         { title: 'key2', scopes: ['datasets'] },
@@ -84,8 +84,8 @@ test.describe('API keys', () => {
     assert.equal(res.data.name, 'Test User1')
     const key1 = res.data.apiKeys[0]
     assert.ok(key1.clearKey)
-    assert.equal(key1.email, 'test_user1@test.com')
-    assert.equal(res.data.email, 'test_user1@test.com')
+    assert.equal(key1.email, 'test_datafair_user1@test.com')
+    assert.equal(res.data.email, 'test_datafair_user1@test.com')
     const key2 = res.data.apiKeys[1]
     const key3 = res.data.apiKeys[2]
     const key4 = res.data.apiKeys[3]
@@ -118,7 +118,7 @@ test.describe('API keys', () => {
     const dataset = await sendDataset('datasets/dataset1.csv', axKey2)
     assert.equal(dataset.status, 'finalized')
     assert.equal(dataset.owner.type, 'user')
-    assert.equal(dataset.owner.id, 'test_user1')
+    assert.equal(dataset.owner.id, 'test_datafair_user1')
     await axKey2.get('/api/v1/datasets/' + dataset.id + '/lines')
     await axKey5.get('/api/v1/datasets/' + dataset.id + '/lines')
 
@@ -126,7 +126,7 @@ test.describe('API keys', () => {
     const orgDataset = await sendDataset('datasets/dataset1.csv', testUser4Org)
     await assert.rejects(axKey2.get('/api/v1/datasets/' + orgDataset.id + '/lines'), { status: 403 })
     await testUser4Org.put('/api/v1/datasets/' + orgDataset.id + '/permissions', [
-      { type: 'user', email: 'test_user1@test.com', classes: ['read'] }
+      { type: 'user', email: 'test_datafair_user1@test.com', classes: ['read'] }
     ])
     await clearDatasetCache()
     await axKey2.get('/api/v1/datasets/' + orgDataset.id + '/lines')
@@ -143,7 +143,7 @@ test.describe('API keys', () => {
   })
 
   test('Create and use an organization level api key', async () => {
-    const res = await testUser1Org.put('/api/v1/settings/organization/test_org1', {
+    const res = await testUser1Org.put('/api/v1/settings/organization/test_datafair_org1', {
       apiKeys: [
         { title: 'Key 1', scopes: ['datasets'] },
         { title: 'Key 2', scopes: [] }
@@ -163,7 +163,7 @@ test.describe('API keys', () => {
     const dataset = await sendDataset('datasets/dataset1.csv', axKey1)
     assert.equal(dataset.status, 'finalized')
     assert.equal(dataset.owner.type, 'organization')
-    assert.equal(dataset.owner.id, 'test_org1')
+    assert.equal(dataset.owner.id, 'test_datafair_org1')
 
     // API key should react to permission granted through its pseudo email
     const otherDataset = await sendDataset('datasets/dataset1.csv', testUser4)
@@ -186,7 +186,7 @@ test.describe('API keys', () => {
   })
 
   test('Create and use a department level api key', async () => {
-    const res = await testUser4Org.put('/api/v1/settings/organization/test_org1:dep1', {
+    const res = await testUser4Org.put('/api/v1/settings/organization/test_datafair_org1:dep1', {
       apiKeys: [
         { title: 'key1', scopes: ['datasets'] }
       ]
@@ -200,19 +200,19 @@ test.describe('API keys', () => {
     const dataset = await sendDataset('datasets/dataset1.csv', axKey1)
     assert.equal(dataset.status, 'finalized')
     assert.equal(dataset.owner.type, 'organization')
-    assert.equal(dataset.owner.id, 'test_org1')
+    assert.equal(dataset.owner.id, 'test_datafair_org1')
     assert.equal(dataset.owner.department, 'dep1')
   })
 
   test('Create and use a adminMode/asAccount api key', async () => {
-    const res = await testSuperadmin.put('/api/v1/settings/user/test_user1', {
+    const res = await testSuperadmin.put('/api/v1/settings/user/test_datafair_user1', {
       apiKeys: [
         { title: 'admin key', scopes: ['datasets'], adminMode: true, asAccount: true }
       ]
     })
     const key = res.data.apiKeys[0].clearKey
     assert.ok(key)
-    const headers = { 'x-apiKey': key, 'x-account': JSON.stringify({ type: 'organization', id: 'test_org1', name: encodeURIComponent('Test Org 1 testé') }) }
+    const headers = { 'x-apiKey': key, 'x-account': JSON.stringify({ type: 'organization', id: 'test_datafair_org1', name: encodeURIComponent('Test Org 1 testé') }) }
 
     // only accepted from inside the infrastructure: refused through the reverse proxy (X-Forwarded-Host)
     await assert.rejects(axios({ headers }).get('/api/v1/datasets'), { status: 421 })
@@ -223,29 +223,29 @@ test.describe('API keys', () => {
     const dataset = await sendDataset('datasets/dataset1.csv', axKey)
     assert.equal(dataset.status, 'finalized')
     assert.equal(dataset.owner.type, 'organization')
-    assert.equal(dataset.owner.id, 'test_org1')
+    assert.equal(dataset.owner.id, 'test_datafair_org1')
     assert.equal(dataset.owner.name, 'Test Org 1 testé')
 
     // user can still save the other settings, the admin key re-sent unchanged
-    const { apiKeys } = (await testUser1.get('/api/v1/settings/user/test_user1')).data
-    await testUser1.put('/api/v1/settings/user/test_user1', { apiKeys, topics: [{ title: 'Topic 1' }] })
-    await testUser1.patch('/api/v1/settings/user/test_user1', { topics: [] })
+    const { apiKeys } = (await testUser1.get('/api/v1/settings/user/test_datafair_user1')).data
+    await testUser1.put('/api/v1/settings/user/test_datafair_user1', { apiKeys, topics: [{ title: 'Topic 1' }] })
+    await testUser1.patch('/api/v1/settings/user/test_datafair_user1', { topics: [] })
     // user cannot mutate the key
-    await assert.rejects(testUser1.put('/api/v1/settings/user/test_user1', {
+    await assert.rejects(testUser1.put('/api/v1/settings/user/test_datafair_user1', {
       apiKeys: [{ ...apiKeys[0], scopes: ['stats'] }]
     }), { status: 400 })
     // nor duplicate it, a copy would outlive its deletion
-    await assert.rejects(testUser1.put('/api/v1/settings/user/test_user1', {
+    await assert.rejects(testUser1.put('/api/v1/settings/user/test_datafair_user1', {
       apiKeys: [apiKeys[0], apiKeys[0]]
     }), { status: 400 })
     // user cannot delete the key
-    await assert.rejects(testUser1.put('/api/v1/settings/user/test_user1', {
+    await assert.rejects(testUser1.put('/api/v1/settings/user/test_datafair_user1', {
       apiKeys: []
     }), { status: 403 })
     // the admin key is still working
     await axKey.get('/api/v1/datasets/' + dataset.id)
     // superadmin can delete the key
-    await testSuperadmin.put('/api/v1/settings/user/test_user1', {
+    await testSuperadmin.put('/api/v1/settings/user/test_datafair_user1', {
       apiKeys: []
     })
     // the admin key is no longer working
@@ -319,13 +319,13 @@ test.describe('API keys', () => {
     assert.equal(res.status, 200)
 
     // transfer the application to the personal account of the same user
-    await ax.put(`/api/v1/applications/${appId}/owner`, { type: 'user', id: 'test_user1', name: 'Test User 1' })
+    await ax.put(`/api/v1/applications/${appId}/owner`, { type: 'user', id: 'test_datafair_user1', name: 'Test User 1' })
 
     // confirm the transfer actually went through — otherwise the next assertion would pass
     // trivially because application.owner and applications-keys.owner would stay aligned at the old value
     res = await ax.get(`/api/v1/applications/${appId}`)
     assert.equal(res.data.owner.type, 'user')
-    assert.equal(res.data.owner.id, 'test_user1')
+    assert.equal(res.data.owner.id, 'test_datafair_user1')
 
     // key must still resolve — the applications-keys.owner field needs to track the transfer,
     // otherwise the ownerFilter in proxy.js silently drops the match and the anon access 302s to login
@@ -560,11 +560,11 @@ test.describe('API keys', () => {
     assert.equal(res.status, 200)
     assert.deepEqual(res.data.userPermissions, ['createOwnLine', 'readOwnLines', 'readDescription'])
 
-    res = await testUser3.post('/api/v1/datasets/restcrowdown/own/user:test_user3/lines', {}, { headers })
+    res = await testUser3.post('/api/v1/datasets/restcrowdown/own/user:test_datafair_user3/lines', {}, { headers })
     assert.equal(res.status, 201)
     await waitForFinalize(ax, 'restcrowdown')
 
-    res = await testUser3.get('/api/v1/datasets/restcrowdown/own/user:test_user3/lines', { headers })
+    res = await testUser3.get('/api/v1/datasets/restcrowdown/own/user:test_datafair_user3/lines', { headers })
     assert.equal(res.status, 200)
     assert.equal(res.data.total, 1)
   })

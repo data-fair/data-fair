@@ -6,10 +6,10 @@ import moment from 'moment'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
 import { waitForFinalize, restCollectionCount, lsAttachments } from '../../../support/workers.ts'
 
-const testUser1 = await axiosAuth('test_user1@test.com')
-const testUser4 = await axiosAuth('test_user4@test.com')
-const testSuperadmin = await axiosAuth('test_superadmin@test.com', undefined, true)
-const testSuperadminPersonal = await axiosAuth('test_superadmin@test.com')
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
+const testUser4 = await axiosAuth('test_datafair_user4@test.com')
+const testSuperadmin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
+const testSuperadminPersonal = await axiosAuth('test_datafair_superadmin@test.com')
 
 const waitForLinesTotal = async (ax: any, datasetId: string, total: number, timeout = 15000) => {
   const start = Date.now()

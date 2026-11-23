@@ -45,7 +45,7 @@ const rawLine = async (ax: any, datasetId: string, lineId: string) =>
   (await anonymousAx.get(`${apiUrl}/api/v1/test-env/rest-collection-find-one/${datasetId}`, { params: { filter: JSON.stringify({ _id: lineId }) } })).data
 
 test('line writes stamp _needsHistorizing and the dataset hint when integrity is active', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }])
   // enroll raw (API enable for REST lands in a later task)
   await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.active': true })
@@ -61,7 +61,7 @@ test('line writes stamp _needsHistorizing and the dataset hint when integrity is
 })
 
 test('line writes do NOT stamp when integrity is inactive', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }])
   await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { _id: 'line0', attr1: 'b', attr2: 2 })
   const line = await rawLine(ax, dataset.id, 'line0')
@@ -69,7 +69,7 @@ test('line writes do NOT stamp when integrity is inactive', async () => {
 })
 
 test('deleteAllLines and drop bulk are refused while integrity is active', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }])
   await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.active': true })
   await anonymousAx.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
@@ -79,7 +79,7 @@ test('deleteAllLines and drop bulk are refused while integrity is active', async
 })
 
 test('history revisions do not expose the _needsHistorizing stamp', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const res = await ax.post('/api/v1/datasets', {
     isRest: true,
     title: `integrity lines history ${Date.now()}`,
@@ -115,7 +115,7 @@ const enableAndDrain = async (ax: any, datasetId: string) => {
 }
 
 test('the lines relay ships a revision per stamped line and clears the flags', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await restDataset(ax, [])
   await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.active': true })
   await anonymousAx.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
@@ -136,7 +136,7 @@ test('the lines relay ships a revision per stamped line and clears the flags', a
 })
 
 test('a deleted line ships a tombstone revision and the doc is purged after both flags clear', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await restDataset(ax, [])
   await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.active': true })
   await anonymousAx.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
@@ -160,7 +160,7 @@ test('a deleted line ships a tombstone revision and the doc is purged after both
 })
 
 test('enable on a REST dataset backfills every live line and GET reports progress', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }, { attr1: 'b', attr2: 2 }])
   // wait for initial indexing to settle before enabling (polls status via the journal instead of a fixed sleep)
   await waitForFinalize(ax, dataset.id)
@@ -190,7 +190,7 @@ test('enable on a REST dataset backfills every live line and GET reports progres
 // pagination loop, its straggler re-check and the skip-list filtering only ever run once. These
 // two cross that boundary — the tester's 20000-line dataset lived entirely past it.
 test('the relay drains a dataset spanning several batches', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const lines = Array.from({ length: 250 }, (_, i) => ({ attr1: `v${i}`, attr2: i }))
   const dataset = await restDataset(ax, lines)
   await waitForFinalize(ax, dataset.id)
@@ -210,7 +210,7 @@ test('the relay drains a dataset spanning several batches', async () => {
 })
 
 test('a run bails out once a batch worth of lines fails, keeping what it anchored', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const lines = Array.from({ length: 250 }, (_, i) => ({ attr1: `v${i}`, attr2: i }))
   const dataset = await restDataset(ax, lines)
   await waitForFinalize(ax, dataset.id)
@@ -241,7 +241,7 @@ test('a run bails out once a batch worth of lines fails, keeping what it anchore
 })
 
 test('enable is refused above the lines gate', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }])
   await waitForFinalize(ax, dataset.id)
   await anonymousAx.post(`${apiUrl}/api/v1/test-env/set-config`, { path: 'integrity.lines.maxLines', value: 0 })
@@ -258,7 +258,7 @@ test('enable is refused above the lines gate', async () => {
 // ---------------------------------------------------------------------------------------------
 
 test('a line whose anchoring throws does not discard the rest of its batch', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await restDataset(ax, [{ attr1: 'a' }, { attr1: 'b' }, { attr1: 'c' }, { attr1: 'd' }])
   await waitForFinalize(ax, dataset.id)
   // enroll raw (not through the API enable, whose backfill would drain before the poison lands)
@@ -294,7 +294,7 @@ test('a line whose anchoring throws does not discard the rest of its batch', asy
 })
 
 test('disable then re-enable leaves the trail coherent (no same-key rewrite)', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }, { attr1: 'b', attr2: 2 }])
   await waitForFinalize(ax, dataset.id)
   await ax.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
@@ -316,7 +316,7 @@ test('disable then re-enable leaves the trail coherent (no same-key rewrite)', a
 })
 
 test('replaying a stamp re-anchors byte-identically (retry-forward idempotence)', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }])
   await waitForFinalize(ax, dataset.id)
   await ax.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
@@ -348,7 +348,7 @@ test('replaying a stamp re-anchors byte-identically (retry-forward idempotence)'
 })
 
 test('enable is refused on a rest dataset with line ownership', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const res = await ax.post('/api/v1/datasets', {
     isRest: true,
     rest: { lineOwnership: true },
@@ -365,7 +365,7 @@ test('enable is refused on a rest dataset with line ownership', async () => {
 })
 
 test('enable is refused on a dataset with an attachments field', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const res = await ax.post('/api/v1/datasets', {
     isRest: true,
     title: `integrity lines attachments ${Date.now()}`,
@@ -381,7 +381,7 @@ test('enable is refused on a dataset with an attachments field', async () => {
 })
 
 test('line ownership and attachment fields cannot be acquired while integrity is active', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }])
   await waitForFinalize(ax, dataset.id)
   await enableAndDrain(ax, dataset.id)
@@ -406,7 +406,7 @@ test('line ownership and attachment fields cannot be acquired while integrity is
 // ---------------------------------------------------------------------------------------------
 
 test('check reports the three line tamper shapes and heals via the transaction path', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }, { attr1: 'b', attr2: 2 }])
   await waitForFinalize(ax, dataset.id)
   await enableAndDrain(ax, dataset.id)
@@ -433,7 +433,7 @@ test('check reports the three line tamper shapes and heals via the transaction p
 })
 
 test('lines restore heals all three tamper shapes and returns a fresh ok verdict', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }, { attr1: 'b', attr2: 2 }])
   await waitForFinalize(ax, dataset.id)
   await enableAndDrain(ax, dataset.id)
@@ -469,7 +469,7 @@ test('lines restore heals all three tamper shapes and returns a fresh ok verdict
 })
 
 test('_fix blesses the current tampered state as the new anchored truth', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }])
   await waitForFinalize(ax, dataset.id)
   await enableAndDrain(ax, dataset.id)
@@ -487,7 +487,7 @@ test('_fix blesses the current tampered state as the new anchored truth', async 
 })
 
 test('_fix deterministically blesses content whose sha256 sorts adversely against the stale anchor', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }])
   await waitForFinalize(ax, dataset.id)
   await enableAndDrain(ax, dataset.id)
@@ -524,7 +524,7 @@ test('_fix deterministically blesses content whose sha256 sorts adversely agains
 // ---------------------------------------------------------------------------------------------
 
 test('per-line revision history lists newest-first and serves the payload diff', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await restDataset(ax, [{ attr1: 'v1', attr2: 1 }])
   await waitForFinalize(ax, dataset.id)
   await enableAndDrain(ax, dataset.id)
@@ -554,7 +554,7 @@ const linesAnchorKeys = async (ax: any, datasetId: string) => {
 }
 
 test('a due lines horizon renews every live line anchor on a passing check', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }, { attr1: 'b', attr2: 2 }])
   await waitForFinalize(ax, dataset.id)
   await enableAndDrain(ax, dataset.id)
@@ -582,7 +582,7 @@ test('a due lines horizon renews every live line anchor on a passing check', asy
 })
 
 test('an acked shadow on one line key refuses its renewal, and the failure keeps the gate due so renewal retries', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }, { attr1: 'b', attr2: 2 }])
   await waitForFinalize(ax, dataset.id)
   await enableAndDrain(ax, dataset.id)
@@ -615,7 +615,7 @@ test('an acked shadow on one line key refuses its renewal, and the failure keeps
 })
 
 test('_fix re-anchors a line whose acked latest key is unclean, so lines renewal succeeds again', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }, { attr1: 'b', attr2: 2 }])
   await waitForFinalize(ax, dataset.id)
   await enableAndDrain(ax, dataset.id)
@@ -650,7 +650,7 @@ test('_fix re-anchors a line whose acked latest key is unclean, so lines renewal
 })
 
 test('a fresh lines horizon is not renewed, and a breach skips lines renewal entirely', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }])
   await waitForFinalize(ax, dataset.id)
   await enableAndDrain(ax, dataset.id)
@@ -678,7 +678,7 @@ test('a fresh lines horizon is not renewed, and a breach skips lines renewal ent
 // `latestLineAnchors`, which parseLineRevisionKey already excludes `.who` from) — proved end to
 // end: every live line's revision lock slides forward, its `.who` sibling's own lock never moves.
 test('a due lines renewal advances line revision locks but never their `.who` siblings', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }])
   await waitForFinalize(ax, dataset.id)
   await enableAndDrain(ax, dataset.id)
@@ -718,7 +718,7 @@ test('a due lines renewal advances line revision locks but never their `.who` si
 // ---------------------------------------------------------------------------------------------
 
 test('purge deletes a lapsed `.who` sibling of a line anchor but keeps the line revision protected', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await restDataset(ax, [])
   await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.active': true })
   const raw = (await anonymousAx.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
@@ -746,7 +746,7 @@ test('purge deletes a lapsed `.who` sibling of a line anchor but keeps the line 
 })
 
 test('a check on a dataset with undrained line stamps reports unknown, never a false ok', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }])
   await waitForFinalize(ax, dataset.id)
   await enableAndDrain(ax, dataset.id)
@@ -768,7 +768,7 @@ test('a check on a dataset with undrained line stamps reports unknown, never a f
 // ---------------------------------------------------------------------------------------------
 
 test('a legitimate schema patch removing a property re-anchors the rewritten lines (no false breach)', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 7 }])
   await waitForFinalize(ax, dataset.id)
   await enableAndDrain(ax, dataset.id)
@@ -788,7 +788,7 @@ test('a legitimate schema patch removing a property re-anchors the rewritten lin
 })
 
 test('exprEval extension outputs stay outside the covered line body', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const res = await ax.post('/api/v1/datasets', {
     isRest: true,
     title: `integrity lines expr ${Date.now()}`,
@@ -830,7 +830,7 @@ test('exprEval extension outputs stay outside the covered line body', async () =
 
 // M2 (target-3 review): disable must not leave per-line stamp residue behind
 test('disable clears per-line stamp residue', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }])
   await waitForFinalize(ax, dataset.id)
   // enroll raw and stamp a line WITHOUT setting the dataset hint: the relay never drains it,
@@ -857,7 +857,7 @@ const linesPrefixFor = async (ax: any, datasetId: string, lineId: string) => {
 }
 
 test('line create/update/delete by a logged-in user attach a `.who` sibling carrying the user id, including on the tombstone', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await restDataset(ax, [])
   await enableAndDrain(ax, dataset.id)
 
@@ -868,7 +868,7 @@ test('line create/update/delete by a logged-in user attach a `.who` sibling carr
   const whoKey = keys.find(k => k.endsWith('.who'))
   expect(whoKey).toBeTruthy()
   let who = await integrityTestStore.getWho(whoKey!)
-  expect(who.user?.id).toBe('test_superadmin')
+  expect(who.user?.id).toBe('test_datafair_superadmin')
   expect(who.date).toBeTruthy()
 
   await ax.patch(`/api/v1/datasets/${dataset.id}/lines/l1`, { attr1: 'updated' })
@@ -882,21 +882,21 @@ test('line create/update/delete by a logged-in user attach a `.who` sibling carr
   const deletedWhoKey = keys.find(k => k.endsWith('-deleted.who'))
   expect(deletedWhoKey).toBeTruthy()
   who = await integrityTestStore.getWho(deletedWhoKey!)
-  expect(who.user?.id).toBe('test_superadmin')
+  expect(who.user?.id).toBe('test_datafair_superadmin')
   // the sibling sits right next to the tombstone revision key
   expect(keys).toContain(deletedWhoKey!.slice(0, -'.who'.length))
 })
 
 test('a line write authenticated with an organization API key attaches `.who` with the key-session user id', async () => {
-  // org-owned dataset (test_user1 is an admin of test_org1, cf. rest-datasets-crud.api.spec.ts) +
+  // org-owned dataset (test_datafair_user1 is an admin of test_datafair_org1, cf. rest-datasets-crud.api.spec.ts) +
   // a separate superadmin session for the integrity admin actions (adminMode + org is untested
   // combo elsewhere in the suite; superadmin acts across orgs without needing org membership)
-  const axOrg = await axiosAuth('test_user1@test.com', 'test_org1')
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const axOrg = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await restDataset(axOrg, [])
   await enableAndDrain(ax, dataset.id)
 
-  const settingsRes = await axOrg.put('/api/v1/settings/organization/test_org1', { apiKeys: [{ title: 'lines-attribution-key', scopes: ['datasets'] }] })
+  const settingsRes = await axOrg.put('/api/v1/settings/organization/test_datafair_org1', { apiKeys: [{ title: 'lines-attribution-key', scopes: ['datasets'] }] })
   const apiKey = settingsRes.data.apiKeys[0]
   const axApiKey = axios({ headers: { 'x-apiKey': apiKey.clearKey } })
 
@@ -915,7 +915,7 @@ test('a line write authenticated with an organization API key attaches `.who` wi
 })
 
 test('`_fix` bless of a tampered line attaches the fixing superadmin\'s `.who` to the fresh revision', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }])
   await waitForFinalize(ax, dataset.id)
   await enableAndDrain(ax, dataset.id)
@@ -933,11 +933,11 @@ test('`_fix` bless of a tampered line attaches the fixing superadmin\'s `.who` t
   expect(whoKeys.length).toBeGreaterThanOrEqual(2)
   const latestWho = whoKeys.at(-1)!
   const who = await integrityTestStore.getWho(latestWho)
-  expect(who.user?.id).toBe('test_superadmin')
+  expect(who.user?.id).toBe('test_datafair_superadmin')
 })
 
 test('enable-backfill anchors every existing line with the enabling admin\'s `.who`', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }, { attr1: 'b', attr2: 2 }])
   await waitForFinalize(ax, dataset.id)
   await enableAndDrain(ax, dataset.id)
@@ -948,12 +948,12 @@ test('enable-backfill anchors every existing line with the enabling admin\'s `.w
   expect(whoKeys.length).toBe(2) // one per backfilled line
   for (const whoKey of whoKeys) {
     const who = await integrityTestStore.getWho(whoKey)
-    expect(who.user?.id).toBe('test_superadmin')
+    expect(who.user?.id).toBe('test_datafair_superadmin')
   }
 })
 
 test('a relay batch with mixed who/no-who lines writes `.who` only for the attributed write', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await restDataset(ax, [{ attr1: 'a', attr2: 1 }])
   await waitForFinalize(ax, dataset.id)
   await enableAndDrain(ax, dataset.id) // line0 gets its backfill `.who` here
@@ -983,7 +983,7 @@ test('a relay batch with mixed who/no-who lines writes `.who` only for the attri
 })
 
 test('a line write drives the relay to write the `.who` sibling with its OWN retain-until (attribution.retentionDays), distinct from the line revision\'s (retention.days)', async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await restDataset(ax, [])
   await enableAndDrain(ax, dataset.id)
 

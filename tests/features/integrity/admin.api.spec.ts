@@ -10,13 +10,13 @@ import { ensureIntegrityBucket, listIntegrityKeys, waitForIntegrityRevisions, wa
 
 test.beforeAll(async () => { await ensureIntegrityBucket() })
 // reset test-owned datasets + limit counters before each test (the shared suite convention); the
-// integrity specs all run as the single test_superadmin, so without this their datasets accumulate
-// and hit the dev nbDatasets quota. clean() spares dev_fixtures (owner.id !~ /^test_/).
+// integrity specs all run as the single test_datafair_superadmin, so without this their datasets accumulate
+// and hit the dev nbDatasets quota. clean() spares the demo world (it only cleans test_datafair_).
 test.beforeEach(async () => { await clean() })
 
 test('superadmin enable writes the initial anchor; non-admin is forbidden', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
-  const user = await axiosAuth('test_superadmin@test.com', undefined, false) // same user, no adminMode
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
+  const user = await axiosAuth('test_datafair_superadmin@test.com', undefined, false) // same user, no adminMode
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   const prefix = revisionsPrefix(dataset)
 
@@ -38,14 +38,14 @@ test('superadmin enable writes the initial anchor; non-admin is forbidden', asyn
 })
 
 test('enable is rejected on a dataset that is neither a file dataset nor rest', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   // a virtual dataset carries no `file` and is not rest (target 3 opened enable up to rest)
   const ds = (await admin.post('/api/v1/datasets', { isVirtual: true, title: 'virtual-int' })).data
   await expect(admin.put(`/api/v1/datasets/${ds.id}/_integrity`, { active: true })).rejects.toMatchObject({ status: 400 })
 })
 
 test('enable accepts a legacy file dataset whose originalFile carries no md5', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   // datasets uploaded before originalFile.md5 started being persisted have no such descriptor;
   // the guarantee never depends on it (the anchor is sha256 of the storage bytes), so enrolling
@@ -62,7 +62,7 @@ test('enable accepts a legacy file dataset whose originalFile carries no md5', a
 })
 
 test('_fix on an unchanged state dedupes (no spurious revision)', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   const prefix = revisionsPrefix(dataset)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
@@ -74,8 +74,8 @@ test('_fix on an unchanged state dedupes (no spurious revision)', async () => {
 })
 
 test('revisions endpoint lists revisions newest-first and is readable by the owner admin', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
-  const user = await axiosAuth('test_superadmin@test.com', undefined, false) // same user, no adminMode
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
+  const user = await axiosAuth('test_datafair_superadmin@test.com', undefined, false) // same user, no adminMode
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   const prefix = revisionsPrefix(dataset)
 
@@ -109,8 +109,8 @@ test('revisions endpoint lists revisions newest-first and is readable by the own
 })
 
 test('integrity reads are allowed to the owner admin, writes stay superadmin-only', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
-  const owner = await axiosAuth('test_superadmin@test.com', undefined, false) // same user = personal owner, no adminMode
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
+  const owner = await axiosAuth('test_datafair_superadmin@test.com', undefined, false) // same user = personal owner, no adminMode
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   const prefix = revisionsPrefix(dataset)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
@@ -130,7 +130,7 @@ test('integrity reads are allowed to the owner admin, writes stay superadmin-onl
 })
 
 test('integrity state is hidden from readers who are not owner admins', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
   // make the dataset publicly readable, then read it anonymously
@@ -142,7 +142,7 @@ test('integrity state is hidden from readers who are not owner admins', async ()
 })
 
 test('disabling integrity clears the breach state and error-filter listing', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
   await anonymousAx.post(`${apiUrl}/api/v1/test-env/tamper-dataset-file/${dataset.id}`, { content: 'corrupted bytes' })
@@ -164,7 +164,7 @@ test('disabling integrity clears the breach state and error-filter listing', asy
 // lastRevision mirror (the relay's dedupe-restores-mirror branch remains for organic anchors,
 // and the checker heals an externally wiped mirror besides).
 test('disable then re-enable writes a self-describing trail (enable → disable → enable)', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   const prefix = revisionsPrefix(dataset)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
@@ -195,7 +195,7 @@ test('disable then re-enable writes a self-describing trail (enable → disable 
 })
 
 test('internal historize fields are stripped from API responses', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   // set only _needsHistorizing (no integrity.active) — the relay now matches the $exists filter
   // and will clear it on its own poll, so assert the response stripping right away rather than
@@ -210,7 +210,7 @@ test('internal historize fields are stripped from API responses', async () => {
 })
 
 test('a breached dataset shows up in the superadmin errors view, labelled as an integrity issue', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
 
@@ -233,7 +233,7 @@ test('a breached dataset shows up in the superadmin errors view, labelled as an 
 })
 
 test('breached dataset appears under the status=error listing without changing its status', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
 
@@ -259,7 +259,7 @@ test('breached dataset appears under the status=error listing without changing i
 // ---------------------------------------------------------------------------------------------
 
 test('an out-of-band covered-field write breaches metadata while file stays ok', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
 
@@ -279,7 +279,7 @@ test('an out-of-band covered-field write breaches metadata while file stays ok',
 })
 
 test('an out-of-band write to an EXCLUDED field neither breaches nor creates a revision', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   const prefix = revisionsPrefix(dataset)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
@@ -293,7 +293,7 @@ test('an out-of-band write to an EXCLUDED field neither breaches nor creates a r
 })
 
 test('a legitimate metadata PATCH historizes a new revision', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   const prefix = revisionsPrefix(dataset)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
@@ -318,7 +318,7 @@ test('a legitimate metadata PATCH historizes a new revision', async () => {
 })
 
 test('a permissions change historizes a new revision', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   const prefix = revisionsPrefix(dataset)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
@@ -337,15 +337,15 @@ test('a permissions change historizes a new revision', async () => {
 // write (topics.ts $pull), so its filter ('topics.id': id) matched nothing post-mutation and the
 // removal silently never historized. The fix moves the stamp before the mutation.
 test('a topic removed from owner settings historizes a new revision', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   const prefix = revisionsPrefix(dataset)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
 
   const topicId = `integrity-topic-${Date.now()}`
-  const existingTopics = (await admin.get('/api/v1/settings/user/test_superadmin')).data.topics ?? []
+  const existingTopics = (await admin.get('/api/v1/settings/user/test_datafair_superadmin')).data.topics ?? []
   // add our topic alongside whatever topics already exist (avoid clobbering unrelated test state)
-  await admin.patch('/api/v1/settings/user/test_superadmin', { topics: [...existingTopics, { id: topicId, title: 'Integrity topic' }] })
+  await admin.patch('/api/v1/settings/user/test_datafair_superadmin', { topics: [...existingTopics, { id: topicId, title: 'Integrity topic' }] })
 
   // topics is a covered field: assigning it to the dataset is itself a legitimate PATCH that historizes
   await admin.patch(`/api/v1/datasets/${dataset.id}`, { topics: [{ id: topicId, title: 'Integrity topic' }] })
@@ -356,16 +356,16 @@ test('a topic removed from owner settings historizes a new revision', async () =
 
   // renaming the topic in settings propagates the display name, but topics are hashed as ids only
   // (D1 simplification) — a rename is NOT a covered change and must not re-anchor
-  const beforeRename = (await admin.get('/api/v1/settings/user/test_superadmin')).data.topics ?? []
-  await admin.patch('/api/v1/settings/user/test_superadmin', {
+  const beforeRename = (await admin.get('/api/v1/settings/user/test_datafair_superadmin')).data.topics ?? []
+  await admin.patch('/api/v1/settings/user/test_datafair_superadmin', {
     topics: beforeRename.map((t: any) => t.id === topicId ? { ...t, title: 'Renamed integrity topic' } : t)
   })
   await waitForFlagCleared(dataset.id)
   expect((await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file') && !k.endsWith('.who')).length).toBe(2) // unchanged: rename is not covered
 
   // now remove the topic from the owner settings — this fires the propagation $pull on the dataset
-  const settingsBeforeRemoval = (await admin.get('/api/v1/settings/user/test_superadmin')).data.topics ?? []
-  await admin.patch('/api/v1/settings/user/test_superadmin', { topics: settingsBeforeRemoval.filter((t: any) => t.id !== topicId) })
+  const settingsBeforeRemoval = (await admin.get('/api/v1/settings/user/test_datafair_superadmin')).data.topics ?? []
+  await admin.patch('/api/v1/settings/user/test_datafair_superadmin', { topics: settingsBeforeRemoval.filter((t: any) => t.id !== topicId) })
 
   await waitForFlagCleared(dataset.id)
   // metadata-only propagation → the new revision references rev 0's payload; propagation stamps
@@ -379,13 +379,13 @@ test('a topic removed from owner settings historizes a new revision', async () =
 // CRITICAL 1 regression: same self-invalidated-filter bug in deletePublicationSite's stampHistorizeMany
 // (called after the $pull, whose filter matched the very element the pull just removed).
 test('deleting a publication site historizes a new revision', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   const prefix = revisionsPrefix(dataset)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
 
   const siteId = `integrity-site-${Date.now()}`
-  await admin.post('/api/v1/settings/user/test_superadmin/publication-sites', { type: 'data-fair-portals', id: siteId, url: 'http://portal.example.test' })
+  await admin.post('/api/v1/settings/user/test_datafair_superadmin/publication-sites', { type: 'data-fair-portals', id: siteId, url: 'http://portal.example.test' })
 
   // publicationSites is a covered field: assigning it to the dataset is itself a legitimate PATCH
   await admin.patch(`/api/v1/datasets/${dataset.id}`, { publicationSites: [`data-fair-portals:${siteId}`] })
@@ -395,7 +395,7 @@ test('deleting a publication site historizes a new revision', async () => {
   await waitForFlagCleared(dataset.id)
 
   // deleting the publication site fires the propagation $pull on the dataset
-  await admin.delete(`/api/v1/settings/user/test_superadmin/publication-sites/data-fair-portals/${siteId}`)
+  await admin.delete(`/api/v1/settings/user/test_datafair_superadmin/publication-sites/data-fair-portals/${siteId}`)
 
   await waitForFlagCleared(dataset.id)
   // metadata-only propagation → the new revision references rev 0's payload; propagation stamps
@@ -410,14 +410,14 @@ test('deleting a publication site historizes a new revision', async () => {
 // single-key PATCH) flows through it with old == new, and blanket re-anchoring would silently
 // legitimize a not-yet-detected out-of-band tamper (this healed the dev breach fixtures once).
 test('a settings write with unchanged topics does not re-anchor tagged datasets', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   const prefix = revisionsPrefix(dataset)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
 
   const topicId = `integrity-topic-same-${Date.now()}`
-  const existingTopics = (await admin.get('/api/v1/settings/user/test_superadmin')).data.topics ?? []
-  await admin.patch('/api/v1/settings/user/test_superadmin', { topics: [...existingTopics, { id: topicId, title: 'Unchanged topic' }] })
+  const existingTopics = (await admin.get('/api/v1/settings/user/test_datafair_superadmin')).data.topics ?? []
+  await admin.patch('/api/v1/settings/user/test_datafair_superadmin', { topics: [...existingTopics, { id: topicId, title: 'Unchanged topic' }] })
   await admin.patch(`/api/v1/datasets/${dataset.id}`, { topics: [{ id: topicId, title: 'Unchanged topic' }] })
   // metadata-only → the new revision references rev 0's payload (3 keys, one .file)
   await waitForIntegrityRevisions(prefix, 3)
@@ -426,8 +426,8 @@ test('a settings write with unchanged topics does not re-anchor tagged datasets'
   // tamper out-of-band, then save settings with the SAME topics: the propagation must NOT
   // stamp/re-anchor (that would legitimize the tamper before it was ever detected)
   await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { description: 'tampered before unrelated settings save' })
-  const settingsTopics = (await admin.get('/api/v1/settings/user/test_superadmin')).data.topics ?? []
-  await admin.patch('/api/v1/settings/user/test_superadmin', { topics: settingsTopics })
+  const settingsTopics = (await admin.get('/api/v1/settings/user/test_datafair_superadmin')).data.topics ?? []
+  await admin.patch('/api/v1/settings/user/test_datafair_superadmin', { topics: settingsTopics })
   await new Promise(resolve => setTimeout(resolve, 2000)) // settle: give a wrongly-stamped relay time to run
   expect((await getRawDataset(dataset.id))._needsHistorizing).toBeUndefined()
   expect((await listIntegrityKeys(prefix)).filter(k => !k.endsWith('.file') && !k.endsWith('.who')).length).toBe(2)
@@ -437,7 +437,7 @@ test('a settings write with unchanged topics does not re-anchor tagged datasets'
 })
 
 test('restore heals a tampered metadata field synchronously and appends a restore revision', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   const prefix = revisionsPrefix(dataset)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
@@ -470,7 +470,7 @@ test('restore heals a tampered metadata field synchronously and appends a restor
 })
 
 test('a restore with nothing to restore reports it instead of claiming success', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
 
@@ -483,7 +483,7 @@ test('a restore with nothing to restore reports it instead of claiming success',
 })
 
 test('a dataset revision restore on a REST dataset covers metadata only, never line content', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const ds = (await admin.post('/api/v1/datasets', {
     isRest: true, title: 'rest restore scope', schema: [{ key: 'attr1', type: 'string' }]
   })).data
@@ -510,7 +510,7 @@ test('a dataset revision restore on a REST dataset covers metadata only, never l
 })
 
 test('file download of a referencing revision streams the owning payload bytes', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   const prefix = revisionsPrefix(dataset)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
@@ -530,7 +530,7 @@ test('file download of a referencing revision streams the owning payload bytes',
 })
 
 test('restore re-ingests a tampered file through the pipeline and anchors with restore context', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   const prefix = revisionsPrefix(dataset)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
@@ -565,7 +565,7 @@ test('restore re-ingests a tampered file through the pipeline and anchors with r
 // originalFile.mimetype instead of the draft's, so the missing mimetype on the draft's own
 // descriptor goes unnoticed for csv. xlsx has no such accidental cover.
 test('restore re-ingests a tampered non-basic-format (xlsx) file through the pipeline and carries mimetype', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/misc.xlsx', admin)
   const prefix = revisionsPrefix(dataset)
   expect(dataset.originalFile.mimetype).toBe('application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
@@ -602,7 +602,7 @@ test('restore re-ingests a tampered non-basic-format (xlsx) file through the pip
 // `file` on Mongo. The stored bytes are also corrupted here so the restore must genuinely
 // re-ingest through the pipeline, not just rely on the metadata heal.
 test('restore heals a tampered doc whose `file` field was unset out-of-band (stale-clone regression)', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   const prefix = revisionsPrefix(dataset)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
@@ -631,8 +631,8 @@ test('restore heals a tampered doc whose `file` field was unset out-of-band (sta
 })
 
 test('restore guards: inactive, unknown index, payload-less revision, non-admin', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
-  const user = await axiosAuth('test_superadmin@test.com', undefined, false)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
+  const user = await axiosAuth('test_datafair_superadmin@test.com', undefined, false)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   const prefix = revisionsPrefix(dataset)
 
@@ -654,7 +654,7 @@ test('restore guards: inactive, unknown index, payload-less revision, non-admin'
 // (preparePatch/applyPatch), not a raw Mongo $set — a restored schema change needs the same
 // revalidation, reindex triggers and REST line cleanup as a legitimate schema patch.
 test('restore of a tampered REST schema goes through the patch pipeline and reindexes', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const ds = (await admin.post('/api/v1/datasets', {
     isRest: true,
     title: `integrity restore rest schema ${Date.now()}`,
@@ -693,7 +693,7 @@ test('restore of a tampered REST schema goes through the patch pipeline and rein
 // processing, so EVERY restore now requires a settled dataset — and a refused restore must not
 // have written anything (the metadata part must not land before the refusal).
 test('restore on an unsettled dataset is refused (409) and writes no metadata', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
 
@@ -719,7 +719,7 @@ test('restore on an unsettled dataset is refused (409) and writes no metadata', 
 // level-2 test debt: one restore heals a combined file+metadata tamper, and the re-ingested
 // file restores the platform-level originalFile.md5 descriptor
 test('restore heals a combined file+metadata tamper in one action', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
   const originalMd5 = dataset.originalFile.md5
@@ -741,7 +741,7 @@ test('restore heals a combined file+metadata tamper in one action', async () => 
 })
 
 test('revision detail returns snapshot + current projection; file endpoint streams the payload', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
   await admin.patch(`/api/v1/datasets/${dataset.id}`, { description: 'edited legitimately' })
@@ -766,16 +766,16 @@ test('revision detail returns snapshot + current projection; file endpoint strea
 })
 
 test('owner transfer is refused while integrity is active', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
 
-  await expect(admin.put(`/api/v1/datasets/${dataset.id}/owner`, { type: 'organization', id: 'test_org1', name: 'Test Org 1' }))
+  await expect(admin.put(`/api/v1/datasets/${dataset.id}/owner`, { type: 'organization', id: 'test_datafair_org1', name: 'Test Org 1' }))
     .rejects.toMatchObject({ status: 400 })
 
   // disabling integrity unblocks the transfer
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: false })
-  const res = await admin.put(`/api/v1/datasets/${dataset.id}/owner`, { type: 'organization', id: 'test_org1', name: 'Test Org 1' })
+  const res = await admin.put(`/api/v1/datasets/${dataset.id}/owner`, { type: 'organization', id: 'test_datafair_org1', name: 'Test Org 1' })
   expect(res.status).toBe(200)
 })
 
@@ -785,7 +785,7 @@ test('owner transfer is refused while integrity is active', async () => {
 // ---------------------------------------------------------------------------------------------
 
 test('enable is refused on a file dataset that carries attachments', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const form = new FormData()
   form.append('dataset', fs.readFileSync('./tests/resources/datasets/attachments.csv'), 'attachments.csv')
   form.append('attachments', fs.readFileSync('./tests/resources/datasets/files.zip'), 'files.zip')
@@ -797,7 +797,7 @@ test('enable is refused on a file dataset that carries attachments', async () =>
 })
 
 test('an enrolled dataset cannot acquire attachments through an upload', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
 

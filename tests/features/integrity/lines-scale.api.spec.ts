@@ -55,7 +55,7 @@ test('lines integrity at scale', async () => {
 })
 
 const run = async () => {
-  const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: `integrity scale ${LINES}`, schema: [{ key: 'label', type: 'string' }, { key: 'n', type: 'integer' }] })).data
   await measure('seed', async () => {
     for (let offset = 0; offset < LINES; offset += 10000) {

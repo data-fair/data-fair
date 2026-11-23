@@ -6,7 +6,7 @@ import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
 import { waitForFinalize, waitForDatasetError, waitForJournalEvent } from '../../../support/workers.ts'
 import { collectNotifs, expectNotif } from '../../../support/notifications.ts'
 
-const testUser1 = await axiosAuth('test_user1@test.com')
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
 
 const schema: any[] = [
   {

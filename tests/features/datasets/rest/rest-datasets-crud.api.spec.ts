@@ -5,10 +5,10 @@ import { axios, axiosAuth, clean, checkPendingTasks, waitForWorkerIdle } from '.
 import { waitForFinalize, doAndWaitForFinalize, waitForDatasetError, restCollectionCount, restCollectionFindOne, restCollectionUpdateOne, patchRawDataset, clearDatasetCache, setConfig } from '../../../support/workers.ts'
 import { collectNotifs, expectNotifPair } from '../../../support/notifications.ts'
 
-const testUser1 = await axiosAuth('test_user1@test.com')
-const testUser1Org = await axiosAuth('test_user1@test.com', 'test_org1')
-const testUser2 = await axiosAuth('test_user2@test.com')
-const testSuperadmin = await axiosAuth('test_superadmin@test.com', undefined, true)
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
+const testUser1Org = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
+const testUser2 = await axiosAuth('test_datafair_user2@test.com')
+const testSuperadmin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
 
 test.describe('REST datasets - CRUD', () => {
   test.beforeEach(async () => {
@@ -752,10 +752,10 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
     await waitForFinalize(ax, 'updatedby')
     res = await ax.get('/api/v1/datasets/updatedby/lines')
     assert.ok(res.data.results[0].attr1)
-    assert.equal(res.data.results[0]._updatedBy, 'test_user1')
+    assert.equal(res.data.results[0]._updatedBy, 'test_datafair_user1')
     assert.equal(res.data.results[0]._updatedByName, 'Test User1')
 
-    res = await ax.put('/api/v1/settings/organization/test_org1', { apiKeys: [{ title: 'api key', scopes: ['datasets'] }] })
+    res = await ax.put('/api/v1/settings/organization/test_datafair_org1', { apiKeys: [{ title: 'api key', scopes: ['datasets'] }] })
     const apiKey = res.data.apiKeys[0]
     const axAPIKey = axios({ headers: { 'x-apiKey': apiKey.clearKey } })
     await axAPIKey.post('/api/v1/datasets/updatedby/lines', { attr1: 'test1', attr2: 'test3' })
@@ -770,7 +770,7 @@ test1,,"",valko`, { headers: { 'content-type': 'text/csv' } })
     await ax.post('/api/v1/datasets/updatedby/lines', { attr1: 'test1', attr2: 'test2' })
     await waitForFinalize(ax, 'updatedby')
     res = await ax.get(`/api/v1/datasets/updatedby/lines/${lineId}/revisions`)
-    assert.equal(res.data.results[0]._updatedBy, 'test_user1')
+    assert.equal(res.data.results[0]._updatedBy, 'test_datafair_user1')
     assert.equal(res.data.results[0]._updatedByName, 'Test User1')
 
     res = await ax.patch('/api/v1/datasets/updatedby', { rest: { storeUpdatedBy: false, history: true } })
