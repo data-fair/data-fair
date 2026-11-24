@@ -1,4 +1,3 @@
-import path from 'path'
 import http from 'http'
 import https from 'https'
 import express from 'express'
@@ -24,6 +23,7 @@ import { setReqResource, setReqResourceType } from '../misc/utils/req-context.ts
 import { reqPublicationSite } from '../misc/utils/publication-sites.ts'
 import { reqPublicBaseUrl } from '../misc/utils/public-base-url.ts'
 import { setReqRemoteService, reqRemoteService } from './middlewares.ts'
+import { joinProxyPath } from '../misc/utils/proxy-path.ts'
 
 const debug = debugModule('remote-services')
 const debugMasterData = debugModule('master-data')
@@ -268,8 +268,9 @@ router.use('/:remoteServiceId/proxy/*proxyPath', allowAnyScope, rateLimiting.rem
   const server = /** @type {string} */(remoteService.server)
   const privateServerUrl = applyPrivateMapping(server, config.remoteServicesPrivateMapping)
   const targetUrl = new URL(privateServerUrl ?? server)
-  const extraPath = '/' + path.join(...req.params.proxyPath)
-  targetUrl.pathname = path.join(targetUrl.pathname, extraPath)
+  const targetPath = joinProxyPath(targetUrl.pathname, [req.params.proxyPath].flat())
+  if (targetPath === null) return res.status(400).send('invalid path')
+  targetUrl.pathname = targetPath
   targetUrl.search = incomingUrl.searchParams
 
   const options = {
