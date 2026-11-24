@@ -186,6 +186,11 @@ export const extractError = (err: any): ExtractedError => {
   // when the per-request client timeout elapses
   if (err == null) return { message: 'Unknown elasticsearch error', status: 500 }
   if (typeof err === 'object') {
+    // the client also throws RequestAbortedError when it refuses a response above maxResponseSize:
+    // a real failure, not a client that went away
+    if (err.name === 'RequestAbortedError' && /bigger than the maximum allowed/.test(err.message ?? '')) {
+      return { message: 'The search response is too large, request fewer lines or fewer columns.', status: 500 }
+    }
     if (err.name === 'RequestAbortedError' || err.name === 'AbortError') {
       // 499 = "client closed request" (nginx convention) - the http response, if any, won't reach
       // anyone; callers must treat this as a quiet no-op (no error log, no error metric)
