@@ -465,15 +465,35 @@ router.post('/es-strip-mapping-field/:datasetId', async (req, res, next) => {
   }
 })
 
+// The integrity passes below (purge, stale alerts, scope audit, storage measure) are bucket-wide
+// in production. Run on demand they act only on the owners of one test sub-space
+// (?prefix=test_<suite>_, required): a suite must not alert, measure or purge another one's data.
+const sweepPrefix = (req: express.Request, res: express.Response): string | undefined => {
+  const prefix = req.query.prefix
+  if (typeof prefix !== 'string' || !testPrefixRegexp.test(prefix)) {
+    res.status(400).type('text/plain').send('invalid test prefix')
+    return undefined
+  }
+  return prefix
+}
+
 // Trigger the expired-revision purge on demand (test-only). `ignoreAge` skips the age pre-filter
 // and `skewMarginMs` shrinks the clock-skew margin, so a test can exercise the real retain-until
 // decision on a seconds-long lock instead of waiting out a full retention window.
 router.post('/integrity-purge/run', async (req, res, next) => {
   try {
+    const ownerIdPrefix = sweepPrefix(req, res)
+    if (!ownerIdPrefix) return
+    const { ownerPrefixInScope } = await import('../../integrity/operations.ts')
+    const keyPrefix: string | undefined = req.body?.prefix
+    if (keyPrefix !== undefined && !ownerPrefixInScope(keyPrefix.split('/').slice(0, 2).join('/') + '/', ownerIdPrefix)) {
+      return res.status(400).type('text/plain').send('the key prefix is outside the test prefix')
+    }
     const { purgeExpiredRevisions } = await import('../../integrity/purge.ts')
     const { integrityStore } = await import('../../integrity/store-factory.ts')
     res.json(await purgeExpiredRevisions(integrityStore(), {
-      prefix: req.body?.prefix,
+      prefix: keyPrefix,
+      ownerIdPrefix,
       ignoreAge: !!req.body?.ignoreAge,
       skewMarginMs: req.body?.skewMarginMs,
       ignoreWatermark: !!req.body?.ignoreWatermark
@@ -486,8 +506,10 @@ router.post('/integrity-purge/run', async (req, res, next) => {
 // Trigger the check-stale alert sweep on demand (test-only)
 router.post('/integrity-stale/run', async (req, res, next) => {
   try {
+    const ownerIdPrefix = sweepPrefix(req, res)
+    if (!ownerIdPrefix) return
     const { alertStaleChecks } = await import('../../integrity/checker.ts')
-    res.json(await alertStaleChecks())
+    res.json(await alertStaleChecks({ ownerIdPrefix }))
   } catch (err) {
     next(err)
   }
@@ -496,9 +518,11 @@ router.post('/integrity-stale/run', async (req, res, next) => {
 // Trigger the store-vs-Mongo integrity scope audit on demand (test-only)
 router.post('/integrity-audit/run', async (req, res, next) => {
   try {
+    const ownerIdPrefix = sweepPrefix(req, res)
+    if (!ownerIdPrefix) return
     const { auditScopes } = await import('../../integrity/audit.ts')
     const { integrityStore } = await import('../../integrity/store-factory.ts')
-    res.json(await auditScopes(integrityStore(), { reclaimedMarkers: req.body?.reclaimedMarkers }))
+    res.json(await auditScopes(integrityStore(), { reclaimedMarkers: req.body?.reclaimedMarkers, ownerIdPrefix }))
   } catch (err) {
     next(err)
   }
@@ -507,9 +531,11 @@ router.post('/integrity-audit/run', async (req, res, next) => {
 // Trigger the integrity storage-accounting measure on demand (test-only)
 router.post('/integrity-storage/run', async (req, res, next) => {
   try {
+    const ownerIdPrefix = sweepPrefix(req, res)
+    if (!ownerIdPrefix) return
     const { measureIntegrityStorage } = await import('../../integrity/storage.ts')
     const { integrityStore } = await import('../../integrity/store-factory.ts')
-    res.json(await measureIntegrityStorage(integrityStore()))
+    res.json(await measureIntegrityStorage(integrityStore(), { ownerIdPrefix }))
   } catch (err) {
     next(err)
   }

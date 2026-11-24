@@ -139,7 +139,7 @@ test('historized storage is metered into the owner consumption, deleted-dataset 
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
   await waitForFlagCleared(dataset.id)
 
-  const measured = (await anonymousAx.post(`${apiUrl}/api/v1/test-env/integrity-storage/run`)).data
+  const measured = (await anonymousAx.post(`${apiUrl}/api/v1/test-env/integrity-storage/run?prefix=test_datafair_`)).data
   expect(measured.owners).toBeGreaterThanOrEqual(1)
   const size = await ownerIntegritySize(owner)
   expect(size).toBeGreaterThan(0)
@@ -151,7 +151,7 @@ test('historized storage is metered into the owner consumption, deleted-dataset 
   // deletion: the anchors age out at retention, but until then the bytes are genuinely held —
   // they must keep counting even though the dataset no longer appears in the datasets aggregation
   await admin.delete(`/api/v1/datasets/${dataset.id}`)
-  await anonymousAx.post(`${apiUrl}/api/v1/test-env/integrity-storage/run`)
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/integrity-storage/run?prefix=test_datafair_`)
   const tailSize = await ownerIntegritySize(owner)
   expect(tailSize).toBeGreaterThan(0)
   const limitsAfter = (await admin.get(`/api/v1/limits/${owner.type}/${owner.id}`)).data

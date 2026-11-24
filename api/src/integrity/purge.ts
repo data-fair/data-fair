@@ -71,7 +71,7 @@ const sequenceId = (key: string): string => {
 
 export const purgeExpiredRevisions = async (
   store: IntegrityStore,
-  opts?: { prefix?: string, ignoreAge?: boolean, skewMarginMs?: number, ignoreWatermark?: boolean }
+  opts?: { prefix?: string, ignoreAge?: boolean, skewMarginMs?: number, ignoreWatermark?: boolean, ownerIdPrefix?: string }
 ): Promise<PurgeResult> => {
   const retentionMs = (config.integrity?.retention?.days ?? 365) * 24 * 3600 * 1000
   // the `.who` attribution sibling's OWN (shorter) window (T5): threaded into both the age
@@ -218,6 +218,7 @@ export const purgeExpiredRevisions = async (
   } else {
     scopePrefixes = []
     for (const ownerPrefix of await store.listSubPrefixes(SERVICE_PREFIX)) {
+      if (!ops.ownerPrefixInScope(ownerPrefix, opts?.ownerIdPrefix)) continue
       scopePrefixes.push(...await store.listSubPrefixes(ownerPrefix))
     }
   }
