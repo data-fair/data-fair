@@ -501,4 +501,27 @@ test.describe('complete-mode AND filter (multi-word narrowing)', () => {
     assert.equal(readings[1].simple_query_string.analyzer, 'custom_french')
     assert.equal(readings[1].simple_query_string.query, 'fo ba')
   })
+
+  test('complete mode quotes the special characters of q in the wildcard reading', () => {
+    const ds = fakeDataset({
+      schema: [
+        { key: 'code', type: 'string', 'x-capabilities': { wildcard: true } },
+        { key: 'other', type: 'string' }
+      ]
+    })
+    const queryStrings: string[] = []
+    const collect = (node: any) => {
+      if (!node || typeof node !== 'object') return
+      if (node.query_string) queryStrings.push(node.query_string.query)
+      for (const child of Object.values(node)) collect(child)
+    }
+    for (const q of ['ab other:[a TO b]', 'ab/c\\d"']) {
+      queryStrings.length = 0
+      collect(buildQClauses(ds, q, undefined, 'complete'))
+      assert.ok(queryStrings.length > 0, q)
+      for (const query of queryStrings) {
+        assert.doesNotMatch(query, /(^|[^\\])[:[\]/"]/, query)
+      }
+    }
+  })
 })

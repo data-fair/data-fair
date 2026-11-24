@@ -728,7 +728,7 @@ export const buildQClauses = (
         should.push({ simple_query_string: { query: `${q}*`, fields: prefixFields, ...sqsOptions } })
       }
       if (qWildcardFields.length) {
-        should.push({ query_string: { query: `*${q}*`, fields: qWildcardFields, ...sqsOptions } })
+        should.push({ query_string: { query: `*${escapeFilter(q)}*`, fields: qWildcardFields, ...sqsOptions } })
       }
     }
     // if the user submitted a multi word query and didn't use quotes
@@ -813,7 +813,7 @@ export const buildQClauses = (
     if (filterFields.length) {
       const readings = andReadings(userWildcards ? q : `${q}*`, filterFields, withLenient)
       if (qWildcardFields.length && !userWildcards) {
-        readings.push({ query_string: { query: `*${q}*`, fields: qWildcardFields, ...sqsOptions } })
+        readings.push({ query_string: { query: `*${escapeFilter(q)}*`, fields: qWildcardFields, ...sqsOptions } })
       }
       return { bool: { must: [scored], filter: [anyReading(readings)] } }
     }
