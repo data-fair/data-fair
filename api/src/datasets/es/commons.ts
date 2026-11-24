@@ -38,7 +38,8 @@ import {
   getCountMode,
   parseQMode,
   parseQIgnored,
-  DEFAULT_Q_MODE
+  DEFAULT_Q_MODE,
+  qsForParser
 } from './operations.ts'
 import { unknownFieldError, missingCapabilityError, columnOperationsHint, fieldAction } from '../utils/field-errors.ts'
 import { i18nHttpError } from '../../misc/utils/i18n-errors.ts'
@@ -140,7 +141,7 @@ function checkQuery (query: any, schema: any[], esFields: string[], currentField
     if (process.env.NODE_ENV === 'development' && query === '(siret:"test \\" failure")') {
       // special test case to check error management
     } else {
-      query = query.replace(/\\"/g, '')
+      query = qsForParser(query)
     }
 
     try {

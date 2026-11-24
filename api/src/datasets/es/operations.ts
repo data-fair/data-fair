@@ -905,6 +905,13 @@ export const lineBytes = (item: Record<string, any>, spec: LineBytesSpec): numbe
  * Escape special Lucene query characters in a filter value
  * cf https://github.com/joeybaker/lucene-escape-query/blob/master/index.js
  */
+// lucene-query-parser does not accept escaped quotes inside phrases: drop them before parsing a qs.
+// Escape pairs are consumed left to right, so that an escaped backslash before a quote ("a\\")
+// stays an escaped backslash and the quote still closes the phrase, as Elasticsearch reads it
+export const qsForParser = (qs: string): string => {
+  return qs.replace(/\\(["\\])/g, (pair: string, char: string) => char === '"' ? '' : pair)
+}
+
 export const escapeFilter = (val: any): any => {
   if (typeof val !== 'string') return val
   return [].map.call(val, (char: string) => {
