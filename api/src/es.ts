@@ -1,6 +1,7 @@
 import log from '@data-fair/lib-node/log.js'
 import config from '#config'
 import elasticsearch, { type ClientOptions, type Client } from '@elastic/elasticsearch'
+import { GuardedUndiciConnection } from './es-connection.ts'
 
 export class DfEs {
   private _client?: Client
@@ -20,6 +21,7 @@ export class DfEs {
       node,
       auth: config.elasticsearch.auth,
       requestTimeout: 240000, // same as timeout in bulk indexing requests
+      Connection: GuardedUndiciConnection,
       ...config.elasticsearch.options
     }
     if (config.elasticsearch.ca) {
