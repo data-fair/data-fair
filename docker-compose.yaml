@@ -67,7 +67,7 @@ services:
       - MAILS_TRANSPORT={"host":"localhost","port":${MAILDEV_SMTP_PORT},"ignoreTLS":true}
       # per recipient, stored in mongo: repeated test runs would stop the mails silently
       - MAILSRATELIMIT_POINTS=100000
-      # non-human identities, declared in tests/support/sd-fixtures.ts (the autonomous-agent simulations)
+      # non-human identities, declared in tests/support/sd-fixtures.ts (the scope NHI used by the api tests)
       - MANAGE_NHIS=true
       # dev only: the NHI issuer is plain http on a .localhost host, which assertSafeIssuer refuses otherwise
       - NHIS_ALLOW_INSECURE_ISSUERS=true
@@ -153,8 +153,8 @@ services:
       # tool titles are shown to people (chat chips)
       - LOCALE=fr
       - OBSERVER_ACTIVE=false
-      # seconds between refreshes of the platform document: the line-edition simulations flip it between
-      # runs (the experiment switch) and wait for the tools to follow
+      # seconds between refreshes of the platform document: a change of the experiment switch
+      # reaches the tools after this delay
       - REFRESH_INTERVAL=10
 
   # registry-side dev container — same domain as data-fair under /registry

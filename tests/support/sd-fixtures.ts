@@ -216,8 +216,6 @@ export const sdFixtures = (env: Record<string, string | undefined> = process.env
         { id: 'test_datafair_user6', role: 'contrib', department: 'dep1' },
         { id: 'test_datafair_user4', role: 'admin', department: 'dep1' },
         { id: 'test_datafair_user4', role: 'admin', department: 'dep2' },
-        { id: 'test_datafair_org1_agent_nhi', role: 'contrib' },
-        { id: 'test_datafair_org1_lines_nhi', role: 'admin' },
         { id: 'test_datafair_org1_scope_nhi', role: 'admin' }
       ]
     },
