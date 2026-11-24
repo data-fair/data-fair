@@ -4,7 +4,6 @@
 
 The test suite uses **Playwright** as test runner with three sub-projects: `unit`, `api`, and `e2e`. Tests are organized by feature under `tests/features/`.
 
-The judged agent simulations (`*.sim.spec.ts`, under `simulations/`) live under their own `playwright.sim.config.ts` instead — a bare `playwright test` or `npm test` can never reach them, because every case spends Claude plan quota. See `npm run simulate` in AGENTS.md's Simulations section and [agent-integration.md](agent-integration.md).
 
 The test suite is very long — when iterating on changes always run only the related test cases. See [Quality gates](#quality-gates) for what runs on commit, push, pull request and nightly.
 
@@ -70,7 +69,6 @@ simple-directory stores its accounts in mongo. The accounts of this suite all st
 | `*.unit.spec.ts` | Pure unit tests | No server needed |
 | `*.api.spec.ts` | API tests (HTTP-only) | Depends on `state-setup` project |
 | `*.e2e.spec.ts` | End-to-end browser tests | Depends on `e2e-warmup` (itself on `state-setup`), uses Desktop Chrome |
-| `*.sim.spec.ts` | Judged agent simulations | Own `playwright.sim.config.ts`; not part of `npm test` |
 
 ## Directory Structure
 

@@ -10,7 +10,7 @@ Quick start without any tooling: `npm ci && npm run dev` (fixed ports from `dev/
 
 The environment is started by the user, in a terminal: `npm run dev` starts the containers, the mock server, the api and the ui, logs in `dev/logs` (`mock.log`, `api.log`, `ui.log`). Read the logs before restarting anything: nodemon (api) and vite (ui) already reload on file changes. Agents do not kill the processes or containers they did not start.
 
-Each dev process also has its own npm script, reading its settings from environment variables (`dev/default.env` overridden by `.env`): `npm run dev-deps` (containers only), `npm run dev-setup` (idempotent builds), `npm run dev:api`, `npm run dev:ui`, `npm run dev:mock`, `npm run dev:bridge`.
+Each dev process also has its own npm script, reading its settings from environment variables (`dev/default.env` overridden by `.env`): `npm run dev-deps` (containers only), `npm run dev-setup` (idempotent builds), `npm run dev:api`, `npm run dev:ui`, `npm run dev:mock`.
 
 - Core containers: elasticsearch, mongo, s3, simple-directory, nginx, clamav (upload scanning, ~30 MB with the EICAR-only signature database). Optional: `events`, `capture`, `agents`, `registry`, `openapi-viewer`, `maildev` (mails sent through simple-directory). Start them with a compose profile: `npm run dev -- --profile events --profile agents`. An optional service is absent when its port variable is empty (`EVENTS_PORT=`); `npm run dev` blanks the ports of the optional containers that are not running, so restart `npm run dev` after adding one.
 
@@ -32,46 +32,6 @@ npx playwright test path/to/file  # specific file
 ```
 
 The test suite is very long — when iterating on changes always run only the related test cases. Pushing runs a light gate (type ratchet, unit tests, the `@smoke` set and the api/e2e spec files the push changes); the full suite runs on pull requests and nightly on master. See [Quality gates](docs/architecture/testing.md#quality-gates).
-
-### Simulations
-
-Judged simulations of the back-office AI assistant: a simulated user drives the
-real chat in a real browser, and a judge reads the transcript. They answer "did a
-person get what they came for", which no other test here does.
-
-**Run them with the `/agents-sim` skill**, not by hand. A simulation is not
-finished when the browser closes: the transcripts still have to be judged and
-reported, and evidence from a previous run has to be cleared first or a case that
-never dispatched will report the old verdict as if it were this one's. The skill
-does all of that in order; the npm scripts below are just the pieces it drives.
-
-The bridge must already be running (`npm run dev:bridge`, with the `agents` profile) — started by the maintainer, never an agent, because it is
-a long-running foreground process.
-
-The underlying scripts, for reference:
-
-```bash
-npm run simulate                                # every case
-SIM_CASES=lien-ouvert-par-l-utilisateur npm run simulate
-npm run simulate:report
-```
-
-A run opens a **real browser window** and drives it in front of you — the persona
-looks around the page, clicks and types on its own. Do not touch that window
-while it runs: you and the persona would be driving the same page, and a stray
-click lands in the transcript as something the product did. Set `SIM_HEADLESS=1`
-to run without a window. Every run also writes a Playwright trace, so a finished
-run can be replayed action by action with `npx playwright show-trace`.
-
-They are **not** part of `npm test` or `npm run quality`, and must never be: every
-case spends Claude plan quota. A run also calls `clean()`, which resets the dev
-environment's whole test state — not just `test_`-owned datasets, applications
-and settings, but also an unfiltered wipe of the `limits`, `applicationsKeys`,
-`remoteServices`, `baseApplications`, `extensions-cache`, `thumbnails-cache`,
-`locks` and integrity collections, plus the tmp directory.
-
-Cases live in `simulations/cases/index.ts`. See
-[docs/architecture/agent-integration.md](docs/architecture/agent-integration.md).
 
 ### Table performance
 
@@ -114,7 +74,7 @@ In-depth documentation for complex subsystems lives in `docs/architecture/`:
 - [Publication Sites](docs/architecture/publication-sites.md) — publication sites model, permissions gate (admin / staging / department), and sync with the `portals` service
 - [Testing](docs/architecture/testing.md) — test suite structure, naming conventions, running tests
 - [Dataset Validation](docs/architecture/dataset-validation.md) — schema validation, mandatory extensions, diagnostic CSV, file vs REST flows
-- [AI Agent Integration](docs/architecture/agent-integration.md) — tools, subagents, action buttons, and prompts exposed to the back-office AI assistant, and the judged simulation suite that exercises them end to end. **When modifying agent tools, subagents, or action buttons, update this document to reflect the changes.**
+- [AI Agent Integration](docs/architecture/agent-integration.md) — tools, subagents, action buttons, and prompts exposed to the back-office AI assistant. **When modifying agent tools, subagents, or action buttons, update this document to reflect the changes.**
 - [Platform API docs](docs/architecture/platform-api-docs.md) — the merged OpenAPI document of every service of a site (`/api/v1/platform/api-docs.json`): namespacing rewrites, security refusals and fail-closed rules, freshness and `x-platform` status, how to add a service, known gaps. **Read before touching `x-agent` annotations, `oauth2Alternatives`/`agentSecurity` or a service's public OpenAPI document.**
 - [Notifications](docs/architecture/notifications.md) — three-layer event model, topic key conventions, draft-prefix logic, uniformisation gaps
 - [Load Management](docs/architecture/load-management.md) — rate limiting, request timeouts and Elasticsearch query controls across the app and the reverse-proxy layer, plus notes on possible further hardening

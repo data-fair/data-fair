@@ -177,28 +177,6 @@ export const sdFixtures = (env: Record<string, string | undefined> = process.env
       password: { clear: 'passwd' }
     },
     {
-      id: 'test_datafair_org1_agent_nhi',
-      firstName: 'Agent',
-      lastName: 'MCP',
-      email: 'test_datafair_org1_agent_nhi@test.com',
-      nhi: {
-        provider: { issuer: `http://${env.DEV_HOST}:${env.NGINX_PORT}/agents/api/nhi` },
-        subject: 'autonomous-agent:sim-mcp',
-        scopes: ['all:read']
-      }
-    },
-    {
-      id: 'test_datafair_org1_lines_nhi',
-      firstName: 'Agent',
-      lastName: 'Lines',
-      email: 'test_datafair_org1_lines_nhi@test.com',
-      nhi: {
-        provider: { issuer: `http://${env.DEV_HOST}:${env.NGINX_PORT}/agents/api/nhi` },
-        subject: 'autonomous-agent:sim-lines',
-        scopes: ['all:read', 'datasets:write']
-      }
-    },
-    {
       id: 'test_datafair_org1_scope_nhi',
       firstName: 'Agent',
       lastName: 'Scope',
