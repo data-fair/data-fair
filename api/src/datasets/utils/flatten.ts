@@ -3,10 +3,12 @@
 // for this reason we tried to optimize it as much as possible
 // we compile a function to prevent looping on keys and we memoize the function to avoid recompiling it every time
 
-// TODO: would it be safer to use a code generator, for example https://www.npmjs.com/package/astring ?
-
 import type { DatasetLine } from '#types'
 import memoize from 'memoizee'
+
+// schema strings (keys, separators, fillNull keys) may hold any character: always quote them for the
+// generated source, JSON.stringify yields a valid JS string literal for any string
+const lit = (s: string) => JSON.stringify(String(s))
 
 // the statements applied to a line: nested keys (extension sub-objects) moved to flat keys, separator
 // arrays joined, fillNull keys defaulted. Empty when the schema needs none of it, i.e. flatten is the identity
@@ -16,14 +18,14 @@ const flattenStatements = (preserveArrays: boolean, fillNull: string, dataset: a
   const fillNullArr = fillNull.split(',').filter(Boolean)
   for (const prop of dataset.schema) {
     const key = prop.key.split('.')
+    const flatKey = lit(prop.key)
     if (key.length > 1) {
-      const flatKey = `"${prop.key}"`
-      const deepKey = key.map((k: string) => `"${k}"`).join(']?.[')
+      const deepKey = key.map(lit).join(']?.[')
 
       jitCode += `if (o[${flatKey}] === undefined) {\n`
       if (key.length > 2) {
-        const level1Key = `"${key.slice(1, key.length).join('.')}"`
-        jitCode += `  if (o["${key[0]}"]?.[${level1Key}] !== undefined) { o[${flatKey}] = o["${key[0]}"][${level1Key}]; }\n`
+        const level1Key = lit(key.slice(1, key.length).join('.'))
+        jitCode += `  if (o[${lit(key[0])}]?.[${level1Key}] !== undefined) { o[${flatKey}] = o[${lit(key[0])}][${level1Key}]; }\n`
         jitCode += `  else if (o[${deepKey}] !== undefined) { o[${flatKey}] = o[${deepKey}]; }\n`
       } else {
         jitCode += `  if (o[${deepKey}] !== undefined) { o[${flatKey}] = o[${deepKey}]; }\n`
@@ -34,14 +36,14 @@ const flattenStatements = (preserveArrays: boolean, fillNull: string, dataset: a
       }
     }
     if (prop.separator && !preserveArrays) {
-      jitCode += `if (Array.isArray(o["${prop.key}"])) { o["${prop.key}"] = o["${prop.key}"].join("${prop.separator}"); }\n`
+      jitCode += `if (Array.isArray(o[${flatKey}])) { o[${flatKey}] = o[${flatKey}].join(${lit(prop.separator)}); }\n`
     }
   }
   for (const nestedKey of nestedKeys) {
-    jitCode += `delete o["${nestedKey}"];\n`
+    jitCode += `delete o[${lit(nestedKey)}];\n`
   }
   for (const fillNullKey of fillNullArr) {
-    jitCode += `if (o["${fillNullKey}"] === undefined) { o["${fillNullKey}"] = null }\n`
+    jitCode += `if (o[${lit(fillNullKey)}] === undefined) { o[${lit(fillNullKey)}] = null }\n`
   }
   return jitCode
 }
