@@ -23,12 +23,17 @@ const router = express.Router()
 // and the data they own, cleaned without touching the other suites nor the unprefixed accounts
 const testPrefixRegexp = /^test_[a-z0-9]+(?:_[a-z0-9]+)*_$/
 
+// data-fair's own test suite: its clean also resets the process-wide test state its specs rely on
+const ownSuitePrefix = 'test_datafair_'
+
 // Cleanup of a sub-space (DELETE /?prefix=test_<suite>_): delete the data owned by its accounts from
 // mongo/ES/filesystem, including the shared collections' documents keyed by the sub-space (remote services
 // and base applications identified under the prefix, locks and integrity state of its datasets), then
-// reset the caches and the tmp dir. Both resets are global: the caches only cost a recomputation to the other
-// sub-spaces, but the tmp dir is wiped for all of them, so an upload or a worker task of another suite running
-// at the same time may lose its temporary files.
+// clear the in-memory caches (a recomputation at most for the other sub-spaces). The tmp dir is left to
+// cleanTmp, which ages its files out: other sub-spaces may have uploads or worker tasks in flight there.
+// Only the clean of data-fair's own suite (prefix exactly test_datafair_) also resets the process-wide test
+// state its specs rely on: the worker ping start date, the extensions and thumbnails caches (not keyed by
+// owner) and the listeners of the test events stream. Any other prefix leaves them alone.
 router.delete('/', async (req, res, next) => {
   try {
     const prefix = req.query.prefix
@@ -38,7 +43,8 @@ router.delete('/', async (req, res, next) => {
     // the prefix only holds [a-z0-9_], safe in a regexp
     const prefixRegexp = new RegExp('^' + prefix)
 
-    await resetPing()
+    const ownSuite = prefix === ownSuitePrefix
+    if (ownSuite) await resetPing()
 
     const testOwnerFilter = { 'owner.id': { $regex: prefixRegexp } }
     const testIdFilter = { id: { $regex: prefixRegexp } }
@@ -86,8 +92,8 @@ router.delete('/', async (req, res, next) => {
       // the storage-accounting measure of still-locked test revisions would otherwise keep
       // counting into the freshly-reset limits and starve the next tests' storage quota
       mongo.db.collection('integrity-storage').deleteMany(testOwnerFilter),
-      mongo.db.collection('extensions-cache').deleteMany({}),
-      mongo.db.collection('thumbnails-cache').deleteMany({}),
+      // not keyed by owner: only emptied for data-fair's own suite
+      ...(ownSuite ? [mongo.db.collection('extensions-cache').deleteMany({}), mongo.db.collection('thumbnails-cache').deleteMany({})] : []),
       // remote services declared under the prefix, or mirroring a master data dataset of the sub-space
       mongo.remoteServices.deleteMany({ $or: [testIdFilter, { 'virtualDatasets.parent.owner.id': { $regex: prefixRegexp } }] }),
       // base applications served under the prefix (http://host/<prefix>…)
@@ -111,10 +117,6 @@ router.delete('/', async (req, res, next) => {
         }
       }
     }
-    // still clean tmpDir entirely
-    if (await fs.pathExists(tmpDir)) {
-      await fs.remove(tmpDir)
-    }
     await fs.ensureDir(dataDir)
     await fs.ensureDir(tmpDir)
 
@@ -134,7 +136,7 @@ router.delete('/', async (req, res, next) => {
     clearApplicationKeysCaches()
     rateLimiting.clear()
     clearThumbnailFailures()
-    testEvents.removeAllListeners()
+    if (ownSuite) testEvents.removeAllListeners()
 
     // re-initialize remote services and base apps from config after cleanup
     const { init: initRemoteServices } = await import('../../remote-services/service.ts')
