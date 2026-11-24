@@ -19,6 +19,7 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { reqSession, reqSiteUrl, reqUserAuthenticated, getThemeParams } from '@data-fair/lib-express'
 import { reqPublicBaseUrl, reqPublicWsBaseUrl } from '../misc/utils/public-base-url.ts'
 import { applyPrivateMapping } from '../misc/utils/private-mapping.ts'
+import { joinProxyPath } from '../misc/utils/proxy-path.ts'
 import { httpAgent, httpsAgent, privateHttpAgent, privateHttpsAgent } from '../misc/utils/http-agents.ts'
 import type { Application, Request } from '#types'
 
@@ -137,7 +138,9 @@ router.all(['/:applicationId/*extraPath', '/:applicationId'], setProxyResource, 
   const targetUrl = new URL(privateApplicationUrl ?? cleanApplicationUrl)
   const extraPathParts = req.params.extraPath ? [...req.params.extraPath] : []
   if (!req.params.extraPath || incomingUrl.pathname.endsWith('/')) extraPathParts.push('index.html')
-  targetUrl.pathname = path.join(targetUrl.pathname, ...extraPathParts)
+  const targetPath = joinProxyPath(targetUrl.pathname, extraPathParts)
+  if (targetPath === null) return res.status(400).send('invalid path')
+  targetUrl.pathname = targetPath
   targetUrl.search = incomingUrl.searchParams.toString()
 
   if (extraPathParts.length !== 1 || extraPathParts[0] !== 'index.html') {
