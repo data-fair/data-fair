@@ -21,6 +21,11 @@ test.describe('ES error extraction', () => {
     assert.equal(status, 499)
   })
 
+  test('Map a response refused for its size to a 500', () => {
+    const { status } = extractError({ name: 'RequestAbortedError', message: 'The content length (600000000) is bigger than the maximum allowed string (536870888)' })
+    assert.equal(status, 500)
+  })
+
   test('Map an elasticsearch client TimeoutError to a 504 with the "too long" message', () => {
     const { message, status } = extractError({ name: 'TimeoutError', message: 'Request timed out' })
     assert.equal(status, 504)

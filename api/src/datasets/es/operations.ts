@@ -186,6 +186,11 @@ export const extractError = (err: any): ExtractedError => {
   // when the per-request client timeout elapses
   if (err == null) return { message: 'Unknown elasticsearch error', status: 500 }
   if (typeof err === 'object') {
+    // the client also throws RequestAbortedError when it refuses a response above maxResponseSize:
+    // a real failure, not a client that went away
+    if (err.name === 'RequestAbortedError' && /bigger than the maximum allowed/.test(err.message ?? '')) {
+      return { message: 'The search response is too large, request fewer lines or fewer columns.', status: 500 }
+    }
     if (err.name === 'RequestAbortedError' || err.name === 'AbortError') {
       // 499 = "client closed request" (nginx convention) - the http response, if any, won't reach
       // anyone; callers must treat this as a quiet no-op (no error log, no error metric)
@@ -728,7 +733,7 @@ export const buildQClauses = (
         should.push({ simple_query_string: { query: `${q}*`, fields: prefixFields, ...sqsOptions } })
       }
       if (qWildcardFields.length) {
-        should.push({ query_string: { query: `*${q}*`, fields: qWildcardFields, ...sqsOptions } })
+        should.push({ query_string: { query: `*${escapeFilter(q)}*`, fields: qWildcardFields, ...sqsOptions } })
       }
     }
     // if the user submitted a multi word query and didn't use quotes
@@ -813,7 +818,7 @@ export const buildQClauses = (
     if (filterFields.length) {
       const readings = andReadings(userWildcards ? q : `${q}*`, filterFields, withLenient)
       if (qWildcardFields.length && !userWildcards) {
-        readings.push({ query_string: { query: `*${q}*`, fields: qWildcardFields, ...sqsOptions } })
+        readings.push({ query_string: { query: `*${escapeFilter(q)}*`, fields: qWildcardFields, ...sqsOptions } })
       }
       return { bool: { must: [scored], filter: [anyReading(readings)] } }
     }
@@ -905,6 +910,13 @@ export const lineBytes = (item: Record<string, any>, spec: LineBytesSpec): numbe
  * Escape special Lucene query characters in a filter value
  * cf https://github.com/joeybaker/lucene-escape-query/blob/master/index.js
  */
+// lucene-query-parser does not accept escaped quotes inside phrases: drop them before parsing a qs.
+// Escape pairs are consumed left to right, so that an escaped backslash before a quote ("a\\")
+// stays an escaped backslash and the quote still closes the phrase, as Elasticsearch reads it
+export const qsForParser = (qs: string): string => {
+  return qs.replace(/\\(["\\])/g, (pair: string, char: string) => char === '"' ? '' : pair)
+}
+
 export const escapeFilter = (val: any): any => {
   if (typeof val !== 'string') return val
   return [].map.call(val, (char: string) => {

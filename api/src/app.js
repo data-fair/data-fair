@@ -328,6 +328,7 @@ export const run = async () => {
           return true
         }
         const [type, id, subject] = channel.split('/')
+        if (type !== 'datasets' && type !== 'applications') throw httpError(404, `Unknown resource ${type}/${id}.`)
         const resource = await db.collection(type).findOne({ id })
         if (!resource) throw httpError(404, `Unknown resource ${type}/${id}.`)
         // TODO: readApiKey is called without the request here, so the "only from inside the infrastructure"

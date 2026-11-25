@@ -2,7 +2,7 @@ import fs from 'fs-extra'
 import { flatten } from 'flat'
 import { Writable, Transform } from 'stream'
 import csv from 'csv-parser'
-import JSONStream from 'JSONStream'
+import { jsonStreamScanner, jsonStreamStringifier } from './json-streams.ts'
 import { stringify as csvStrStream } from 'csv-stringify'
 import tmp from 'tmp-promise'
 import { mimeTypeStream } from './mime-type-stream.ts'
@@ -165,7 +165,7 @@ export const transformFileStreams = (mimeType: string, schema: SchemaProperty[],
       }
     }))
   } else if (mimeType === 'application/geo+json') {
-    streams.push(JSONStream.parse('features.*'))
+    streams.push(jsonStreamScanner({ path: ['features'] }))
     // a property escaping to the "id" key (id, ID, _id...) takes precedence over the feature top-level id
     const idKey = fieldsSniffer.escapeKey('id', dataset?.analysis?.escapeKeyAlgorithm)
     const escapedKeys: Record<string, string> = {}
@@ -344,7 +344,7 @@ export const writeExtendedStreams = async (dataset: Dataset, extensions: any[]):
       },
       objectMode: true
     }))
-    transforms.push(JSONStream.stringify(`{
+    transforms.push(jsonStreamStringifier(`{
   "type": "FeatureCollection",
   "features": [
     `, `,
@@ -370,7 +370,12 @@ export const sampleValues = async (dataset: Dataset, ignoreKeys?: string[], onDe
       streams.splice(decodeStreamIndex + 1, 0,
         new Transform({
           transform (chunk, encoding, callback) {
-            onDecodedData(chunk)
+            // a throw aborts the read before the chunk reaches the parsers
+            try {
+              onDecodedData(chunk)
+            } catch (err: any) {
+              return callback(err)
+            }
             callback(null, chunk)
           }
         })
