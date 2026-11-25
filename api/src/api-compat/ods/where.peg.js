@@ -500,6 +500,8 @@ function peg$parse(input, options) {
     return { range: { [key]: { [esOperator]: value.value + "||/y", format: 'yyyy', time_zone: options.timezone } } }
   };
   var peg$f14 = function(key, value) {
+    const prop = options.dataset.schema.find(p => p.key === key)
+    if (!prop) throw unknownFieldError('filter', key)
     const fields = [
       key,
       ...options.searchFields.filter(f => f.startsWith(key + '.')),
