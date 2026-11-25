@@ -680,13 +680,19 @@ accepts it. The distance sort is described in the `workflow` skill, not in the p
 
 No line-writing operation is annotated: the served surface has no line tool. For the experiment
 comparing how an autonomous agent writes lines,
-`POST /api/v1/test-env/line-edition-arm` with `{ arm: 'json' | 'editor' | null }` annotates the
+`POST /api/v1/test-env/line-edition-arm` with `{ owner: { type, id }, arm: 'json' | 'editor' | null }` annotates the
 line operations of the merged document (`api/contract/x-agent-line-edition.ts`) and answers 204
 once the platform document is refreshed. Arm `json`: `read_line`, `delete_line`, `write_line`,
 `patch_line`, `bulk_lines`, with generic request bodies (the merged document's line schema is a
 sample dataset's). Arm `editor`: `read_line`, `delete_line` and the json-layout editor groups
 `create_line` and `edit_line`, whose form schema is the dataset's `readSchema`. `null` restores
 the production document. Pinned by `tests/features/agent-tools/line-edition-arms.unit.spec.ts`.
+
+The arm is one value for the whole platform document, held by the owners that set it: another arm
+while other owners hold it answers 409 naming them, the same arm is shared. Each holder releases it
+with `null` (a release by an owner holding nothing changes nothing), the clean of a test sub-space
+releases its owners' holds, and the arm goes back to none with its last holder. Pinned by
+`tests/features/agent-tools/line-edition-arm-holder.api.spec.ts`.
 
 ### File tools
 

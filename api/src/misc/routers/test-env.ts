@@ -120,6 +120,13 @@ router.delete('/', async (req, res, next) => {
     await fs.ensureDir(dataDir)
     await fs.ensureDir(tmpDir)
 
+    // the line edition arm its owners held (a run that ended without releasing it)
+    const { releaseLineEditionArmOf } = await import('../../../contract/x-agent-line-edition.ts')
+    if (releaseLineEditionArmOf(prefix)) {
+      const { refreshPlatformDoc } = await import('../../platform-api-docs/service.ts')
+      await refreshPlatformDoc()
+    }
+
     memoizedGetPublicationSiteSettings.clear()
     memoizedGetDataset.clear()
     if (config.compatODS) {
@@ -678,18 +685,29 @@ router.post('/set-config', (req, res, next) => {
   }
 })
 
-// Dev-only line edition arm of the platform document (api/contract/x-agent-line-edition.ts): answers
-// once the platform document carries it
+// Dev-only line edition arm of the platform document (api/contract/x-agent-line-edition.ts), for an owner
+// ({ owner: { type, id }, arm }, arm null to release it): one value for the whole document, held by the owners
+// that set it. Another arm while other owners hold it answers 409 naming them. Answers once the platform
+// document carries it.
 router.post('/line-edition-arm', async (req, res, next) => {
   try {
     const arm = req.body?.arm
     if (arm !== 'json' && arm !== 'editor' && arm !== null) {
       return res.status(400).type('text/plain').send('arm must be "json", "editor" or null')
     }
-    const { setLineEditionArm } = await import('../../../contract/x-agent-line-edition.ts')
-    const { refreshPlatformDoc } = await import('../../platform-api-docs/service.ts')
-    setLineEditionArm(arm ?? undefined)
-    await refreshPlatformDoc()
+    const owner = req.body?.owner
+    if (typeof owner?.type !== 'string' || typeof owner?.id !== 'string' || !owner.type || !owner.id) {
+      return res.status(400).type('text/plain').send('owner { type, id } is required')
+    }
+    const { holdLineEditionArm } = await import('../../../contract/x-agent-line-edition.ts')
+    const holding = holdLineEditionArm(`${owner.type}:${owner.id}`, arm)
+    if ('conflict' in holding) {
+      return res.status(409).type('text/plain').send(`the line edition arm is held by ${holding.conflict}`)
+    }
+    if (holding.changed) {
+      const { refreshPlatformDoc } = await import('../../platform-api-docs/service.ts')
+      await refreshPlatformDoc()
+    }
     res.status(204).send()
   } catch (err) {
     next(err)

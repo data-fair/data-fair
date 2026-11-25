@@ -4,18 +4,53 @@
  * Arm `json` offers plain JSON tools, arm `editor` json-layout editor groups; reading a line and
  * deleting one are the same plain tools in both. No arm is set by default, and then the line
  * operations carry no annotation at all: the platform document is the one served in production.
- * The arm is set through the test-env router.
+ * The arm is set through the test-env router, for an owner: it is one value for the whole platform document,
+ * held by the owners (`<type>:<id>`) of the runs that set it. Another owner cannot switch it under them, the
+ * last holder's release (or the clean of its test sub-space) sets it back to none.
  */
 import type { AgentOperation, JsonSchema } from '@data-fair/openapi-mcp'
 
 export type LineEditionArm = 'json' | 'editor'
 
 let currentArm: LineEditionArm | undefined
+const holders = new Set<string>()
 
 export const getLineEditionArm = (): LineEditionArm | undefined => currentArm
 
+/** the arm without holders, for the unit specs of the document */
 export const setLineEditionArm = (arm: LineEditionArm | undefined): void => {
   currentArm = arm
+  holders.clear()
+}
+
+export type ArmHolding = { conflict: string } | { changed: boolean }
+
+/**
+ * An owner asks for an arm (null: releases its hold). Another arm than the one its co-holders hold is a
+ * conflict naming them; a release by an owner that holds nothing changes nothing.
+ */
+export const holdLineEditionArm = (owner: string, arm: LineEditionArm | null): ArmHolding => {
+  const before = currentArm
+  if (arm === null) {
+    holders.delete(owner)
+  } else {
+    const others = [...holders].filter(holder => holder !== owner)
+    if (others.length && arm !== currentArm) return { conflict: others.join(', ') }
+    holders.add(owner)
+    currentArm = arm
+  }
+  if (!holders.size) currentArm = undefined
+  return { changed: currentArm !== before }
+}
+
+/** the clean of a test sub-space: its owners (ids starting with the prefix) release the arm; true when it changed */
+export const releaseLineEditionArmOf = (idPrefix: string): boolean => {
+  for (const holder of [...holders]) {
+    if (holder.slice(holder.indexOf(':') + 1).startsWith(idPrefix)) holders.delete(holder)
+  }
+  if (holders.size || currentArm === undefined) return false
+  currentArm = undefined
+  return true
 }
 
 /** the same schema request for both editor groups: the line's JSON Schema, multi-valued columns as arrays, extension columns included (the editor hides them) */
