@@ -12,6 +12,11 @@ const testSuperadmin = await axiosAuth('test_datafair_superadmin@test.com', unde
 
 const captureUrl = `http://localhost:${process.env.NGINX_PORT}/capture`
 
+// base applications are global and unowned: another context sharing the stack can register its own, so the
+// specs only look at the ones of the dev config (monapp1, monapp2, monapp3)
+const ownBaseAppUrls = ['monapp1', 'monapp2', 'monapp3'].map(mockAppUrl)
+const ours = (results: any[]) => results.filter((a: any) => ownBaseAppUrls.includes(a.url))
+
 const sendAttachment = async (ax: any, appId: string, attachmentName: string) => {
   const attachmentForm = new FormData()
   attachmentForm.append('attachment', fs.readFileSync('./tests/resources/' + attachmentName), attachmentName)
@@ -30,24 +35,24 @@ test.describe('Applications', () => {
 
   test('Get public base applications', async () => {
     const ax = anonymous
-    const res = await ax.get('/api/v1/base-applications')
+    const res = await ax.get('/api/v1/base-applications?size=100')
     assert.equal(res.status, 200)
-    assert.equal(res.data.count, 2)
+    assert.equal(ours(res.data.results).length, 2)
   })
 
   test('Get privately readable base app', async () => {
     // Only public at first
     const ax = testUser1
-    let res = await ax.get('/api/v1/base-applications?privateAccess=user:test_datafair_user1')
+    let res = await ax.get('/api/v1/base-applications?size=100&privateAccess=user:test_datafair_user1')
     assert.equal(res.status, 200)
-    assert.equal(res.data.count, 2)
-    const baseApp1 = res.data.results[0]
+    assert.equal(ours(res.data.results).length, 2)
+    const baseApp1 = ours(res.data.results)[0]
     assert.ok(baseApp1)
     assert.equal(baseApp1.public, true)
     assert.equal(baseApp1.datasetsFilters.length, 2)
     assert.deepEqual(baseApp1.datasetsFilters[0]['field-type'], ['integer', 'number'])
     assert.deepEqual(baseApp1.datasetsFilters[0].select, ['id', 'title', 'schema', 'userPermissions'])
-    const baseApp3 = res.data.results[1]
+    const baseApp3 = ours(res.data.results)[1]
     assert.ok(baseApp3)
     assert.equal(baseApp3.public, true)
     assert.equal(baseApp3.datasetsFilters.length, 1)
@@ -55,18 +60,18 @@ test.describe('Applications', () => {
 
     // super admin patchs the private one
     const adminAx = testSuperadmin
-    res = await adminAx.get('/api/v1/admin/base-applications')
+    res = await adminAx.get('/api/v1/admin/base-applications?size=100')
     assert.equal(res.status, 200)
-    assert.equal(res.data.count, 3)
+    assert.equal(ours(res.data.results).length, 3)
     await adminAx.patch(`/api/v1/base-applications/${mockAppId('monapp2')}`, {
       privateAccess: [{ type: 'user', id: 'test_datafair_user1' }, { type: 'user', id: 'test_datafair_another' }]
     })
     assert.equal(res.status, 200)
 
     // User sees the public and private base app
-    res = await ax.get('/api/v1/base-applications?privateAccess=user:test_datafair_user1')
+    res = await ax.get('/api/v1/base-applications?size=100&privateAccess=user:test_datafair_user1')
     assert.equal(res.status, 200)
-    assert.equal(res.data.count, 3)
+    assert.equal(ours(res.data.results).length, 3)
     const baseApp = res.data.results.find((a: any) => a.url === mockAppUrl('monapp2'))
     assert.equal(baseApp.privateAccess.length, 1)
   })
@@ -76,9 +81,9 @@ test.describe('Applications', () => {
     const adminAx = testSuperadmin
     await adminAx.patch(`/api/v1/base-applications/${mockAppId('monapp2')}`, { privateAccess: [{ type: 'user', id: 'test_datafair_user1' }] })
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
-    const res = await ax.get('/api/v1/base-applications?privateAccess=user:test_datafair_user1&dataset=' + dataset.id)
+    const res = await ax.get('/api/v1/base-applications?size=100&privateAccess=user:test_datafair_user1&dataset=' + dataset.id)
     assert.equal(res.status, 200)
-    assert.equal(res.data.count, 3)
+    assert.equal(ours(res.data.results).length, 3)
     const app = res.data.results.find((a: any) => a.url === mockAppUrl('monapp2'))
     assert.equal(app.category, 'autre')
     assert.equal(app.disabled.length, 1)
