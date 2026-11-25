@@ -262,8 +262,8 @@ test.describe('datasets - upload', () => {
     const ax = testUser3
 
     // Set up mock route to accept webhook POSTs. The mock keeps every request made to its
-    // dynamic routes until cleared, and clean() does not clear it (npm run dev-fixtures, for
-    // one, leaves geocoder calls in it)
+    // dynamic routes until cleared, and clean() does not clear it (dev data seeded
+    // through it, for one, can leave geocoder calls in it)
     await clearMockRoutes()
     await setupMockRoute({ path: '/webhook', status: 200, body: { ok: true } })
 

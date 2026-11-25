@@ -29,14 +29,15 @@ export type AuditResult = { scopes: number, incoherent: IncoherentScope[] }
 // `reclaimedMarkers` comes from the purge run of the same daily pass: markers are attacker
 // artifacts (no code path of ours issues a versionless DELETE), so their reclaim is reported
 // through the same event instead of being silently swept.
-export const auditScopes = async (store: IntegrityStore, opts?: { reclaimedMarkers?: Record<string, number> }): Promise<AuditResult> => {
+// `ownerIdPrefix` limits the pass to the owners whose id starts with it (a test sub-space).
+export const auditScopes = async (store: IntegrityStore, opts?: { reclaimedMarkers?: Record<string, number>, ownerIdPrefix?: string }): Promise<AuditResult> => {
   const retentionMs = (config.integrity?.retention?.days ?? 365) * 24 * 3600 * 1000
   const now = Date.now()
   const result: AuditResult = { scopes: 0, incoherent: [] }
 
   for (const ownerPrefix of await store.listSubPrefixes(ops.SERVICE_PREFIX)) {
     const owner = ops.parseOwnerPrefix(ownerPrefix)
-    if (!owner) continue
+    if (!owner || !ops.ownerPrefixInScope(ownerPrefix, opts?.ownerIdPrefix)) continue
     for (const scopePrefix of await store.listSubPrefixes(ownerPrefix)) {
       result.scopes++
       const datasetId = scopePrefix.split('/')[2]
@@ -93,6 +94,7 @@ export const auditScopes = async (store: IntegrityStore, opts?: { reclaimedMarke
   for (const [scopePrefix, count] of Object.entries(opts?.reclaimedMarkers ?? {})) {
     const datasetId = scopePrefix.split('/')[2]
     if (!datasetId || !count) continue
+    if (!ops.ownerPrefixInScope(scopePrefix.split('/').slice(0, 2).join('/') + '/', opts?.ownerIdPrefix)) continue
     const incoherent: IncoherentScope = { scopePrefix, datasetId, reason: 'reclaimed-markers', detail: `${count} delete marker(s) reclaimed by the purge` }
     result.incoherent.push(incoherent)
     try {

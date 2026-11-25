@@ -1,6 +1,7 @@
 // api/src/integrity/checker.ts
 import cron, { type ScheduledTask } from 'node-cron'
 import Debug from 'debug'
+import escapeStringRegexp from 'escape-string-regexp'
 import locks from '@data-fair/lib-node/locks.js'
 import log from '@data-fair/lib-node/log.js'
 import config from '#config'
@@ -431,11 +432,13 @@ export const checkDataset = async (dataset: DatasetInternal, opts?: { deep?: boo
 // (ok or breach) for maxUnknownDays — wedged stamps, stuck pipeline, lock contention, S3 outage,
 // or an adversary keeping flags set — must not stay silent: the whole round-2 posture of
 // "downgrade to unknown" is only safe if unknowns cannot silently accumulate.
-export const alertStaleChecks = async (): Promise<{ alerted: string[] }> => {
+// `ownerIdPrefix` limits the sweep to the datasets of the owners whose id starts with it (a test sub-space).
+export const alertStaleChecks = async (opts?: { ownerIdPrefix?: string }): Promise<{ alerted: string[] }> => {
   const maxUnknownDays = config.integrity?.maxUnknownDays ?? 7
   const cutoff = new Date(Date.now() - maxUnknownDays * 24 * 3600 * 1000).toISOString()
   const alerted: string[] = []
-  const cursor = mongo.datasets.find({ 'integrity.active': true, 'integrity.lastDefinitiveCheck': { $lt: cutoff } }).limit(BATCH)
+  const ownerFilter = opts?.ownerIdPrefix ? { 'owner.id': { $regex: '^' + escapeStringRegexp(opts.ownerIdPrefix) } } : {}
+  const cursor = mongo.datasets.find({ ...ownerFilter, 'integrity.active': true, 'integrity.lastDefinitiveCheck': { $lt: cutoff } }).limit(BATCH)
   for await (const dataset of cursor) {
     try {
       if (await maybeAlert(dataset as DatasetInternal, 'integrity-check-stale', true)) alerted.push(dataset.id)
@@ -449,6 +452,7 @@ export const alertStaleChecks = async (): Promise<{ alerted: string[] }> => {
   // index-stale); the distinct dedup key keeps the two cadences independent (same
   // two-sources-one-event pattern as integrity-renewal-failed).
   const indexCursor = mongo.datasets.find({
+    ...ownerFilter,
     'integrity.active': true,
     'integrity.lastDefinitiveIndexCheck': { $lt: cutoff },
     'integrity.lastDefinitiveCheck': { $gte: cutoff }

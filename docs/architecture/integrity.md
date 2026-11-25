@@ -617,24 +617,22 @@ is `true` with a 2-day revision retention and a 1-day attribution retention (del
 distinct windows, so tests can tell the two formulas apart), so the capability is on by default —
 but it is still opt-in **per dataset** (admin-mode `PUT /datasets/{id}/_integrity`).
 
-`npm run dev-fixtures` seeds **three** datasets in the `test_demo_org` org that demonstrate the
-feature end-to-end (each is documented in detail in the fixtures script itself):
+Demonstrating the feature end-to-end in dev takes **three** datasets, one per verdict:
 
-- `fixtures-integrite-ok` — enabled, organically re-anchored twice (file update + metadata
-  patch); check returns `ok`;
-- `fixtures-integrite-breach` — file **and** metadata tampered out-of-band via the dev-only
-  test-env endpoints → `breach: ['file', 'metadata']` (re-tampered on each run, since any
-  legitimate covered write would re-anchor and heal it);
-- `fixtures-integrite-lignes` — editable dataset, one line legitimately updated, another
-  tampered raw (the silent-edit shape the dropped hash-fold could not see) →
-  `breach: ['lines']` with the diverged sample.
+- **ok** — enabled, organically re-anchored twice (file update + metadata patch); check
+  returns `ok`;
+- **breach** — file **and** metadata tampered out-of-band via the dev-only test-env
+  endpoints → `breach: ['file', 'metadata']` (any later legitimate covered write re-anchors
+  and heals it, so nothing should write it after the tamper);
+- **lines** — editable dataset, one line legitimately updated, another tampered raw (the
+  silent-edit shape the dropped hash-fold could not see) → `breach: ['lines']` with the
+  diverged sample.
 
 Note the WORM retention interacts with re-runs: a revision written today cannot be deleted
 for a day (compliance lock), so re-creating a dataset with the same id and identical content
-dedupes against the still-locked revision. The fixtures are `skip-if-exists` and thus run
-once per environment; on a fresh environment the three datasets seed automatically. These
-fixtures also feed the screenshots of the client-facing presentation
-(`dev/capture-integrity-screenshots.ts`).
+dedupes against the still-locked revision. Such datasets also feed the screenshots of the
+client-facing presentation (`dev/capture-integrity-screenshots.ts`, which takes their ids as
+arguments).
 
 ## 5. Resource taxonomy & per-class feasibility
 

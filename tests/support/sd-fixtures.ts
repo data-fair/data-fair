@@ -1,7 +1,7 @@
 /**
  * The accounts of data-fair's test sub-space in simple-directory: every user, organization and member id
  * (and every email) starts with the prefix, so this suite seeds and cleans them without touching the
- * accounts of other sub-spaces (e.g. the demo world test_demo_ of dev/resources/demo-world.json) nor the unprefixed ones.
+ * accounts of other sub-spaces (dev data under another prefix, other suites) nor the unprefixed ones.
  *
  * Seeded by tests/global-setup.ts through simple-directory's test API (POST /api/test-env/seed), after
  * a cleanup of the prefix (DELETE /api/test-env?prefix=). All the users with a password use 'passwd'.
@@ -177,28 +177,6 @@ export const sdFixtures = (env: Record<string, string | undefined> = process.env
       password: { clear: 'passwd' }
     },
     {
-      id: 'test_datafair_org1_agent_nhi',
-      firstName: 'Agent',
-      lastName: 'MCP',
-      email: 'test_datafair_org1_agent_nhi@test.com',
-      nhi: {
-        provider: { issuer: `http://${env.DEV_HOST}:${env.NGINX_PORT}/agents/api/nhi` },
-        subject: 'autonomous-agent:sim-mcp',
-        scopes: ['all:read']
-      }
-    },
-    {
-      id: 'test_datafair_org1_lines_nhi',
-      firstName: 'Agent',
-      lastName: 'Lines',
-      email: 'test_datafair_org1_lines_nhi@test.com',
-      nhi: {
-        provider: { issuer: `http://${env.DEV_HOST}:${env.NGINX_PORT}/agents/api/nhi` },
-        subject: 'autonomous-agent:sim-lines',
-        scopes: ['all:read', 'datasets:write']
-      }
-    },
-    {
       id: 'test_datafair_org1_scope_nhi',
       firstName: 'Agent',
       lastName: 'Scope',
@@ -238,8 +216,6 @@ export const sdFixtures = (env: Record<string, string | undefined> = process.env
         { id: 'test_datafair_user6', role: 'contrib', department: 'dep1' },
         { id: 'test_datafair_user4', role: 'admin', department: 'dep1' },
         { id: 'test_datafair_user4', role: 'admin', department: 'dep2' },
-        { id: 'test_datafair_org1_agent_nhi', role: 'contrib' },
-        { id: 'test_datafair_org1_lines_nhi', role: 'admin' },
         { id: 'test_datafair_org1_scope_nhi', role: 'admin' }
       ]
     },

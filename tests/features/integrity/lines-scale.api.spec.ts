@@ -87,9 +87,9 @@ const run = async () => {
     })
   }
   // the other daily walks over the same data (design §5): O(objects) time, constant memory.
-  // Both are bucket-wide, so on a shared dev bucket the figures include other test data.
-  await measure('storage measurement', () => anonymousAx.post(`${apiUrl}/api/v1/test-env/integrity-storage/run`))
-  await measure('purge', () => anonymousAx.post(`${apiUrl}/api/v1/test-env/integrity-purge/run`))
+  // Both are scoped to the suite's sub-space (test_datafair_), so the figures include its other test data.
+  await measure('storage measurement', () => anonymousAx.post(`${apiUrl}/api/v1/test-env/integrity-storage/run?prefix=test_datafair_`))
+  await measure('purge', () => anonymousAx.post(`${apiUrl}/api/v1/test-env/integrity-purge/run?prefix=test_datafair_`))
   // one tampered line, then _fix through the 202 path
   await anonymousAx.post(`${apiUrl}/api/v1/test-env/rest-collection-update-one/${dataset.id}`, { filter: { n: 42 }, update: { $set: { label: 'tampered' } } })
   await measure('_fix one line', async () => {

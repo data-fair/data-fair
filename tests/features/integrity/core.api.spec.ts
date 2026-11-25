@@ -15,7 +15,7 @@ import { Readable } from 'node:stream'
 test.beforeAll(async () => { await ensureIntegrityBucket() })
 // reset test-owned datasets + limit counters before each test (the shared suite convention); the
 // integrity specs all run as the single test_datafair_superadmin, so without this their datasets accumulate
-// and hit the dev nbDatasets quota. clean() spares the demo world (it only cleans test_datafair_).
+// and hit the dev nbDatasets quota. clean() spares the other sub-spaces (it only cleans test_datafair_).
 test.beforeEach(async () => { await clean() })
 
 // ---------------------------------------------------------------------------------------------
@@ -625,14 +625,14 @@ test('renewal advances the anchor lock but never touches the `.who` sibling\'s r
 // ---------------------------------------------------------------------------------------------
 
 const runPurge = async (admin: any, prefix: string, opts: Record<string, any> = {}) =>
-  (await anonymousAx.post(`${apiUrl}/api/v1/test-env/integrity-purge/run`,
+  (await anonymousAx.post(`${apiUrl}/api/v1/test-env/integrity-purge/run?prefix=test_datafair_`,
     { prefix, ignoreAge: true, skewMarginMs: 0, ignoreWatermark: true, ...opts })).data
 
 test('purge deletes a revision whose lock has lapsed and keeps one still locked', async () => {
   const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   // a bare prefix with no matching dataset: nothing is "current anchor of an enrolled dataset",
   // so the compliance lock alone decides — exactly the property under test
-  const prefix = `data-fair/test-purge-${Date.now()}/nodataset/`
+  const prefix = `data-fair/user-test_datafair_purge-${Date.now()}/nodataset/`
   const context = { operation: 'create' as const, origin: 'worker' as const, date: new Date().toISOString() }
   const body = { hash: { metadata: 'x' }, context, dataset: { id: 'nodataset' } }
   // RustFS takes retain-until at second granularity; 2s out expires well inside the test
@@ -652,7 +652,7 @@ test('purge deletes a revision whose lock has lapsed and keeps one still locked'
 
 test('purge leaves a still-locked revision entirely untouched, attempting no delete', async () => {
   const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
-  const prefix = `data-fair/test-purge-locked-${Date.now()}/nodataset/`
+  const prefix = `data-fair/user-test_datafair_purge-locked-${Date.now()}/nodataset/`
   const context = { operation: 'create' as const, origin: 'worker' as const, date: new Date().toISOString() }
   // every version here is locked well into the future, and ignoreAge defeats the age pre-filter,
   // so the retain-until read is the only thing standing between the purge and a delete
@@ -746,7 +746,7 @@ test('the deliberate asymmetry: a referenced `.file` payload is protected like t
 
 test('a scope is skipped without listing objects until its watermark comes due', async () => {
   const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
-  const prefix = `data-fair/test-purge-wm-${Date.now()}/nodataset/`
+  const prefix = `data-fair/user-test_datafair_purge-wm-${Date.now()}/nodataset/`
   const context = { operation: 'create' as const, origin: 'worker' as const, date: new Date().toISOString() }
   await integrityTestStore.writeRevision(`${prefix}000000000`, { hash: { metadata: 'a' }, context, dataset: { id: 'nodataset' } },
     new Date(Date.now() + 24 * 3600 * 1000))

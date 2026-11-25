@@ -295,10 +295,10 @@ test('a pinned-unknown index verdict fires integrity-check-stale despite a fresh
   // simulate 8 pinned days (default maxUnknownDays = 7): index clock stale, overall clock fresh
   const eightDaysAgo = new Date(Date.now() - 8 * 24 * 3600 * 1000).toISOString()
   await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.lastDefinitiveIndexCheck': eightDaysAgo })
-  const run1 = (await anonymousAx.post(`${apiUrl}/api/v1/test-env/integrity-stale/run`)).data
+  const run1 = (await anonymousAx.post(`${apiUrl}/api/v1/test-env/integrity-stale/run?prefix=test_datafair_`)).data
   expect(run1.alerted).toContain(dataset.id)
   // dedup: a second run within the realert window stays silent
-  const run2 = (await anonymousAx.post(`${apiUrl}/api/v1/test-env/integrity-stale/run`)).data
+  const run2 = (await anonymousAx.post(`${apiUrl}/api/v1/test-env/integrity-stale/run?prefix=test_datafair_`)).data
   expect(run2.alerted).not.toContain(dataset.id)
   raw = (await anonymousAx.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
   expect(raw.integrity.alerts?.['index-check-stale']).toBeTruthy()
@@ -324,7 +324,7 @@ test('a dataset stale on the overall clock is not double-alerted by the index cl
     'integrity.lastDefinitiveCheck': eightDaysAgo,
     'integrity.lastDefinitiveIndexCheck': eightDaysAgo
   })
-  const run = (await anonymousAx.post(`${apiUrl}/api/v1/test-env/integrity-stale/run`)).data
+  const run = (await anonymousAx.post(`${apiUrl}/api/v1/test-env/integrity-stale/run?prefix=test_datafair_`)).data
   expect(run.alerted).toContain(dataset.id)
   const raw = (await anonymousAx.get(`${apiUrl}/api/v1/test-env/raw-dataset/${dataset.id}`)).data
   // only the overall dedup key fired: the index loop excludes datasets the overall loop caught

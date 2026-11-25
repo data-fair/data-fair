@@ -5,6 +5,7 @@ import { readFileSync } from 'node:fs'
 import { axiosAuth, clean, checkPendingTasks, anonymousAx, apiUrl, mockAppUrl, mockAppId } from '../../support/axios.ts'
 import { sdTestEnvUrl } from '../../support/sd-fixtures.ts'
 import { doAndWaitForFinalize, datasetEsIndicesCount, setupMockRoute, clearMockRoutes } from '../../support/workers.ts'
+import { TestEventClient, waitForCollected } from '../../support/events.ts'
 
 const geocoderApi = JSON.parse(readFileSync(path.resolve('./tests/resources/geocoder-api.json'), 'utf8'))
 
@@ -98,5 +99,20 @@ test.describe('test-env cleanup', () => {
     await anonymousAx.delete(`${apiUrl}/api/v1/test-env/lock/datasets:clean-master`)
     assert.equal(await lock('clean-master-kept'), false)
     await anonymousAx.delete(`${apiUrl}/api/v1/test-env/lock/datasets:clean-master-kept`)
+  })
+
+  test('the clean of another sub-space keeps the listeners of the test events stream', async () => {
+    const client = new TestEventClient()
+    await client.ready
+    try {
+      const received: any[] = []
+      client.on('notification', (event: any) => received.push(event))
+      await anonymousAx.delete(`${apiUrl}/api/v1/test-env`, { params: { prefix: otherPrefix } })
+      const testUser1 = await axiosAuth('test_datafair_user1@test.com')
+      await doAndWaitForFinalize(testUser1, 'clean-listeners', () => testUser1.put('/api/v1/datasets/clean-listeners', { isRest: true, title: 'listened' }))
+      assert.ok(await waitForCollected(() => received.find(e => e.topic?.key === 'data-fair:dataset-dataset-created:clean-listeners')), JSON.stringify(received.map(e => e.topic?.key)))
+    } finally {
+      client.close()
+    }
   })
 })

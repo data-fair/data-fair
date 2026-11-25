@@ -32,14 +32,13 @@ services:
       - OBSERVER_ACTIVE=false
       - CIPHER_PASSWORD=dev-cipher-password-0123456789abcdef
       # accounts in mongo: the test suites seed and clean their own sub-space (test_datafair_ for this
-      # repository, tests/support/sd-fixtures.ts) through the test API, npm run dev-fixtures seeds
-      # the demo world test_demo_ the same way (dev/resources/demo-world.json)
+      # repository, tests/support/sd-fixtures.ts) through the test API
       - STORAGE_TYPE=mongo
       - ENABLE_TEST_API=1
       # the test API needs NODE_ENV=development, the configuration stays the image's production one
       - NODE_ENV=development
       - NODE_CONFIG_ENV=production
-      - ADMINS=["test_datafair_superadmin@test.com","test_demo_dev@example.org"]
+      - ADMINS=["test_datafair_superadmin@test.com"]
       - CONTACT=contact@test.com
       # in dev simple-directory only notifies this service, directly (the shared identities router refuses calls through the proxy)
       - IDENTITIES_WEBHOOKS=[{"base":"http://localhost:${DEV_API_PORT}/api/v1/identities","key":"secret-identities"}]
@@ -67,7 +66,7 @@ services:
       - MAILS_TRANSPORT={"host":"localhost","port":${MAILDEV_SMTP_PORT},"ignoreTLS":true}
       # per recipient, stored in mongo: repeated test runs would stop the mails silently
       - MAILSRATELIMIT_POINTS=100000
-      # non-human identities, declared in tests/support/sd-fixtures.ts (the autonomous-agent simulations)
+      # non-human identities, declared in tests/support/sd-fixtures.ts (the scope NHI used by the api tests)
       - MANAGE_NHIS=true
       # dev only: the NHI issuer is plain http on a .localhost host, which assertSafeIssuer refuses otherwise
       - NHIS_ALLOW_INSECURE_ISSUERS=true
@@ -153,8 +152,8 @@ services:
       # tool titles are shown to people (chat chips)
       - LOCALE=fr
       - OBSERVER_ACTIVE=false
-      # seconds between refreshes of the platform document: the line-edition simulations flip it between
-      # runs (the experiment switch) and wait for the tools to follow
+      # seconds between refreshes of the platform document: a change of the experiment switch
+      # reaches the tools after this delay
       - REFRESH_INTERVAL=10
 
   # registry-side dev container — same domain as data-fair under /registry

@@ -735,7 +735,7 @@ test('purge deletes a lapsed `.who` sibling of a line anchor but keeps the line 
   await new Promise(resolve => setTimeout(resolve, 3500)) // let both locks genuinely lapse
 
   const linesPrefixValue = lops.linesPrefix(owner, dataset.id)
-  const result = (await anonymousAx.post(`${apiUrl}/api/v1/test-env/integrity-purge/run`,
+  const result = (await anonymousAx.post(`${apiUrl}/api/v1/test-env/integrity-purge/run?prefix=test_datafair_`,
     { prefix: linesPrefixValue, ignoreAge: true, skewMarginMs: 0, ignoreWatermark: true })).data
   expect(result.errors).toBe(0)
   const remaining = await listIntegrityKeys(linesPrefixValue)

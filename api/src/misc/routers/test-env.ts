@@ -23,12 +23,17 @@ const router = express.Router()
 // and the data they own, cleaned without touching the other suites nor the unprefixed accounts
 const testPrefixRegexp = /^test_[a-z0-9]+(?:_[a-z0-9]+)*_$/
 
+// data-fair's own test suite: its clean also resets the process-wide test state its specs rely on
+const ownSuitePrefix = 'test_datafair_'
+
 // Cleanup of a sub-space (DELETE /?prefix=test_<suite>_): delete the data owned by its accounts from
 // mongo/ES/filesystem, including the shared collections' documents keyed by the sub-space (remote services
 // and base applications identified under the prefix, locks and integrity state of its datasets), then
-// reset the caches and the tmp dir. Both resets are global: the caches only cost a recomputation to the other
-// sub-spaces, but the tmp dir is wiped for all of them, so an upload or a worker task of another suite running
-// at the same time may lose its temporary files.
+// clear the in-memory caches (a recomputation at most for the other sub-spaces). The tmp dir is left to
+// cleanTmp, which ages its files out: other sub-spaces may have uploads or worker tasks in flight there.
+// Only the clean of data-fair's own suite (prefix exactly test_datafair_) also resets the process-wide test
+// state its specs rely on: the worker ping start date, the extensions and thumbnails caches (not keyed by
+// owner) and the listeners of the test events stream. Any other prefix leaves them alone.
 router.delete('/', async (req, res, next) => {
   try {
     const prefix = req.query.prefix
@@ -38,7 +43,8 @@ router.delete('/', async (req, res, next) => {
     // the prefix only holds [a-z0-9_], safe in a regexp
     const prefixRegexp = new RegExp('^' + prefix)
 
-    await resetPing()
+    const ownSuite = prefix === ownSuitePrefix
+    if (ownSuite) await resetPing()
 
     const testOwnerFilter = { 'owner.id': { $regex: prefixRegexp } }
     const testIdFilter = { id: { $regex: prefixRegexp } }
@@ -86,8 +92,8 @@ router.delete('/', async (req, res, next) => {
       // the storage-accounting measure of still-locked test revisions would otherwise keep
       // counting into the freshly-reset limits and starve the next tests' storage quota
       mongo.db.collection('integrity-storage').deleteMany(testOwnerFilter),
-      mongo.db.collection('extensions-cache').deleteMany({}),
-      mongo.db.collection('thumbnails-cache').deleteMany({}),
+      // not keyed by owner: only emptied for data-fair's own suite
+      ...(ownSuite ? [mongo.db.collection('extensions-cache').deleteMany({}), mongo.db.collection('thumbnails-cache').deleteMany({})] : []),
       // remote services declared under the prefix, or mirroring a master data dataset of the sub-space
       mongo.remoteServices.deleteMany({ $or: [testIdFilter, { 'virtualDatasets.parent.owner.id': { $regex: prefixRegexp } }] }),
       // base applications served under the prefix (http://host/<prefix>…)
@@ -111,12 +117,15 @@ router.delete('/', async (req, res, next) => {
         }
       }
     }
-    // still clean tmpDir entirely
-    if (await fs.pathExists(tmpDir)) {
-      await fs.remove(tmpDir)
-    }
     await fs.ensureDir(dataDir)
     await fs.ensureDir(tmpDir)
+
+    // the line edition arm its owners held (a run that ended without releasing it)
+    const { releaseLineEditionArmOf } = await import('../../../contract/x-agent-line-edition.ts')
+    if (releaseLineEditionArmOf(prefix)) {
+      const { refreshPlatformDoc } = await import('../../platform-api-docs/service.ts')
+      await refreshPlatformDoc()
+    }
 
     memoizedGetPublicationSiteSettings.clear()
     memoizedGetDataset.clear()
@@ -134,7 +143,7 @@ router.delete('/', async (req, res, next) => {
     clearApplicationKeysCaches()
     rateLimiting.clear()
     clearThumbnailFailures()
-    testEvents.removeAllListeners()
+    if (ownSuite) testEvents.removeAllListeners()
 
     // re-initialize remote services and base apps from config after cleanup
     const { init: initRemoteServices } = await import('../../remote-services/service.ts')
@@ -463,15 +472,35 @@ router.post('/es-strip-mapping-field/:datasetId', async (req, res, next) => {
   }
 })
 
+// The integrity passes below (purge, stale alerts, scope audit, storage measure) are bucket-wide
+// in production. Run on demand they act only on the owners of one test sub-space
+// (?prefix=test_<suite>_, required): a suite must not alert, measure or purge another one's data.
+const sweepPrefix = (req: express.Request, res: express.Response): string | undefined => {
+  const prefix = req.query.prefix
+  if (typeof prefix !== 'string' || !testPrefixRegexp.test(prefix)) {
+    res.status(400).type('text/plain').send('invalid test prefix')
+    return undefined
+  }
+  return prefix
+}
+
 // Trigger the expired-revision purge on demand (test-only). `ignoreAge` skips the age pre-filter
 // and `skewMarginMs` shrinks the clock-skew margin, so a test can exercise the real retain-until
 // decision on a seconds-long lock instead of waiting out a full retention window.
 router.post('/integrity-purge/run', async (req, res, next) => {
   try {
+    const ownerIdPrefix = sweepPrefix(req, res)
+    if (!ownerIdPrefix) return
+    const { ownerPrefixInScope } = await import('../../integrity/operations.ts')
+    const keyPrefix: string | undefined = req.body?.prefix
+    if (keyPrefix !== undefined && !ownerPrefixInScope(keyPrefix.split('/').slice(0, 2).join('/') + '/', ownerIdPrefix)) {
+      return res.status(400).type('text/plain').send('the key prefix is outside the test prefix')
+    }
     const { purgeExpiredRevisions } = await import('../../integrity/purge.ts')
     const { integrityStore } = await import('../../integrity/store-factory.ts')
     res.json(await purgeExpiredRevisions(integrityStore(), {
-      prefix: req.body?.prefix,
+      prefix: keyPrefix,
+      ownerIdPrefix,
       ignoreAge: !!req.body?.ignoreAge,
       skewMarginMs: req.body?.skewMarginMs,
       ignoreWatermark: !!req.body?.ignoreWatermark
@@ -484,8 +513,10 @@ router.post('/integrity-purge/run', async (req, res, next) => {
 // Trigger the check-stale alert sweep on demand (test-only)
 router.post('/integrity-stale/run', async (req, res, next) => {
   try {
+    const ownerIdPrefix = sweepPrefix(req, res)
+    if (!ownerIdPrefix) return
     const { alertStaleChecks } = await import('../../integrity/checker.ts')
-    res.json(await alertStaleChecks())
+    res.json(await alertStaleChecks({ ownerIdPrefix }))
   } catch (err) {
     next(err)
   }
@@ -494,9 +525,11 @@ router.post('/integrity-stale/run', async (req, res, next) => {
 // Trigger the store-vs-Mongo integrity scope audit on demand (test-only)
 router.post('/integrity-audit/run', async (req, res, next) => {
   try {
+    const ownerIdPrefix = sweepPrefix(req, res)
+    if (!ownerIdPrefix) return
     const { auditScopes } = await import('../../integrity/audit.ts')
     const { integrityStore } = await import('../../integrity/store-factory.ts')
-    res.json(await auditScopes(integrityStore(), { reclaimedMarkers: req.body?.reclaimedMarkers }))
+    res.json(await auditScopes(integrityStore(), { reclaimedMarkers: req.body?.reclaimedMarkers, ownerIdPrefix }))
   } catch (err) {
     next(err)
   }
@@ -505,9 +538,11 @@ router.post('/integrity-audit/run', async (req, res, next) => {
 // Trigger the integrity storage-accounting measure on demand (test-only)
 router.post('/integrity-storage/run', async (req, res, next) => {
   try {
+    const ownerIdPrefix = sweepPrefix(req, res)
+    if (!ownerIdPrefix) return
     const { measureIntegrityStorage } = await import('../../integrity/storage.ts')
     const { integrityStore } = await import('../../integrity/store-factory.ts')
-    res.json(await measureIntegrityStorage(integrityStore()))
+    res.json(await measureIntegrityStorage(integrityStore(), { ownerIdPrefix }))
   } catch (err) {
     next(err)
   }
@@ -650,18 +685,29 @@ router.post('/set-config', (req, res, next) => {
   }
 })
 
-// Dev-only line edition arm of the platform document (api/contract/x-agent-line-edition.ts): answers
-// once the platform document carries it
+// Dev-only line edition arm of the platform document (api/contract/x-agent-line-edition.ts), for an owner
+// ({ owner: { type, id }, arm }, arm null to release it): one value for the whole document, held by the owners
+// that set it. Another arm while other owners hold it answers 409 naming them. Answers once the platform
+// document carries it.
 router.post('/line-edition-arm', async (req, res, next) => {
   try {
     const arm = req.body?.arm
     if (arm !== 'json' && arm !== 'editor' && arm !== null) {
       return res.status(400).type('text/plain').send('arm must be "json", "editor" or null')
     }
-    const { setLineEditionArm } = await import('../../../contract/x-agent-line-edition.ts')
-    const { refreshPlatformDoc } = await import('../../platform-api-docs/service.ts')
-    setLineEditionArm(arm ?? undefined)
-    await refreshPlatformDoc()
+    const owner = req.body?.owner
+    if (typeof owner?.type !== 'string' || typeof owner?.id !== 'string' || !owner.type || !owner.id) {
+      return res.status(400).type('text/plain').send('owner { type, id } is required')
+    }
+    const { holdLineEditionArm } = await import('../../../contract/x-agent-line-edition.ts')
+    const holding = holdLineEditionArm(`${owner.type}:${owner.id}`, arm)
+    if ('conflict' in holding) {
+      return res.status(409).type('text/plain').send(`the line edition arm is held by ${holding.conflict}`)
+    }
+    if (holding.changed) {
+      const { refreshPlatformDoc } = await import('../../platform-api-docs/service.ts')
+      await refreshPlatformDoc()
+    }
     res.status(204).send()
   } catch (err) {
     next(err)

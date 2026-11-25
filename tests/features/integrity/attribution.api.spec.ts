@@ -23,7 +23,7 @@ test.beforeEach(async () => { await clean() })
 
 test('writeWho stores a compliance-locked .who sibling with its own (shorter) retention than the revision', async () => {
   const store = integrityTestStore
-  const owner = { type: 'user', id: `test-attribution-${Date.now()}` }
+  const owner = { type: 'user', id: `test_datafair_attribution-${Date.now()}` }
   const datasetId = 'ds-attribution'
   const key = ops.revisionKey(owner, datasetId, 0)
   const whoKey = ops.whoKey(owner, datasetId, 0)
@@ -60,7 +60,7 @@ test('writeWho stores a compliance-locked .who sibling with its own (shorter) re
 
 test('getWho normalizes a missing key the same way getRevision does', async () => {
   const store = integrityTestStore
-  const missingKey = `data-fair/test-attribution-missing/${Date.now()}/000000000.who`
+  const missingKey = `data-fair/user-test_datafair_attribution-missing/${Date.now()}/000000000.who`
   await expect(store.getRevision(missingKey)).rejects.toMatchObject({ name: 'NoSuchKey' })
   await expect(store.getWho(missingKey)).rejects.toMatchObject({ name: 'NoSuchKey' })
 })
