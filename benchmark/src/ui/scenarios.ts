@@ -2,7 +2,6 @@
 // Everything is fixed (paths, counts, query) so runs are comparable.
 import type { RunRecord } from './compare.ts'
 import { beginSpan, endSpan, settle, type Instrumented } from './collect.ts'
-import { TABLE_PERF_SEARCH_WORD } from '../../../dev/table-perf-fixture.ts'
 
 export interface UiScenario {
   name: string
@@ -22,7 +21,8 @@ const openTable = async (h: Instrumented, tableUrl: string) => {
 // after opening: let that timer run before pressing Escape
 const nextTimer = (h: Instrumented) => h.page.evaluate(() => new Promise(resolve => setTimeout(resolve)))
 
-export const uiScenarios: UiScenario[] = [
+/** The scenarios on a dataset whose rows contain searchWord in a minority of them. */
+export const uiScenarios = (searchWord: string): UiScenario[] => [
   {
     name: 'load',
     description: 'navigation until the first rows are drawn',
@@ -57,13 +57,13 @@ export const uiScenarios: UiScenario[] = [
   },
   {
     name: 'search',
-    description: `submit the query "${TABLE_PERF_SEARCH_WORD}" until the updated rows are drawn`,
+    description: `submit the query "${searchWord}" until the updated rows are drawn`,
     async run (h, tableUrl) {
       await openTable(h, tableUrl)
       const input = h.page.locator('[role="search"] input').first()
       const start = await beginSpan(h)
-      await input.fill(TABLE_PERF_SEARCH_WORD)
-      const searched = h.page.waitForResponse(r => r.url().includes('/lines') && r.url().includes(`q=${TABLE_PERF_SEARCH_WORD}`))
+      await input.fill(searchWord)
+      const searched = h.page.waitForResponse(r => r.url().includes('/lines') && r.url().includes(`q=${searchWord}`))
       await input.press('Enter')
       await searched
       await settle(h)

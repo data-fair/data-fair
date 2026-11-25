@@ -72,7 +72,7 @@ test.describe('admin/elasticsearch/diagnose', () => {
     const fileDataset = await sendDataset('datasets/dataset1.csv', testUser1)
 
     // the listing is global while clean() only removes test_* owned data: a dev database seeded with
-    // dev-fixtures or used by hand holds unrelated REST datasets predating the marker, so restrict
+    // dev data or used by hand holds unrelated REST datasets predating the marker, so restrict
     // the assertions to the datasets this test owns
     const ourIds = ['esdiag-legacy', fileDataset.id]
     const listed = async () => (await adminUser.get('/api/v1/admin/elasticsearch/diagnose')).data.restDatasetsWithoutLineBytes.results

@@ -1,11 +1,19 @@
-// Regenerate the screenshots of docs/presentation-integrite-fr/img/ from the dev fixtures.
-// Prerequisites: dev env up, `npm run dev-fixtures` seeded (fixtures-integrite-*).
-// Run: node --experimental-strip-types dev/capture-integrity-screenshots.ts
+// Regenerate the screenshots of docs/presentation-integrite-fr/img/ from three dev datasets
+// with integrity enabled, one per verdict (see docs/architecture/integrity.md): ok, breach of
+// the file and metadata, breach of the lines.
+// Prerequisites: dev env up, the three datasets exist.
+// Run: node --experimental-strip-types dev/capture-integrity-screenshots.ts <ok-id> <breach-id> <lines-id>
 import { chromium } from '@playwright/test'
 import { mkdirSync } from 'node:fs'
 import * as dotenv from 'dotenv'
 
 dotenv.config({ path: '.env', quiet: true })
+
+const [okId, breachId, linesId] = process.argv.slice(2)
+if (!okId || !breachId || !linesId) {
+  console.error('usage: dev/capture-integrity-screenshots.ts <ok-dataset-id> <breach-dataset-id> <lines-dataset-id>')
+  process.exit(1)
+}
 
 const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}`
 const outDir = 'docs/presentation-integrite-fr/img'
@@ -17,7 +25,7 @@ const context = await browser.newContext({ viewport: { width: 1280, height: 1400
 const page = await context.newPage()
 
 // superadmin login with admin mode (the integrity write actions render in admin mode only)
-const firstTarget = `${baseUrl}/data-fair/dataset/fixtures-integrite-ok`
+const firstTarget = `${baseUrl}/data-fair/dataset/${okId}`
 await page.goto(`${baseUrl}/simple-directory/login?redirect=${encodeURIComponent(firstTarget)}&adminMode=true`)
 await page.locator('input[name=email]').fill('test_datafair_superadmin@test.com')
 await page.locator('input[name=password]').fill('passwd')
@@ -36,9 +44,9 @@ const captureIntegrityTab = async (datasetId: string, filename: string) => {
   console.log('captured', filename)
 }
 
-await captureIntegrityTab('fixtures-integrite-ok', 'panneau-integrite-ok.png')
-await captureIntegrityTab('fixtures-integrite-breach', 'panneau-integrite-breche.png')
-await captureIntegrityTab('fixtures-integrite-lignes', 'panneau-integrite-lignes.png')
+await captureIntegrityTab(okId, 'panneau-integrite-ok.png')
+await captureIntegrityTab(breachId, 'panneau-integrite-breche.png')
+await captureIntegrityTab(linesId, 'panneau-integrite-lignes.png')
 
 await browser.close()
 console.log('done')

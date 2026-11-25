@@ -28,6 +28,7 @@ Commands:
   throughput  Autocannon concurrency test over GET /lines
               --scenarios=<all|name,...>  --duration=<s>  --connections=<n>  --warmup=<s>  --no-save
   ui-table    A/B of the dataset table UI: production builds of --base and of the working tree
+              --dataset=<id>  --search=<word>  --email=<account>  --password=<pwd>  --org=<id>
               --base=<ref>  --runs=<n>  --scenarios=<all|load,scroll,search,header-menu,hover>
               --no-throttle  --headed  --no-save
 

@@ -32,14 +32,13 @@ services:
       - OBSERVER_ACTIVE=false
       - CIPHER_PASSWORD=dev-cipher-password-0123456789abcdef
       # accounts in mongo: the test suites seed and clean their own sub-space (test_datafair_ for this
-      # repository, tests/support/sd-fixtures.ts) through the test API, npm run dev-fixtures seeds
-      # the demo world test_demo_ the same way (dev/resources/demo-world.json)
+      # repository, tests/support/sd-fixtures.ts) through the test API
       - STORAGE_TYPE=mongo
       - ENABLE_TEST_API=1
       # the test API needs NODE_ENV=development, the configuration stays the image's production one
       - NODE_ENV=development
       - NODE_CONFIG_ENV=production
-      - ADMINS=["test_datafair_superadmin@test.com","test_demo_dev@example.org"]
+      - ADMINS=["test_datafair_superadmin@test.com"]
       - CONTACT=contact@test.com
       # in dev simple-directory only notifies this service, directly (the shared identities router refuses calls through the proxy)
       - IDENTITIES_WEBHOOKS=[{"base":"http://localhost:${DEV_API_PORT}/api/v1/identities","key":"secret-identities"}]

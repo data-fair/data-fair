@@ -9,15 +9,14 @@ import { openInstrumentedPage } from './collect.ts'
 import { uiScenarios } from './scenarios.ts'
 import { compareRuns, verdict, type RunRecord, type Row } from './compare.ts'
 import { saveUiTableResults } from '../reporter.ts'
-import { loginCookies, cookieHeader } from './auth.ts'
-import { TABLE_PERF_ID } from '../../../dev/table-perf-fixture.ts'
+import { loginCookies, cookieHeader, type Credentials } from './auth.ts'
 
-export function preflightMessage (probe: { reachable: false } | { reachable: true, status: number, body?: { status?: string } }): string | null {
+export function preflightMessage (dataset: string, probe: { reachable: false } | { reachable: true, status: number, body?: { status?: string } }): string | null {
   if (!probe.reachable) return 'the dev stack is not reachable — start it with `npm run dev`'
-  if (probe.status === 404) return `the ${TABLE_PERF_ID} dataset is missing — run \`npm run dev-fixtures\``
-  if (probe.status === 401 || probe.status === 403) return `the dev user cannot read ${TABLE_PERF_ID} — run \`npm run dev-fixtures\``
-  if (probe.status !== 200) return `unexpected HTTP ${probe.status} reading the ${TABLE_PERF_ID} dataset — check that \`npm run dev\` is running`
-  if (probe.body?.status !== 'finalized') return `${TABLE_PERF_ID} is still indexing (status: ${probe.body?.status}) — retry later`
+  if (probe.status === 404) return `the ${dataset} dataset is missing — pass the id of an existing dataset with --dataset (see benchmark/README.md)`
+  if (probe.status === 401 || probe.status === 403) return `the account cannot read ${dataset} — pass an account that can with --email, --password and --org`
+  if (probe.status !== 200) return `unexpected HTTP ${probe.status} reading the ${dataset} dataset — check that \`npm run dev\` is running`
+  if (probe.body?.status !== 'finalized') return `${dataset} is still indexing (status: ${probe.body?.status}) — retry later`
   return null
 }
 
@@ -49,6 +48,11 @@ export async function uiTableCommand (argv: string[]): Promise<void> {
   const { values } = parseArgs({
     args: argv,
     options: {
+      dataset: { type: 'string' },
+      search: { type: 'string', default: 'Rennes' },
+      email: { type: 'string' },
+      password: { type: 'string' },
+      org: { type: 'string' },
       base: { type: 'string', default: 'master' },
       runs: { type: 'string', default: '5' },
       scenarios: { type: 'string', default: 'all' },
@@ -57,20 +61,27 @@ export async function uiTableCommand (argv: string[]): Promise<void> {
       'no-save': { type: 'boolean', default: false }
     }
   })
-  const runs = parseInt(values.runs!)
-  const scenarios = values.scenarios === 'all' ? uiScenarios : uiScenarios.filter(s => values.scenarios!.split(',').includes(s.name))
-  if (!scenarios.length) throw new Error(`no scenario matches "${values.scenarios}" (${uiScenarios.map(s => s.name).join(', ')})`)
   const origin = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}`
-  const tableUrl = `${origin}/data-fair/embed/dataset/${TABLE_PERF_ID}/table`
+  const dataset = values.dataset
+  if (!dataset) throw new Error('ui-table: --dataset is required (see benchmark/README.md for the data it expects)')
+  if (!!values.email !== !!values.password) throw new Error('ui-table: --email and --password go together')
+  const creds: Credentials | undefined = values.email ? { email: values.email, password: values.password!, ...(values.org ? { org: values.org } : {}) } : undefined
+  // without an account the dataset is read anonymously, so it must be public
+  const cookies = async () => creds ? await loginCookies(origin, creds) : []
+  const runs = parseInt(values.runs!)
+  const allScenarios = uiScenarios(values.search!)
+  const scenarios = values.scenarios === 'all' ? allScenarios : allScenarios.filter(s => values.scenarios!.split(',').includes(s.name))
+  if (!scenarios.length) throw new Error(`no scenario matches "${values.scenarios}" (${allScenarios.map(s => s.name).join(', ')})`)
+  const tableUrl = `${origin}/data-fair/embed/dataset/${dataset}/table`
 
-  let probe: Parameters<typeof preflightMessage>[0]
+  let probe: Parameters<typeof preflightMessage>[1]
   try {
-    const res = await fetch(`${origin}/data-fair/api/v1/datasets/${TABLE_PERF_ID}`, { headers: { Cookie: cookieHeader(await loginCookies(origin)) } })
+    const res = await fetch(`${origin}/data-fair/api/v1/datasets/${dataset}`, { headers: { Cookie: cookieHeader(await cookies()) } })
     probe = { reachable: true, status: res.status, body: res.ok ? await res.json() : undefined }
   } catch {
     probe = { reachable: false }
   }
-  const blocker = preflightMessage(probe)
+  const blocker = preflightMessage(dataset, probe)
   if (blocker) throw new Error(blocker)
   const uiConfigPath = extractUiConfigPath(await (await fetch(`${origin}/data-fair/`)).text())
 
@@ -86,7 +97,7 @@ export async function uiTableCommand (argv: string[]): Promise<void> {
       const context = await browser.newContext({ viewport: { width: 1920, height: 1080 } })
       try {
         await installVariantRoutes(context, { origin, buildDir: variants[variant].dir, uiConfigPath })
-        await context.addCookies(await loginCookies(origin))
+        await context.addCookies(await cookies())
         const h = await openInstrumentedPage(context, { throttle: !values['no-throttle'] })
         return await scenario.run(h, tableUrl)
       } catch (err: any) {

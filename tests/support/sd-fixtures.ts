@@ -1,7 +1,7 @@
 /**
  * The accounts of data-fair's test sub-space in simple-directory: every user, organization and member id
  * (and every email) starts with the prefix, so this suite seeds and cleans them without touching the
- * accounts of other sub-spaces (e.g. the demo world test_demo_ of dev/resources/demo-world.json) nor the unprefixed ones.
+ * accounts of other sub-spaces (dev data under another prefix, other suites) nor the unprefixed ones.
  *
  * Seeded by tests/global-setup.ts through simple-directory's test API (POST /api/test-env/seed), after
  * a cleanup of the prefix (DELETE /api/test-env?prefix=). All the users with a password use 'passwd'.

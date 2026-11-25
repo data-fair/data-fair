@@ -24,7 +24,7 @@ test.describe('admin pages', () => {
   test('displays errors page listing datasets in error', async ({ page, goToAsAdmin }) => {
     // the errors listing is global (all owners), so asserting an EMPTY datasets state
     // would break whenever the shared dev env contains deliberately-errored datasets
-    // (e.g. seeded by `npm run dev-fixtures`). Seed our own errored dataset (owned by
+    // (e.g. seeded as dev data). Seed our own errored dataset (owned by
     // a test user, removed by clean()) and assert it is listed.
     const ax = await axiosAuth('test_datafair_user1@test.com')
     const form = new FormData()

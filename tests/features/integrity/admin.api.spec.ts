@@ -11,7 +11,7 @@ import { ensureIntegrityBucket, listIntegrityKeys, waitForIntegrityRevisions, wa
 test.beforeAll(async () => { await ensureIntegrityBucket() })
 // reset test-owned datasets + limit counters before each test (the shared suite convention); the
 // integrity specs all run as the single test_datafair_superadmin, so without this their datasets accumulate
-// and hit the dev nbDatasets quota. clean() spares the demo world (it only cleans test_datafair_).
+// and hit the dev nbDatasets quota. clean() spares the other sub-spaces (it only cleans test_datafair_).
 test.beforeEach(async () => { await clean() })
 
 test('superadmin enable writes the initial anchor; non-admin is forbidden', async () => {

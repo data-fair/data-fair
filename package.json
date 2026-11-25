@@ -14,7 +14,6 @@
     "lint": "eslint --cache --cache-location node_modules/.cache/eslint/ . && npm -w ui run lint",
     "lint-fix": "eslint --fix . && npm -w ui run lint-fix",
     "stop-dev-deps": "docker compose --profile '*' stop",
-    "dev-fixtures": "dotenv -- node --experimental-strip-types --disable-warning=ExperimentalWarning dev/fixtures.ts",
     "dev-benchmark": "MODE=server_worker npm -w api run dev-benchmark",
     "dev-benchmark-prof": "MODE=server_worker npm -w api run dev-benchmark-prof",
     "dev": "bash dev/run.sh",

@@ -60,7 +60,7 @@ simple-directory stores its accounts in mongo. The accounts of this suite all st
 
 - `tests/global-setup.ts` cleans the sub-space in simple-directory (`DELETE /api/test-env?prefix=test_datafair_`) and seeds it (`POST /api/test-env/seed`), before playwright loads the spec files (many log in at import). The suite needs a simple-directory image with the prefixed test API (run `docker compose pull simple-directory`, or set `SD_IMAGE`); an older image is detected at the seed.
 - `clean()` (`tests/support/axios.ts`) calls `DELETE /api/v1/test-env?prefix=test_datafair_` on data-fair: it deletes what the sub-space owns (datasets and their indices and collections, applications, journals, settings, limits, application keys, data files) and the shared documents keyed by the sub-space (locks, integrity collections, remote services, base applications), and clears the in-memory caches. It leaves the tmp dir to `cleanTmp`, which ages its files out. Only the clean of this suite's own prefix (`test_datafair_` exactly) also resets the process-wide test state its specs rely on: the worker ping start date, the extensions and thumbnails caches (not keyed by owner) and the listeners of the test events stream. A clean under any other prefix leaves them alone, so it does not disturb another context running on the same data-fair. A prefix that is not `test_<a-z0-9 words>_` is refused (400).
-- The demo world of `npm run dev-fixtures` is another sub-space, `test_demo_` (`dev/resources/demo-world.json`, seeded with the same `POST /api/test-env/seed`): the suite's cleanups never touch it.
+- Other contexts sharing the same data-fair and simple-directory (dev data, other suites) use other prefixes: the suite's cleanups never touch them.
 
 ## File Naming Convention
 

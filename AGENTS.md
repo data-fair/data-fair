@@ -39,14 +39,15 @@ The dataset table (`ui/src/components/dataset/table/`) is a critical, optimized
 component. When a change touches it, or what it relies on
 (`ui/src/composables/dataset/lines.ts`, the filters composables, `use-headers.ts`):
 
-1. Run `npm run benchmark -- ui-table --base=master`. It takes about 10 minutes, so run
-   it in the background. Put the verdict and any flagged lines in your summary (see
-   `benchmark/README.md`, "UI table harness").
-2. Give the user the fixture's table URL on the dev stack,
-   `/data-fair/embed/dataset/fixtures-table-perf/table`, for a manual look at
-   scrolling, search and menus. It needs a dev session, since the dataset is private
-   on purpose: never make a dev fixture public, because the test suites count every
-   dataset a user can read.
+1. Run `npm run benchmark -- ui-table --dataset=<id> --base=master` (plus the account
+   options), on a dev dataset with the shape described in `benchmark/README.md`, "UI table
+   harness". It takes about 10 minutes, so run it in the background. Put the verdict and
+   any flagged lines in your summary. If no such dataset exists in the dev environment,
+   ask the user for one.
+2. Give the user the dataset's table URL on the dev stack,
+   `/data-fair/embed/dataset/<id>/table`, for a manual look at scrolling, search and
+   menus. It needs a dev session, since the dataset is private on purpose: never make a
+   dev dataset public, because the test suites count every dataset a user can read.
 
 ### Linting & Type Checking
 
