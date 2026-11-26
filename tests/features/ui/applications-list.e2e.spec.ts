@@ -77,7 +77,7 @@ test.describe('applications list page', () => {
   })
 
   test('list view rows show the capture, the title and the date', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/applications', 'test_user1')
+    await goToWithAuth('/data-fair/applications', 'test_datafair_user1')
     await expect(page.locator('.v-container .v-card').first()).toBeVisible({ timeout: 10000 })
 
     await page.locator('#navigation-right-local button[value="list"]').click()
