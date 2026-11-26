@@ -98,7 +98,7 @@ test.describe('buildDcatCatalog', () => {
       isMetaOnly: true,
       attachments: [
         { type: 'file', name: 'doc 1.pdf', title: 'Documentation', mimetype: 'application/pdf', size: 5, includeInCatalogPublications: true },
-        { type: 'url', url: 'https://other.test/page', title: 'Link', includeInCatalogPublications: true },
+        { type: 'url', url: 'https://other.test/data.csv?token=1', title: 'Link', includeInCatalogPublications: true },
         { type: 'file', name: 'thumb.jpg', title: 'Not published' }
       ]
     }], site, 'https://df.test')
@@ -107,8 +107,25 @@ test.describe('buildDcatCatalog', () => {
     assert.equal(distributions[0]['@id'], 'https://df.test/api/v1/datasets/m1/metadata-attachments/doc%201.pdf')
     assert.equal(distributions[0]['dct:title'], 'Documentation')
     assert.equal(distributions[0]['dct:format']?.['@id'], 'http://publications.europa.eu/resource/authority/file-type/PDF')
-    assert.equal(distributions[1]['dcat:accessURL']['@id'], 'https://other.test/page')
+    assert.equal(distributions[1]['dcat:accessURL']['@id'], 'https://other.test/data.csv?token=1')
+    assert.equal(distributions[1]['dct:format']?.['@id'], 'http://publications.europa.eu/resource/authority/file-type/CSV')
+    // a blank node without the dataset license: the same link on 2 datasets must not merge their distributions
+    assert.equal(distributions[1]['@id'], undefined)
+    assert.equal(distributions[1]['dct:license'], undefined)
     assert.equal(distributions[1]['dcat:downloadURL'], undefined)
+  })
+
+  test('leaves out the distributions the caller cannot reach', () => {
+    const dataset = {
+      ...fileDataset,
+      attachments: [
+        { type: 'file', name: 'doc.pdf', title: 'Documentation', includeInCatalogPublications: true },
+        { type: 'url', url: 'https://other.test/page', title: 'Link', includeInCatalogPublications: true }
+      ]
+    }
+    const result = buildDcatCatalog([dataset], site, 'https://df.test', {}, 'fr', () => false)
+    const distributions = result['dcat:dataset'][0]['dcat:distribution']!
+    assert.deepEqual(distributions.map((d: any) => d['dcat:accessURL']['@id']), ['https://other.test/page'])
   })
 
   test('uses the datasetUrlTemplate and each dataset own modification date', () => {

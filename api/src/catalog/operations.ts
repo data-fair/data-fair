@@ -58,8 +58,12 @@ const dcatApTexts = {
 const iri = (url: string, type?: string) => type ? { '@id': url, '@type': type } : { '@id': url }
 const dateLiteral = (value: string) => ({ '@value': value, '@type': /^\d{4}-\d{2}-\d{2}$/.test(value) ? 'xsd:date' : 'xsd:dateTime' })
 const fileExtension = (name: string) => name.split('.').pop()?.toLowerCase() ?? ''
+const urlExtension = (url: string) => {
+  try { return fileExtension(new URL(url).pathname) } catch { return '' }
+}
 
-export const buildDcatCatalog = (datasets: any[], publicationSite: any, publicBaseUrl: string, ownerInfo: any = {}, locale = 'fr') => {
+// can: whether the caller may run an operation on a dataset, to leave out the distributions it cannot reach
+export const buildDcatCatalog = (datasets: any[], publicationSite: any, publicBaseUrl: string, ownerInfo: any = {}, locale = 'fr', can: (dataset: any, operationId: string) => boolean = () => true) => {
   const texts = locale === 'en' ? dcatApTexts.en : dcatApTexts.fr
   const datasetUrlTemplate = publicationSite.datasetUrlTemplate || publicationSite.url + '/datasets/{id}'
   const siteTitle = publicationSite.title || publicationSite.owner?.name || publicationSite.url
@@ -87,7 +91,7 @@ export const buildDcatCatalog = (datasets: any[], publicationSite: any, publicBa
 
     const distributions: any[] = []
     const fileDistribution = (file: any, url: string, identifier: string, title?: string, description?: string): Record<string, any> => {
-      const ext = fileExtension(file.name ?? url)
+      const ext = file.name ? fileExtension(file.name) : urlExtension(url)
       const mediaType = file.mimetype?.split(';')[0].trim()
       return {
         '@id': url,
@@ -104,7 +108,7 @@ export const buildDcatCatalog = (datasets: any[], publicationSite: any, publicBa
         'dct:license': license
       }
     }
-    if (dataset.file && dataset.originalFile) {
+    if (dataset.file && dataset.originalFile && can(dataset, 'downloadOriginalData')) {
       const original = { ...dataset.originalFile, updatedAt: dataset.dataUpdatedAt }
       distributions.push(fileDistribution(original, `${datasetApiUrl}/raw`, `${dataset.id}/raw`))
       if (dataset.file.mimetype !== dataset.originalFile.mimetype) {
@@ -113,15 +117,21 @@ export const buildDcatCatalog = (datasets: any[], publicationSite: any, publicBa
     }
     for (const attachment of dataset.attachments ?? []) {
       if (!attachment.includeInCatalogPublications) continue
-      const url = attachment.type === 'url' ? attachment.url : `${datasetApiUrl}/metadata-attachments/${encodeURIComponent(attachment.name)}`
-      if (!url) continue
+      const isLink = attachment.type === 'url'
+      if (isLink ? !attachment.url : !can(dataset, 'downloadMetadataAttachment')) continue
+      const url = isLink ? attachment.url : `${datasetApiUrl}/metadata-attachments/${encodeURIComponent(attachment.name)}`
       const distribution = fileDistribution(attachment, url, `${dataset.id}/attachments/${attachment.name ?? attachment.url}`, attachment.title, attachment.description)
-      // a link may be a web page, not a download
-      if (attachment.type === 'url') delete distribution['dcat:downloadURL']
+      if (isLink) {
+        // a blank node: the external URL shared by several datasets would merge their distributions,
+        // a link may be a web page, not a download, and the dataset license is not its license
+        delete distribution['@id']
+        delete distribution['dcat:downloadURL']
+        delete distribution['dct:license']
+      }
       distributions.push(distribution)
     }
     // every dataset with data has a queryable API, the only distribution of REST and virtual datasets
-    if (!dataset.isMetaOnly) {
+    if (!dataset.isMetaOnly && can(dataset, 'readLines')) {
       distributions.push({
         '@id': `${datasetApiUrl}/lines`,
         '@type': 'dcat:Distribution',
