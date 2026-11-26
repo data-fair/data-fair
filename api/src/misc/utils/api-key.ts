@@ -9,7 +9,7 @@ import type { RequestWithResource } from '#types'
 import { type OrganizationMembership, type SessionState, setReqSession, type Account, assertReqInternal } from '@data-fair/lib-express'
 import type { NextFunction, Response, Request } from 'express'
 import { isDepartmentSettings, isUserSettings } from '../../settings/operations.ts'
-import { reqResourceOptional, setReqBypassPermissions, setReqApiKeyRef } from './req-context.ts'
+import { reqResourceOptional, reqDatasetOptional, setReqBypassPermissions, setReqApiKeyRef } from './req-context.ts'
 import dayjs from 'dayjs'
 import { withLogContext } from '@data-fair/lib-node/log.js'
 import { sessionLogFields } from '@data-fair/lib-express/req-log-context.js'
@@ -27,29 +27,48 @@ const findApiKeySettings = memoize(async (hashedApiKey: string) => {
 // (other nodes converge within the 30s TTL)
 export const clearApiKeysCache = () => { findApiKeySettings.clear() }
 
+const resourceReadApiKeySession = (req: RequestWithResource): SessionState & { isApiKey: true } => {
+  setReqBypassPermissions(req, { classes: ['read'] })
+  const user = {
+    id: 'readApiKey',
+    name: 'Read API key for specifc resource',
+    email: '',
+    organizations: []
+  }
+  return {
+    lang: 'fr',
+    isApiKey: true,
+    user,
+    account: { type: 'user', id: user.id, name: user.name },
+    accountRole: config.adminRole
+  }
+}
+
+const isFreshDatasetReadApiKey = async (req: RequestWithResource, rawApiKey: string) => {
+  const dataset = reqDatasetOptional(req)
+  if (!dataset) return false
+  const found = await mongo.datasets.findOne(
+    { id: dataset.id, $or: [{ '_readApiKey.current': rawApiKey }, { '_readApiKey.previous': rawApiKey }] },
+    { projection: { _id: 0, id: 1 } }
+  )
+  return !!found
+}
+
 export const readApiKey = async (rawApiKey: string, scopes: string[], asAccount?: Account | string, req?: RequestWithResource): Promise<SessionState & { isApiKey: true }> => {
   const resource = req && reqResourceOptional(req)
   if (req && resource?._readApiKey && (resource._readApiKey.current === rawApiKey || resource._readApiKey.previous === rawApiKey)) {
-    setReqBypassPermissions(req, { classes: ['read'] })
-    const user = {
-      id: 'readApiKey',
-      name: 'Read API key for specifc resource',
-      email: '',
-      organizations: []
-    }
-    return {
-      lang: 'fr',
-      isApiKey: true,
-      user,
-      account: { type: 'user', id: user.id, name: user.name },
-      accountRole: config.adminRole
-    }
+    return resourceReadApiKeySession(req)
   } else {
     const hash = crypto.createHash('sha512')
     hash.update(rawApiKey)
     const hashedApiKey = hash.digest('hex')
     const settings = await findApiKeySettings(hashedApiKey)
-    if (!settings) throw i18nHttpError(401, 'errors.apiKeys.unknown')
+    if (!settings) {
+      // the dataset may come from the 30s cache, older than a key that was just created or rotated:
+      // check the stored key before refusing (only unknown keys pay this query)
+      if (req && await isFreshDatasetReadApiKey(req, rawApiKey)) return resourceReadApiKeySession(req)
+      throw i18nHttpError(401, 'errors.apiKeys.unknown')
+    }
     const apiKey = settings.apiKeys?.[0]
     if (!apiKey) throw i18nHttpError(401, 'errors.apiKeys.unknown')
     if (apiKey.expireAt && apiKey.expireAt < dayjs().format('YYYY-MM-DD')) {

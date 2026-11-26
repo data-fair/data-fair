@@ -135,7 +135,12 @@ dataset-related memoize caches between tests.
 (`api/src/datasets/middlewares.js:74`) chooses:
 
 - `tolerateStale = !acceptedStatuses && !noCache && NODE_ENV !== 'development'` ⇒ use the raw 30 s
-  memoize cache. For read-only data endpoints where being ≤ 30 s stale is acceptable.
+  memoize cache. For read-only data endpoints where being ≤ 30 s stale is acceptable. In
+  development a test can still get this production path for one request with the
+  `x-test-stale-cache: true` header (the read API key tests use it).
+- A read API key that does not match the cached dataset is checked against the stored dataset
+  before the 401 (`misc/utils/api-key.ts`), so a key works as soon as it is created or rotated;
+  `GET /datasets/:id/read-api-key` is `noCache` for the same reason.
 - otherwise ⇒ `getDatasetFresh`: calls `memoizedGetDataset`, then runs a **cheap projection query**
   (`{updatedAt, finalizedAt, status, errorStatus, errorRetry}`, plus `draft.updatedAt` in draft
   mode) and, if any changed, re-reads the full dataset. "Validate before trusting the cache."
