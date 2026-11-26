@@ -83,13 +83,21 @@ export class S3Backend implements FileBackend {
 
   async lsrWithStats (targetPath: string): Promise<FileStats[]> {
     debug('lrsWithStats', targetPath, this.bucketPath(targetPath))
-    const command = new ListObjectsV2Command({ Bucket: this.bucket, Prefix: this.bucketDirPrefix(targetPath) })
-    const response = await this.metadataClient.send(command)
-    const filesStats = (response.Contents || []).map((obj) => ({
-      path: relativePath(targetPath, joinPath(this.dataDir, obj.Key!)),
-      size: obj.Size!,
-      lastModified: obj.LastModified!,
-    }))
+    // a single ListObjectsV2 call stops at 1000 keys
+    const pages = paginateListObjectsV2(
+      { client: this.metadataClient },
+      { Bucket: this.bucket, Prefix: this.bucketDirPrefix(targetPath) }
+    )
+    const filesStats: FileStats[] = []
+    for await (const page of pages) {
+      for (const obj of page.Contents ?? []) {
+        filesStats.push({
+          path: relativePath(targetPath, joinPath(this.dataDir, obj.Key!)),
+          size: obj.Size!,
+          lastModified: obj.LastModified!,
+        })
+      }
+    }
     debug(' -> ', filesStats)
     return filesStats
   }

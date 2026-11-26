@@ -8,27 +8,27 @@ test.describe('embed dataset table page', () => {
   })
 
   test('displays dataset table with data', { tag: '@smoke' }, async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
 
-    await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_user1')
+    await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_datafair_user1')
     await expect(page.locator('table')).toBeVisible({ timeout: 10000 })
   })
 
   test('hides the pagination buttons when every line fits on one page', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
 
-    await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table?pagination=true&interaction=sort`, 'test_user1')
+    await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table?pagination=true&interaction=sort`, 'test_datafair_user1')
     await expect(page.locator('tbody tr')).toHaveCount(2, { timeout: 10000 })
     await expect(page.locator('.v-toolbar')).toHaveCount(0)
   })
 
   test('selects a line from the card list display', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
 
-    await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table?display=list&selectable=true`, 'test_user1')
+    await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table?display=list&selectable=true`, 'test_datafair_user1')
     const card = page.locator('.dataset-table-card').filter({ hasText: 'koumoul' })
     await card.getByTitle('Sélectionner la ligne').click()
     await expect(page).toHaveURL(/_id_eq=/)
@@ -37,12 +37,12 @@ test.describe('embed dataset table page', () => {
 
   // a line _id is free text in REST datasets and used to be part of a CSS selector, breaking the menu
   test('opens the value menu of a card whose line _id is not a valid CSS identifier', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'Dotted ids', schema: [{ key: 'city', type: 'string' }] })).data
     await waitForFinalize(ax, dataset.id)
     await ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines`, [{ _id: 'box.1', city: 'Quimper' }])
 
-    await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table?display=list`, 'test_user1')
+    await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table?display=list`, 'test_datafair_user1')
     await page.locator('.dataset-table-card').getByText('Quimper', { exact: true }).click({ timeout: 10000 })
     await expect(page.getByText('Ajouter un filtre')).toBeVisible()
   })
@@ -50,10 +50,10 @@ test.describe('embed dataset table page', () => {
   // the infinite-scroll sentinel stays visible on a short list and used to fetch the first page a
   // second time while the filter reset was loading it, duplicating the cards
   test('does not duplicate cards when filtering the card list display', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
 
-    await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table?display=list`, 'test_user1')
+    await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table?display=list`, 'test_datafair_user1')
     const cards = page.locator('.dataset-table-card')
     await expect(cards).toHaveCount(2, { timeout: 10000 })
     await cards.getByText('koumoul', { exact: true }).click()
@@ -66,10 +66,10 @@ test.describe('embed dataset table page', () => {
 
   // the card menu filters depend on the "filters" interaction only, as the table header menus do
   test('filters from the card menu when cell interactions are disabled', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
 
-    await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table?display=list&interaction=-cells`, 'test_user1')
+    await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table?display=list&interaction=-cells`, 'test_datafair_user1')
     const cards = page.locator('.dataset-table-card')
     await expect(cards).toHaveCount(2, { timeout: 10000 })
     await cards.getByText('koumoul', { exact: true }).click()
@@ -81,10 +81,10 @@ test.describe('embed dataset table page', () => {
 
   // the sentinel stays visible when a filter fails, and used to retry the failing page in a loop
   test('does not retry a failing page of the card list display in a loop', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
 
-    await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table?display=list`, 'test_user1')
+    await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table?display=list`, 'test_datafair_user1')
     await expect(page.locator('.dataset-table-card')).toHaveCount(2, { timeout: 10000 })
     let failures = 0
     page.on('response', res => { if (res.url().includes('/lines?') && res.status() === 400) failures++ })
@@ -100,10 +100,10 @@ test.describe('embed dataset table page', () => {
   })
 
   test('displays dataset journal', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
 
-    await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/journal`, 'test_user1')
+    await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/journal`, 'test_datafair_user1')
     await expect(page.getByText('le jeu de données a été entièrement traité')).toBeVisible({ timeout: 10000 })
   })
 
@@ -112,10 +112,10 @@ test.describe('embed dataset table page', () => {
   // `id_in=koumoul` is a single-value "in" filter, normalized to "eq" internally by addFilter,
   // which also guards against a naive removal loop matching operators by strict equality.
   test('refetches when a URL filter is removed externally', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
 
-    await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table?id_in=koumoul`, 'test_user1')
+    await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table?id_in=koumoul`, 'test_datafair_user1')
 
     // the filter is applied: only the matching row is shown
     await expect(page.getByRole('cell', { name: 'koumoul' })).toBeVisible({ timeout: 10000 })

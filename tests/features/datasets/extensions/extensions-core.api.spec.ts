@@ -5,8 +5,8 @@ import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
 import { waitForFinalize, sendDataset, waitForDatasetError, setupMockRoute, clearMockRoutes, getMockReceivedRequests, restCollectionCount } from '../../../support/workers.ts'
 
-const testUser1 = await axiosAuth('test_user1@test.com')
-const testSuperadmin = await axiosAuth('test_superadmin@test.com', undefined, true)
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
+const testSuperadmin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
 
 // Helper to set up geocoder coords mock via the mock server (replaces nock-based setCoordsNock)
 const setupCoordsMock = async (latLon: number, opts?: { multiply?: boolean }) => {

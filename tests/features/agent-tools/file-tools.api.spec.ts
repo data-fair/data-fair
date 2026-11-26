@@ -11,7 +11,7 @@ import { load, type Tool } from '@data-fair/openapi-mcp'
 import { axiosAuth, baseURL, clean, checkPendingTasks } from '../../support/axios.ts'
 import { sendDataset, waitForFinalize, doAndWaitForFinalize, getRawDataset } from '../../support/workers.ts'
 
-const testUser1 = await axiosAuth('test_user1@test.com')
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
 const ctx = { headers: { cookie: testUser1.cookieJar.getCookieStringSync(baseURL) } }
 
 const dataset1 = readFileSync('./tests/resources/datasets/dataset1.csv')
@@ -124,7 +124,8 @@ test.describe('file tools against the API', () => {
 
     const exported = await tool('export_data').execute({ datasetId: id, select: ['id', 'nb'] }, ctx)
     assert.equal(exported.resourceLink!.mimeType, 'text/csv')
-    assert.equal(exported.resourceLink!.name, `${id}-lines.csv`)
+    // openapi-mcp strips leading dashes from link names, and random ids can start with one
+    assert.equal(exported.resourceLink!.name, `${id.replace(/^-+/, '')}-lines.csv`)
     res = await fetch(exported.resourceLink!.uri, { headers: ctx.headers })
     assert.equal(res.status, 200)
     assert.match(res.headers.get('content-type') ?? '', /text\/csv/)

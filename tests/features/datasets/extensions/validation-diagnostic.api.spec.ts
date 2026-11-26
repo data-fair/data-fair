@@ -4,7 +4,7 @@ import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks, waitForWorkerIdle } from '../../../support/axios.ts'
 import { waitForFinalize, sendDataset, waitForDatasetError, setupMockRoute, clearMockRoutes, waitForJournalEvent } from '../../../support/workers.ts'
 
-const testUser1 = await axiosAuth('test_user1@test.com')
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
 
 const fetchDiagnostic = async (datasetId: string) => {
   return testUser1.get(`/api/v1/datasets/${datasetId}/validation-diagnostic.csv`, {

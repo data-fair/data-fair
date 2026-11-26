@@ -132,6 +132,11 @@ const projCoordinates = (projection: { proj4: string }, coordinates: any[]): voi
 }
 
 export const geometry2fields = async (dataset: Dataset, doc: Record<string, any>): Promise<Record<string, any>> => {
+  // Yield first: the line reaches us synchronously from the read stream, whose frames still reference
+  // the geometry as parsed (the json scanner, and a stale interpreter register of the transform that
+  // stringified it). Awaiting unwinds them, so that object can be collected before we parse and
+  // simplify our own copy: ~230MB of heap less at 1M vertices (measured with JSONStream).
+  await Promise.resolve()
   const schema = dataset.schema ?? []
   let geometry: any, capabilities: any
 
@@ -244,27 +249,20 @@ export const aggs2geojson = (aggsResult: { total: number, aggs: Array<{ centroid
 
 export { result2wkt } from './geo-features.ts'
 
-// Simple wrapping of the command line prepair https://github.com/tudelft3d/prepair
-// help fixing some polygons
+// Repairs self-intersecting polygons with the prepair command line tool https://github.com/tudelft3d/prepair
+// Each polygon of a multipolygon is repaired on its own: prepair's odd-even rule applied to the whole
+// multipolygon would remove the areas where its polygons overlap (that Elasticsearch accepts). They
+// are all repaired in one run of prepair, as the features of one collection.
 const customUnkink = async (geometry: any): Promise<void> => {
   try {
-    if (geometry.type === 'MultiPolygon') {
-      const newCoordinates: any[] = []
-      for (const coordinates of geometry.coordinates) {
-        const childPolygon = { type: 'Polygon', coordinates }
-        await prepair(childPolygon)
-        if (childPolygon.type === 'Polygon') newCoordinates.push(childPolygon.coordinates)
-        else if (childPolygon.type === 'MultiPolygon') {
-          for (const c of (childPolygon as any).geometry.coordinates) {
-            newCoordinates.push(c)
-          }
-        } else {
-          throw new Error('Unexpected geometry type after prepair')
-        }
-      }
-      geometry.coordinates = newCoordinates
+    const polygons = await prepair(geometry.type === 'MultiPolygon' ? geometry.coordinates : [geometry.coordinates])
+    if (!polygons.length) throw new Error('no polygon left after prepair')
+    if (polygons.length === 1) {
+      geometry.type = 'Polygon'
+      geometry.coordinates = polygons[0]
     } else {
-      await prepair(geometry)
+      geometry.type = 'MultiPolygon'
+      geometry.coordinates = polygons
     }
   } catch (err) {
     debug('Failed to use the prepair command line tool', err)
@@ -274,20 +272,30 @@ const customUnkink = async (geometry: any): Promise<void> => {
   }
 }
 
-const prepair = async (geometry: any): Promise<any> => {
+// the repaired polygons: a polygon prepair splits gives several, a degenerate one (no area) gives none
+const prepair = async (polygons: any[][]): Promise<any[][]> => {
   const tmpGeojsonDir = await tmp.dir({ prefix: 'prepair-', tmpdir: tmpDir, unsafeCleanup: true })
   try {
-    // const wkt = wktParser.convert(feature.geometry)
     const fileIn = join(tmpGeojsonDir.path, 'in.geojson')
     const fileOut = join(tmpGeojsonDir.path, 'out.geojson')
-    await writeFile(fileIn, JSON.stringify({ type: 'Feature', geometry }))
+    await writeFile(fileIn, JSON.stringify({
+      type: 'FeatureCollection',
+      features: polygons.map(coordinates => ({ type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates } }))
+    }))
     const cmd = `prepair --ogrin '${fileIn}' --ogrout '${fileOut}'`
     debug('run command: ', cmd)
     await exec(cmd, { maxBuffer: 100000000 })
-    const repairedGeojson = JSON.parse(await readFile(fileOut, 'utf8'))
-    geometry.coordinates = repairedGeojson?.features[0]?.geometry?.coordinates
-    geometry.type = repairedGeojson?.features[0]?.geometry?.type
-    return geometry
+    const repairedFeatures = JSON.parse(await readFile(fileOut, 'utf8'))?.features
+    if (repairedFeatures?.length !== polygons.length) throw new Error(`prepair returned ${repairedFeatures?.length} features for ${polygons.length} polygons`)
+    const repaired: any[][] = []
+    for (const { geometry } of repairedFeatures) {
+      // null or empty geometry for a degenerate polygon
+      if (!geometry) continue
+      if (geometry.type === 'Polygon') repaired.push(geometry.coordinates)
+      else if (geometry.type === 'MultiPolygon') repaired.push(...geometry.coordinates)
+      else throw new Error('Unexpected geometry type after prepair ' + geometry.type)
+    }
+    return repaired.filter(polygon => polygon?.[0]?.length)
   } finally {
     if (debug.enabled) {
       debug('preserving tmp file for debug', tmpGeojsonDir.path)

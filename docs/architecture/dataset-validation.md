@@ -57,7 +57,7 @@ Phase B reuses `extensionsUtils.extend()` with an `onLineError(absoluteIndex, er
 
 ### Why a single worker
 
-Originally the design had two workers (`validate-file.ts` then `extend.ts`) writing to two separate diagnostic files. The follow-up spec (`docs/superpowers/specs/2026-05-05-process-file-merge-design.md`) merged them so that **schema and extension errors from the same processing attempt land in the same CSV**. The internal stream classes (`ValidateStream`, `ExtensionsStream`) were kept; only the worker that owns them was unified.
+Originally the design had two workers (`validate-file.ts` then `extend.ts`) writing to two separate diagnostic files. A follow-up merged them so that **schema and extension errors from the same processing attempt land in the same CSV**. The internal stream classes (`ValidateStream`, `ExtensionsStream`) were kept; only the worker that owns them was unified.
 
 ### Status transitions
 
@@ -247,7 +247,7 @@ Each duplicate group's `raw_value` in the diagnostic CSV goes through `unicityKe
 Changing `constraints` on a **file** dataset (adding, removing, or replacing a `unique` constraint, with no `dateCoherence` constraint in play) sets `dataset.status` to `reindexerStatus` (`'validated'` for file datasets) in `api/src/datasets/utils/patch.ts`, so the whole file gets rebuilt into a temp index and the gate above re-runs against the current data — this is what makes both directions of the constraint lifecycle actually take effect:
 
 - adding a constraint to a **finalized** dataset whose existing data violates it drives the dataset into the same error state described above, with a `unicityErrorCount`-carrying diagnostic;
-- dropping (or loosening) the constraint of a dataset that is currently in that **error** state lets it pick up the retry from `errorStatus` and re-finalize normally, since the gate no longer has anything to reject — this is the "drop the constraint to recover" path referenced in `dev/fixtures.ts`, and it also discards the now-stale diagnostic file from the previous run.
+- dropping (or loosening) the constraint of a dataset that is currently in that **error** state lets it pick up the retry from `errorStatus` and re-finalize normally, since the gate no longer has anything to reject — this is the "drop the constraint to recover" path, and it also discards the now-stale diagnostic file from the previous run.
 
 This status assignment is applied as a **floor**, after the rest of the status-trigger chain has already run, rather than as one more branch inside it — so it never wins a first-match-wins tie against another trigger fired by the same `PATCH` (e.g. the structure tab saving a schema `x-transform` or a validation-rule change together with a constraint change in one request). Concretely: if the chain already picked a status that reaches the index-lines gate on its own (`'loaded'`, `'analyzed'`, or `'validated'`), it is left untouched; if the chain picked `'validation-updated'` — which `process-file.ts` finalizes directly without ever visiting index-lines — it is escalated to `'analyzed'` instead, so the combined `PATCH` re-checks both the validation rule and the constraint; and if the chain picked no status at all (a constraints-only `PATCH`), the floor applies `reindexerStatus` directly.
 
@@ -353,8 +353,3 @@ Scope, deliberately narrow:
 - Only keys **absent from the dataset's current schema** are checked, so datasets predating the gate stay patchable.
 - `x-calculated` and `x-extension` properties are exempt: they legitimately use `_` prefixes and dots (an extension key is `propertyPrefix.field`, and `buildIndexMappings` maps it to a real nested object).
 - **Virtual datasets are exempt**: their schema is derived from their children by `prepareVirtualDatasetPatch`, never from the request.
-
-## Related design specs
-
-- `docs/superpowers/specs/2026-04-29-extension-validation-design.md` — original mandatory-extension + diagnostic-file design (partly superseded).
-- `docs/superpowers/specs/2026-05-05-process-file-merge-design.md` — the worker-merge follow-up that produced `process-file.ts`.

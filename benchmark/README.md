@@ -3,8 +3,7 @@
 An Elasticsearch query evaluation harness for data-fair. Measures per-query ES cost on
 large, realistically-shaped datasets and runs A/B comparisons of query variants.
 
-See [`../docs/superpowers/specs/2026-05-22-es-query-evaluation-harness-design.md`](../docs/superpowers/specs/2026-05-22-es-query-evaluation-harness-design.md)
-for the design and [`INVESTIGATIONS.md`](./INVESTIGATIONS.md) for the follow-up backlog.
+See [`INVESTIGATIONS.md`](./INVESTIGATIONS.md) for the follow-up backlog.
 
 ## Setup
 
@@ -48,15 +47,25 @@ browser, a Playwright route answers the build's files from disk and lets API and
 requests through, so only the bundle differs. `ui/dist` is never written.
 
 Prerequisites:
-- the dev stack is up (`npx --no df-dev status`);
-- the `fixtures-table-perf` dataset exists (`npm run dev-fixtures`). It has 50 columns and
-  10,000 rows, and belongs to the `dev_fixtures` org: open
-  `/data-fair/embed/dataset/fixtures-table-perf/table` in your dev session. The harness
-  signs in as the dev user itself. The dataset is not public on purpose: the test suites run
-  against the same API and count every dataset a user can read.
+- the dev stack is up (`npm run dev`);
+- a finalized dataset to measure, passed with `--dataset=<id>`. Results are only comparable
+  between runs on the same data. The scenarios expect a wide and long table that stresses the
+  rendering, for example:
+  - about 50 columns, mixing the kinds the table renders differently: short and long strings
+    (several hundred characters), low-cardinality strings, integers, decimals, dates,
+    date-times, booleans, URLs and multi-valued strings (with a separator);
+  - about 10,000 rows, so the scroll scenario keeps fetching pages;
+  - a search word (`--search`, default `Rennes`) present in a minority of the rows (a few
+    percent), so a search narrows the results.
+- an account that can read it, passed with `--email`, `--password` and optionally `--org`
+  (the active organization). The harness signs in with it in each browser context. Without
+  `--email` the dataset is read anonymously and must be public. Keep a dev dataset private:
+  the test suites run against the same API and count every dataset a user can read.
 
-    npm run benchmark -- ui-table --base=master                    # all scenarios, ~10 minutes
-    npm run benchmark -- ui-table --scenarios=hover,search --runs=3   # targeted, a few minutes
+Open `/data-fair/embed/dataset/<id>/table` in a dev session for a manual look at the same table.
+
+    npm run benchmark -- ui-table --dataset=<id> --email=<account> --password=<pwd> --org=<org> --base=master   # all scenarios, ~10 minutes
+    npm run benchmark -- ui-table --dataset=<id> --email=<account> --password=<pwd> --scenarios=hover,search --runs=3   # targeted, a few minutes
 
 Scenarios:
 - `load`: navigation until the first rows are drawn;

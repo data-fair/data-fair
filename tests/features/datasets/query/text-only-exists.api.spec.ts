@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { axiosAuth, clean } from '../../../support/axios.ts'
 import { waitForFinalize } from '../../../support/workers.ts'
 
-const ax = await axiosAuth('test_user1@test.com')
+const ax = await axiosAuth('test_datafair_user1@test.com')
 
 // A "long text" column, as prepareSchema configures textarea/markdown fields: no exact keyword
 // index, no doc_values, only the analyzed sub-field. Existence must still be filterable.

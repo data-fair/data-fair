@@ -3,9 +3,9 @@ import assert from 'node:assert/strict'
 import dayjs from 'dayjs'
 import { axiosAuth, clean, checkPendingTasks, anonymousAx, apiUrl } from '../../support/axios.ts'
 
-const testUser1 = await axiosAuth('test_user1@test.com')
-const testUser1Org = await axiosAuth('test_user1@test.com', 'test_org1')
-const testUser4Org = await axiosAuth('test_user4@test.com', 'test_org1')
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
+const testUser1Org = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
+const testUser4Org = await axiosAuth('test_datafair_user4@test.com', 'test_datafair_org1')
 
 test.describe('settings API', () => {
   test.beforeEach(async () => {
@@ -18,48 +18,48 @@ test.describe('settings API', () => {
 
   test('should reject wrong account type', async () => {
     await assert.rejects(
-      testUser1.get('/api/v1/settings/unknown/test_user1'),
+      testUser1.get('/api/v1/settings/unknown/test_datafair_user1'),
       { status: 400 }
     )
   })
 
   test('should reject anonymous request', async () => {
     await assert.rejects(
-      testUser1.get('/api/v1/settings/user/test_user4'),
+      testUser1.get('/api/v1/settings/user/test_datafair_user4'),
       { status: 403 }
     )
   })
 
   test('should read user empty settings', async () => {
-    const res = await testUser1.get('/api/v1/settings/user/test_user1')
+    const res = await testUser1.get('/api/v1/settings/user/test_datafair_user1')
     assert.equal(res.status, 200)
     assert.deepEqual(res.data, {})
   })
 
   test('should reject update with wrong format', async () => {
     await assert.rejects(
-      testUser1.put('/api/v1/settings/user/test_user1', { forbiddenKey: 'not allowed' }),
+      testUser1.put('/api/v1/settings/user/test_datafair_user1', { forbiddenKey: 'not allowed' }),
       { status: 400 }
     )
   })
 
   test('should read settings as organization admin', async () => {
-    const res = await testUser1Org.get('/api/v1/settings/organization/test_org1')
+    const res = await testUser1Org.get('/api/v1/settings/organization/test_datafair_org1')
     assert.equal(res.status, 200)
     assert.deepEqual(res.data, {})
   })
 
   test('should write settings as organization admin', async () => {
-    await testUser1Org.put('/api/v1/settings/organization/test_org1', { topics: [{ id: 'topic1', title: 'Topic 1' }] })
-    const res = await testUser1Org.get('/api/v1/settings/organization/test_org1')
+    await testUser1Org.put('/api/v1/settings/organization/test_datafair_org1', { topics: [{ id: 'topic1', title: 'Topic 1' }] })
+    const res = await testUser1Org.get('/api/v1/settings/organization/test_datafair_org1')
     assert.equal(res.status, 200)
     assert.deepEqual(res.data.topics, [{ id: 'topic1', title: 'Topic 1' }])
   })
 
   test('should write and read settings as organization department admin', async () => {
-    await assert.rejects(testUser4Org.put('/api/v1/settings/organization/test_org1:dep1', { topics: [{ id: 'topic1', title: 'Topic 1' }] }), (err: any) => err.status === 400)
-    await testUser1Org.put('/api/v1/settings/organization/test_org1:dep1', { apiKeys: [{ title: 'Api key 1', scopes: [] }] })
-    const res = await testUser4Org.get('/api/v1/settings/organization/test_org1:dep1')
+    await assert.rejects(testUser4Org.put('/api/v1/settings/organization/test_datafair_org1:dep1', { topics: [{ id: 'topic1', title: 'Topic 1' }] }), (err: any) => err.status === 400)
+    await testUser1Org.put('/api/v1/settings/organization/test_datafair_org1:dep1', { apiKeys: [{ title: 'Api key 1', scopes: [] }] })
+    const res = await testUser4Org.get('/api/v1/settings/organization/test_datafair_org1:dep1')
     assert.equal(res.status, 200)
     assert.equal(res.data.name, 'Test Org 1 - dep1')
     assert.equal(res.data.department, 'dep1')
@@ -68,7 +68,7 @@ test.describe('settings API', () => {
 
   test('cannot write notifiedJ3At from the api', async () => {
     await assert.rejects(
-      testUser1.put('/api/v1/settings/user/test_user1', {
+      testUser1.put('/api/v1/settings/user/test_datafair_user1', {
         apiKeys: [{
           title: 'k2',
           scopes: ['datasets-read'],
@@ -82,18 +82,18 @@ test.describe('settings API', () => {
 
   test('notifiedJ3At / notifiedJAt are not returned in the API response', async () => {
     // Create an API key
-    await testUser1.put('/api/v1/settings/user/test_user1', {
+    await testUser1.put('/api/v1/settings/user/test_datafair_user1', {
       apiKeys: [{ title: 'k1', scopes: ['datasets-read'], expireAt: dayjs().add(1, 'year').format('YYYY-MM-DD') }]
     })
 
     // Write the internal flags directly to mongo (simulating what the worker does)
     await anonymousAx.post(`${apiUrl}/api/v1/test-env/settings-update-one`, {
-      filter: { type: 'user', id: 'test_user1' },
+      filter: { type: 'user', id: 'test_datafair_user1' },
       update: { $set: { 'apiKeys.0.notifiedJ3At': '2026-05-20T00:00:00.000Z' } }
     })
 
     // Read via the API
-    const res = await testUser1.get('/api/v1/settings/user/test_user1')
+    const res = await testUser1.get('/api/v1/settings/user/test_datafair_user1')
     assert.equal(res.status, 200)
     assert.ok(res.data.apiKeys?.[0], 'apiKey present')
     assert.equal(res.data.apiKeys[0].notifiedJ3At, undefined, 'notifiedJ3At not exposed')
@@ -104,10 +104,10 @@ test.describe('settings API', () => {
     const ax = testUser1Org
 
     // define two custom metadata
-    await ax.put('/api/v1/settings/organization/test_org1', {
+    await ax.put('/api/v1/settings/organization/test_datafair_org1', {
       datasetsMetadata: { custom: [{ title: 'Foo metadata' }, { title: 'Bar metadata' }] }
     })
-    const settings = (await ax.get('/api/v1/settings/organization/test_org1')).data
+    const settings = (await ax.get('/api/v1/settings/organization/test_datafair_org1')).data
     const fooKey = settings.datasetsMetadata.custom.find((c: any) => c.title === 'Foo metadata').key
     const barKey = settings.datasetsMetadata.custom.find((c: any) => c.title === 'Bar metadata').key
     assert.ok(fooKey && barKey)
@@ -117,7 +117,7 @@ test.describe('settings API', () => {
     await ax.patch(`/api/v1/datasets/${dataset.id}`, { customMetadata: { [fooKey]: 'foo value', [barKey]: 'bar value' } })
 
     // remove the Foo definition, keep Bar
-    await ax.put('/api/v1/settings/organization/test_org1', {
+    await ax.put('/api/v1/settings/organization/test_datafair_org1', {
       datasetsMetadata: { custom: [{ title: 'Bar metadata', key: barKey }] }
     })
 
@@ -129,7 +129,7 @@ test.describe('settings API', () => {
 
   test('renaming or removing a topic propagates to the datasets carrying it', async () => {
     const ax = testUser1Org
-    const settingsUrl = '/api/v1/settings/organization/test_org1'
+    const settingsUrl = '/api/v1/settings/organization/test_datafair_org1'
 
     // same path as the settings page: PATCH { topics }
     const topics = (await ax.patch(settingsUrl, { topics: [{ title: 'Topic A', color: '#ff0000' }, { title: 'Topic B' }] })).data.topics
@@ -148,73 +148,73 @@ test.describe('settings API', () => {
 
   test('metadata categories get a key and reject reserved or duplicate keys', async () => {
     const ax = testUser1Org
-    const settings = (await ax.put('/api/v1/settings/organization/test_org1', {
+    const settings = (await ax.put('/api/v1/settings/organization/test_datafair_org1', {
       datasetsMetadata: { groups: [{ title: 'Classement' }] }
     })).data
     assert.ok(settings.datasetsMetadata.groups[0].key)
     for (const groups of [[{ key: 'attachments', title: 'Annexes' }], [{ key: 'abc', title: 'Une' }, { key: 'abc', title: 'Deux' }]]) {
-      await assert.rejects(ax.put('/api/v1/settings/organization/test_org1', { datasetsMetadata: { groups } }), (err: any) => err.status === 400)
+      await assert.rejects(ax.put('/api/v1/settings/organization/test_datafair_org1', { datasetsMetadata: { groups } }), (err: any) => err.status === 400)
     }
   })
 
   test('the AI assistant is activated at the organization level only', async () => {
-    const testUser4Dep1 = await axiosAuth('test_user4@test.com', 'test_org1')
-    testUser4Dep1.setOrg('test_org1', 'dep1')
+    const testUser4Dep1 = await axiosAuth('test_datafair_user4@test.com', 'test_datafair_org1')
+    testUser4Dep1.setOrg('test_datafair_org1', 'dep1')
 
     // a department settings document exists alongside the organization one
-    await testUser1Org.put('/api/v1/settings/organization/test_org1:dep1', { apiKeys: [] })
+    await testUser1Org.put('/api/v1/settings/organization/test_datafair_org1:dep1', { apiKeys: [] })
     // the flag is not part of the department settings schema
     await assert.rejects(
-      testUser1Org.patch('/api/v1/settings/organization/test_org1:dep1', { agentChat: true }),
+      testUser1Org.patch('/api/v1/settings/organization/test_datafair_org1:dep1', { agentChat: true }),
       (err: any) => err.status === 400
     )
 
-    assert.deepEqual((await testUser4Dep1.get('/api/v1/settings/organization/test_org1/agent-chat')).data, { agentChat: false })
+    assert.deepEqual((await testUser4Dep1.get('/api/v1/settings/organization/test_datafair_org1/agent-chat')).data, { agentChat: false })
 
-    await testUser1Org.patch('/api/v1/settings/organization/test_org1', { agentChat: true })
+    await testUser1Org.patch('/api/v1/settings/organization/test_datafair_org1', { agentChat: true })
 
     // a department member gets the organization activation, whether or not the path is department scoped
-    assert.deepEqual((await testUser4Dep1.get('/api/v1/settings/organization/test_org1/agent-chat')).data, { agentChat: true })
-    assert.deepEqual((await testUser4Dep1.get('/api/v1/settings/organization/test_org1:dep1/agent-chat')).data, { agentChat: true })
+    assert.deepEqual((await testUser4Dep1.get('/api/v1/settings/organization/test_datafair_org1/agent-chat')).data, { agentChat: true })
+    assert.deepEqual((await testUser4Dep1.get('/api/v1/settings/organization/test_datafair_org1:dep1/agent-chat')).data, { agentChat: true })
   })
 
   test('org admins restrict the AI assistant to an audience of departments and roles', async () => {
-    const testUser4Dep1 = await axiosAuth('test_user4@test.com', 'test_org1')
-    testUser4Dep1.setOrg('test_org1', 'dep1')
-    const testUser6Dep1 = await axiosAuth('test_user6@test.com', 'test_org1')
-    testUser6Dep1.setOrg('test_org1', 'dep1')
-    const testUser8Org = await axiosAuth('test_user8@test.com', 'test_org1')
-    const agentChat = async (ax: typeof testUser1Org) => (await ax.get('/api/v1/settings/organization/test_org1/agent-chat')).data.agentChat
+    const testUser4Dep1 = await axiosAuth('test_datafair_user4@test.com', 'test_datafair_org1')
+    testUser4Dep1.setOrg('test_datafair_org1', 'dep1')
+    const testUser6Dep1 = await axiosAuth('test_datafair_user6@test.com', 'test_datafair_org1')
+    testUser6Dep1.setOrg('test_datafair_org1', 'dep1')
+    const testUser8Org = await axiosAuth('test_datafair_user8@test.com', 'test_datafair_org1')
+    const agentChat = async (ax: typeof testUser1Org) => (await ax.get('/api/v1/settings/organization/test_datafair_org1/agent-chat')).data.agentChat
 
     // a plain org admin (not a super-admin) manages the activation and its audience
-    await testUser1Org.patch('/api/v1/settings/organization/test_org1', { agentChat: true, agentChatAudience: [{ department: '-', roles: ['admin'] }] })
+    await testUser1Org.patch('/api/v1/settings/organization/test_datafair_org1', { agentChat: true, agentChatAudience: [{ department: '-', roles: ['admin'] }] })
     assert.equal(await agentChat(testUser1Org), true)
     assert.equal(await agentChat(testUser8Org), false)
     assert.equal(await agentChat(testUser4Dep1), false)
 
-    await testUser1Org.patch('/api/v1/settings/organization/test_org1', { agentChatAudience: [{ department: '*', roles: ['admin'] }, { department: 'dep1', roles: ['contrib'] }] })
+    await testUser1Org.patch('/api/v1/settings/organization/test_datafair_org1', { agentChatAudience: [{ department: '*', roles: ['admin'] }, { department: 'dep1', roles: ['contrib'] }] })
     assert.equal(await agentChat(testUser1Org), true)
     assert.equal(await agentChat(testUser4Dep1), true)
     assert.equal(await agentChat(testUser6Dep1), true)
     assert.equal(await agentChat(testUser8Org), false)
 
     // an empty audience means every member
-    await testUser1Org.patch('/api/v1/settings/organization/test_org1', { agentChatAudience: [] })
+    await testUser1Org.patch('/api/v1/settings/organization/test_datafair_org1', { agentChatAudience: [] })
     assert.equal(await agentChat(testUser8Org), true)
 
     // the audience never overrides the activation
-    await testUser1Org.patch('/api/v1/settings/organization/test_org1', { agentChat: false })
+    await testUser1Org.patch('/api/v1/settings/organization/test_datafair_org1', { agentChat: false })
     assert.equal(await agentChat(testUser1Org), false)
 
     await assert.rejects(
-      testUser1Org.patch('/api/v1/settings/organization/test_org1', { agentChatAudience: [{ roles: ['admin'] }] }),
+      testUser1Org.patch('/api/v1/settings/organization/test_datafair_org1', { agentChatAudience: [{ roles: ['admin'] }] }),
       (err: any) => err.status === 400
     )
   })
 
   test('can still re-save settings after the worker set an expiration flag on a key', async () => {
     // create a key
-    const created = (await testUser1.put('/api/v1/settings/user/test_user1', {
+    const created = (await testUser1.put('/api/v1/settings/user/test_datafair_user1', {
       apiKeys: [{ title: 'k-flag', scopes: ['datasets-read'], expireAt: dayjs().add(10, 'day').format('YYYY-MM-DD') }]
     })).data
     const key = created.apiKeys.find((k: any) => k.title === 'k-flag')
@@ -222,14 +222,14 @@ test.describe('settings API', () => {
 
     // simulate the expiration worker having set the internal flag directly in mongo
     await anonymousAx.post(`${apiUrl}/api/v1/test-env/settings-update-one`, {
-      filter: { type: 'user', id: 'test_user1' },
+      filter: { type: 'user', id: 'test_datafair_user1' },
       update: { $set: { 'apiKeys.0.notifiedJ3At': '2026-05-20T00:00:00.000Z' } }
     })
 
     // re-read (flags are stripped) and re-save the same settings — must NOT 400 'immutable'
-    const reread = (await testUser1.get('/api/v1/settings/user/test_user1')).data
+    const reread = (await testUser1.get('/api/v1/settings/user/test_datafair_user1')).data
     assert.equal(reread.apiKeys[0].notifiedJ3At, undefined)
-    const resave = await testUser1.put('/api/v1/settings/user/test_user1', { apiKeys: reread.apiKeys })
+    const resave = await testUser1.put('/api/v1/settings/user/test_datafair_user1', { apiKeys: reread.apiKeys })
     assert.equal(resave.status, 200)
   })
 })

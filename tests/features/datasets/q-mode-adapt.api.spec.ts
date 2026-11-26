@@ -3,10 +3,9 @@ import assert from 'node:assert/strict'
 import { axiosAuth, clean, config } from '../../support/axios.ts'
 import { waitForFinalize, setConfig } from '../../support/workers.ts'
 
-const testUser1 = await axiosAuth('test_user1@test.com')
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
 
-// q_mode=or|and|adapt (see docs/superpowers/plans/2026-08-01-adapt-or-of-retained.md and
-// benchmark/INVESTIGATIONS.md §14). adapt = ignore the most common query words in filtering —
+// q_mode=or|and|adapt (see benchmark/INVESTIGATIONS.md §14). adapt = ignore the most common query words in filtering —
 // just enough that the RETAINED-WORD UNION stays above the cap — while every word keeps
 // scoring; the match set is the plain OR minus docs that only matched ignored words.
 // THE INVARIANT under test: searches totalling under the cap are untouched.
@@ -42,7 +41,7 @@ test.describe('q_mode adapt — common words ignored in filtering', () => {
   test.beforeAll(async () => {
     await clean()
     // the fixture exceeds the default store_bytes limit — raise it so checkStorage never 429s
-    await testUser1.post('/api/v1/limits/user/test_user1',
+    await testUser1.post('/api/v1/limits/user/test_datafair_user1',
       { store_bytes: { limit: 10000000, consumption: 0 }, lastUpdate: new Date().toISOString() },
       { params: { key: config.secretKeys.limits } })
     await testUser1.put('/api/v1/datasets/' + id, {

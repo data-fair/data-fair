@@ -3,8 +3,8 @@ import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
 import { waitForFinalize, sendDataset, patchRawDataset, clearDatasetCache } from '../../support/workers.ts'
 
-const testUser1 = await axiosAuth('test_user1@test.com')
-const adminUser = await axiosAuth('test_superadmin@test.com', undefined, true)
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
+const adminUser = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
 
 test.describe('admin/elasticsearch/diagnose', () => {
   test.beforeEach(async () => { await clean() })
@@ -72,7 +72,7 @@ test.describe('admin/elasticsearch/diagnose', () => {
     const fileDataset = await sendDataset('datasets/dataset1.csv', testUser1)
 
     // the listing is global while clean() only removes test_* owned data: a dev database seeded with
-    // dev-fixtures or used by hand holds unrelated REST datasets predating the marker, so restrict
+    // dev data or used by hand holds unrelated REST datasets predating the marker, so restrict
     // the assertions to the datasets this test owns
     const ourIds = ['esdiag-legacy', fileDataset.id]
     const listed = async () => (await adminUser.get('/api/v1/admin/elasticsearch/diagnose')).data.restDatasetsWithoutLineBytes.results

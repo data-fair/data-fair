@@ -13,9 +13,6 @@
     "deny": []
   },
   "enableAllProjectMcpServers": true,
-  "enabledPlugins": {
-    "superpowers@claude-plugins-official": true
-  },
   "sandbox": {
     "enabled": true,
     "autoAllowBashIfSandboxed": true

@@ -2,16 +2,24 @@ import { test, expect } from '../../fixtures/login.ts'
 import { axiosAuth, clean } from '../../support/axios.ts'
 import { sendDataset, waitForFinalize } from '../../support/workers.ts'
 
+// the table is the last focusable element of the embed page, and Tab from the last element
+// does not leave the document in Playwright's Firefox: give Tab somewhere to go
+const addFocusTargetAfter = (page: any) => page.evaluate(() => {
+  const button = document.createElement('button')
+  button.id = 'focus-target-after'
+  document.body.appendChild(button)
+})
+
 test.describe('embed dataset table — accessibility (RGAA)', () => {
   test.beforeEach(async () => {
     await clean()
   })
 
   test('table exposes an accessible name and column scopes (5.5 / 5.6)', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
 
-    await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_user1')
+    await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_datafair_user1')
     const table = page.locator('table').first()
     await expect(table).toBeVisible({ timeout: 15000 })
 
@@ -29,10 +37,10 @@ test.describe('embed dataset table — accessibility (RGAA)', () => {
   })
 
   test('search field is labelled and wrapped in a search landmark (7.1 / 12.6)', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
 
-    await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_user1')
+    await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_datafair_user1')
     await expect(page.locator('table').first()).toBeVisible({ timeout: 15000 })
 
     const searchLandmark = page.locator('[role="search"]').first()
@@ -51,10 +59,10 @@ test.describe('embed dataset table — accessibility (RGAA)', () => {
   })
 
   test('search results are announced via aria-live (7.5)', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
 
-    await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_user1')
+    await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_datafair_user1')
     await expect(page.locator('table').first()).toBeVisible({ timeout: 15000 })
 
     // the visible result count is itself the status message
@@ -69,10 +77,10 @@ test.describe('embed dataset table — accessibility (RGAA)', () => {
   })
 
   test('the header menu opens from the keyboard and gives focus back on close (7.3)', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
 
-    await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_user1')
+    await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_datafair_user1')
     await expect(page.locator('table').first()).toBeVisible({ timeout: 15000 })
 
     // Each sortable column header exposes a real focusable button
@@ -95,10 +103,10 @@ test.describe('embed dataset table — accessibility (RGAA)', () => {
   })
 
   test('sort and column visibility states are exposed without relying on color (7.1 / 3.1)', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
 
-    await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_user1')
+    await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_datafair_user1')
     await expect(page.locator('table').first()).toBeVisible({ timeout: 15000 })
     const firstHeader = page.locator('thead th button').first()
     const menu = page.locator('.v-overlay--active.v-menu')
@@ -141,13 +149,15 @@ test.describe('embed dataset table — accessibility (RGAA)', () => {
       (ths: HTMLElement[], t: string) => ths.findIndex(th => th.textContent?.trim() === t), title)
 
     test('the table is a single Tab stop and arrows move between cells', async ({ page, goToWithAuth }) => {
-      const ax = await axiosAuth('test_user1@test.com')
+      const ax = await axiosAuth('test_datafair_user1@test.com')
       const dataset = await sendDataset('datasets/dataset1.csv', ax)
-      await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_user1')
+      await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_datafair_user1')
       await expect(page.locator('.dataset-table tbody td').first()).toBeVisible({ timeout: 15000 })
 
+      await addFocusTargetAfter(page)
       await page.locator('[role="search"] input').first().focus()
-      for (let i = 0; i < 15 && !(await activeCell(page)).inTable; i++) await page.keyboard.press('Tab')
+      // Firefox also stops on the scroll wrapper of the table before its cells
+      for (let i = 0; i < 15 && !(await activeCell(page)).isCell; i++) await page.keyboard.press('Tab')
       expect(await activeCell(page)).toMatchObject({ inTable: true, isCell: true, row: 1, col: 0 })
 
       await page.keyboard.press('ArrowRight')
@@ -156,15 +166,15 @@ test.describe('embed dataset table — accessibility (RGAA)', () => {
 
       // one Tab leaves the table, Shift+Tab comes back to the same cell
       await page.keyboard.press('Tab')
-      expect((await activeCell(page)).inTable).toBe(false)
+      await expect(page.locator('#focus-target-after')).toBeFocused()
       await page.keyboard.press('Shift+Tab')
       expect(await activeCell(page)).toMatchObject({ isCell: true, row: 2, col: 1 })
     })
 
     test('Enter on a cell with a single control activates it', async ({ page, goToWithAuth }) => {
-      const ax = await axiosAuth('test_user1@test.com')
+      const ax = await axiosAuth('test_datafair_user1@test.com')
       const dataset = await sendDataset('datasets/dataset1.csv', ax)
-      await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_user1')
+      await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_datafair_user1')
       await expect(page.locator('.dataset-table tbody td').first()).toBeVisible({ timeout: 15000 })
       const col = await colOf(page, 'adr')
       const cell = page.locator(`.dataset-table td[data-row="1"][data-col="${col}"]`)
@@ -185,11 +195,11 @@ test.describe('embed dataset table — accessibility (RGAA)', () => {
     })
 
     test('each chip of a multi-valued cell filters from the keyboard', async ({ page, goToWithAuth }) => {
-      const ax = await axiosAuth('test_user1@test.com')
+      const ax = await axiosAuth('test_datafair_user1@test.com')
       const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'keyboard-chips', schema: [{ key: 'tags', type: 'string', separator: ',' }] })).data
       await ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines`, [{ tags: 'rouge,vert' }, { tags: 'vert' }, { tags: 'bleu' }])
       await waitForFinalize(ax, dataset.id)
-      await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_user1')
+      await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_datafair_user1')
       await expect(page.locator('.dataset-table tbody td').first()).toBeVisible({ timeout: 15000 })
       const col = await colOf(page, 'tags')
       const row = await page.locator('.dataset-table tbody tr').filter({ hasText: 'rouge' }).locator('td').first().getAttribute('data-row')
@@ -241,11 +251,11 @@ test.describe('embed dataset table — accessibility (RGAA)', () => {
     })
 
     test('a number filter keeps its formatted label, and the cell removes it the way it added it', async ({ page, goToWithAuth }) => {
-      const ax = await axiosAuth('test_user1@test.com')
+      const ax = await axiosAuth('test_datafair_user1@test.com')
       const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'keyboard-numbers', schema: [{ key: 'n', type: 'integer' }] })).data
       await ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines`, [{ n: 10000 }, { n: 20000 }, { n: 10000 }])
       await waitForFinalize(ax, dataset.id)
-      await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_user1')
+      await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_datafair_user1')
       await expect(page.locator('.dataset-table tbody td').first()).toBeVisible({ timeout: 15000 })
       const col = await colOf(page, 'n')
       const cellWith = async (text: RegExp) => page.locator(`.dataset-table td[data-row="${await page.locator('.dataset-table tbody tr').filter({ hasText: text }).first().locator('td').first().getAttribute('data-row')}"][data-col="${col}"]`)
@@ -279,7 +289,7 @@ test.describe('embed dataset table — accessibility (RGAA)', () => {
       await expect(page.locator('.dataset-table tbody tr')).toHaveCount(3)
 
       // a filter read from the URL gets the same label and the same remove button
-      await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table?n_eq=10000`, 'test_user1')
+      await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table?n_eq=10000`, 'test_datafair_user1')
       await expect(page.locator('.dataset-table tbody tr')).toHaveCount(2)
       await expect(filterChip).toHaveText(/10\s000/)
       const reloaded = await cellWith(/10\s000/)
@@ -288,12 +298,12 @@ test.describe('embed dataset table — accessibility (RGAA)', () => {
     })
 
     test('a truncated value only offers its full value, Enter shows it', async ({ page, goToWithAuth }) => {
-      const ax = await axiosAuth('test_user1@test.com')
+      const ax = await axiosAuth('test_datafair_user1@test.com')
       const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'keyboard-long', schema: [{ key: 'txt', type: 'string' }] })).data
       const long = 'mot '.repeat(80) + 'fin'
       await ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines`, [{ txt: long }, { txt: 'court' }])
       await waitForFinalize(ax, dataset.id)
-      await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_user1')
+      await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_datafair_user1')
       await expect(page.locator('.dataset-table tbody td').first()).toBeVisible({ timeout: 15000 })
       const col = await colOf(page, 'txt')
       const row = await page.locator('.dataset-table tbody tr').filter({ hasText: 'mot' }).locator('td').first().getAttribute('data-row')
@@ -325,9 +335,9 @@ test.describe('embed dataset table — accessibility (RGAA)', () => {
     })
 
     test('ArrowUp reaches the header, Enter opens its menu', async ({ page, goToWithAuth }) => {
-      const ax = await axiosAuth('test_user1@test.com')
+      const ax = await axiosAuth('test_datafair_user1@test.com')
       const dataset = await sendDataset('datasets/dataset1.csv', ax)
-      await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_user1')
+      await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_datafair_user1')
       await expect(page.locator('.dataset-table tbody td').first()).toBeVisible({ timeout: 15000 })
       const col = await colOf(page, 'adr')
       await page.locator(`.dataset-table td[data-row="1"][data-col="${col}"]`).focus()
@@ -339,9 +349,9 @@ test.describe('embed dataset table — accessibility (RGAA)', () => {
     })
 
     test('the focus comes back to the header after an action of its menu', async ({ page, goToWithAuth }) => {
-      const ax = await axiosAuth('test_user1@test.com')
+      const ax = await axiosAuth('test_datafair_user1@test.com')
       const dataset = await sendDataset('datasets/dataset1.csv', ax)
-      await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_user1')
+      await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_datafair_user1')
       await expect(page.locator('.dataset-table tbody td').first()).toBeVisible({ timeout: 15000 })
       const col = await colOf(page, 'adr')
       await page.locator(`.dataset-table td[data-row="1"][data-col="${col}"]`).focus()
@@ -381,9 +391,9 @@ test.describe('embed dataset table — accessibility (RGAA)', () => {
     })
 
     test('a search filter added from the header menu is removed from the keyboard', async ({ page, goToWithAuth }) => {
-      const ax = await axiosAuth('test_user1@test.com')
+      const ax = await axiosAuth('test_datafair_user1@test.com')
       const dataset = await sendDataset('datasets/dataset1.csv', ax)
-      await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_user1')
+      await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_datafair_user1')
       await expect(page.locator('.dataset-table tbody td').first()).toBeVisible({ timeout: 15000 })
       const rows = await page.locator('.dataset-table tbody tr').count()
       const col = await colOf(page, 'adr')
@@ -442,11 +452,11 @@ test.describe('embed dataset table — accessibility (RGAA)', () => {
     })
 
     test('an existing filter is edited, then cleared, from the header menu', async ({ page, goToWithAuth }) => {
-      const ax = await axiosAuth('test_user1@test.com')
+      const ax = await axiosAuth('test_datafair_user1@test.com')
       const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'keyboard-edit-filter', schema: [{ key: 'numero', type: 'integer' }] })).data
       await ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines`, [{ numero: 1 }, { numero: 2 }, { numero: 1 }])
       await waitForFinalize(ax, dataset.id)
-      await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table?numero_eq=1`, 'test_user1')
+      await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table?numero_eq=1`, 'test_datafair_user1')
       await expect(page.locator('.dataset-table tbody tr')).toHaveCount(2, { timeout: 15000 })
       const col = await colOf(page, 'numero')
       const menu = page.locator('.v-overlay--active.v-menu')
@@ -495,11 +505,11 @@ test.describe('embed dataset table — accessibility (RGAA)', () => {
     })
 
     test('a cell reached with ArrowUp is not hidden under the sticky header', async ({ page, goToWithAuth }) => {
-      const ax = await axiosAuth('test_user1@test.com')
+      const ax = await axiosAuth('test_datafair_user1@test.com')
       const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'keyboard-up', schema: [{ key: 'n', type: 'integer' }] })).data
       await ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines`, Array.from({ length: 100 }, (_, n) => ({ n })))
       await waitForFinalize(ax, dataset.id)
-      await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_user1')
+      await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_datafair_user1')
       await expect(page.locator('.dataset-table tbody td').first()).toBeVisible({ timeout: 15000 })
       await page.locator('.dataset-table td[data-row="1"][data-col="0"]').focus()
 
@@ -523,11 +533,11 @@ test.describe('embed dataset table — accessibility (RGAA)', () => {
     })
 
     test('Ctrl+End reaches the last loaded row, outside the rendered range', async ({ page, goToWithAuth }) => {
-      const ax = await axiosAuth('test_user1@test.com')
+      const ax = await axiosAuth('test_datafair_user1@test.com')
       const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'keyboard-rows', schema: [{ key: 'n', type: 'integer' }] })).data
       await ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines`, Array.from({ length: 300 }, (_, n) => ({ n })))
       await waitForFinalize(ax, dataset.id)
-      await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_user1')
+      await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_datafair_user1')
       await expect(page.locator('.dataset-table tbody td').first()).toBeVisible({ timeout: 15000 })
       const renderedRows = await page.locator('.dataset-table tbody tr').count()
       await page.locator('.dataset-table td[data-row="1"][data-col="0"]').focus()
@@ -551,13 +561,14 @@ test.describe('embed dataset table — accessibility (RGAA)', () => {
     })
 
     test('the list is a single Tab stop, arrows move between fields and cards, Enter opens a field menu', async ({ page, goToWithAuth }) => {
-      const ax = await axiosAuth('test_user1@test.com')
+      const ax = await axiosAuth('test_datafair_user1@test.com')
       const dataset = await sendDataset('datasets/dataset1.csv', ax)
-      await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table?display=list`, 'test_user1')
+      await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table?display=list`, 'test_datafair_user1')
       const list = page.locator('.dataset-table-list-wrapper')
       await expect(list.locator('.dataset-table-card').first()).toBeVisible({ timeout: 15000 })
       await expect(list.locator('[tabindex="0"]')).toHaveCount(1)
 
+      await addFocusTargetAfter(page)
       await page.locator('[role="search"] input').first().focus()
       for (let i = 0; i < 15 && !(await activeField(page)).inList; i++) await page.keyboard.press('Tab')
       expect(await activeField(page)).toMatchObject({ isField: true, card: 0, field: 0 })
@@ -572,7 +583,7 @@ test.describe('embed dataset table — accessibility (RGAA)', () => {
       expect(field).toBe(2)
       // one Tab leaves the list, Shift+Tab comes back to the same field
       await page.keyboard.press('Tab')
-      expect((await activeField(page)).inList).toBe(false)
+      await expect(page.locator('#focus-target-after')).toBeFocused()
       await page.keyboard.press('Shift+Tab')
       expect(await activeField(page)).toMatchObject({ isField: true, card: 0, field })
 
@@ -603,9 +614,9 @@ test.describe('embed dataset table — accessibility (RGAA)', () => {
     })
 
     test('F2 reaches the controls of a field, a filter that removes the focused card keeps the focus in the list', async ({ page, goToWithAuth }) => {
-      const ax = await axiosAuth('test_user1@test.com')
+      const ax = await axiosAuth('test_datafair_user1@test.com')
       const dataset = await sendDataset('datasets/dataset1.csv', ax)
-      await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table?display=list`, 'test_user1')
+      await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table?display=list`, 'test_datafair_user1')
       const list = page.locator('.dataset-table-list-wrapper')
       await expect(list.locator('.dataset-table-card').first()).toBeVisible({ timeout: 15000 })
       const cards = await list.locator('.dataset-table-card').count()
@@ -660,9 +671,9 @@ test.describe('embed dataset table — accessibility (RGAA)', () => {
     })
 
     test('arrows move between the columns, Space toggles one, the focus is visible (7.3 / 10.7)', async ({ page, goToWithAuth }) => {
-      const ax = await axiosAuth('test_user1@test.com')
+      const ax = await axiosAuth('test_datafair_user1@test.com')
       const dataset = await sendDataset('datasets/dataset1.csv', ax)
-      await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_user1')
+      await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_datafair_user1')
       await expect(page.locator('.dataset-table tbody td').first()).toBeVisible({ timeout: 15000 })
       await openSelector(page)
 
@@ -690,7 +701,7 @@ test.describe('embed dataset table — accessibility (RGAA)', () => {
     })
 
     test('a group folds and unfolds with the arrows, Space toggles all its columns', async ({ page, goToWithAuth }) => {
-      const ax = await axiosAuth('test_user1@test.com')
+      const ax = await axiosAuth('test_datafair_user1@test.com')
       const dataset = (await ax.post('/api/v1/datasets', {
         isRest: true,
         title: 'keyboard-groups',
@@ -698,7 +709,7 @@ test.describe('embed dataset table — accessibility (RGAA)', () => {
       })).data
       await ax.post(`/api/v1/datasets/${dataset.id}/_bulk_lines`, [{ a: 'x', b: 'y', c: 'z' }])
       await waitForFinalize(ax, dataset.id)
-      await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_user1')
+      await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/table`, 'test_datafair_user1')
       await expect(page.locator('.dataset-table tbody td').first()).toBeVisible({ timeout: 15000 })
       const menu = await openSelector(page)
 

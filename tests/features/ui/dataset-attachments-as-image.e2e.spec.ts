@@ -9,7 +9,7 @@ test.describe('row attachments as images', () => {
 
   test.beforeAll(async () => {
     await clean()
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     const form = new FormData()
     form.append('dataset', fs.readFileSync('./tests/resources/datasets/attachments.csv'), 'attachments.csv')
     form.append('attachments', fs.readFileSync('./tests/resources/datasets/files.zip'), 'files.zip')
@@ -18,7 +18,7 @@ test.describe('row attachments as images', () => {
   })
 
   test('is set on the attachments column and swaps the files tab for the thumbnails one', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_datafair_user1')
     const exploration = page.locator('#exploration')
     await expect(exploration.getByRole('tab', { name: 'Fichiers' })).toBeVisible({ timeout: 15000 })
     await expect(exploration.getByRole('tab', { name: 'Vignettes' })).not.toBeVisible()
@@ -29,7 +29,7 @@ test.describe('row attachments as images', () => {
     await structure.getByRole('button', { name: /Enregistrer/ }).click()
     await expect(structure.getByRole('button', { name: /Enregistrer/ })).not.toBeVisible({ timeout: 10000 })
 
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     // the image concept moves to _attachment_url, the dataset is reindexed
     await expect.poll(async () => {
       const dataset = (await ax.get(`/api/v1/datasets/${datasetId}`)).data

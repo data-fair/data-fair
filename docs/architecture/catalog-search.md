@@ -8,8 +8,6 @@ For the design reasoning (why an owned index instead of `$text` or Elasticsearch
 costed and rejected) read [the spec](../plans/2026-09-18-text-search-util-design.md). For the
 measured evidence behind that choice — precision/recall numbers, the engines that were actually
 benchmarked — read [`benchmark/catalog-search/ENGINE-OPTIONS.md`](../../benchmark/catalog-search/ENGINE-OPTIONS.md).
-The implementation plan and its task-by-task ledger (real bugs found and fixed along the way,
-several of them silent) live under `.superpowers/sdd/2026-09-18-text-search-util-plan/`.
 
 ## Which collections switched, which did not
 

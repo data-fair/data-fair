@@ -52,4 +52,36 @@ test.describe('simplifyToVertexBudget', () => {
     const mpt = { type: 'MultiPoint', coordinates: [[0, 0], [1, 1], [2, 2]] }
     assert.equal(simplifyToVertexBudget(mpt as any, 1), mpt) // over budget but unsupported type -> identity
   })
+
+  test('drops zero-area polygons and holes instead of failing the whole simplification', () => {
+    const big = circlePolygon(20000)
+    // a ring of aligned points: cleanCoords leaves fewer than 4 points, @turf/simplify used to throw
+    const flat = [[10, 10], [11, 10], [12, 10], [10, 10]]
+    const square = [[20, 20], [20, 21], [21, 21], [21, 20], [20, 20]]
+    const mp = { type: 'MultiPolygon', coordinates: [big.coordinates, [flat], [square, flat]] }
+    const out = simplifyToVertexBudget(mp as any, 5000) as any
+    assert.ok(countVertices(out) <= 5000, `expected <=5000 got ${countVertices(out)}`)
+    assert.equal(out.coordinates.length, 2, 'the zero-area polygon is dropped, the real ones kept')
+    assert.equal(out.coordinates[1].length, 1, 'the zero-area hole is dropped')
+    assert.equal(mp.coordinates.length, 3, 'the input geometry is left untouched')
+    const poly = { type: 'Polygon', coordinates: [big.coordinates[0], flat] }
+    assert.equal((simplifyToVertexBudget(poly as any, 5000) as any).coordinates.length, 1)
+  })
+  test('still reports a geometry with no area at all as invalid', () => {
+    const flat = [[10, 10], [11, 10], [12, 10], [10, 10]]
+    const mp = { type: 'MultiPolygon', coordinates: Array.from({ length: 10 }, () => [flat]) }
+    assert.throws(() => simplifyToVertexBudget(mp as any, 5), /invalid polygon/)
+  })
+  test('keeps an unclosed ring, which has an area: the geometry is still reported as invalid', () => {
+    const unclosed = [[20, 20], [20, 21], [21, 21], [21, 20]]
+    const mp = { type: 'MultiPolygon', coordinates: [circlePolygon(20000).coordinates, [unclosed]] }
+    assert.throws(() => simplifyToVertexBudget(mp as any, 5000), /first and last points not equal/)
+  })
+  test('goes straight to the last tolerance when the budget is below the parts floor', () => {
+    // 2000 small 5-point squares: rings keep 4 entries at least, the floor (8000) is above the budget
+    const coordinates = Array.from({ length: 2000 }, (_, i) => [[[i, 0], [i, 0.5], [i, 1], [i + 0.5, 1], [i, 0]]])
+    const mp = { type: 'MultiPolygon', coordinates }
+    const out = simplifyToVertexBudget(mp as any, 5000)
+    assert.equal(countVertices(out), 8000, 'each ring reduced to its 4-entry floor')
+  })
 })

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
 import { waitForFinalize, doAndWaitForFinalize } from '../../../support/workers.ts'
 
-const testUser1 = await axiosAuth('test_user1@test.com')
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
 
 // A `terms` aggregation is document-scoped: on a multi-valued (separator) column it emits every
 // value of every matching row, so `q` used to be unable to narrow the list — the sibling values

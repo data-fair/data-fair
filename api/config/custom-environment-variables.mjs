@@ -8,6 +8,7 @@ export default {
   dataDir: 'DATA_DIR',
   tmpDir: 'TMP_DIR',
   filesStorage: 'FILES_STORAGE',
+  indicesPrefix: 'INDICES_PREFIX',
   s3: {
     region: 'S3_REGION',
     endpoint: 'S3_ENDPOINT',

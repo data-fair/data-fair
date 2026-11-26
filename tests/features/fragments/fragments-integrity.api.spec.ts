@@ -12,7 +12,7 @@ test.beforeAll(async () => { await ensureIntegrityBucket() })
 test.beforeEach(async () => { await clean() })
 
 test('changing the parent ACL of an integrity-enabled dataset fragment does not raise a false breach', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const virtual = (await admin.post('/api/v1/datasets', { isVirtual: true, title: 'parent of an audited fragment' })).data
   const fragment = await sendDataset('datasets/dataset1.csv', admin, {}, { partOf: { type: 'dataset', id: virtual.id } })
 
@@ -22,10 +22,10 @@ test('changing the parent ACL of an integrity-enabled dataset fragment does not 
 
   // edit the PARENT's ACL: syncFragmentPermissions rewrites the fragment's covered `permissions`
   const parentPermissions = (await admin.get(`/api/v1/datasets/${virtual.id}/permissions`)).data
-  await admin.put(`/api/v1/datasets/${virtual.id}/permissions`, [...parentPermissions, { type: 'user', id: 'test_user3', name: 'Test User3', classes: ['write'] }])
+  await admin.put(`/api/v1/datasets/${virtual.id}/permissions`, [...parentPermissions, { type: 'user', id: 'test_datafair_user3', name: 'Test User3', classes: ['write'] }])
   const derived = (await admin.get(`/api/v1/datasets/${fragment.id}/permissions`)).data
   // the write really happened — otherwise this test could pass on a no-op
-  expect(derived.some((p: any) => p.id === 'test_user3')).toBe(true)
+  expect(derived.some((p: any) => p.id === 'test_datafair_user3')).toBe(true)
 
   // the stamp must have been written with the ACL fan-out: the relay re-anchors, then the check is clean
   await waitForFlagCleared(fragment.id)
@@ -35,14 +35,14 @@ test('changing the parent ACL of an integrity-enabled dataset fragment does not 
 })
 
 test('the parent of an integrity-enabled dataset fragment cannot change owner, nothing is moved', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const virtual = (await admin.post('/api/v1/datasets', { isVirtual: true, title: 'parent of an audited fragment' })).data
   const plain = await sendDataset('datasets/dataset1.csv', admin, {}, { partOf: { type: 'dataset', id: virtual.id } })
   const audited = await sendDataset('datasets/dataset1.csv', admin, {}, { partOf: { type: 'dataset', id: virtual.id } })
   await admin.put(`/api/v1/datasets/${audited.id}/_integrity`, { active: true })
 
   // integrity anchors are owner-scoped, same refusal as on the fragment's own transfer
-  await expect(admin.put(`/api/v1/datasets/${virtual.id}/owner`, { type: 'user', id: 'test_user1', name: 'Test User1' })).rejects.toMatchObject({ status: 400 })
+  await expect(admin.put(`/api/v1/datasets/${virtual.id}/owner`, { type: 'user', id: 'test_datafair_user1', name: 'Test User1' })).rejects.toMatchObject({ status: 400 })
   for (const id of [virtual.id, plain.id, audited.id]) {
     expect((await admin.get(`/api/v1/datasets/${id}`)).data.owner).toMatchObject(virtual.owner)
   }

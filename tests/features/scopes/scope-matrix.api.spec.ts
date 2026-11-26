@@ -5,11 +5,11 @@ import { axiosAuth, clean, checkPendingTasks, mockAppUrl, apiUrl } from '../../s
 import { waitForFinalize } from '../../support/workers.ts'
 import { nhiSession } from '../../support/nhi.ts'
 
-// end-to-end scope enforcement: a scoped session (the test NHI, admin of test_org1) is limited by
+// end-to-end scope enforcement: a scoped session (the test NHI, admin of test_datafair_org1) is limited by
 // the tier of its scopes on top of its role. Resources are created by an unrestricted admin of
-// test_org1, so they are owned by the organization.
+// test_datafair_org1, so they are owned by the organization.
 
-const orgAdmin = await axiosAuth('test_user1@test.com', 'test_org1')
+const orgAdmin = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
 
 const status = async (p: Promise<any>) => {
   try {
@@ -30,7 +30,7 @@ const createDataset = async (id: string) => {
   await waitForFinalize(orgAdmin, id)
 }
 
-const ownerBody = { type: 'organization', id: 'test_org1', name: 'Test Org 1' }
+const ownerBody = { type: 'organization', id: 'test_datafair_org1', name: 'Test Org 1' }
 
 test.describe('scope tiers on datasets', () => {
   test.beforeEach(async () => { await clean() })
@@ -84,8 +84,8 @@ test.describe('scope tiers on datasets', () => {
 
       test(`${scope} still cannot write settings (${transport})`, async () => {
         const ax = pick(await nhiSession(scope))
-        assert.equal(await status(ax.put('/api/v1/settings/organization/test_org1', {})), 403)
-        assert.equal(await status(ax.patch('/api/v1/settings/organization/test_org1', {})), 403)
+        assert.equal(await status(ax.put('/api/v1/settings/organization/test_datafair_org1', {})), 403)
+        assert.equal(await status(ax.patch('/api/v1/settings/organization/test_datafair_org1', {})), 403)
       })
     }
 

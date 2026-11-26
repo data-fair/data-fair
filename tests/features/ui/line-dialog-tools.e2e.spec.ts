@@ -33,12 +33,12 @@ const callTool = (page: any, name: string, args: Record<string, unknown> = {}) =
 test.describe('line dialog agent tools', () => {
   test.beforeEach(async () => {
     await clean()
-    const ax = await axiosAuth('test_user1@test.com')
-    await ax.patch('/api/v1/settings/user/test_user1', { agentChat: true })
+    const ax = await axiosAuth('test_datafair_user1@test.com')
+    await ax.patch('/api/v1/settings/user/test_datafair_user1', { agentChat: true })
   })
 
   test('opening a line dialog returns once its form tools are registered', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     const { data: created } = await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'Registre',
@@ -46,7 +46,7 @@ test.describe('line dialog agent tools', () => {
     })
     const { data: line } = await ax.post(`/api/v1/datasets/${created.id}/lines`, { nom: 'Les Amis du Vieux Moulin' })
 
-    await goToWithAuth(`/data-fair/dataset/${created.id}/edit-data`, 'test_user1')
+    await goToWithAuth(`/data-fair/dataset/${created.id}/edit-data`, 'test_datafair_user1')
     await expect(page.getByRole('button', { name: /Ajouter une ligne/ })).toBeVisible({ timeout: 15000 })
 
     const added = await callTool(page, 'open_add_line_dialog')
@@ -67,13 +67,13 @@ test.describe('line dialog agent tools', () => {
   })
 
   test('an unknown line _id is refused rather than opened', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     const { data: created } = await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'Registre',
       schema: [{ key: 'nom', type: 'string', title: 'Nom' }]
     })
-    await goToWithAuth(`/data-fair/dataset/${created.id}/edit-data`, 'test_user1')
+    await goToWithAuth(`/data-fair/dataset/${created.id}/edit-data`, 'test_datafair_user1')
     await expect(page.getByRole('button', { name: /Ajouter une ligne/ })).toBeVisible({ timeout: 15000 })
 
     const res = await callTool(page, 'open_edit_line_dialog', { lineId: 'no-such-line' })
@@ -84,18 +84,18 @@ test.describe('line dialog agent tools', () => {
 
   test('navigate returns once the destination page has registered its tools', async ({ page, goToWithAuth }) => {
     // the assistant's tools and host events are only on with the agents integration
-    test.skip(!await serviceUp('AGENTS_PORT'), 'needs the optional agents service: npm run dev-zellij -- --services agents')
+    test.skip(!await serviceUp('AGENTS_PORT'), 'needs the optional agents service: npm run dev -- --profile agents')
     // Its result used to say a destination tool is "not callable in this request"
     // and send the model into a wait on the arrival — whose `location` event had
     // already been delivered inside that very result. A judged run ignored the
     // advice and called open_add_line_dialog on the next step, which worked.
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     const { data: created } = await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'Registre',
       schema: [{ key: 'nom', type: 'string', title: 'Nom' }]
     })
-    await goToWithAuth('/data-fair/datasets', 'test_user1')
+    await goToWithAuth('/data-fair/datasets', 'test_datafair_user1')
     await expect.poll(() => page.evaluate(() => (navigator as any).modelContext?.listTools?.().some((t: { name: string }) => t.name === 'navigate')), { timeout: 15000 }).toBe(true)
 
     const res = await page.evaluate(async (path: string) => {

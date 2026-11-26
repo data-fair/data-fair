@@ -175,6 +175,8 @@ ComparisonOperator
 Like = "like"i
 LikeFilter
   = key:FieldName __ Like __ value:StringLiteral {
+    const prop = options.dataset.schema.find(p => p.key === key)
+    if (!prop) throw unknownFieldError('filter', key)
     const fields = [
       key,
       ...options.searchFields.filter(f => f.startsWith(key + '.')),

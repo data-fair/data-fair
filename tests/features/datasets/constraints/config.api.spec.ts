@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import FormData from 'form-data'
 import { axiosAuth, clean } from '../../../support/axios.ts'
 
-const testUser1 = await axiosAuth('test_user1@test.com')
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
 
 test.describe('unicity constraint config', () => {
   test.beforeEach(async () => { await clean() })

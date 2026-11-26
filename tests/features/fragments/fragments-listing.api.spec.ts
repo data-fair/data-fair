@@ -3,9 +3,9 @@ import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks, mockAppUrl } from '../../support/axios.ts'
 import { sendDataset } from '../../support/workers.ts'
 
-const testUser1Org = await axiosAuth('test_user1@test.com', 'test_org1')
-const testUser5Org = await axiosAuth('test_user5@test.com', 'test_org1')
-const testUser3 = await axiosAuth('test_user3@test.com')
+const testUser1Org = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
+const testUser5Org = await axiosAuth('test_datafair_user5@test.com', 'test_datafair_org1')
+const testUser3 = await axiosAuth('test_datafair_user3@test.com')
 
 test.describe('fragments listing', () => {
   test.beforeEach(async () => {
@@ -40,7 +40,7 @@ test.describe('fragments listing', () => {
     // a contributor of the parent sees the fragment through the derived ACL, an external reader of the parent does not
     assert.deepEqual(ids(await testUser5Org.get('/api/v1/datasets', { params: { partOf: `dataset:${virtual.id}` } })), [fragment.id])
     const parentPermissions = (await testUser1Org.get(`/api/v1/datasets/${virtual.id}/permissions`)).data
-    await testUser1Org.put(`/api/v1/datasets/${virtual.id}/permissions`, [...parentPermissions, { type: 'user', id: 'test_user3', name: 'Test User3', classes: ['list', 'read'] }])
+    await testUser1Org.put(`/api/v1/datasets/${virtual.id}/permissions`, [...parentPermissions, { type: 'user', id: 'test_datafair_user3', name: 'Test User3', classes: ['list', 'read'] }])
     assert.deepEqual(ids(await testUser3.get('/api/v1/datasets', { params: { partOf: `dataset:${virtual.id}` } })), [])
 
     // applications

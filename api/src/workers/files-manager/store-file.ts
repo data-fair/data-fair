@@ -4,7 +4,7 @@ import { updateStorage } from '../../datasets/utils/storage.ts'
 import * as datasetsService from '../../datasets/service.ts'
 import { replaceAllAttachments } from '../../datasets/utils/attachments.ts'
 import { detectEncoding } from '../../misc/utils/detect-encoding.ts'
-import JSONStream from 'JSONStream'
+import { jsonStreamScanner, jsonStreamStringifier } from '../../datasets/utils/json-streams.ts'
 import { Transform } from 'node:stream'
 import split2 from 'split2'
 import pump from '../../misc/utils/pipe.ts'
@@ -65,7 +65,8 @@ export default async function (dataset: DatasetInternal) {
             }
           }
         }),
-        JSONStream.parse('features.*'),
+        // lines without their line breaks: json has none in its strings and needs none between tokens
+        jsonStreamScanner({ path: ['features'] }),
         // transform geojson features into raw data items
         new Transform({
           objectMode: true,
@@ -76,7 +77,7 @@ export default async function (dataset: DatasetInternal) {
             callback(null, feature)
           }
         }),
-        JSONStream.stringify(`{
+        jsonStreamStringifier(`{
  "type": "FeatureCollection",
  "features": [`, ',\n  ', ` ]
 }`),

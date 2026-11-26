@@ -2,7 +2,7 @@ import { test } from '../../fixtures/diagnostics.ts'
 import assert from 'node:assert/strict'
 import { axiosAuth, clean } from '../../support/axios.ts'
 
-const u1 = await axiosAuth('test_user1@test.com')
+const u1 = await axiosAuth('test_datafair_user1@test.com')
 
 const metaOnly = async (id: string, body: Record<string, any>) => {
   await u1.post('/api/v1/datasets/' + id, { isMetaOnly: true, title: id, ...body })

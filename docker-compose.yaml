@@ -31,8 +31,14 @@ services:
       - MONGO_URL=mongodb://localhost:${MONGO_PORT}/simple-directory
       - OBSERVER_ACTIVE=false
       - CIPHER_PASSWORD=dev-cipher-password-0123456789abcdef
-      - STORAGE_TYPE=file
-      - ADMINS=["test_superadmin@test.com","superadmin@test.com","alban.mouton@koumoul.com"]
+      # accounts in mongo: the test suites seed and clean their own sub-space (test_datafair_ for this
+      # repository, tests/support/sd-fixtures.ts) through the test API
+      - STORAGE_TYPE=mongo
+      - ENABLE_TEST_API=1
+      # the test API needs NODE_ENV=development, the configuration stays the image's production one
+      - NODE_ENV=development
+      - NODE_CONFIG_ENV=production
+      - ADMINS=["test_datafair_superadmin@test.com"]
       - CONTACT=contact@test.com
       # in dev simple-directory only notifies this service, directly (the shared identities router refuses calls through the proxy)
       - IDENTITIES_WEBHOOKS=[{"base":"http://localhost:${DEV_API_PORT}/api/v1/identities","key":"secret-identities"}]
@@ -60,7 +66,7 @@ services:
       - MAILS_TRANSPORT={"host":"localhost","port":${MAILDEV_SMTP_PORT},"ignoreTLS":true}
       # per recipient, stored in mongo: repeated test runs would stop the mails silently
       - MAILSRATELIMIT_POINTS=100000
-      # non-human identities, declared in dev/resources/users.template.json (the autonomous-agent simulations)
+      # non-human identities, declared in tests/support/sd-fixtures.ts (the scope NHI used by the api tests)
       - MANAGE_NHIS=true
       # dev only: the NHI issuer is plain http on a .localhost host, which assertSafeIssuer refuses otherwise
       - NHIS_ALLOW_INSECURE_ISSUERS=true
@@ -68,9 +74,6 @@ services:
       - OAUTH_SERVER_ENABLED=true
       # the scopes an NHI may hold: those of every service of data-fair's platform document
       - PLATFORM_SCOPES_URL=http://localhost:${DEV_API_PORT}/api/v1/scopes.json
-    volumes:
-      - ./dev/resources/users.json:/app/data/users.json
-      - ./dev/resources/organizations.json:/app/data/organizations.json
     healthcheck:
       test: ["CMD", "nc", "-z", "localhost", "${SD_PORT}"]
       interval: 2s
@@ -114,7 +117,7 @@ services:
       - DEFAULT_MODELS={"assistant":{"provider":"global-mock","id":"mock-model"}}
       - DEFAULT_CREDITS=-1
       # NODE_ENV=development only for POST /api/test-env/autonomous-agent: an NHI declared in
-      # simple-directory's files pins the agent id (autonomous-agent:<id>), which the public creation
+      # simple-directory pins the agent id (autonomous-agent:<id>), which the public creation
       # route always generates. The configuration stays the image's production one.
       - NODE_ENV=development
       - NODE_CONFIG_ENV=production
@@ -149,8 +152,8 @@ services:
       # tool titles are shown to people (chat chips)
       - LOCALE=fr
       - OBSERVER_ACTIVE=false
-      # seconds between refreshes of the platform document: the line-edition simulations flip it between
-      # runs (the experiment switch) and wait for the tools to follow
+      # seconds between refreshes of the platform document: a change of the experiment switch
+      # reaches the tools after this delay
       - REFRESH_INTERVAL=10
 
   # registry-side dev container — same domain as data-fair under /registry
@@ -268,13 +271,13 @@ services:
       # and index creation hangs (cluster red), a dev or CI ES has no disk to protect
       - cluster.routing.allocation.disk.threshold_enabled=false
       # heap starts at 64m and grows up to 512m (pre-touching a fixed 512m cost ~360m per idle stack);
-      # an agent that needs more sets ES_HEAP=1g in .env (df-dev never overwrites it)
+      # an agent that needs more sets ES_HEAP=1g in .env (`.env` is never overwritten)
       - ES_JAVA_OPTS=-Xms64m -Xmx${ES_HEAP:-512m}
     volumes:
       - elasticsearch-data:/usr/share/elasticsearch/data
     healthcheck:
       test: ["CMD", "curl", "-f", "http://localhost:9200"]
-      # 2 s probes while starting (df-dev wait-deps gives up after 3 min), then one per minute
+      # 2 s probes while starting (the start period is 3 min), then one per minute
       interval: 60s
       timeout: 10s
       retries: 3

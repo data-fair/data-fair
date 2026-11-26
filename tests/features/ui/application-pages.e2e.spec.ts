@@ -6,7 +6,7 @@ test.describe('application detail pages', () => {
 
   test.beforeEach(async () => {
     await clean()
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
 
     // Create a base application first (use an existing one or create)
     const baseApps = await ax.get('/api/v1/base-applications', { params: { size: 1 } })
@@ -23,7 +23,7 @@ test.describe('application detail pages', () => {
 
   test('application index page loads with sections', async ({ page, goToWithAuth }) => {
     test.skip(!applicationId, 'No base application available')
-    await goToWithAuth(`/data-fair/application/${applicationId}`, 'test_user1')
+    await goToWithAuth(`/data-fair/application/${applicationId}`, 'test_datafair_user1')
     // Wait for the metadata section which contains the title
     await expect(page.locator('#metadata')).toBeVisible({ timeout: 15000 })
     await expect(page.locator('#metadata').getByRole('textbox', { name: /Titre|Title/ })).toHaveValue('Test Application E2E')
@@ -31,7 +31,7 @@ test.describe('application detail pages', () => {
 
   test('application config page loads', async ({ page, goToWithAuth }) => {
     test.skip(!applicationId, 'No base application available')
-    await goToWithAuth(`/data-fair/application/${applicationId}/config`, 'test_user1')
+    await goToWithAuth(`/data-fair/application/${applicationId}/config`, 'test_datafair_user1')
     await expect(page.locator('d-frame').first()).toBeAttached({ timeout: 10000 })
   })
 
@@ -62,7 +62,7 @@ test.describe('application detail pages', () => {
       firstAnswered = true
     })
 
-    await goToWithAuth(`/data-fair/application/${applicationId}/config`, 'test_user1')
+    await goToWithAuth(`/data-fair/application/${applicationId}/config`, 'test_datafair_user1')
     await page.getByRole('button', { name: 'Options' }).click()
     const first = page.getByRole('checkbox', { name: 'First option' })
     const second = page.getByRole('checkbox', { name: 'Second option' })
@@ -79,21 +79,21 @@ test.describe('application detail pages', () => {
     await validate.click()
     await expect(validate).toBeDisabled()
 
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     const config = (await ax.get(`/api/v1/applications/${applicationId}/configuration`)).data
     expect(config).toMatchObject({ first: true, second: true })
   })
 
   test('application api-doc page loads', async ({ page, goToWithAuth }) => {
     test.skip(!applicationId, 'No base application available')
-    await goToWithAuth(`/data-fair/application/${applicationId}/api-doc`, 'test_user1')
+    await goToWithAuth(`/data-fair/application/${applicationId}/api-doc`, 'test_datafair_user1')
     await expect(page.locator('d-frame').first()).toBeAttached({ timeout: 10000 })
   })
 
   test('config page loads when returning without refresh', async ({ page, goToWithAuth }) => {
     test.skip(!applicationId, 'No base application available')
     // Navigate to config page
-    await goToWithAuth(`/data-fair/application/${applicationId}/config`, 'test_user1')
+    await goToWithAuth(`/data-fair/application/${applicationId}/config`, 'test_datafair_user1')
     // Wait for d-frame to load
     await expect(page.locator('d-frame').first()).toBeAttached({ timeout: 10000 })
 
