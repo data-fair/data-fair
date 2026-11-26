@@ -40,7 +40,7 @@ const fileSchema = {
     required: ['key'],
     properties: {
       key: { type: 'string' },
-      separator: { type: ['string', 'null'] },
+      separator: { type: ['string', 'null'], maxLength: 20 },
       dateFormat: { type: ['string', 'null'] },
       dateTimeFormat: { type: ['string', 'null'] },
       timeZone: { type: ['string', 'null'] },
@@ -1261,6 +1261,7 @@ const dataset = {
         key: { type: 'string', readOnly: true, layout: 'none' },
         type: { type: 'string' },
         format: { type: ['string', 'null'] },
+        separator: { type: ['string', 'null'], maxLength: 20 },
         'x-originalName': { type: ['string', 'null'] },
         title: { type: 'string' },
         description: { type: 'string' },

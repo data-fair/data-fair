@@ -17,9 +17,9 @@ async function goToWithAuthResilient (goToWithAuth: (url: string, user: string, 
 test.describe('access audit page', () => {
   test.beforeAll(async () => {
     await clean()
-    const ax = await axiosAuth('test_user1@test.com', 'test_org1')
+    const ax = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
     const visible = (await ax.post('/api/v1/datasets', { isRest: true, title: 'Audit visible dataset' })).data
-    await ax.put(`/api/v1/datasets/${visible.id}/permissions`, [{ type: 'user', id: 'test_user8', classes: ['list', 'read'] }])
+    await ax.put(`/api/v1/datasets/${visible.id}/permissions`, [{ type: 'user', id: 'test_datafair_user8', classes: ['list', 'read'] }])
     await ax.post('/api/v1/datasets', { isRest: true, title: 'Audit hidden dataset' })
     const publicDs = (await ax.post('/api/v1/datasets', { isRest: true, title: 'Audit public dataset' })).data
     await ax.put(`/api/v1/datasets/${publicDs.id}/permissions`, [{ classes: ['list', 'read'] }])
@@ -30,18 +30,18 @@ test.describe('access audit page', () => {
   })
 
   test('the page is not available to a contrib', async ({ page, goToWithAuth }) => {
-    await goToWithAuthResilient(goToWithAuth, '/data-fair/access-audit', 'test_user5', { org: 'test_org1' })
+    await goToWithAuthResilient(goToWithAuth, '/data-fair/access-audit', 'test_datafair_user5', { org: 'test_datafair_org1' })
     await expect(page.getByText(/réservée aux administrateurs/)).toBeVisible()
   })
 
   test('an org admin audits a member', async ({ page, goToWithAuth }) => {
-    await goToWithAuthResilient(goToWithAuth, '/data-fair/access-audit', 'test_user1', { org: 'test_org1' })
+    await goToWithAuthResilient(goToWithAuth, '/data-fair/access-audit', 'test_datafair_user1', { org: 'test_datafair_org1' })
     await page.locator('.v-select').filter({ hasText: 'Visiteur simulé' }).click()
     await page.getByRole('option', { name: /Un membre de/ }).click()
     // pick the member (member-select queries simple-directory from 3 typed chars)
     await page.getByRole('combobox').filter({ hasText: /Membre de/ }).locator('input').fill('user8')
     await page.getByRole('option', { name: /user8/i }).click()
-    await page.waitForURL(/visitor=member(:|%3A)test_user8(:|%3A)/)
+    await page.waitForURL(/visitor=member(:|%3A)test_datafair_user8(:|%3A)/)
     // only the explicitly shared dataset is listed, with its capability chip
     await expect(page.getByText('Audit visible dataset')).toBeVisible()
     await expect(page.getByText('Audit hidden dataset')).toBeHidden()
@@ -56,7 +56,7 @@ test.describe('access audit page', () => {
     await expect(page.getByText('Audit visible dataset')).toBeHidden()
   })
   test('an org admin audits an anonymous visitor', async ({ page, goToWithAuth }) => {
-    await goToWithAuthResilient(goToWithAuth, '/data-fair/access-audit', 'test_user1', { org: 'test_org1' })
+    await goToWithAuthResilient(goToWithAuth, '/data-fair/access-audit', 'test_datafair_user1', { org: 'test_datafair_org1' })
     await page.locator('.v-select').filter({ hasText: 'Visiteur simulé' }).click()
     await page.getByRole('option', { name: 'Un visiteur anonyme' }).click()
     await expect(page.getByText('Audit public dataset')).toBeVisible()

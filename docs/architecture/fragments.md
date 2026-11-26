@@ -3,8 +3,7 @@
 This document describes **fragments**: datasets and applications that exist only as a part of
 another resource, declared by a `partOf` attribute on the fragment itself. See also
 [Application keys](./application-keys.md) for the application-context mechanism that fragments
-extend, and the design spec at `docs/superpowers/specs/2026-09-18-fragments-design.md` (some
-decisions there were amended during implementation; this document describes the code as built).
+extend. This document describes the code as built.
 
 ## 1. What a fragment is
 

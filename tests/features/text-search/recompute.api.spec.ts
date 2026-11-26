@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks, anonymousAx, apiUrl, mockAppUrl } from '../../support/axios.ts'
 import { callWorkerFunction, getRawDataset, getRawApplication, patchRawDataset } from '../../support/workers.ts'
 
-const u1 = await axiosAuth('test_user1@test.com')
+const u1 = await axiosAuth('test_datafair_user1@test.com')
 
 const metaOnly = async (id: string, body: Record<string, any> = {}) => {
   await u1.post('/api/v1/datasets/' + id, { isMetaOnly: true, title: id, ...body })

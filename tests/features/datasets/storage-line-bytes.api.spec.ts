@@ -4,7 +4,7 @@ import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
 import { waitForFinalize } from '../../support/workers.ts'
 
-const ax = await axiosAuth('test_user1@test.com')
+const ax = await axiosAuth('test_datafair_user1@test.com')
 
 // indexed size = byte length of the default CSV export minus BOM and header:
 // '"aaa",1\n' (8) + '"bébé",22\n' (12) = 20

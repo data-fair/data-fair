@@ -12,32 +12,32 @@ import { i18nMessage } from '../../../api/src/misc/utils/i18n-errors.ts'
 // a refusal rendered in French, the language of the default locale
 const fr = (refusal: FragmentRefusal | null) => refusal ? i18nMessage(refusal.key, refusal.params ?? {}, 'fr') : ''
 
-const orgOwner = { type: 'organization', id: 'test_org1', name: 'Test Org 1' }
-const contribWrite: Permission = { type: 'organization', id: 'test_org1', name: 'Test Org 1', department: '-', roles: ['contrib'], classes: ['write'], operations: ['delete'] }
+const orgOwner = { type: 'organization', id: 'test_datafair_org1', name: 'Test Org 1' }
+const contribWrite: Permission = { type: 'organization', id: 'test_datafair_org1', name: 'Test Org 1', department: '-', roles: ['contrib'], classes: ['write'], operations: ['delete'] }
 const contribRead: Permission = { ...contribWrite, classes: ['list', 'read', 'readAdvanced'], operations: [] }
 const publicRead: Permission = { classes: ['read', 'list'] }
-const userWriteOnly: Permission = { type: 'user', id: 'test_user3', name: 'Test User3', classes: ['write'] }
-const userReadOnly: Permission = { type: 'user', id: 'test_user3', name: 'Test User3', classes: ['read'] }
-const userAdmin: Permission = { type: 'user', id: 'test_user3', name: 'Test User3', classes: ['admin'] }
-const userByEmailWriteDesc: Permission = { type: 'user', email: 'test_user3@test.com', operations: ['writeDescription'] }
+const userWriteOnly: Permission = { type: 'user', id: 'test_datafair_user3', name: 'Test User3', classes: ['write'] }
+const userReadOnly: Permission = { type: 'user', id: 'test_datafair_user3', name: 'Test User3', classes: ['read'] }
+const userAdmin: Permission = { type: 'user', id: 'test_datafair_user3', name: 'Test User3', classes: ['admin'] }
+const userByEmailWriteDesc: Permission = { type: 'user', email: 'test_datafair_user3@test.com', operations: ['writeDescription'] }
 
 test.describe('deriveFragmentPermissions', () => {
   test('dataset fragment of a virtual dataset: management inherited and implies read, read alone dropped', () => {
     const derived = deriveFragmentPermissions([contribWrite, contribRead, publicRead, userWriteOnly, userReadOnly, userAdmin, userByEmailWriteDesc], 'datasets', 'datasets')
     assert.deepEqual(derived, [
-      { type: 'organization', id: 'test_org1', name: 'Test Org 1', department: '-', roles: ['contrib'], classes: ['list', 'read', 'readAdvanced', 'write'], operations: ['delete'] },
-      { type: 'user', id: 'test_user3', name: 'Test User3', classes: ['list', 'read', 'readAdvanced', 'write'] },
-      { type: 'user', id: 'test_user3', name: 'Test User3', classes: ['list', 'read', 'readAdvanced', 'admin'] },
-      { type: 'user', email: 'test_user3@test.com', classes: ['list', 'read', 'readAdvanced'], operations: ['writeDescription'] }
+      { type: 'organization', id: 'test_datafair_org1', name: 'Test Org 1', department: '-', roles: ['contrib'], classes: ['list', 'read', 'readAdvanced', 'write'], operations: ['delete'] },
+      { type: 'user', id: 'test_datafair_user3', name: 'Test User3', classes: ['list', 'read', 'readAdvanced', 'write'] },
+      { type: 'user', id: 'test_datafair_user3', name: 'Test User3', classes: ['list', 'read', 'readAdvanced', 'admin'] },
+      { type: 'user', email: 'test_datafair_user3@test.com', classes: ['list', 'read', 'readAdvanced'], operations: ['writeDescription'] }
     ])
   })
 
   test('dataset fragment of an application: same as above, cross-type classes', () => {
-    const appContribWrite: Permission = { type: 'organization', id: 'test_org1', department: '-', roles: ['contrib'], classes: ['write'], operations: ['delete'] }
+    const appContribWrite: Permission = { type: 'organization', id: 'test_datafair_org1', department: '-', roles: ['contrib'], classes: ['write'], operations: ['delete'] }
     const derived = deriveFragmentPermissions([appContribWrite, publicRead, userAdmin], 'applications', 'datasets')
     assert.deepEqual(derived, [
-      { type: 'organization', id: 'test_org1', department: '-', roles: ['contrib'], classes: ['list', 'read', 'readAdvanced', 'write'], operations: ['delete'] },
-      { type: 'user', id: 'test_user3', name: 'Test User3', classes: ['list', 'read', 'readAdvanced', 'admin'] }
+      { type: 'organization', id: 'test_datafair_org1', department: '-', roles: ['contrib'], classes: ['list', 'read', 'readAdvanced', 'write'], operations: ['delete'] },
+      { type: 'user', id: 'test_datafair_user3', name: 'Test User3', classes: ['list', 'read', 'readAdvanced', 'admin'] }
     ])
   })
 
@@ -45,7 +45,7 @@ test.describe('deriveFragmentPermissions', () => {
     const derived = deriveFragmentPermissions([publicRead, userReadOnly, { type: 'user', id: 'u', operations: ['readConfig'] }], 'applications', 'applications')
     assert.deepEqual(derived, [
       { classes: ['list', 'read'] },
-      { type: 'user', id: 'test_user3', name: 'Test User3', classes: ['read'] },
+      { type: 'user', id: 'test_datafair_user3', name: 'Test User3', classes: ['read'] },
       { type: 'user', id: 'u', operations: ['readConfig'] }
     ])
   })
@@ -55,9 +55,9 @@ test.describe('deriveFragmentPermissions', () => {
     const derived = deriveFragmentPermissions([publicRead, contribRead, userReadOnly, metaOnlyDetailedRead, contribWrite], 'datasets', 'datasets', true)
     assert.deepEqual(derived, [
       { classes: ['list', 'read'] },
-      { type: 'organization', id: 'test_org1', name: 'Test Org 1', department: '-', roles: ['contrib'], classes: ['list', 'read'] },
-      { type: 'user', id: 'test_user3', name: 'Test User3', classes: ['read'] },
-      { type: 'organization', id: 'test_org1', name: 'Test Org 1', department: '-', roles: ['contrib'], classes: ['list', 'read', 'readAdvanced', 'write'], operations: ['delete'] }
+      { type: 'organization', id: 'test_datafair_org1', name: 'Test Org 1', department: '-', roles: ['contrib'], classes: ['list', 'read'] },
+      { type: 'user', id: 'test_datafair_user3', name: 'Test User3', classes: ['read'] },
+      { type: 'organization', id: 'test_datafair_org1', name: 'Test Org 1', department: '-', roles: ['contrib'], classes: ['list', 'read', 'readAdvanced', 'write'], operations: ['delete'] }
     ])
     assert.deepEqual(deriveFragmentPermissions(derived, 'datasets', 'datasets', true), derived)
   })
@@ -66,7 +66,7 @@ test.describe('deriveFragmentPermissions', () => {
   // readIntegrity and readIntegrityRevisions are pure reads that happen to sit in the `admin` class:
   // carrying them over used to trigger the "write implies read" grant and leak the whole fragment.
   test('a read-only admin entry on the parent derives nothing', () => {
-    const readOnlyAdmin: Permission = { type: 'user', id: 'test_user3', name: 'Test User3', operations: ['getPermissions'] }
+    const readOnlyAdmin: Permission = { type: 'user', id: 'test_datafair_user3', name: 'Test User3', operations: ['getPermissions'] }
     assert.deepEqual(deriveFragmentPermissions([readOnlyAdmin], 'datasets', 'datasets'), [])
     assert.deepEqual(deriveFragmentPermissions([{ ...readOnlyAdmin, operations: ['readIntegrity', 'readIntegrityRevisions'] }], 'datasets', 'datasets'), [])
     // applications: getPermissions is read-only there too
@@ -74,9 +74,9 @@ test.describe('deriveFragmentPermissions', () => {
   })
 
   test('a mixed entry derives only its write side, plus read', () => {
-    const mixed: Permission = { type: 'user', id: 'test_user3', name: 'Test User3', operations: ['getPermissions', 'writeDescription'] }
+    const mixed: Permission = { type: 'user', id: 'test_datafair_user3', name: 'Test User3', operations: ['getPermissions', 'writeDescription'] }
     assert.deepEqual(deriveFragmentPermissions([mixed], 'datasets', 'datasets'), [
-      { type: 'user', id: 'test_user3', name: 'Test User3', classes: ['list', 'read', 'readAdvanced'], operations: ['writeDescription'] }
+      { type: 'user', id: 'test_datafair_user3', name: 'Test User3', classes: ['list', 'read', 'readAdvanced'], operations: ['writeDescription'] }
     ])
   })
 
@@ -111,7 +111,7 @@ test.describe('validatePartOf', () => {
   test('refuses self, a fragment parent, a different owner, a resource that has fragments, a published resource', () => {
     assert.match(fr(validatePartOf({ ...base, fragment: { id: 'v', owner: orgOwner }, partOf: { type: 'dataset', id: 'v' }, parent: virtualParent })), /elle-même/)
     assert.match(fr(validatePartOf({ ...base, partOf: { type: 'dataset', id: 'v' }, parent: { ...virtualParent, partOf: { type: 'application', id: 'a' } } })), /lui-même un fragment/)
-    assert.match(fr(validatePartOf({ ...base, fragment: { owner: { type: 'organization', id: 'test_org1', department: 'dep1' } }, partOf: { type: 'dataset', id: 'v' }, parent: virtualParent })), /propriétaire/)
+    assert.match(fr(validatePartOf({ ...base, fragment: { owner: { type: 'organization', id: 'test_datafair_org1', department: 'dep1' } }, partOf: { type: 'dataset', id: 'v' }, parent: virtualParent })), /propriétaire/)
     assert.match(fr(validatePartOf({ ...base, partOf: { type: 'dataset', id: 'v' }, parent: virtualParent, nbFragments: 2 })), /fragments/)
     assert.match(fr(validatePartOf({ ...base, fragment: { owner: orgOwner, publicationSites: ['data-fair-portals:p'] }, partOf: { type: 'dataset', id: 'v' }, parent: virtualParent })), /portail/)
     assert.match(fr(validatePartOf({ ...base, fragment: { owner: orgOwner, publications: [{ catalog: 'c' }] }, partOf: { type: 'dataset', id: 'v' }, parent: virtualParent })), /catalogue/)

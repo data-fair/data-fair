@@ -10,7 +10,7 @@
     />
     <vjsf
       v-else-if="dataset"
-      :key="trLocale ?? 'default'"
+      :key="`${trLocale ?? 'default'}-${schemaVersion}`"
       :model-value="vjsfModel"
       :schema="schema"
       :options="vjsfOptions"

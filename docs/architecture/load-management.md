@@ -408,8 +408,7 @@ Items marked **measured** carry benchmark-harness evidence (`benchmark/`, raw re
   *direction* is consistent across four runs — a 5M-row seed would sharpen the figures.) *Proposed
   bound:* cap `track_total_hits` (`10000`) for scoring `q` requests — `hits.total.relation` becomes
   `"gte"`, which the UI already handles via `count=estimate`. A behaviour change, so it warrants its
-  own spec. **IMPLEMENTED (2026-07-30)** as the *approximate-count mode* (plan:
-  `docs/superpowers/plans/2026-07-30-approx-count-ranked-search.md`; full measurement trail:
+  own spec. **IMPLEMENTED (2026-07-30)** as the *approximate-count mode* (full measurement trail:
   `benchmark/INVESTIGATIONS.md` §11–12, incl. an ES 7.17 validation and a 3.3M-row real-corpus run
   where the cap measured −52…−93 % on ES 7.17 and −87…−97 % on ES 8.19 with the top hits identical
   in every case): `prepareQuery` caps `track_total_hits` to `approxCount.cap` on page-1 ranked `q`

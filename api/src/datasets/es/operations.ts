@@ -184,7 +184,13 @@ export const extractError = (err: any): ExtractedError => {
   // on a read path (see es/abort.js) the elasticsearch client throws RequestAbortedError when our
   // AbortSignal fires - the only thing that aborts it is the http client going away - and TimeoutError
   // when the per-request client timeout elapses
-  if (err) {
+  if (err == null) return { message: 'Unknown elasticsearch error', status: 500 }
+  if (typeof err === 'object') {
+    // the client also throws RequestAbortedError when it refuses a response above maxResponseSize:
+    // a real failure, not a client that went away
+    if (err.name === 'RequestAbortedError' && /bigger than the maximum allowed/.test(err.message ?? '')) {
+      return { message: 'The search response is too large, request fewer lines or fewer columns.', status: 500 }
+    }
     if (err.name === 'RequestAbortedError' || err.name === 'AbortError') {
       // 499 = "client closed request" (nginx convention) - the http response, if any, won't reach
       // anyone; callers must treat this as a quiet no-op (no error log, no error metric)
@@ -192,16 +198,15 @@ export const extractError = (err: any): ExtractedError => {
     }
     if (err.name === 'TimeoutError') return tooLongError
   }
-  const status = err.status ?? err.statusCode ?? 500
+  const status = err.status ?? err.statusCode ?? err.meta?.statusCode ?? 500
   if (typeof err === 'string') return { message: err, status }
   // an i18n http error thrown by our own code (a query builder...) keeps its message key
   if (err.i18n) return { message: err.message, status, i18n: err.i18n }
   let errBody = (err.body && err.body.error) || (err.meta && err.meta.body && err.meta.body.error) || err.error
+  // a plain string error body ("no handler found for uri...")
+  if (typeof errBody === 'string') return { message: errBody, status }
   if (!errBody && !!err.reason) errBody = err
-  if (!errBody) {
-    if (err.message) return { message: err.message, status }
-    else return { message: JSON.stringify(err), status }
-  }
+  if (!errBody) return { message: fallbackErrorMessage(err), status }
   const parts: string[] = []
   if (errBody.reason) {
     parts.push(errBody.reason)
@@ -227,8 +232,36 @@ export const extractError = (err: any): ExtractedError => {
   if (parts.includes('Time exceeded')) {
     return tooLongError
   }
+  if (!parts.length) parts.push(errBody.type ?? fallbackErrorMessage(err))
   return { message: parts.join(' - '), status }
 }
+
+// the message of an error without a usable elasticsearch error body - never empty
+const fallbackErrorMessage = (err: any): string => {
+  // 'Response Error' is the client's generic message for a response without error body (empty 413,
+  // proxy page...): its status says more
+  if (err.message && err.message !== 'Response Error') return err.message
+  const statusCode = err.statusCode ?? err.meta?.statusCode
+  if (statusCode) return `elasticsearch responded with status ${statusCode}`
+  const json = JSON.stringify(err)
+  return json && json !== '{}' ? json : 'Unknown elasticsearch error'
+}
+
+/**
+ * The reason of a failed elasticsearch write request (index creation, bulk indexing...).
+ * extractError words a timeout or an abort for the search request of a user ("This request is too
+ * long...", "client disconnected"), which says nothing true about a write: keep the client message.
+ */
+export const writeErrorReason = (err: any): string => {
+  if (err?.name === 'TimeoutError' || err?.name === 'RequestAbortedError') return err.message
+  return extractError(err).message
+}
+
+// The error a failed bulk indexing request ends the indexing task with. It keeps the elasticsearch
+// reason (read-only index after the disk flood-stage watermark, circuit breaker, unreachable
+// node...): the journal is the only place a dataset owner reads it.
+export const bulkIndexingError = (err: any) =>
+  new Error(`Failure while indexing a batch of data: ${writeErrorReason(err)}`, { cause: err })
 
 // The mapping-emission shape esProperty / buildIndexMappings produce, persisted per dataset as
 // `_indexShape` when its index is (re)built. Absent = legacy (uniform polarity).
@@ -700,7 +733,7 @@ export const buildQClauses = (
         should.push({ simple_query_string: { query: `${q}*`, fields: prefixFields, ...sqsOptions } })
       }
       if (qWildcardFields.length) {
-        should.push({ query_string: { query: `*${q}*`, fields: qWildcardFields, ...sqsOptions } })
+        should.push({ query_string: { query: `*${escapeFilter(q)}*`, fields: qWildcardFields, ...sqsOptions } })
       }
     }
     // if the user submitted a multi word query and didn't use quotes
@@ -785,7 +818,7 @@ export const buildQClauses = (
     if (filterFields.length) {
       const readings = andReadings(userWildcards ? q : `${q}*`, filterFields, withLenient)
       if (qWildcardFields.length && !userWildcards) {
-        readings.push({ query_string: { query: `*${q}*`, fields: qWildcardFields, ...sqsOptions } })
+        readings.push({ query_string: { query: `*${escapeFilter(q)}*`, fields: qWildcardFields, ...sqsOptions } })
       }
       return { bool: { must: [scored], filter: [anyReading(readings)] } }
     }
@@ -877,6 +910,13 @@ export const lineBytes = (item: Record<string, any>, spec: LineBytesSpec): numbe
  * Escape special Lucene query characters in a filter value
  * cf https://github.com/joeybaker/lucene-escape-query/blob/master/index.js
  */
+// lucene-query-parser does not accept escaped quotes inside phrases: drop them before parsing a qs.
+// Escape pairs are consumed left to right, so that an escaped backslash before a quote ("a\\")
+// stays an escaped backslash and the quote still closes the phrase, as Elasticsearch reads it
+export const qsForParser = (qs: string): string => {
+  return qs.replace(/\\(["\\])/g, (pair: string, char: string) => char === '"' ? '' : pair)
+}
+
 export const escapeFilter = (val: any): any => {
   if (typeof val !== 'string') return val
   return [].map.call(val, (char: string) => {

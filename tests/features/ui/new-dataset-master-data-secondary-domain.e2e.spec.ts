@@ -12,12 +12,12 @@ test.describe('new-dataset wizard — virtual dataset from master-data on a seco
   })
 
   test('initializes virtual dataset schema from a master-data child of the main domain', async ({ page, goToWithAuth }) => {
-    // 1) main-domain master-data dataset, owned by another org (test_org3) but
-    //    explicitly shared with test_org1 so the corresponding remote-service is
-    //    surfaced by /api/v1/remote-services?privateAccess=organization:test_org1.
+    // 1) main-domain master-data dataset, owned by another org (test_datafair_org3) but
+    //    explicitly shared with test_datafair_org1 so the corresponding remote-service is
+    //    surfaced by /api/v1/remote-services?privateAccess=organization:test_datafair_org1.
     //    This mirrors the production scenario: a master-data published as a
     //    cross-domain reference for another organization.
-    const axOtherOrg = await axiosAuth('test_user2@test.com', 'test_org3')
+    const axOtherOrg = await axiosAuth('test_datafair_user2@test.com', 'test_datafair_org3')
     await axOtherOrg.put('/api/v1/datasets/master-products', {
       isRest: true,
       title: 'Master products',
@@ -27,10 +27,10 @@ test.describe('new-dataset wizard — virtual dataset from master-data on a seco
       ],
       masterData: {
         virtualDatasets: { active: true },
-        shareOrgs: [{ id: 'test_org1', name: 'Test Org 1' }]
+        shareOrgs: [{ id: 'test_datafair_org1', name: 'Test Org 1' }]
       }
     })
-    // grant public read+list so test_org1 can find it via the bulk listing
+    // grant public read+list so test_datafair_org1 can find it via the bulk listing
     // used by the new-dataset wizard's "fill schema from children" flow
     await axOtherOrg.put('/api/v1/datasets/master-products/permissions', [{ classes: ['read', 'list'] }])
     // populate the master-data with at least one row so it gets finalized
@@ -40,20 +40,20 @@ test.describe('new-dataset wizard — virtual dataset from master-data on a seco
     ])
     await waitForFinalize(axOtherOrg, 'master-products')
 
-    // 2) test_org1 registers a publication site bound to NGINX_PORT2
-    const axOrg = await axiosAuth('test_user1@test.com', 'test_org1')
-    await axOrg.post('/api/v1/settings/organization/test_org1/publication-sites', {
+    // 2) test_datafair_org1 registers a publication site bound to NGINX_PORT2
+    const axOrg = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
+    await axOrg.post('/api/v1/settings/organization/test_datafair_org1/publication-sites', {
       type: 'data-fair-portals',
       id: 'portal1',
       url: baseUrl2
     })
     await clearPublicationSitesCache()
 
-    // 3) session of test_user1 on test_org1, opened through simple-directory's API rather than
+    // 3) session of test_datafair_user1 on test_datafair_org1, opened through simple-directory's API rather than
     //    its login form, whose wording is not ours. The cookies (session, language, cache bypass)
     //    are host-scoped, not port-scoped, so they also apply on NGINX_PORT2: go straight to the
     //    new-dataset wizard of the secondary domain
-    await goToWithAuth(`${baseUrl2}/data-fair/new-dataset`, 'test_user1', { org: 'test_org1' })
+    await goToWithAuth(`${baseUrl2}/data-fair/new-dataset`, 'test_datafair_user1', { org: 'test_datafair_org1' })
 
     const virtualCard = page.locator('.v-card-title', { hasText: 'Virtuel' })
     await expect(virtualCard).toBeVisible({ timeout: 10000 })

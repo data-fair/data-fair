@@ -5,7 +5,7 @@ import type { AxiosInstance } from 'axios'
 
 const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}`
 
-async function goToSettings (page: any, goToWithAuth: any, user = 'test_user1') {
+async function goToSettings (page: any, goToWithAuth: any, user = 'test_datafair_user1') {
   await goToWithAuth('/data-fair/', user)
   await page.goto(`${baseUrl}/data-fair/settings`)
   await expect(page.locator('#info')).toBeVisible({ timeout: 15000 })
@@ -24,7 +24,7 @@ async function slowSaves (page: any, ms: number, onlyKey?: string) {
 
 // the session is opened on the organization: switching from the personal menu reloads the page,
 // sometimes twice, and a navigation started right after the switch was interrupted by the reload
-async function goToSettingsOrg (page: any, goToWithAuth: any, user = 'test_user1', org = 'test_org1') {
+async function goToSettingsOrg (page: any, goToWithAuth: any, user = 'test_datafair_user1', org = 'test_datafair_org1') {
   await goToWithAuth('/data-fair/settings', user, { org })
   await expect(page.locator('#info')).toBeVisible({ timeout: 15000 })
 }
@@ -59,14 +59,14 @@ test.describe('settings topics save/cancel', () => {
 
   test.beforeAll(async () => {
     await clean()
-    ax = await axiosAuth('test_user1@test.com')
-    baseSettings = (await ax.get('/api/v1/settings/user/test_user1')).data
+    ax = await axiosAuth('test_datafair_user1@test.com')
+    baseSettings = (await ax.get('/api/v1/settings/user/test_datafair_user1')).data
   })
 
   // reset topics between tests: fragile "first titre field" locators only target
   // the right (blank) item when the topics array starts empty
   test.beforeEach(async () => {
-    await ax.put('/api/v1/settings/user/test_user1', baseSettings)
+    await ax.put('/api/v1/settings/user/test_datafair_user1', baseSettings)
   })
 
   test('save button appears on topic change and saves correctly', async ({ page, goToWithAuth }) => {
@@ -88,7 +88,7 @@ test.describe('settings topics save/cancel', () => {
 
     // Verify via API
     await expect.poll(async () => {
-      const res = await ax.get('/api/v1/settings/user/test_user1')
+      const res = await ax.get('/api/v1/settings/user/test_datafair_user1')
       return res.data.topics?.some((t: any) => t.title === 'Test Topic')
     }, { timeout: 10000 }).toBeTruthy()
 
@@ -116,8 +116,8 @@ test.describe('settings topics save/cancel', () => {
   })
 
   test('deleting a used topic asks for confirmation before saving', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com')
-    const topics = (await ax.put('/api/v1/settings/user/test_user1', { topics: [{ title: 'Used topic' }] })).data.topics
+    const ax = await axiosAuth('test_datafair_user1@test.com')
+    const topics = (await ax.put('/api/v1/settings/user/test_datafair_user1', { topics: [{ title: 'Used topic' }] })).data.topics
     const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'with topic', topics })).data
 
     await goToSettings(page, goToWithAuth)
@@ -134,7 +134,7 @@ test.describe('settings topics save/cancel', () => {
     await expect(dialog).toContainText('Thématique « Used topic » supprimée : elle sera retirée de 1 jeu de données.')
     await dialog.getByRole('button', { name: /Annuler/i }).click()
     // checked on the settings: reading the dataset here would put it in the 30s memoize cache
-    assert.equal((await ax.get('/api/v1/settings/user/test_user1')).data.topics.length, 1)
+    assert.equal((await ax.get('/api/v1/settings/user/test_datafair_user1')).data.topics.length, 1)
 
     await page.locator('#catalog').getByRole('button', { name: /Enregistrer/i }).click()
     await page.getByRole('dialog').getByRole('button', { name: /Enregistrer/i }).click()
@@ -148,13 +148,13 @@ test.describe('settings catalog tabs save/cancel', () => {
 
   test.beforeAll(async () => {
     await clean()
-    ax = await axiosAuth('test_user1@test.com')
-    baseSettings = (await ax.get('/api/v1/settings/user/test_user1')).data
+    ax = await axiosAuth('test_datafair_user1@test.com')
+    baseSettings = (await ax.get('/api/v1/settings/user/test_datafair_user1')).data
   })
 
   // reset licenses between tests: same "first titre field" fragility as topics
   test.beforeEach(async () => {
-    await ax.put('/api/v1/settings/user/test_user1', baseSettings)
+    await ax.put('/api/v1/settings/user/test_datafair_user1', baseSettings)
   })
 
   test('save persists license across tabs', async ({ page, goToWithAuth }) => {
@@ -181,7 +181,7 @@ test.describe('settings catalog tabs save/cancel', () => {
 
     // Verify via API
     await expect.poll(async () => {
-      const res = await ax.get('/api/v1/settings/user/test_user1')
+      const res = await ax.get('/api/v1/settings/user/test_datafair_user1')
       return res.data.licenses?.some((l: any) => l.title === 'MIT License')
     }, { timeout: 10000 }).toBeTruthy()
   })
@@ -212,10 +212,10 @@ test.describe('settings publication sites save/cancel', () => {
   })
 
   test('save persists publication site changes', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com', 'test_org1')
+    const ax = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
 
     // Pre-seed a publication site
-    await ax.post('/api/v1/settings/organization/test_org1/publication-sites', {
+    await ax.post('/api/v1/settings/organization/test_datafair_org1/publication-sites', {
       type: 'data-fair-portals',
       id: 'portal1',
       url: 'http://portal.com',
@@ -239,7 +239,7 @@ test.describe('settings cross-subEdit interference', () => {
   })
 
   test('saving the catalog does not affect pending contact changes', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
 
     await goToSettings(page, goToWithAuth)
 
@@ -264,7 +264,7 @@ test.describe('settings cross-subEdit interference', () => {
     await expect(info.getByRole('button', { name: /Enregistrer/i })).toBeVisible()
 
     // Verify API: license saved, contact NOT saved
-    const res = await ax.get('/api/v1/settings/user/test_user1')
+    const res = await ax.get('/api/v1/settings/user/test_datafair_user1')
     expect(res.data.licenses?.some((l: any) => l.title === 'Saved License')).toBeTruthy()
     expect(res.data.info?.contact?.name).toBeUndefined()
   })
@@ -276,7 +276,7 @@ test.describe('settings integrations', () => {
   })
 
   test('an API key is saved as soon as it is added', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
 
     await goToSettings(page, goToWithAuth)
     const section = page.locator('#integrations')
@@ -286,7 +286,7 @@ test.describe('settings integrations', () => {
     await dialog.getByLabel('Titre', { exact: true }).fill('Auto key')
     await dialog.getByRole('button', { name: 'Ajouter', exact: true }).click()
 
-    await expect.poll(async () => (await ax.get('/api/v1/settings/user/test_user1')).data.apiKeys?.length ?? 0, { timeout: 10000 }).toBe(1)
+    await expect.poll(async () => (await ax.get('/api/v1/settings/user/test_datafair_user1')).data.apiKeys?.length ?? 0, { timeout: 10000 }).toBe(1)
     // the secret is shown once, right after the save
     await expect(section.getByText('Clé « Auto key » créée')).toBeVisible()
     await expect(section.getByRole('button', { name: /Enregistrer/i })).not.toBeVisible()
@@ -300,8 +300,8 @@ test.describe('settings integrations', () => {
   })
 
   test('a key stored before this visit does not block adding another one', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com')
-    await ax.patch('/api/v1/settings/user/test_user1', { apiKeys: [{ title: 'Stored key', scopes: ['datasets'] }] })
+    const ax = await axiosAuth('test_datafair_user1@test.com')
+    await ax.patch('/api/v1/settings/user/test_datafair_user1', { apiKeys: [{ title: 'Stored key', scopes: ['datasets'] }] })
 
     await goToSettings(page, goToWithAuth)
     const section = page.locator('#integrations')
@@ -312,11 +312,11 @@ test.describe('settings integrations', () => {
     await dialog.getByRole('button', { name: 'Ajouter', exact: true }).click()
 
     await expect(section.getByText('Clé « Second key » créée')).toBeVisible()
-    assert.equal((await ax.get('/api/v1/settings/user/test_user1')).data.apiKeys.length, 2)
+    assert.equal((await ax.get('/api/v1/settings/user/test_datafair_user1')).data.apiKeys.length, 2)
   })
 
   test('a refused API key save is rolled back and the next one still goes out', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     await goToSettings(page, goToWithAuth)
     const section = page.locator('#integrations')
     await section.scrollIntoViewIfNeeded()
@@ -340,14 +340,14 @@ test.describe('settings integrations', () => {
     await dialog.getByLabel('Titre', { exact: true }).fill('Accepted key')
     await dialog.getByRole('button', { name: 'Ajouter', exact: true }).click()
     await expect(dialog).not.toBeVisible({ timeout: 5000 })
-    await expect.poll(async () => (await ax.get('/api/v1/settings/user/test_user1')).data.apiKeys?.map((k: any) => k.title), { timeout: 10000 })
+    await expect.poll(async () => (await ax.get('/api/v1/settings/user/test_datafair_user1')).data.apiKeys?.map((k: any) => k.title), { timeout: 10000 })
       .toContain('Accepted key')
-    expect((await ax.get('/api/v1/settings/user/test_user1')).data.apiKeys?.map((k: any) => k.title)).not.toContain('Refused key')
+    expect((await ax.get('/api/v1/settings/user/test_datafair_user1')).data.apiKeys?.map((k: any) => k.title)).not.toContain('Refused key')
   })
 
   test('a webhook is saved on explicit save, once complete', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com')
-    const webhooks = async () => (await ax.get('/api/v1/settings/user/test_user1')).data.webhooks ?? []
+    const ax = await axiosAuth('test_datafair_user1@test.com')
+    const webhooks = async () => (await ax.get('/api/v1/settings/user/test_datafair_user1')).data.webhooks ?? []
 
     await goToSettings(page, goToWithAuth)
     const section = page.locator('#integrations')
@@ -383,7 +383,7 @@ test.describe('settings contact save/cancel', () => {
   })
 
   test('contact info is saved only on explicit save', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
 
     await goToSettings(page, goToWithAuth)
 
@@ -399,11 +399,11 @@ test.describe('settings contact save/cancel', () => {
     await nameInput.blur()
 
     await expect(saveButton).toBeVisible({ timeout: 5000 })
-    expect((await ax.get('/api/v1/settings/user/test_user1')).data.info?.contact?.name).toBeUndefined()
+    expect((await ax.get('/api/v1/settings/user/test_datafair_user1')).data.info?.contact?.name).toBeUndefined()
 
     await saveButton.click()
     await expect.poll(async () => {
-      const res = await ax.get('/api/v1/settings/user/test_user1')
+      const res = await ax.get('/api/v1/settings/user/test_datafair_user1')
       return res.data.info?.contact?.name
     }, { timeout: 10000 }).toBe('Test Contact')
     await expect(saveButton).not.toBeVisible({ timeout: 5000 })
@@ -446,8 +446,8 @@ test.describe('settings metadata score', () => {
   })
 
   test('standard and custom metadata lines show their weight and share', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com', 'test_org1')
-    await ax.patch('/api/v1/settings/organization/test_org1', {
+    const ax = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
+    await ax.patch('/api/v1/settings/organization/test_datafair_org1', {
       datasetsMetadata: { completeness: { active: true }, custom: [{ title: 'Service producteur', weight: 3 }, { title: 'Sans poids', weight: 0 }] }
     })
 
@@ -466,8 +466,8 @@ test.describe('settings defaults filled by the form', () => {
   })
 
   test('opening a line of a list is not an edit, changing it is', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com', 'test_org1')
-    await ax.patch('/api/v1/settings/organization/test_org1', {
+    const ax = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
+    await ax.patch('/api/v1/settings/organization/test_datafair_org1', {
       datasetsMetadata: { custom: [{ title: 'Service producteur' }] },
       privateVocabulary: [{ title: 'Mon concept' }]
     })
@@ -497,7 +497,7 @@ test.describe('settings defaults filled by the form', () => {
     const patches: string[] = []
     page.on('request', request => { if (request.method() === 'PATCH') patches.push(request.url()) })
 
-    await goToWithAuth('/data-fair/embed/settings/user/test_user1/datasets-metadata', 'test_user1')
+    await goToWithAuth('/data-fair/embed/settings/user/test_datafair_user1/datasets-metadata', 'test_datafair_user1')
     const score = page.getByRole('checkbox', { name: /Activer le score/ })
     await expect(score).toBeVisible({ timeout: 15000 })
     await page.waitForTimeout(1000)
@@ -515,14 +515,16 @@ test.describe('settings AI assistant audience', () => {
   })
 
   test('an org admin activates the assistant and restricts it to main organization admins', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com', 'test_org1')
+    // the assistant settings follow the agents integration, off when its port is empty
+    test.skip(!process.env.AGENTS_PORT, 'needs the optional agents integration (AGENTS_PORT)')
+    const ax = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
 
     await goToSettingsOrg(page, goToWithAuth)
     const section = page.locator('#features')
     await section.scrollIntoViewIfNeeded()
     await section.getByLabel(/Activer l'assistant IA/i).check()
     await section.getByRole('button', { name: /Enregistrer/i }).click()
-    await expect.poll(async () => (await ax.get('/api/v1/settings/organization/test_org1')).data.agentChat, { timeout: 10000 }).toBe(true)
+    await expect.poll(async () => (await ax.get('/api/v1/settings/organization/test_datafair_org1')).data.agentChat, { timeout: 10000 }).toBe(true)
 
     // a new rule defaults to the main organization only, all roles
     await section.getByRole('button', { name: /Ajouter une règle/i }).click()
@@ -531,7 +533,7 @@ test.describe('settings AI assistant audience', () => {
     await page.keyboard.press('Escape')
     await section.getByRole('button', { name: /Enregistrer/i }).click()
 
-    await expect.poll(async () => (await ax.get('/api/v1/settings/organization/test_org1')).data.agentChatAudience, { timeout: 10000 })
+    await expect.poll(async () => (await ax.get('/api/v1/settings/organization/test_datafair_org1')).data.agentChatAudience, { timeout: 10000 })
       .toEqual([{ department: '-', roles: ['admin'] }])
     await expect(section.getByText(/Seuls les membres correspondant/)).toBeVisible()
   })
@@ -542,10 +544,10 @@ test.describe('settings saves in flight', () => {
 
   test.beforeEach(async () => {
     await clean()
-    ax = await axiosAuth('test_user1@test.com')
+    ax = await axiosAuth('test_datafair_user1@test.com')
   })
 
-  const settings = async () => (await ax.get('/api/v1/settings/user/test_user1')).data
+  const settings = async () => (await ax.get('/api/v1/settings/user/test_datafair_user1')).data
 
   test('a section cannot be canceled while it saves', async ({ page, goToWithAuth }) => {
     await goToSettings(page, goToWithAuth)
@@ -591,7 +593,7 @@ test.describe('settings saves in flight', () => {
   })
 
   test('the late response of a save does not undo the save of another section', async ({ page, goToWithAuth }) => {
-    await ax.patch('/api/v1/settings/user/test_user1', { info: { contact: { name: 'Old name' } } })
+    await ax.patch('/api/v1/settings/user/test_datafair_user1', { info: { contact: { name: 'Old name' } } })
     await goToSettings(page, goToWithAuth)
     const catalog = page.locator('#catalog')
     await catalog.getByRole('button', { name: 'Ajouter une thématique' }).click()
@@ -614,7 +616,7 @@ test.describe('settings saves in flight', () => {
   })
 
   test('saving a section does not make partial metadata look modified', async ({ page, goToWithAuth }) => {
-    await ax.patch('/api/v1/settings/user/test_user1', { datasetsMetadata: {} })
+    await ax.patch('/api/v1/settings/user/test_datafair_user1', { datasetsMetadata: {} })
     await goToSettings(page, goToWithAuth)
     const contact = page.locator('#info')
     const nameInput = contact.getByLabel('Nom', { exact: true })
@@ -695,8 +697,8 @@ test.describe('settings api keys table', () => {
   })
 
   test('an unknown scope shows as is and a key email is not called a pseudo email', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com')
-    await ax.patch('/api/v1/settings/user/test_user1', {
+    const ax = await axiosAuth('test_datafair_user1@test.com')
+    await ax.patch('/api/v1/settings/user/test_datafair_user1', {
       apiKeys: [{ title: 'Old scope', scopes: ['legacy-scope'], expireAt: new Date(Date.now() + 864e5).toISOString().slice(0, 10) }]
     })
     await goToSettings(page, goToWithAuth)

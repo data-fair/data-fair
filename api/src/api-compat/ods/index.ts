@@ -16,7 +16,7 @@ import memoize from 'memoizee'
 import pump from '../../misc/utils/pipe.ts'
 import { stringify as csvStrStream, type Options as CsvOptions } from 'csv-stringify'
 import contentDisposition from 'content-disposition'
-import JSONStream from 'JSONStream'
+import { jsonStreamStringifier } from '../../datasets/utils/json-streams.ts'
 import { queryAdvice } from '../../misc/utils/query-advice.ts'
 import { compatReqCounter, logCompatODSError, prepareEsQuery, prepareResult, applyAliases, sortBuckets, prepareBucketResult } from './operations.ts'
 import { rootSettingsFilter } from '../../settings/operations.ts'
@@ -301,7 +301,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
     res.setHeader('content-disposition', contentDisposition(dataset.slug + '.json'))
     res.type('json')
     // TODO: should we flatten or nest multi-valued values ?
-    transformStreams = [JSONStream.stringify('[', ',', ']')]
+    transformStreams = [jsonStreamStringifier('[', ',', ']')]
   } else if (req.params.format === 'jsonl') {
     res.setHeader('content-disposition', contentDisposition(dataset.slug + '.jsonl'))
     res.type('application/jsonl; charset=utf-8')
@@ -331,7 +331,7 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
           callback(null, { type: 'Feature', geometry, properties })
         }
       }),
-      JSONStream.stringify('{"type":"FeatureCollection","features": [', ',', ']}')
+      jsonStreamStringifier('{"type":"FeatureCollection","features": [', ',', ']}')
     ]
   } else {
     compatReqCounter.inc({ route: 'exports', status: 'unsupported' })

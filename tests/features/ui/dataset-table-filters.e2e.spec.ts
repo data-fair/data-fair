@@ -7,7 +7,7 @@ test.describe('dataset table column filters', () => {
 
   test.beforeAll(async () => {
     await clean()
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     const dataset = (await ax.post('/api/v1/datasets/table-filters', {
       isRest: true,
       title: 'table-filters',
@@ -25,7 +25,7 @@ test.describe('dataset table column filters', () => {
   // a long text column has no exact-value index, but its existence is still filterable through the
   // analyzed sub-field, so the menu must keep offering it (see resolveExistsFields in the API)
   test('a text-only column still offers the "is defined" filters', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}/table`, 'test_user1')
+    await goToWithAuth(`/data-fair/dataset/${datasetId}/table`, 'test_datafair_user1')
     await expect(page.locator('.dataset-table')).toBeAttached({ timeout: 15000 })
     await page.locator('thead th').getByRole('button', { name: 'bio', exact: true }).click()
     await page.getByRole('listitem').filter({ hasText: 'Ajouter un filtre' }).click()

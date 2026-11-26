@@ -8,7 +8,7 @@ import { sendDataset, waitForFinalize, waitForDatasetError, doAndWaitForFinalize
 import { VectorTile } from '@mapbox/vector-tile'
 import Protobuf from 'pbf'
 
-const testUser1 = await axiosAuth('test_user1@test.com')
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
 
 test.describe('geo files support', () => {
   test.beforeAll(async () => {
@@ -215,9 +215,9 @@ test.describe('geo files support', () => {
     assert.equal(dataset.count, 2)
   })
 
-  test('Log error for geojson with broken feature', async () => {
+  test('Log error for geojson with a feature that cannot be repaired', async () => {
     // Send dataset
-    const datasetFd = fs.readFileSync('./tests/resources/geo/geojson-broken.geojson')
+    const datasetFd = fs.readFileSync('./tests/resources/geo/geojson-unrepairable.geojson')
     const form = new FormData()
     form.append('file', datasetFd, 'geojson-example.geojson')
     const ax = testUser1
@@ -245,6 +245,23 @@ test.describe('geo files support', () => {
     const dataset = res.data
     assert.equal(res.status, 201)
     await waitForFinalize(ax, dataset.id)
+    const lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { select: '_geoshape' } })).data
+    assert.equal(lines.total, 1)
+    assert.equal(lines.results[0]._geoshape.type, 'MultiPolygon')
+  })
+
+  test('Index a multipolygon with a part without area, dropped by the repair', async () => {
+    test.skip(!!process.env.OGR2OGR_SKIP, 'ogr2ogr not available in this environment')
+    const form = new FormData()
+    form.append('file', fs.readFileSync('./tests/resources/geo/geojson-broken.geojson'), 'geojson-broken.geojson')
+    const ax = testUser1
+    const res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
+    assert.equal(res.status, 201)
+    await waitForFinalize(ax, res.data.id)
+    const lines = (await ax.get(`/api/v1/datasets/${res.data.id}/lines`, { params: { select: '_geoshape' } })).data
+    assert.equal(lines.total, 1)
+    // the part with 3 distinct points is gone, the other one is kept
+    assert.equal(lines.results[0]._geoshape.type, 'Polygon')
   })
 
   test('Process uploaded shapefile dataset', async () => {

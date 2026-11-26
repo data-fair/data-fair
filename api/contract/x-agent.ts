@@ -17,9 +17,11 @@
 import type { AgentRoot, AgentOperation, AgentOperationAnnotation, AgentProperty, AgentParamOverride } from '@data-fair/openapi-mcp'
 import { agentSecurity } from './scopes-security.ts'
 
-export const filtersDescription = 'Column filters as key-value pairs: column_key + suffix, all values strings. Example: { "ville_eq": "Paris", "age_lte": "30", "nom_search": "Jean" }. Suffixes: _eq, _neq, _in, _nin, _gt, _gte, _lt, _lte, _starts, _exists, _nexists, _search (free-text word search, default choice for text), _contains (only when enabled). If a suffix is rejected the 400 error lists what the column supports — read it and adapt. Never prefix with _c_.'
+export const filtersDescription = 'Column filters { "<column key><suffix>": "<value as a string>" }, e.g. { "ville_eq": "Paris", "age_lte": "30", "nom_search": "Jean" }. Suffixes: _eq _neq _in _nin (comma-separated) _gt _gte _lt _lte _starts _exists _nexists _search (words, the default for text) _contains (when enabled). A rejected suffix answers a 400 listing the column\'s. Never prefix with _c_.'
 
-const datasetId: AgentParamOverride = { name: 'datasetId', description: 'The exact dataset ID from the "id" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug.' }
+const datasetId: AgentParamOverride = { name: 'datasetId', description: 'The "id" of a datafair_list_account_datasets result, not its title or slug.' }
+/** The account's resources on given portals: the back-office answer to "what does this portal publish", whatever site the call is made on. */
+const publicationSitesFilter = (resources: string): AgentParamOverride => ({ description: `Keep only the ${resources} published on these portals: their keys from datafair_list_publication_sites, e.g. ["data-fair-portals:abc123"].` })
 
 /** Geo and temporal filters, shared by every query operation. */
 const queryParams: Record<string, AgentParamOverride> = {
@@ -31,8 +33,13 @@ const queryParams: Record<string, AgentParamOverride> = {
   q_mode: { exclude: true },
   q_ignored: { exclude: true },
   q_fields: { exclude: true },
+  // a cache timestamp (see the dataset API doc): agents gain nothing from it, and a wrong value is a 400
+  finalizedAt: { exclude: true },
   filters: { description: filtersDescription }
 }
+
+/** `q` where it keeps its name: aggregate_data and calculate_metric (the API's text is a syntax guide for people) */
+const qFilter: AgentParamOverride = { description: 'Full-text search across all columns, restricting the rows. Prefer filters for structured criteria.' }
 
 /** The row selection search_data and export_data share. */
 const linesSelection: Record<string, AgentParamOverride> = {
@@ -59,7 +66,8 @@ export const datasetRoot: AgentRoot = {}
 export const root: AgentRoot = {
   skills: [{
     name: 'workflow',
-    description: 'How to explore the data published on a portal: find datasets, read their schema, then search rows, aggregate or compute metrics. Read it before querying data.',
+    // Served by both mcp servers (no tools: it is not bound to one listing): the body names only the tools both have.
+    description: 'How to explore datasets: find them, read their schema, then search rows, aggregate or compute metrics. Read it before querying data.',
     // the body is agent-skills/workflow.md, served next to this document
     href: 'agents/skills/workflow.md'
   }]
@@ -91,7 +99,7 @@ export const applicationPatchFields = {
   manage: ['publications', 'publicationSites', 'partOf']
 }
 
-const applicationId: AgentParamOverride = { name: 'applicationId', description: 'The exact application ID from the "id" field in datafair_list_account_applications results.' }
+const applicationId: AgentParamOverride = { name: 'applicationId', description: 'The "id" of a datafair_list_account_applications result.' }
 
 /**
  * Checked labels (openapi-mcp docs/x-agent.md, "Checked labels"): a write naming its target by id also
@@ -99,8 +107,9 @@ const applicationId: AgentParamOverride = { name: 'applicationId', description: 
  * service's automatic reviewer, then reads which dataset or application it changes instead of an opaque
  * id. Every higher scope tier covers the read tier, so a token that may write may read the title.
  */
-const applicationLabels = { applicationId: { name: 'applicationTitle', operation: 'getApplication', field: '/title' } }
-const datasetLabels = { datasetId: { name: 'datasetTitle', operation: 'readDescription', field: '/title' } }
+const labelDescription = (resource: string) => `The ${resource}'s current title, checked before the call (refused if it differs): it tells whoever reads the call what it acts on.`
+const applicationLabels = { applicationId: { name: 'applicationTitle', operation: 'getApplication', field: '/title', description: labelDescription('application') } }
+const datasetLabels = { datasetId: { name: 'datasetTitle', operation: 'readDescription', field: '/title', description: labelDescription('dataset') } }
 
 /**
  * A per-dataset operation's annotation as the root document mounts it, under /datasets/{id}: every view
@@ -130,6 +139,7 @@ export const operations = {
     description: 'List the datasets owned by the active account (its department included), with optional text search. Without q it lists all of them, page by page (count is the total): prefer that for an inventory, since a keyword can miss a dataset worded differently. Returns id, title, status, row count, and last update.',
     params: {
       q: { description: 'French keywords for full-text search (simple terms, not sentences). Examples: "élus", "DPE", "entreprises"' },
+      publicationSites: publicationSitesFilter('datasets'),
       size: { default: 10, maximum: 50 },
       page: { default: 1 },
       mine: { exclude: true },
@@ -153,7 +163,8 @@ export const operations = {
   listCatalogDatasets: {
     name: 'list_datasets',
     title: { fr: 'Lister les jeux de données', en: 'List datasets' },
-    description: 'List the datasets published on the portal you are called from, with optional text search. Returns id, title, row count, and last update. Only available from a portal, not from the back-office.',
+    // served by the datasets server of data-fair/mcp only, which a portal calls: the platform server leaves it out
+    description: 'List the datasets published on the portal you are called from, with optional text search. Returns id, title, row count, and last update.',
     params: {
       q: { description: 'French keywords for full-text search (simple terms, not sentences). Examples: "élus", "DPE", "entreprises"' },
       size: { default: 10, maximum: 50 },
@@ -222,6 +233,7 @@ export const operations = {
       field: { name: 'groupByColumns', description: 'Columns to GROUP BY (like SQL GROUP BY), 1 to 3 keys from datafair_describe_dataset. NOT the column to compute the metric on.' },
       metric: { description: 'Metric computed ON EACH GROUP. Omit to count rows per group.' },
       metric_field: { name: 'metricColumn', description: 'The column to compute the metric on, for the average or sum of that column. Requires metric.' },
+      q: qFilter,
       // Declared as an array (one size per nesting level); the vocabulary cannot target items, and
       // the server default of 20 is what agent-tools relies on too.
       agg_size: { exclude: true },
@@ -249,6 +261,7 @@ export const operations = {
       field: { name: 'fieldKey', description: 'The column key to calculate the metric on (use keys from datafair_describe_dataset)' },
       metric: { description: 'avg, sum, min, max (numbers); min, max, cardinality, value_count (strings); stats returns count/min/max/avg/sum; percentiles returns a distribution.' },
       percents: { description: 'Comma-separated percentages for the percentiles metric (default "1,5,25,50,75,95,99").' },
+      q: qFilter,
       ...queryParams
     },
     response: { rows: '/metric' }
@@ -288,7 +301,7 @@ export const operations = {
     {
       name: 'update_dataset',
       title: { fr: 'Modifier un jeu de données', en: 'Update a dataset' },
-      description: 'Update the metadata or configuration of a dataset: title, description, keywords, license, topics, schema… Send only the fields to change. Array and object fields (topics, keywords, attachments, schema, configuration…) replace the current value entirely: read it first with datafair_describe_dataset and send the complete new value. Publishing on portals, publications to remote catalogs, the read API key, master-data exposure and attaching to a parent (partOf) are done with datafair_publish_dataset.',
+      description: 'Update the metadata or configuration of a dataset: title, description, keywords, license, topics, schema… Send only the fields to change. Array and object fields (keywords, topics, attachments, schema…) replace the current value entirely: read it first with datafair_describe_dataset and send the complete new value. Publishing on portals, publications to remote catalogs, the read API key, master-data exposure and attaching to a parent (partOf) are done with datafair_publish_dataset.',
       params: { id: datasetId },
       body: 'compact',
       bodyFields: datasetPatchFields.write
@@ -333,6 +346,7 @@ export const operations = {
     params: {
       q: { description: 'Keywords for full-text search.' },
       dataset: { description: 'Restrict to the applications using these datasets (ids from datafair_list_account_datasets).' },
+      publicationSites: publicationSitesFilter('applications'),
       size: { default: 10, maximum: 50 },
       page: { default: 1 },
       mine: { exclude: true },
@@ -357,7 +371,7 @@ export const operations = {
       name: 'update_application',
       annotations: { openWorldHint: false },
       title: { fr: 'Modifier une application', en: 'Update an application' },
-      description: 'Update the metadata or configuration of an application: title, description, topics, configuration… Send only the fields to change. Array and object fields (topics, keywords, attachments, schema, configuration…) replace the current value entirely: read it first with datafair_describe_application and send the complete new value. Publishing on portals, publications to remote catalogs and attaching to a parent (partOf) are done with datafair_publish_application. Do not change configuration.datasets[].applicationKeyPermissions unless explicitly asked: it decides what anyone holding the application key can do on that dataset; send it back as you read it.',
+      description: 'Update the metadata or configuration of an application: title, description, topics, configuration… Send only the fields to change. Array and object fields (topics, attachments, configuration…) replace the current value entirely: read it first with datafair_describe_application and send the complete new value. Publishing on portals, publications to remote catalogs and attaching to a parent (partOf) are done with datafair_publish_application. Do not change configuration.datasets[].applicationKeyPermissions unless explicitly asked: it decides what anyone holding the application key can do on that dataset; send it back as you read it.',
       params: { id: applicationId },
       labels: applicationLabels,
       bodyFields: applicationPatchFields.write

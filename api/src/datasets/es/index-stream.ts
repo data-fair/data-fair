@@ -5,10 +5,10 @@ import * as extensionsUtils from '../utils/extensions.ts'
 import { stripTransientLineFlags } from '../utils/line-flags.ts'
 import { nanoid } from 'nanoid'
 import debugLib from 'debug'
-import es from '#es'
+import es, { attachmentPipelineId } from '#es'
 import log from '@data-fair/lib-node/log.js'
 import type { Dataset } from '#types'
-import { lineBytes, lineBytesSpec, type LineBytesSpec } from './operations.ts'
+import { bulkIndexingError, lineBytes, lineBytesSpec, type LineBytesSpec } from './operations.ts'
 
 const debug = debugLib('index-stream')
 
@@ -155,7 +155,7 @@ class IndexStream extends Transform {
     }
     try {
       // Use the ingest plugin to parse attached files
-      if (this.options.attachments) bulkOpts.pipeline = 'attachment'
+      if (this.options.attachments) bulkOpts.pipeline = attachmentPipelineId
       const res: any = await es.client.bulk(bulkOpts)
       debug('Bulk sent OK')
       const rejected = new Set<number>()
@@ -195,7 +195,7 @@ class IndexStream extends Transform {
       this.bulkChars = 0
     } catch (err) {
       log.warn('elasticsearch bulk indexing failed', { code: 'es-bulk-index', err })
-      throw new Error('Failure while indexing a batch of data.')
+      throw bulkIndexingError(err)
     }
   }
 

@@ -4,14 +4,14 @@ import { axiosAuth, clean } from '../../../support/axios.ts'
 import { waitForFinalize } from '../../../support/workers.ts'
 
 // an organization account, as the ods compatibility is an organization setting
-const ax = await axiosAuth('test_user1@test.com', 'test_org1')
+const ax = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
 const longUri = 'https://example.com/' + 'a'.repeat(250)
 
 // string formats other than the dates (email, uri...) are keyword strings like a plain column
 test.describe('string columns with a non-date format', () => {
   test.beforeAll(async () => {
     await clean()
-    await ax.put('/api/v1/settings/organization/test_org1', { compatODS: true })
+    await ax.put('/api/v1/settings/organization/test_datafair_org1', { compatODS: true })
     await ax.post('/api/v1/datasets/str-formats', {
       isRest: true,
       title: 'str-formats',

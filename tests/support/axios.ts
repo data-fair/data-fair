@@ -1,16 +1,12 @@
 import { axiosBuilder } from '@data-fair/lib-node/axios.js'
 import { axiosAuth as _axiosAuth } from '@data-fair/lib-node/axios-auth.js'
 import _slug from 'slugify'
+import { prefix } from './sd-fixtures.ts'
 const slug = _slug as unknown as (str: string, opts?: Record<string, any>) => string
 
 /**
- * Test users and orgs are defined in:
- *   - dev/resources/users.json — user accounts (test_user1..test_user10, test_alone, test_user, test_contrib, test_superadmin, albanm,
- *     plus kml_admin / kml_user / kml_{data,support,marketing}_{admin,contrib}[/user] / kml_multi_admin for koumoul-org dept testing).
- *     All use password 'passwd'.
- *   - dev/resources/organizations.json — org memberships and roles (test_org1..test_org6, koumoul with depts data/support/marketing)
- *
- * These are loaded by simple-directory (see docker-compose.yaml, STORAGE_TYPE=file).
+ * Test users and orgs are those of data-fair's test sub-space in simple-directory (prefix test_datafair_),
+ * defined in ./sd-fixtures.ts and seeded by tests/global-setup.ts. All use password 'passwd'.
  */
 
 export const directoryUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}/simple-directory`
@@ -60,7 +56,7 @@ export const clean = async () => {
     const res = await anonymousAx.get(`${apiUrl}/api/v1/test-env/pending-tasks`)
     throw new Error(`clean() refused: the worker is still busy after 20s, the previous test left tasks running: ${JSON.stringify(res.data)}`)
   }
-  await anonymousAx.delete(`${apiUrl}/api/v1/test-env`)
+  await anonymousAx.delete(`${apiUrl}/api/v1/test-env`, { params: { prefix } })
 }
 
 export const config = {

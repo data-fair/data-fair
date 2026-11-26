@@ -270,8 +270,7 @@ provide one.
 All three datasets are public, from the `data.ademe.fr` catalog
 (`GET https://data.ademe.fr/data-fair/api/v1/datasets?select=id,slug,count,schema&q=...`).
 Row data was pulled via each dataset's public `/lines` JSON API (already typed — numbers as
-JS numbers, booleans as booleans, ISO date strings), capped at 200,000 rows per dataset. Full
-search/selection log is in `.superpowers/sdd/2026-08-07-default-capabilities/task-6-report.md`.
+JS numbers, booleans as booleans, ISO date strings), capped at 200,000 rows per dataset.
 
 | dataset | ademe id | slug | rows used | ademe total count | fetched |
 |---|---|---|---|---|---|

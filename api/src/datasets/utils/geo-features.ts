@@ -36,9 +36,9 @@ export const result2geojson = (esResponse: any, flatten: (o: Record<string, any>
 // Shared prelude of both zero-copy workers (geojson2pbf, geojson2shp): wrap the TRANSFERRED bytes without
 // copying (after transfer the worker owns the ArrayBuffer exclusively — Buffer.from(uint8) would memcpy
 // the whole response a second time), parse, and build the FeatureCollection.
-export const rawEsBuffer2geojson = (rawBuffer: Uint8Array, dataset: any): { esResponse: any, geojson: any } => {
+export const rawEsBuffer2geojson = (rawBuffer: Uint8Array, dataset: any, preserveArrays = true): { esResponse: any, geojson: any } => {
   const esResponse = JSON.parse(Buffer.from(rawBuffer.buffer, rawBuffer.byteOffset, rawBuffer.byteLength).toString())
-  return { esResponse, geojson: result2geojson(esResponse, getFlatten(dataset, true)) }
+  return { esResponse, geojson: result2geojson(esResponse, getFlatten(dataset, preserveArrays)) }
 }
 
 // format=wkt page builder — config-free so the render worker (threads/geojson2shp.ts `wkt` export) and

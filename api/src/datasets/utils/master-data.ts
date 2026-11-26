@@ -71,12 +71,16 @@ export const bulkSearchStreams = async (dataset: Dataset, contentType: string, b
         throw i18nHttpError(400, 'errors.masterData.inputRequired', { property: input.property.key })
       }
       if (input.type === 'equals') {
-        qs.push(`${esUtils.escapeFilter(input.property.key)}:"${esUtils.escapeFilter(line[input.property.key])}"`)
+        const value = line[input.property.key]
+        if (!['string', 'number', 'boolean'].includes(typeof value)) throw httpError(400, `invalid value for ${input.property.key}`)
+        qs.push(`${esUtils.escapeFilter(input.property.key)}:"${esUtils.escapeFilter(String(value))}"`)
       } else if (input.type === 'date-in-interval') {
         const startDate = schema.find(p => p['x-refersTo'] === 'https://schema.org/startDate')
         const endDate = schema.find(p => p['x-refersTo'] === 'https://schema.org/endDate')
         if (!startDate || !endDate) throw new Error('this extension on a date interval requires the concepts "start date" and "end date"')
-        const date = line[input.property.key].replace(/:/g, '\\:')
+        const value = line[input.property.key]
+        if (typeof value !== 'string' || !/^[\w:.+-]+$/.test(value)) throw httpError(400, `invalid date for ${input.property.key}`)
+        const date = value.replace(/:/g, '\\:')
         qs.push(`${endDate.key}:[${date} TO *]`)
         qs.push(`${startDate.key}:[* TO ${date}]`)
       } else if (input.type === 'geo-distance') {

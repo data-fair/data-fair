@@ -69,6 +69,7 @@
     "schema[].pattern",
     "schema[].patternErrorMessage",
     "schema[].readOnly",
+    "schema[].separator",
     "schema[].title",
     "schema[].type",
     "schema[].x-calculated",

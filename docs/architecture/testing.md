@@ -4,7 +4,6 @@
 
 The test suite uses **Playwright** as test runner with three sub-projects: `unit`, `api`, and `e2e`. Tests are organized by feature under `tests/features/`.
 
-The judged agent simulations (`*.sim.spec.ts`, under `simulations/`) live under their own `playwright.sim.config.ts` instead — a bare `playwright test` or `npm test` can never reach them, because every case spends Claude plan quota. See `npm run simulate` in AGENTS.md's Simulations section and [agent-integration.md](agent-integration.md).
 
 The test suite is very long — when iterating on changes always run only the related test cases. See [Quality gates](#quality-gates) for what runs on commit, push, pull request and nightly.
 
@@ -53,7 +52,15 @@ Check that the scoped key set is served:
 curl -s http://localhost:$SD_PORT/.well-known/scoped-jwks.json
 ```
 
-The test NHI `test_org1_scope_nhi` (key in `tests/resources/nhi/`, helper `tests/support/nhi.ts`) is defined in `dev/resources/users.template.json`. After editing the template, re-render `users.json` and run `docker compose up -d --force-recreate sd`: the file is bind-mounted alone and the render replaces it by rename, so a plain restart keeps the old content.
+The test NHI `test_datafair_org1_scope_nhi` (key in `tests/resources/nhi/`, helper `tests/support/nhi.ts`) is one of the test accounts of `tests/support/sd-fixtures.ts`, seeded again by every test run.
+
+## Test accounts: the `test_datafair_` sub-space
+
+simple-directory stores its accounts in mongo. The accounts of this suite all start with `test_datafair_` (ids and emails), defined in `tests/support/sd-fixtures.ts`:
+
+- `tests/global-setup.ts` cleans the sub-space in simple-directory (`DELETE /api/test-env?prefix=test_datafair_`) and seeds it (`POST /api/test-env/seed`), before playwright loads the spec files (many log in at import). The suite needs a simple-directory image with the prefixed test API (run `docker compose pull simple-directory`, or set `SD_IMAGE`); an older image is detected at the seed.
+- `clean()` (`tests/support/axios.ts`) calls `DELETE /api/v1/test-env?prefix=test_datafair_` on data-fair: it deletes what the sub-space owns (datasets and their indices and collections, applications, journals, settings, limits, application keys, data files) and the shared documents keyed by the sub-space (locks, integrity collections, remote services, base applications), and clears the in-memory caches. It leaves the tmp dir to `cleanTmp`, which ages its files out. Only the clean of this suite's own prefix (`test_datafair_` exactly) also resets the process-wide test state its specs rely on: the worker ping start date, the extensions and thumbnails caches (not keyed by owner) and the listeners of the test events stream. A clean under any other prefix leaves them alone, so it does not disturb another context running on the same data-fair. A prefix that is not `test_<a-z0-9 words>_` is refused (400).
+- Other contexts sharing the same data-fair and simple-directory (dev data, other suites) use other prefixes: the suite's cleanups never touch them.
 
 ## File Naming Convention
 
@@ -62,7 +69,6 @@ The test NHI `test_org1_scope_nhi` (key in `tests/resources/nhi/`, helper `tests
 | `*.unit.spec.ts` | Pure unit tests | No server needed |
 | `*.api.spec.ts` | API tests (HTTP-only) | Depends on `state-setup` project |
 | `*.e2e.spec.ts` | End-to-end browser tests | Depends on `e2e-warmup` (itself on `state-setup`), uses Desktop Chrome |
-| `*.sim.spec.ts` | Judged agent simulations | Own `playwright.sim.config.ts`; not part of `npm test` |
 
 ## Directory Structure
 
@@ -98,8 +104,7 @@ tests/
 ### On a failure
 
 Each failed api or e2e test gets attachments in its trace (`npx playwright show-trace
-test-results/<test>/trace.zip`): the last lines of the `api` and `mock` panes (`df-dev logs`,
-nothing in CI where `dev/logs/` is uploaded instead), the worker's pending tasks, and, when the
+test-results/<test>/trace.zip`): the last lines of `dev/logs/api.log` and `dev/logs/mock.log`, the worker's pending tasks, and, when the
 API restarted during the test (nodemon reacting to an edit in the checkout), an attachment named
 "the API restarted during this test, re-run it: not a regression", printed under the failure.
 - Tests interact with the API via HTTP (no direct DB access from tests)
@@ -138,6 +143,19 @@ only the Playwright browser binaries are cached between runs. The jobs split by 
 `--shard` over the whole suite follows the file order, and its 3 shards came out at 16 s /
 2.6 min / 23.9 min. e2e alone (~15-20 min against ~12 for api) is then halved. On a failure a job uploads `test-results/` and `dev/logs/` as
 an artifact. A new push on a pull request cancels its running checks.
+
+**Map tests expected to fail on Firefox in CI.** The embed map tests that need the map to
+render (`dataset-map.e2e.spec.ts` legend test, `dataset-map-popup.e2e.spec.ts`) are marked
+`test.fail()` when `TEST_BROWSER=firefox` runs in CI. MapLibre 6 requires WebGL2, and the
+headless Firefox of the GPU-less GitHub runner has none: the map shows "WebGL2 is required
+to display this map" and its error toast covers the page. Chromium (built-in software
+renderer) and WebKit pass there, and Firefox passes locally on a machine with a GPU, so the
+maps do work in Firefox; only that runner cannot render them. Forcing the
+`webgl.force-enabled` pref was tried and is not enough (2026-11).
+The tests still run: their failure is reported as expected and keeps the nightly green. If
+they start passing (a runner with WebGL2), Playwright fails them with "expected to fail, but
+passed": then remove the `test.fail()` lines and this paragraph. They are not marked outside
+CI: run them locally with `TEST_BROWSER=firefox` when touching the map.
 
 ### The smoke set
 

@@ -8,9 +8,9 @@ import iconv from 'iconv-lite'
 import { axiosAuth, clean, checkPendingTasks, waitForWorkerIdle } from '../../../support/axios.ts'
 import { waitForFinalize, setConfig } from '../../../support/workers.ts'
 
-const testUser1 = await axiosAuth('test_user1@test.com')
-const testUser5 = await axiosAuth('test_user5@test.com')
-const testUser4 = await axiosAuth('test_user4@test.com')
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
+const testUser5 = await axiosAuth('test_datafair_user5@test.com')
+const testUser4 = await axiosAuth('test_datafair_user4@test.com')
 
 test.describe('REST datasets - Bulk', () => {
   test.beforeEach(async () => {

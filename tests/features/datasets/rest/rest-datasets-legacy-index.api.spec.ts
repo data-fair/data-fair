@@ -4,8 +4,8 @@ import { axios, axiosAuth, clean, checkPendingTasks, config, directoryUrl, mockA
 import { waitForFinalize, clearRateLimiting, clearDatasetCache, getRawDataset, patchRawDataset, datasetEsMappingProperties } from '../../../support/workers.ts'
 
 const anonymous = axios()
-const testUser1 = await axiosAuth('test_user1@test.com')
-const testSuperadmin = await axiosAuth('test_superadmin@test.com', undefined, true)
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
+const testSuperadmin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
 
 // 6.18.0 started stamping `_bytes` on every indexed line, but an index built by an older release
 // has a strict mapping without it: every single-line write into such an index was rejected by

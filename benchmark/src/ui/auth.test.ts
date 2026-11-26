@@ -11,7 +11,7 @@ test('parseSetCookie keeps name, value and flags, bound to the origin', () => {
 })
 
 test('parseSetCookie uses the cookie path and defaults to not httpOnly', () => {
-  assert.deepEqual(parseSetCookie('id_token_org=dev_fixtures; Path=/simple-directory', origin), {
-    name: 'id_token_org', value: 'dev_fixtures', url: origin + '/simple-directory', httpOnly: false
+  assert.deepEqual(parseSetCookie('id_token_org=my_org; Path=/simple-directory', origin), {
+    name: 'id_token_org', value: 'my_org', url: origin + '/simple-directory', httpOnly: false
   })
 })

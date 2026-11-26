@@ -2,9 +2,9 @@ import { test } from '../../fixtures/diagnostics.ts'
 import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
 
-const testUser1Org = await axiosAuth('test_user1@test.com', 'test_org1')
-const testUser4Org = await axiosAuth('test_user4@test.com', 'test_org1')
-const testUser6Org = await axiosAuth('test_user6@test.com', 'test_org1')
+const testUser1Org = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
+const testUser4Org = await axiosAuth('test_datafair_user4@test.com', 'test_datafair_org1')
+const testUser6Org = await axiosAuth('test_datafair_user6@test.com', 'test_datafair_org1')
 
 test.describe('publication sites shared with departments', () => {
   test.beforeEach(async () => {
@@ -22,7 +22,7 @@ test.describe('publication sites shared with departments', () => {
       url: 'http://portal.com',
       settings: { contributorDepartments: ['dep1'] }
     }
-    await testUser1Org.post('/api/v1/settings/organization/test_org1/publication-sites', portal)
+    await testUser1Org.post('/api/v1/settings/organization/test_datafair_org1/publication-sites', portal)
 
     const dataset = (await testUser4Org.post('/api/v1/datasets', { isRest: true, title: 'ds', schema: [] })).data
     await testUser4Org.patch(`/api/v1/datasets/${dataset.id}`, { publicationSites: ['data-fair-portals:shared-portal'] })
@@ -38,7 +38,7 @@ test.describe('publication sites shared with departments', () => {
       url: 'http://portal.com',
       settings: { contributorDepartments: ['dep2'] }
     }
-    await testUser1Org.post('/api/v1/settings/organization/test_org1/publication-sites', portal)
+    await testUser1Org.post('/api/v1/settings/organization/test_datafair_org1/publication-sites', portal)
 
     const dataset = (await testUser4Org.post('/api/v1/datasets', { isRest: true, title: 'ds', schema: [] })).data
     await assert.rejects(
@@ -54,7 +54,7 @@ test.describe('publication sites shared with departments', () => {
       url: 'http://portal.com',
       settings: { contributorDepartments: ['dep1'] }
     }
-    await testUser1Org.post('/api/v1/settings/organization/test_org1/publication-sites', portal)
+    await testUser1Org.post('/api/v1/settings/organization/test_datafair_org1/publication-sites', portal)
 
     const dataset = (await testUser4Org.post('/api/v1/datasets', { isRest: true, title: 'ds', schema: [] })).data
     await assert.rejects(
@@ -70,12 +70,12 @@ test.describe('publication sites shared with departments', () => {
       url: 'http://portal.com',
       settings: { contributorDepartments: ['dep1'] }
     }
-    await testUser1Org.post('/api/v1/settings/organization/test_org1/publication-sites', portal)
+    await testUser1Org.post('/api/v1/settings/organization/test_datafair_org1/publication-sites', portal)
 
     const dataset = (await testUser4Org.post('/api/v1/datasets', { isRest: true, title: 'ds', schema: [] })).data
     await testUser4Org.patch(`/api/v1/datasets/${dataset.id}`, { publicationSites: ['data-fair-portals:shared-portal'] })
 
-    await testUser1Org.post('/api/v1/settings/organization/test_org1/publication-sites', {
+    await testUser1Org.post('/api/v1/settings/organization/test_datafair_org1/publication-sites', {
       ...portal,
       settings: { contributorDepartments: [] }
     })
@@ -90,7 +90,7 @@ test.describe('publication sites shared with departments', () => {
 
   test('posting contributorDepartments on a dept-scoped settings doc is refused', async () => {
     await assert.rejects(
-      testUser4Org.post('/api/v1/settings/organization/test_org1:dep1/publication-sites', {
+      testUser4Org.post('/api/v1/settings/organization/test_datafair_org1:dep1/publication-sites', {
         type: 'data-fair-portals',
         id: 'some-portal',
         url: 'http://portal.com',
@@ -107,14 +107,14 @@ test.describe('publication sites shared with departments', () => {
       url: 'http://portal.com',
       settings: { contributorDepartments: ['dep1'] }
     }
-    await testUser1Org.post('/api/v1/settings/organization/test_org1/publication-sites', portal)
+    await testUser1Org.post('/api/v1/settings/organization/test_datafair_org1/publication-sites', portal)
 
-    const dep1List = (await testUser4Org.get('/api/v1/settings/organization/test_org1:dep1/publication-sites')).data
+    const dep1List = (await testUser4Org.get('/api/v1/settings/organization/test_datafair_org1:dep1/publication-sites')).data
     const shared = dep1List.find((s: any) => s.id === 'shared-portal')
     assert.ok(shared)
     assert.equal(shared.canContributeAsDepartment, true)
 
-    const orgList = (await testUser1Org.get('/api/v1/settings/organization/test_org1/publication-sites')).data
+    const orgList = (await testUser1Org.get('/api/v1/settings/organization/test_datafair_org1/publication-sites')).data
     const orgShared = orgList.find((s: any) => s.id === 'shared-portal')
     assert.deepEqual(orgShared.settings.contributorDepartments, ['dep1'])
     assert.equal(orgShared.canContributeAsDepartment, undefined)

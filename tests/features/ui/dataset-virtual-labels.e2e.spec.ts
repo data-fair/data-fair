@@ -34,7 +34,7 @@ test.describe('consult value labels (x-labels) of derived columns in the schema 
   test.beforeAll(async () => {
     test.setTimeout(60000)
     await clean()
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
 
     // the virtual dataset's schema is derived (labels merged) and cannot be edited directly
     const child = async (id: string, labels: Record<string, string>) => {
@@ -63,7 +63,7 @@ test.describe('consult value labels (x-labels) of derived columns in the schema 
     expect(virtualDataset.schema[0]['x-labels']).toEqual({ koumoul: 'Koumoul', bidule: 'Bidule' })
 
     // labels of an enriched column come from the master dataset
-    const axAdmin = await axiosAuth('test_superadmin@test.com', undefined, true)
+    const axAdmin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
     const siret = { key: 'siret', title: 'Siret', type: 'string', 'x-refersTo': 'http://www.datatourisme.fr/ontology/core/1.0/#siret' }
     const masterId = 'labels-enriched-master'
     await axAdmin.put(`/api/v1/datasets/${masterId}`, {
@@ -89,7 +89,7 @@ test.describe('consult value labels (x-labels) of derived columns in the schema 
   })
 
   test('virtual dataset: labels merged from the children open read-only', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${virtualId}`, 'test_user1')
+    await goToWithAuth(`/data-fair/dataset/${virtualId}`, 'test_datafair_user1')
     await selectColumn(page, 'Identifiant')
     await labelsButton(page).click()
 
@@ -102,14 +102,14 @@ test.describe('consult value labels (x-labels) of derived columns in the schema 
   })
 
   test('virtual dataset: no labels button on a column without labels', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${virtualId}`, 'test_user1')
+    await goToWithAuth(`/data-fair/dataset/${virtualId}`, 'test_datafair_user1')
     await selectColumn(page, 'Note')
     await expect(page.getByLabel('Libellé', { exact: true })).toHaveValue('Note')
     await expect(labelsButton(page)).toHaveCount(0)
   })
 
   test('enriched column: labels of the master dataset open read-only', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${slaveId}`, 'test_superadmin')
+    await goToWithAuth(`/data-fair/dataset/${slaveId}`, 'test_datafair_superadmin')
     await selectColumn(page, 'Statut')
     await labelsButton(page).click()
 
@@ -119,19 +119,19 @@ test.describe('consult value labels (x-labels) of derived columns in the schema 
   })
 
   test('virtual dataset: capabilities open read-only', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${virtualId}`, 'test_user1')
+    await goToWithAuth(`/data-fair/dataset/${virtualId}`, 'test_datafair_user1')
     await selectColumn(page, 'Note')
     await expectReadonlyCapabilities(page, /Lecture seule : cette configuration est déduite des jeux enfants/)
   })
 
   test('enriched column: capabilities open read-only', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${slaveId}`, 'test_superadmin')
+    await goToWithAuth(`/data-fair/dataset/${slaveId}`, 'test_datafair_superadmin')
     await selectColumn(page, 'Statut')
     await expectReadonlyCapabilities(page, "Lecture seule : cette configuration vient de l'enrichissement.")
   })
 
   test('plain REST column: capabilities stay editable', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${childId}`, 'test_user1')
+    await goToWithAuth(`/data-fair/dataset/${childId}`, 'test_datafair_user1')
     await selectColumn(page, 'Note')
     await capabilitiesButton(page).click()
     const dialog = page.getByRole('dialog')
@@ -140,7 +140,7 @@ test.describe('consult value labels (x-labels) of derived columns in the schema 
   })
 
   test('plain REST column: labels stay editable', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${childId}`, 'test_user1')
+    await goToWithAuth(`/data-fair/dataset/${childId}`, 'test_datafair_user1')
     await selectColumn(page, 'Identifiant')
     await labelsButton(page).click()
 

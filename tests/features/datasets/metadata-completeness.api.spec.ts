@@ -3,8 +3,8 @@ import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
 import { getRawDataset, patchRawDataset, sendDataset } from '../../support/workers.ts'
 
-const testUser1 = await axiosAuth('test_user1@test.com')
-const settingsUrl = '/api/v1/settings/user/test_user1'
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
+const settingsUrl = '/api/v1/settings/user/test_datafair_user1'
 // only the summary counts, 100 to 300 characters by default
 const summaryOnly = { summary: { weight: 1 }, description: { weight: 0 }, license: { weight: 0 }, origin: { weight: 0 }, image: { weight: 0 }, topics: { weight: 0 } }
 
@@ -67,7 +67,7 @@ test.describe('metadata completeness score', () => {
     assert.equal(typeof (await getRawDataset(dataset.id)).completeness?.score, 'number')
 
     // the organization has not activated the score
-    await testUser1.put(`/api/v1/datasets/${dataset.id}/owner`, { type: 'organization', id: 'test_org1', name: 'Test Org 1' })
+    await testUser1.put(`/api/v1/datasets/${dataset.id}/owner`, { type: 'organization', id: 'test_datafair_org1', name: 'Test Org 1' })
     assert.equal((await waitForRescore(dataset.id)).completeness, undefined)
   })
 

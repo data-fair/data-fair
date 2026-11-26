@@ -8,10 +8,10 @@ test.describe('add-column dialog', () => {
   test.beforeEach(async () => { await clean() })
 
   test('shows the normalized key and refuses a name without a usable key', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     const { data: created } = await ax.post('/api/v1/datasets', { isRest: true, title: 'Notes', schema: [] })
 
-    await goToWithAuth(`/data-fair/dataset/${created.id}`, 'test_user1')
+    await goToWithAuth(`/data-fair/dataset/${created.id}`, 'test_datafair_user1')
     await page.getByRole('tab', { name: /Schéma/ }).click()
     await page.getByRole('button', { name: /Ajouter une colonne/ }).click()
     const addButton = page.locator('.v-card-actions').getByRole('button', { name: /^Ajouter$/ })

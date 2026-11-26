@@ -6,20 +6,13 @@ Data FAIR (Findable, Accessible, Interoperable, Reusable Data) is an open-source
 
 ## Dev environment
 
-The user starts the dev environment of a checkout with `npm run dev-zellij` (zellij >= 0.44, session named after the checkout directory). Agents never start or kill the session, and act on processes and containers only through `df-dev`:
+Quick start without any tooling: `npm ci && npm run dev` (fixed ports from `dev/default.env`, overridden by `.env`), then `npm test`.
 
-```bash
-npx --no df-dev status                     # containers (health, memory), panes (running / exited + code, readiness), dev processes memory
-npx --no df-dev logs api -n 100            # last lines of a pane: api, ui, mock, bridge
-npx --no df-dev restart api                # Ctrl+C, rerun, wait for /api/v1/ping
-npx --no df-dev up agents events           # optional containers (compose profiles), added to the running env
-npx --no df-dev down events
-```
+The environment is started by the user, in a terminal: `npm run dev` starts the containers, the mock server, the api and the ui, logs in `dev/logs` (`mock.log`, `api.log`, `ui.log`). Read the logs before restarting anything: nodemon (api) and vite (ui) already reload on file changes. Agents do not kill the processes or containers they did not start.
 
-- Read the logs before restarting: nodemon (api) and vite (ui) already reload on file changes. Restart only a pane that exited, hangs, or needs new env.
-- If `restart` answers "not ready", report to the user with the logs instead of retrying.
-- Never use `docker compose restart`, `kill` or `zellij action` directly.
-- Core containers: elasticsearch, mongo, s3, simple-directory, nginx, clamav (upload scanning, ~30 MB with the EICAR-only signature database). Optional: `events`, `capture`, `agents`, `registry`, `openapi-viewer`, `maildev` (mails sent through simple-directory). The user starts them with the env: `npm run dev-zellij -- --services events,agents`. When events, agents or registry does not run as the api pane starts, its config entry is overridden (`optional` in `dev/dev.json`, exported as `NODE_CONFIG` by the api and ui panes, vite building the ui-config from it): after `npx --no df-dev up <service>` or `down <service>`, run `npx --no df-dev restart api && npx --no df-dev restart ui`.
+Each dev process also has its own npm script, reading its settings from environment variables (`dev/default.env` overridden by `.env`): `npm run dev-deps` (containers only), `npm run dev-setup` (idempotent builds), `npm run dev:api`, `npm run dev:ui`, `npm run dev:mock`.
+
+- Core containers: elasticsearch, mongo, s3, simple-directory, nginx, clamav (upload scanning, ~30 MB with the EICAR-only signature database). Optional: `events`, `capture`, `agents`, `registry`, `openapi-viewer`, `maildev` (mails sent through simple-directory). Start them with a compose profile: `npm run dev -- --profile events --profile agents`. An optional service is absent when its port variable is empty (`EVENTS_PORT=`); `npm run dev` blanks the ports of the optional containers that are not running, so restart `npm run dev` after adding one.
 
 ### Port assignments
 
@@ -40,61 +33,21 @@ npx playwright test path/to/file  # specific file
 
 The test suite is very long — when iterating on changes always run only the related test cases. Pushing runs a light gate (type ratchet, unit tests, the `@smoke` set and the api/e2e spec files the push changes); the full suite runs on pull requests and nightly on master. See [Quality gates](docs/architecture/testing.md#quality-gates).
 
-### Simulations
-
-Judged simulations of the back-office AI assistant: a simulated user drives the
-real chat in a real browser, and a judge reads the transcript. They answer "did a
-person get what they came for", which no other test here does.
-
-**Run them with the `/agents-sim` skill**, not by hand. A simulation is not
-finished when the browser closes: the transcripts still have to be judged and
-reported, and evidence from a previous run has to be cleared first or a case that
-never dispatched will report the old verdict as if it were this one's. The skill
-does all of that in order; the npm scripts below are just the pieces it drives.
-
-The bridge must already be running. It has a `bridge` pane in the zellij layout,
-suspended until the maintainer presses Enter in it — never an agent, because it is
-a long-running foreground process. `npx --no df-dev status` shows the pane running.
-
-The underlying scripts, for reference:
-
-```bash
-npm run simulate                                # every case
-SIM_CASES=lien-ouvert-par-l-utilisateur npm run simulate
-npm run simulate:report
-```
-
-A run opens a **real browser window** and drives it in front of you — the persona
-looks around the page, clicks and types on its own. Do not touch that window
-while it runs: you and the persona would be driving the same page, and a stray
-click lands in the transcript as something the product did. Set `SIM_HEADLESS=1`
-to run without a window. Every run also writes a Playwright trace, so a finished
-run can be replayed action by action with `npx playwright show-trace`.
-
-They are **not** part of `npm test` or `npm run quality`, and must never be: every
-case spends Claude plan quota. A run also calls `clean()`, which resets the dev
-environment's whole test state — not just `test_`-owned datasets, applications
-and settings, but also an unfiltered wipe of the `limits`, `applicationsKeys`,
-`remoteServices`, `baseApplications`, `extensions-cache`, `thumbnails-cache`,
-`locks` and integrity collections, plus the tmp directory.
-
-Cases live in `simulations/cases/index.ts`. See
-[docs/architecture/agent-integration.md](docs/architecture/agent-integration.md).
-
 ### Table performance
 
 The dataset table (`ui/src/components/dataset/table/`) is a critical, optimized
 component. When a change touches it, or what it relies on
 (`ui/src/composables/dataset/lines.ts`, the filters composables, `use-headers.ts`):
 
-1. Run `npm run benchmark -- ui-table --base=master`. It takes about 10 minutes, so run
-   it in the background. Put the verdict and any flagged lines in your summary (see
-   `benchmark/README.md`, "UI table harness").
-2. Give the user the fixture's table URL on the dev stack,
-   `/data-fair/embed/dataset/fixtures-table-perf/table`, for a manual look at
-   scrolling, search and menus. It needs a dev session, since the dataset is private
-   on purpose: never make a dev fixture public, because the test suites count every
-   dataset a user can read.
+1. Run `npm run benchmark -- ui-table --dataset=<id> --base=master` (plus the account
+   options), on a dev dataset with the shape described in `benchmark/README.md`, "UI table
+   harness". It takes about 10 minutes, so run it in the background. Put the verdict and
+   any flagged lines in your summary. If no such dataset exists in the dev environment,
+   ask the user for one.
+2. Give the user the dataset's table URL on the dev stack,
+   `/data-fair/embed/dataset/<id>/table`, for a manual look at scrolling, search and
+   menus. It needs a dev session, since the dataset is private on purpose: never make a
+   dev dataset public, because the test suites count every dataset a user can read.
 
 ### Linting & Type Checking
 
@@ -114,13 +67,15 @@ npm run build-parsers    # Build PEG.js parsers (where, select, order-by, etc.)
 
 ## Architecture Documentation
 
+Design specs and implementation plans are not kept in this repository; durable architecture docs live in `docs/architecture/`.
+
 In-depth documentation for complex subsystems lives in `docs/architecture/`:
 
 - [Dataset Drafts](docs/architecture/dataset-drafts.md) — draft lifecycle, API mechanics, UI section visibility for file-new vs file-updated
 - [Publication Sites](docs/architecture/publication-sites.md) — publication sites model, permissions gate (admin / staging / department), and sync with the `portals` service
 - [Testing](docs/architecture/testing.md) — test suite structure, naming conventions, running tests
 - [Dataset Validation](docs/architecture/dataset-validation.md) — schema validation, mandatory extensions, diagnostic CSV, file vs REST flows
-- [AI Agent Integration](docs/architecture/agent-integration.md) — tools, subagents, action buttons, and prompts exposed to the back-office AI assistant, and the judged simulation suite that exercises them end to end. **When modifying agent tools, subagents, or action buttons, update this document to reflect the changes.**
+- [AI Agent Integration](docs/architecture/agent-integration.md) — tools, subagents, action buttons, and prompts exposed to the back-office AI assistant. **When modifying agent tools, subagents, or action buttons, update this document to reflect the changes.**
 - [Platform API docs](docs/architecture/platform-api-docs.md) — the merged OpenAPI document of every service of a site (`/api/v1/platform/api-docs.json`): namespacing rewrites, security refusals and fail-closed rules, freshness and `x-platform` status, how to add a service, known gaps. **Read before touching `x-agent` annotations, `oauth2Alternatives`/`agentSecurity` or a service's public OpenAPI document.**
 - [Notifications](docs/architecture/notifications.md) — three-layer event model, topic key conventions, draft-prefix logic, uniformisation gaps
 - [Load Management](docs/architecture/load-management.md) — rate limiting, request timeouts and Elasticsearch query controls across the app and the reverse-proxy layer, plus notes on possible further hardening
@@ -128,7 +83,7 @@ In-depth documentation for complex subsystems lives in `docs/architecture/`:
 - [Map base layer & tileserver](docs/architecture/map-tiles.md) — where dataset maps get their MapLibre style (`map.style`, the same-origin `/tileserver` convention) and the 302 redirect keeping legacy `tileserver-koumoul` remote-service URLs alive, with its removal conditions
 - [Application Keys](docs/architecture/application-keys.md) — intermediate-security tier for un-connected access to applications and the datasets they embed: data model, URL shapes, the two enforcement points (proxy + dataset middleware), permission scoping, owner boundary, and the anti-spam stack for anonymous writes
 - [Fragments](docs/architecture/fragments.md) — datasets and applications declared `partOf` another resource: derived ACL and its sync points, application-context read for dataset fragments, default hiding in listings, attach/detach and delete cascade. **Read before touching permissions, listing filters or the application-key middleware.**
-- [Dev environment resource limits](docs/architecture/dev-resources.md) — why the vite dev server and Elasticsearch are memory-capped: running several dev stacks side by side can exhaust host RAM and swap, and the resulting global OOM kill destroys the desktop session while leaving the containers running. Also covers the ES / MongoDB / ClamAV caps and `dev/idle-stacks.sh` for spotting stacks left running
+- [Dev environment resource limits](docs/architecture/dev-resources.md) — why the vite dev server and Elasticsearch are memory-capped: running several dev stacks side by side can exhaust host RAM and swap, and the resulting global OOM kill destroys the desktop session while leaving the containers running. Also covers the ES / MongoDB / ClamAV caps
 - [Code conventions](docs/architecture/code-conventions.md) — module file roles (router/middlewares/service/operations), request-context accessors, typing ratchet. **Read before refactoring or adding API code.**
 - [Date management](docs/architecture/date-management.md) — the date / date-time strategy end to end: French-first sniffing, offset-preserving storage, timezone-aware filters & aggregations, and display in the data's own timezone (not the viewer's). **Read before touching date parsing, storage, or display.**
 - [/lines read efficiency](docs/architecture/read-lines-efficiency.md) — the design choices behind the `/lines` hot path: stream the source not the response (ETag/Link preserved, zero observable change), the streamed `LinesSource` + splitter, per-format routing (incl. the pbf/shp zero-copy worker paths and why xlsx stays buffered), the parity/verification harness, and the measured rejected alternatives. **Read before touching the `/lines` read path.**

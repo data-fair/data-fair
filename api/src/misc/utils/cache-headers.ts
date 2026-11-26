@@ -67,13 +67,19 @@ export const applyResourceCacheHeaders = (req: Request, res: Response, date: Dat
   // finalizedAt passed as query parameter is used to timestamp the query and
   // make it compatible with a longer caching
   const queryDateStr = req.query.finalizedAt || req.query.updatedAt
+  let timestamped = false
   if (queryDateStr && !reqNoModifiedCache(req)) {
-    debug('date in query parameter, use longer max age', queryDateStr)
     const queryDate = new Date(queryDateStr)
     if (queryDate > date) {
       log.warn('wrong usage of finalizedAt or updatedAt parameters', { code: 'cache-headers-wrong-date', resource: { finalizedAt: resource.finalizedAt, updatedAt: resource.updatedAt } })
       throw httpError(400, `"finalizedAt" or "updatedAt" parameter has a value higher in the query than in the resource (${queryDate.toISOString()} > ${date.toISOString()}).`)
     }
+    // the long max-age only when the timestamp IS the current version: an older one is served the
+    // current content, which must not be pinned for a week under a URL naming another version
+    timestamped = queryDate.getTime() === date.getTime()
+    debug('date in query parameter', queryDateStr, timestamped ? 'current, use longer max age' : 'outdated, use normal max age')
+  }
+  if (timestamped) {
     res.setHeader('Cache-Control', `must-revalidate, ${cacheVisibility}, max-age=${config.cache.timestampedPublicMaxAge}`)
   } else {
     if (cacheVisibility === 'public') {

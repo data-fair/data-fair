@@ -3,8 +3,8 @@ import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
 import { waitForFinalize, sendDataset } from '../../../support/workers.ts'
 
-const testUser1 = await axiosAuth('test_user1@test.com')
-const testUser1Org = await axiosAuth('test_user1@test.com', 'test_org1')
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
+const testUser1Org = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
 
 test.describe('deleting a member of a virtual dataset', () => {
   test.beforeEach(async () => {

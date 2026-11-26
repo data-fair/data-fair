@@ -10,13 +10,13 @@ test.describe('dataset upload dialog', () => {
 
   test.beforeEach(async () => {
     await clean()
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
     datasetId = dataset.id
   })
 
   test('update file flow: open dialog, select file, upload', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_datafair_user1')
     await expect(page.locator('#metadata')).toBeVisible({ timeout: 10000 })
 
     // Open upload dialog via the actions nav
@@ -36,7 +36,7 @@ test.describe('dataset upload dialog', () => {
   })
 
   test('dialog can be closed without uploading', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_datafair_user1')
     await expect(page.locator('#metadata')).toBeVisible({ timeout: 10000 })
 
     // Open upload dialog

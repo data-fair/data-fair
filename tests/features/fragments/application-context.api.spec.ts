@@ -4,8 +4,8 @@ import { axios, axiosAuth, clean, checkPendingTasks, config, mockAppUrl } from '
 import { sendDataset, clearDatasetCache } from '../../support/workers.ts'
 
 const anonymous = axios()
-const testUser1Org = await axiosAuth('test_user1@test.com', 'test_org1')
-const testUser3 = await axiosAuth('test_user3@test.com')
+const testUser1Org = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
+const testUser3 = await axiosAuth('test_datafair_user3@test.com')
 
 test.describe('application context for dataset fragments', () => {
   test.beforeEach(async () => {
@@ -25,7 +25,7 @@ test.describe('application context for dataset fragments', () => {
     await testUser1Org.put(`/api/v1/applications/${dashboard.id}/config`, { datasets: [{ href, id: utility.id }] })
     await testUser1Org.put(`/api/v1/applications/${sub.id}/config`, { datasets: [{ href, id: utility.id, applicationKeyPermissions: { operations: ['readSafeSchema'] } }] })
     const parentPermissions = (await testUser1Org.get(`/api/v1/applications/${dashboard.id}/permissions`)).data
-    await testUser1Org.put(`/api/v1/applications/${dashboard.id}/permissions`, [...parentPermissions, { type: 'user', id: 'test_user3', name: 'Test User3', classes: ['list', 'read'] }])
+    await testUser1Org.put(`/api/v1/applications/${dashboard.id}/permissions`, [...parentPermissions, { type: 'user', id: 'test_datafair_user3', name: 'Test User3', classes: ['list', 'read'] }])
     await clearDatasetCache()
 
     // no context: no read
@@ -58,7 +58,7 @@ test.describe('application context for dataset fragments', () => {
     const utility = await sendDataset('datasets/dataset1.csv', testUser1Org, {}, { partOf: { type: 'application', id: dashboard.id } })
     await testUser1Org.put(`/api/v1/applications/${dashboard.id}/config`, { datasets: [{ href: `${config.publicUrl}/api/v1/datasets/${utility.id}`, id: utility.id }] })
     const parentPermissions = (await testUser1Org.get(`/api/v1/applications/${dashboard.id}/permissions`)).data
-    await testUser1Org.put(`/api/v1/applications/${dashboard.id}/permissions`, [...parentPermissions, { type: 'user', id: 'test_user3', name: 'Test User3', classes: ['list', 'read'] }])
+    await testUser1Org.put(`/api/v1/applications/${dashboard.id}/permissions`, [...parentPermissions, { type: 'user', id: 'test_datafair_user3', name: 'Test User3', classes: ['list', 'read'] }])
     await clearDatasetCache()
 
     // session proof
@@ -77,7 +77,7 @@ test.describe('application context for dataset fragments', () => {
     const dataset = await sendDataset('datasets/dataset1.csv', testUser1Org)
     await testUser1Org.put(`/api/v1/applications/${app.id}/config`, { datasets: [{ href: `${config.publicUrl}/api/v1/datasets/${dataset.id}`, id: dataset.id }] })
     const parentPermissions = (await testUser1Org.get(`/api/v1/applications/${app.id}/permissions`)).data
-    await testUser1Org.put(`/api/v1/applications/${app.id}/permissions`, [...parentPermissions, { type: 'user', id: 'test_user3', name: 'Test User3', classes: ['list', 'read'] }])
+    await testUser1Org.put(`/api/v1/applications/${app.id}/permissions`, [...parentPermissions, { type: 'user', id: 'test_datafair_user3', name: 'Test User3', classes: ['list', 'read'] }])
     await assert.rejects(testUser3.get(`/api/v1/datasets/${dataset.id}/lines`, { headers: { referer: `${config.publicUrl}/app/${app.id}/` } }), { status: 403 })
   })
 
@@ -103,7 +103,7 @@ test.describe('application context for dataset fragments', () => {
     const utility = await sendDataset('datasets/dataset1.csv', testUser1Org, {}, { partOf: { type: 'application', id: dashboard.id } })
     await testUser1Org.put(`/api/v1/applications/${dashboard.id}/config`, { datasets: [{ href: `${config.publicUrl}/api/v1/datasets/${utility.id}`, id: utility.id }] })
     await clearDatasetCache()
-    // test_user3 was never granted any permission on the dashboard
+    // test_datafair_user3 was never granted any permission on the dashboard
     await assert.rejects(testUser3.get(`/api/v1/datasets/${utility.id}/lines`, { headers: { referer: `${config.publicUrl}/app/${dashboard.id}/` } }), { status: 403 })
   })
 
@@ -117,7 +117,7 @@ test.describe('application context for dataset fragments', () => {
     const other = (await testUser1Org.post('/api/v1/applications', { url: mockAppUrl('monapp1') })).data
     await testUser1Org.put(`/api/v1/applications/${other.id}/config`, { datasets: [{ href: `${config.publicUrl}/api/v1/datasets/${utility.id}`, id: utility.id }] })
     const otherPermissions = (await testUser1Org.get(`/api/v1/applications/${other.id}/permissions`)).data
-    await testUser1Org.put(`/api/v1/applications/${other.id}/permissions`, [...otherPermissions, { type: 'user', id: 'test_user3', name: 'Test User3', classes: ['list', 'read'] }])
+    await testUser1Org.put(`/api/v1/applications/${other.id}/permissions`, [...otherPermissions, { type: 'user', id: 'test_datafair_user3', name: 'Test User3', classes: ['list', 'read'] }])
     await clearDatasetCache()
     await assert.rejects(testUser3.get(`/api/v1/datasets/${utility.id}/lines`, { headers: { referer: `${config.publicUrl}/app/${other.id}/` } }), { status: 403 })
   })
@@ -131,7 +131,7 @@ test.describe('application context for dataset fragments', () => {
     const utility = await sendDataset('datasets/dataset1.csv', testUser1Org, {}, { partOf: { type: 'application', id: dashboard.id } })
     await testUser1Org.put(`/api/v1/applications/${dashboard.id}/config`, { datasets: [{ href: `${config.publicUrl}/api/v1/datasets/${utility.id}`, id: utility.id }] })
     const parentPermissions = (await testUser1Org.get(`/api/v1/applications/${dashboard.id}/permissions`)).data
-    await testUser1Org.put(`/api/v1/applications/${dashboard.id}/permissions`, [...parentPermissions, { type: 'user', id: 'test_user3', name: 'Test User3', classes: ['list', 'read'] }])
+    await testUser1Org.put(`/api/v1/applications/${dashboard.id}/permissions`, [...parentPermissions, { type: 'user', id: 'test_datafair_user3', name: 'Test User3', classes: ['list', 'read'] }])
     await clearDatasetCache()
     const res = await testUser3.get(`/api/v1/datasets/${utility.id}/lines`, { headers: { referer: `${config.publicUrl}/app/${dashboard.id}/` } })
     assert.equal(res.status, 200)
@@ -151,7 +151,7 @@ test.describe('application context for dataset fragments', () => {
     const utility = await sendDataset('datasets/dataset1.csv', testUser1Org, {}, { partOf: { type: 'application', id: dashboard.id } })
     await testUser1Org.put(`/api/v1/applications/${sub.id}/config`, { datasets: [{ href: `${config.publicUrl}/api/v1/datasets/${utility.id}`, id: utility.id }] })
     const parentPermissions = (await testUser1Org.get(`/api/v1/applications/${dashboard.id}/permissions`)).data
-    await testUser1Org.put(`/api/v1/applications/${dashboard.id}/permissions`, [...parentPermissions, { type: 'user', id: 'test_user3', name: 'Test User3', classes: ['list', 'read'] }])
+    await testUser1Org.put(`/api/v1/applications/${dashboard.id}/permissions`, [...parentPermissions, { type: 'user', id: 'test_datafair_user3', name: 'Test User3', classes: ['list', 'read'] }])
     await clearDatasetCache()
 
     // the sub-application reaches the utility dataset because it is a fragment of the same parent
@@ -160,7 +160,7 @@ test.describe('application context for dataset fragments', () => {
 
     // detach: the partOf-only body the UI sends
     await testUser1Org.patch(`/api/v1/applications/${sub.id}`, { partOf: null })
-    // test_user3 keeps its (now frozen) ACL on the detached application, so this really is the
+    // test_datafair_user3 keeps its (now frozen) ACL on the detached application, so this really is the
     // parentage edge being re-evaluated, not a permission loss
     assert.ok((await testUser3.get(`/api/v1/applications/${sub.id}`)).data.userPermissions.includes('readConfig'))
     // the very next request must be refused, with no sleep

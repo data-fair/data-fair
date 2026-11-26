@@ -7,11 +7,15 @@ import { sendDataset, fileExists, clearDatasetCache, setupMockRoute, clearMockRo
 import { collectNotifs, expectNotif } from '../../support/notifications.ts'
 
 const anonymous = axios()
-const testUser1 = await axiosAuth('test_user1@test.com')
-const alban = await axiosAuth('alban.mouton@koumoul.com', undefined, true)
-const testSuperadmin = await axiosAuth('test_superadmin@test.com', undefined, true)
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
+const testSuperadmin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
 
 const captureUrl = `http://localhost:${process.env.NGINX_PORT}/capture`
+
+// base applications are global and unowned: another context sharing the stack can register its own, so the
+// specs only look at the ones of the dev config (monapp1, monapp2, monapp3)
+const ownBaseAppUrls = ['monapp1', 'monapp2', 'monapp3'].map(mockAppUrl)
+const ours = (results: any[]) => results.filter((a: any) => ownBaseAppUrls.includes(a.url))
 
 const sendAttachment = async (ax: any, appId: string, attachmentName: string) => {
   const attachmentForm = new FormData()
@@ -31,24 +35,24 @@ test.describe('Applications', () => {
 
   test('Get public base applications', async () => {
     const ax = anonymous
-    const res = await ax.get('/api/v1/base-applications')
+    const res = await ax.get('/api/v1/base-applications?size=100')
     assert.equal(res.status, 200)
-    assert.equal(res.data.count, 2)
+    assert.equal(ours(res.data.results).length, 2)
   })
 
   test('Get privately readable base app', async () => {
     // Only public at first
     const ax = testUser1
-    let res = await ax.get('/api/v1/base-applications?privateAccess=user:test_user1')
+    let res = await ax.get('/api/v1/base-applications?size=100&privateAccess=user:test_datafair_user1')
     assert.equal(res.status, 200)
-    assert.equal(res.data.count, 2)
-    const baseApp1 = res.data.results[0]
+    assert.equal(ours(res.data.results).length, 2)
+    const baseApp1 = ours(res.data.results)[0]
     assert.ok(baseApp1)
     assert.equal(baseApp1.public, true)
     assert.equal(baseApp1.datasetsFilters.length, 2)
     assert.deepEqual(baseApp1.datasetsFilters[0]['field-type'], ['integer', 'number'])
     assert.deepEqual(baseApp1.datasetsFilters[0].select, ['id', 'title', 'schema', 'userPermissions'])
-    const baseApp3 = res.data.results[1]
+    const baseApp3 = ours(res.data.results)[1]
     assert.ok(baseApp3)
     assert.equal(baseApp3.public, true)
     assert.equal(baseApp3.datasetsFilters.length, 1)
@@ -56,18 +60,18 @@ test.describe('Applications', () => {
 
     // super admin patchs the private one
     const adminAx = testSuperadmin
-    res = await adminAx.get('/api/v1/admin/base-applications')
+    res = await adminAx.get('/api/v1/admin/base-applications?size=100')
     assert.equal(res.status, 200)
-    assert.equal(res.data.count, 3)
+    assert.equal(ours(res.data.results).length, 3)
     await adminAx.patch(`/api/v1/base-applications/${mockAppId('monapp2')}`, {
-      privateAccess: [{ type: 'user', id: 'test_user1' }, { type: 'user', id: 'another' }]
+      privateAccess: [{ type: 'user', id: 'test_datafair_user1' }, { type: 'user', id: 'test_datafair_another' }]
     })
     assert.equal(res.status, 200)
 
     // User sees the public and private base app
-    res = await ax.get('/api/v1/base-applications?privateAccess=user:test_user1')
+    res = await ax.get('/api/v1/base-applications?size=100&privateAccess=user:test_datafair_user1')
     assert.equal(res.status, 200)
-    assert.equal(res.data.count, 3)
+    assert.equal(ours(res.data.results).length, 3)
     const baseApp = res.data.results.find((a: any) => a.url === mockAppUrl('monapp2'))
     assert.equal(baseApp.privateAccess.length, 1)
   })
@@ -75,11 +79,11 @@ test.describe('Applications', () => {
   test('Get base apps completed with contextual dataset', async () => {
     const ax = testUser1
     const adminAx = testSuperadmin
-    await adminAx.patch(`/api/v1/base-applications/${mockAppId('monapp2')}`, { privateAccess: [{ type: 'user', id: 'test_user1' }] })
+    await adminAx.patch(`/api/v1/base-applications/${mockAppId('monapp2')}`, { privateAccess: [{ type: 'user', id: 'test_datafair_user1' }] })
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
-    const res = await ax.get('/api/v1/base-applications?privateAccess=user:test_user1&dataset=' + dataset.id)
+    const res = await ax.get('/api/v1/base-applications?size=100&privateAccess=user:test_datafair_user1&dataset=' + dataset.id)
     assert.equal(res.status, 200)
-    assert.equal(res.data.count, 3)
+    assert.equal(ours(res.data.results).length, 3)
     const app = res.data.results.find((a: any) => a.url === mockAppUrl('monapp2'))
     assert.equal(app.category, 'autre')
     assert.equal(app.disabled.length, 1)
@@ -191,7 +195,7 @@ test.describe('Applications', () => {
 
   test('Use an application through the application proxy', { tag: '@smoke' }, async () => {
     const ax = testUser1
-    const adminAx = alban
+    const adminAx = testSuperadmin
 
     const dataset = await sendDataset('datasets/split.csv', ax)
     const datasetRefInit = (await ax.get('/api/v1/datasets', { params: { id: dataset.id, select: 'id' } })).data.results[0]
@@ -263,7 +267,7 @@ test.describe('Applications', () => {
     assert.ok(res.data.includes('<div hidden="">application embed</div>'))
 
     // no brand embed if the specific limit is defined
-    await adminAx.post('/api/v1/limits/user/test_user1', { hide_brand: { limit: 1 }, lastUpdate: new Date().toISOString() }, { params: { key: config.secretKeys.limits } })
+    await adminAx.post('/api/v1/limits/user/test_datafair_user1', { hide_brand: { limit: 1 }, lastUpdate: new Date().toISOString() }, { params: { key: config.secretKeys.limits } })
     res = await ax.get('/app/' + appId)
     assert.equal(res.data.includes('<div hidden="">application embed</div>'), false)
   })
@@ -280,7 +284,7 @@ test.describe('Applications', () => {
   test('Point the site theme resources of a proxied application to hashed or overridden URLs', async () => {
     // the canonical references of an application following the theme of its site
     await setupMockRoute({
-      path: '/themeapp/index.html',
+      path: '/test_datafair_themeapp/index.html',
       contentType: 'text/html',
       body: `<html><head>
         <meta name="application-name" content="themeapp">
@@ -289,12 +293,12 @@ test.describe('Applications', () => {
         <script>window.APPLICATION=%APPLICATION%;</script>
       </head><body>themed app</body></html>`
     })
-    await setupMockRoute({ path: '/themeapp/config-schema.json', body: {} })
+    await setupMockRoute({ path: '/test_datafair_themeapp/config-schema.json', body: {} })
     try {
-      await testSuperadmin.post('/api/v1/base-applications', { url: mockAppUrl('themeapp') })
-      await testSuperadmin.patch(`/api/v1/base-applications/${mockAppId('themeapp')}`, { public: true })
+      await testSuperadmin.post('/api/v1/base-applications', { url: mockAppUrl('test_datafair_themeapp') })
+      await testSuperadmin.patch(`/api/v1/base-applications/${mockAppId('test_datafair_themeapp')}`, { public: true })
       const ax = testUser1
-      const themeApp = (await ax.post('/api/v1/applications', { url: mockAppUrl('themeapp'), title: 'themed' })).data
+      const themeApp = (await ax.post('/api/v1/applications', { url: mockAppUrl('test_datafair_themeapp'), title: 'themed' })).data
       const plainApp = (await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'plain' })).data
       const hashes = (await anonymous.get(`${directoryUrl}/api/sites/_hashes`)).data
 
@@ -340,7 +344,8 @@ test.describe('Applications', () => {
       await ax.get(captureUrl + '/api/v1/api-docs.json')
     } catch (err: any) {
       console.warn('capture is not available in this test environment')
-      assert.equal(err.status, 502)
+      // 502: a proxy route to a stopped capture, 404: no route at all
+      assert.ok([404, 502].includes(err.status), `unexpected status ${err.status}`)
       return
     }
 
@@ -432,7 +437,8 @@ test.describe('Applications', () => {
       await ax.get(captureUrl + '/api/v1/api-docs.json')
     } catch (err: any) {
       console.warn('capture is not available in this test environment')
-      assert.equal(err.status, 502)
+      // 502: a proxy route to a stopped capture, 404: no route at all
+      assert.ok([404, 502].includes(err.status), `unexpected status ${err.status}`)
       return
     }
 
@@ -551,7 +557,7 @@ test.describe('Applications', () => {
     app = (await ax.get(`/api/v1/applications/${app.id}`)).data
     assert.equal(app.storage.size, 9755)
 
-    const { data: limits } = await ax.get('/api/v1/limits/user/test_user1')
+    const { data: limits } = await ax.get('/api/v1/limits/user/test_datafair_user1')
     assert.equal(limits.store_bytes.consumption, 9755)
   })
 })

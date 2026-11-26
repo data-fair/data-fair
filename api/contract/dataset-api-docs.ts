@@ -12,11 +12,13 @@ import * as utils from './utils.js'
 import pJson from './p-json.js'
 import { getColumnFilters, maxQLength } from '../src/datasets/es/commons.ts'
 import { gettingStartedGuide, type GettingStartedInputs } from './getting-started-guide.ts'
+import { consistencyGuide } from './consistency-guide.ts'
 import { operations as xAgent, datasetRoot as xAgentRoot } from './x-agent.ts'
 
 type DatasetApiDocsSettings = (Pick<Settings, 'info' | 'compatODS'> & Record<string, any>) | null | undefined
 
-type DatasetApiDocsOptions = { merged?: boolean }
+// publicData: an anonymous caller may read the data (see consistency-guide.ts)
+type DatasetApiDocsOptions = { merged?: boolean, publicData?: boolean }
 
 const dataFiles = datasetSchema.properties.storage.properties.dataFiles
 
@@ -1586,6 +1588,21 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
     }
   }
 
+  // The documented data read routes validated on finalizedAt (cacheHeaders.resourceBased('finalizedAt')) accept it
+  // as a version timestamp — see docs/architecture/caching.md, "Consistency across requests". Added
+  // on copies: some operations are module level objects shared between docs.
+  const finalizedAtParam = {
+    in: 'query',
+    name: 'finalizedAt',
+    description: "La valeur, telle quelle, de la propriété `finalizedAt` des informations du jeu de données. La réponse contient alors des données au moins aussi récentes que cette version et peut être conservée plus longtemps par les caches. Les données servies restent les données courantes : ce paramètre ne permet pas de consulter une version antérieure, et une valeur plus récente que la version courante est refusée (erreur 400). Voir la section \"Cache et fraîcheur des données\" de la description de l'API.",
+    schema: { title: 'Version des données', type: 'string', format: 'date-time' }
+  }
+  for (const path of ['/lines', '/values_agg', '/values/{field}', '/values-labels/{field}', '/metric_agg', '/simple_metrics_agg', '/geo_agg', '/words_agg']) {
+    const op = api.paths[path]?.get
+    if (!op) continue
+    api.paths[path] = { ...api.paths[path], get: { ...op, parameters: [...(op.parameters ?? []), finalizedAtParam] } }
+  }
+
   // Explicit tag order — drives the navigation drawer order in the openapi-viewer.
   // Only tags that are actually used by at least one operation are listed.
   const usedTags = new Set<string>(
@@ -1605,7 +1622,7 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
   // The private doc discards this description and re-appends the guide after its own contextual
   // filter — same reason: it must reflect what the caller can actually call.
   const gettingStartedInputs: GettingStartedInputs = { aggField: valuesProperties[0]?.key, hasBbox }
-  if (!merged) api.info.description += gettingStartedGuide(api, gettingStartedInputs)
+  if (!merged) api.info.description += gettingStartedGuide(api, gettingStartedInputs) + (api.paths['/lines'] ? consistencyGuide(options?.publicData) : '')
 
   return { api, userApiRate, anonymousApiRate, bulkLineSchema, gettingStartedInputs }
 }

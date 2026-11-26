@@ -4,11 +4,11 @@ import { axiosAuth, clean, checkPendingTasks, config, mockAppUrl } from '../../s
 import { clearPublicationSitesCache, validateDcat } from '../../support/workers.ts'
 import { collectNotifs, expectNotifPair } from '../../support/notifications.ts'
 
-const testUser1 = await axiosAuth('test_user1@test.com')
-const testUser1Org = await axiosAuth('test_user1@test.com', 'test_org1')
-const testUser4Org = await axiosAuth('test_user4@test.com', 'test_org1')
-const testUser5Org = await axiosAuth('test_user5@test.com', 'test_org1')
-const testUser6Org = await axiosAuth('test_user6@test.com', 'test_org1')
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
+const testUser1Org = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
+const testUser4Org = await axiosAuth('test_datafair_user4@test.com', 'test_datafair_org1')
+const testUser5Org = await axiosAuth('test_datafair_user5@test.com', 'test_datafair_org1')
+const testUser6Org = await axiosAuth('test_datafair_user6@test.com', 'test_datafair_org1')
 
 const publicUrl2 = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT2}/data-fair`
 
@@ -49,7 +49,7 @@ test.describe('publication sites', () => {
     const ax = testUser1Org
 
     const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://portal.com' }
-    await ax.post('/api/v1/settings/organization/test_org1/publication-sites', portal)
+    await ax.post('/api/v1/settings/organization/test_datafair_org1/publication-sites', portal)
 
     const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'published dataset', schema: [] })).data
 
@@ -60,7 +60,7 @@ test.describe('publication sites', () => {
     const ax = testUser1Org
 
     const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://portal.com' }
-    await ax.post('/api/v1/settings/organization/test_org1/publication-sites', portal)
+    await ax.post('/api/v1/settings/organization/test_datafair_org1/publication-sites', portal)
 
     const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'published dataset', schema: [] })).data
     await ax.patch(`/api/v1/datasets/${dataset.id}`, { publicationSites: ['data-fair-portals:portal1'] })
@@ -72,7 +72,7 @@ test.describe('publication sites', () => {
     const requestedApp = (await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })).data
     await ax.patch(`/api/v1/applications/${requestedApp.id}`, { requestedPublicationSites: ['data-fair-portals:portal1'] })
 
-    await ax.delete('/api/v1/settings/organization/test_org1/publication-sites/data-fair-portals/portal1')
+    await ax.delete('/api/v1/settings/organization/test_datafair_org1/publication-sites/data-fair-portals/portal1')
 
     assert.deepEqual((await ax.get(`/api/v1/datasets/${dataset.id}`)).data.publicationSites, [])
     assert.deepEqual((await ax.get(`/api/v1/datasets/${requestedDataset.id}`)).data.requestedPublicationSites, [])
@@ -94,7 +94,7 @@ test.describe('publication sites', () => {
     })
 
     const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://' + process.env.DEV_HOST + ':' + process.env.NGINX_PORT2 }
-    await ax.post('/api/v1/settings/organization/test_org1/publication-sites', portal)
+    await ax.post('/api/v1/settings/organization/test_datafair_org1/publication-sites', portal)
     await clearPublicationSitesCache()
 
     await assert.rejects(ax.get(`${publicUrl2}/api/v1/datasets/${otherDataset.id}`), (err: any) => {
@@ -136,7 +136,7 @@ test.describe('publication sites', () => {
     const ax = testUser1Org
 
     const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://' + process.env.DEV_HOST + ':' + process.env.NGINX_PORT2 }
-    await ax.post('/api/v1/settings/organization/test_org1/publication-sites', portal)
+    await ax.post('/api/v1/settings/organization/test_datafair_org1/publication-sites', portal)
     await clearPublicationSitesCache()
 
     const app = (await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1') })).data
@@ -152,7 +152,7 @@ test.describe('publication sites', () => {
 
   test('POST application targeting a publication site builds well-formed links', async () => {
     const ax = testUser1Org
-    await ax.post('/api/v1/settings/organization/test_org1/publication-sites', { type: 'data-fair-portals', id: 'portal1', url: 'http://portal.com' })
+    await ax.post('/api/v1/settings/organization/test_datafair_org1/publication-sites', { type: 'data-fair-portals', id: 'portal1', url: 'http://portal.com' })
     await clearPublicationSitesCache()
 
     // on the main domain a publication site is put in context through the publicationSites query param;
@@ -166,7 +166,7 @@ test.describe('publication sites', () => {
 
   test('department admin should fail to publish dataset on org site', async () => {
     const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://portal.com' }
-    await testUser1Org.post('/api/v1/settings/organization/test_org1/publication-sites', portal)
+    await testUser1Org.post('/api/v1/settings/organization/test_datafair_org1/publication-sites', portal)
 
     const dataset = (await testUser4Org.post('/api/v1/datasets', { isRest: true, title: 'published dataset', schema: [] })).data
     await assert.rejects(testUser4Org.patch(`/api/v1/datasets/${dataset.id}`, { publicationSites: ['data-fair-portals:portal1'] }),
@@ -175,7 +175,7 @@ test.describe('publication sites', () => {
 
   test('department admin can request publishing dataset on org site', async () => {
     const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://portal.com' }
-    await testUser1Org.post('/api/v1/settings/organization/test_org1/publication-sites', portal)
+    await testUser1Org.post('/api/v1/settings/organization/test_datafair_org1/publication-sites', portal)
     const dataset = (await testUser4Org.post('/api/v1/datasets', { isRest: true, title: 'published dataset', schema: [] })).data
 
     const notifs = await collectNotifs()
@@ -185,23 +185,23 @@ test.describe('publication sites', () => {
 
     const { id } = expectNotifPair(captured, base, dataset)
     assert.equal(id.sender.type, 'organization')
-    assert.equal(id.sender.id, 'test_org1')
+    assert.equal(id.sender.id, 'test_datafair_org1')
     assert.equal(id.sender.department, undefined)
   })
 
   test('department admin can publish dataset on department site', async () => {
-    await testUser1Org.post('/api/v1/settings/organization/test_org1/publication-sites', { type: 'data-fair-portals', id: 'portalorg', url: 'http://portal.com' })
+    await testUser1Org.post('/api/v1/settings/organization/test_datafair_org1/publication-sites', { type: 'data-fair-portals', id: 'portalorg', url: 'http://portal.com' })
     const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://portal.com' }
-    await testUser4Org.post('/api/v1/settings/organization/test_org1:dep1/publication-sites', portal)
+    await testUser4Org.post('/api/v1/settings/organization/test_datafair_org1:dep1/publication-sites', portal)
 
-    let publicationSites = (await testUser4Org.get('/api/v1/settings/organization/test_org1:dep1/publication-sites')).data
+    let publicationSites = (await testUser4Org.get('/api/v1/settings/organization/test_datafair_org1:dep1/publication-sites')).data
     assert.equal(publicationSites.length, 2)
     assert.equal(publicationSites[0].id, 'portalorg')
     assert.equal(publicationSites[0].department, undefined)
     assert.equal(publicationSites[1].id, 'portal1')
     assert.equal(publicationSites[1].department, 'dep1')
 
-    publicationSites = (await testUser4Org.get('/api/v1/settings/organization/test_org1:*/publication-sites')).data
+    publicationSites = (await testUser4Org.get('/api/v1/settings/organization/test_datafair_org1:*/publication-sites')).data
     assert.equal(publicationSites.length, 2)
     assert.equal(publicationSites[0].id, 'portalorg')
     assert.equal(publicationSites[0].department, undefined)
@@ -214,7 +214,7 @@ test.describe('publication sites', () => {
 
   test('department contrib cannot publish dataset on department site', async () => {
     const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://portal.com' }
-    await testUser4Org.post('/api/v1/settings/organization/test_org1:dep1/publication-sites', portal)
+    await testUser4Org.post('/api/v1/settings/organization/test_datafair_org1:dep1/publication-sites', portal)
 
     const dataset = (await testUser4Org.post('/api/v1/datasets', { isRest: true, title: 'published dataset', schema: [] })).data
     await assert.rejects(testUser6Org.patch(`/api/v1/datasets/${dataset.id}`, { publicationSites: ['data-fair-portals:portal1'] }),
@@ -223,7 +223,7 @@ test.describe('publication sites', () => {
 
   test('department contrib can request publishing dataset on department site', async () => {
     const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://portal.com' }
-    await testUser4Org.post('/api/v1/settings/organization/test_org1:dep1/publication-sites', portal)
+    await testUser4Org.post('/api/v1/settings/organization/test_datafair_org1:dep1/publication-sites', portal)
     const dataset = (await testUser4Org.post('/api/v1/datasets', { isRest: true, title: 'published dataset', schema: [] })).data
 
     const notifs = await collectNotifs()
@@ -233,32 +233,32 @@ test.describe('publication sites', () => {
 
     const { id } = expectNotifPair(captured, base, dataset)
     assert.equal(id.sender.type, 'organization')
-    assert.equal(id.sender.id, 'test_org1')
+    assert.equal(id.sender.id, 'test_datafair_org1')
     assert.equal(id.sender.department, 'dep1')
   })
 
   test('POST org-root publication site must not clobber a department settings doc', async () => {
     // a department settings doc with its own publication site
-    await testUser1Org.post('/api/v1/settings/organization/test_org1:dep1/publication-sites', { type: 'data-fair-portals', id: 'dep-portal', url: 'http://portal.com' })
+    await testUser1Org.post('/api/v1/settings/organization/test_datafair_org1:dep1/publication-sites', { type: 'data-fair-portals', id: 'dep-portal', url: 'http://portal.com' })
 
     // create an org-root publication site (no org-root settings doc exists yet, only the department one)
-    await testUser1Org.post('/api/v1/settings/organization/test_org1/publication-sites', { type: 'data-fair-portals', id: 'org-portal', url: 'http://portal.com' })
+    await testUser1Org.post('/api/v1/settings/organization/test_datafair_org1/publication-sites', { type: 'data-fair-portals', id: 'org-portal', url: 'http://portal.com' })
 
     // the department site must survive — a replaceOne filtering on owner without the
     // department:{$exists:false} clause would replace the department doc instead
-    const depSites = (await testUser1Org.get('/api/v1/settings/organization/test_org1:dep1/publication-sites')).data
+    const depSites = (await testUser1Org.get('/api/v1/settings/organization/test_datafair_org1:dep1/publication-sites')).data
     assert.ok(depSites.some((s: any) => s.id === 'dep-portal' && s.department === 'dep1'), 'department publication site should survive')
 
     // and the org-root site exists too
-    const orgSites = (await testUser1Org.get('/api/v1/settings/organization/test_org1/publication-sites')).data
+    const orgSites = (await testUser1Org.get('/api/v1/settings/organization/test_datafair_org1/publication-sites')).data
     assert.ok(orgSites.some((s: any) => s.id === 'org-portal'), 'org-root publication site should exist')
   })
 
   test('contrib can publish on a "staging" publication site', async () => {
     const portalProd = { type: 'data-fair-portals', id: 'portal-staging', url: 'http://portal.com', settings: { staging: true } }
-    await testUser1Org.post('/api/v1/settings/organization/test_org1:dep1/publication-sites', portalProd)
+    await testUser1Org.post('/api/v1/settings/organization/test_datafair_org1:dep1/publication-sites', portalProd)
     const portalStaging = { type: 'data-fair-portals', id: 'portal-prod', url: 'http://portal.com' }
-    await testUser1Org.post('/api/v1/settings/organization/test_org1:dep1/publication-sites', portalStaging)
+    await testUser1Org.post('/api/v1/settings/organization/test_datafair_org1:dep1/publication-sites', portalStaging)
 
     const dataset = (await testUser1Org.post('/api/v1/datasets', { isRest: true, title: 'published dataset', schema: [] })).data
     await assert.rejects(testUser5Org.patch(`/api/v1/datasets/${dataset.id}`, { publicationSites: ['data-fair-portals:portal-unknown'] }), (err: any) => err.status === 404)
@@ -271,7 +271,7 @@ test.describe('publication sites', () => {
 
     // register a publication site on NGINX_PORT2
     const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://' + process.env.DEV_HOST + ':' + process.env.NGINX_PORT2 }
-    await ax.post('/api/v1/settings/organization/test_org1/publication-sites', portal)
+    await ax.post('/api/v1/settings/organization/test_datafair_org1/publication-sites', portal)
     await clearPublicationSitesCache()
 
     // create a dataset with a title so slug differs from nanoid-based id

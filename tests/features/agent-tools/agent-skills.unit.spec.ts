@@ -27,6 +27,15 @@ test.describe('agent skills served as markdown files', () => {
     assert.ok(readAgentSkill('workflow')!.includes(filtersDescription), 'update agent-skills/workflow.md when filtersDescription changes')
   })
 
+  // Both mcp servers serve the workflow skill, the datasets server under its own tool names (data-fair/mcp
+  // DATASETS_TOOLS, which it renames in the body too): the body names only the tools both have.
+  test('the workflow file names only the tools of both mcp servers', async () => {
+    const { readAgentSkill } = await import('../../../api/contract/agent-skills.ts')
+    const named = new Set(readAgentSkill('workflow')!.match(/\bdatafair_[a-z0-9_]+\b/g))
+    const shared = ['datafair_describe_dataset', 'datafair_search_data', 'datafair_get_field_values', 'datafair_aggregate_data', 'datafair_calculate_metric']
+    assert.deepEqual([...named].filter(name => !shared.includes(name)), [])
+  })
+
   test('serves only the known skill names', async () => {
     const { readAgentSkill } = await import('../../../api/contract/agent-skills.ts')
     assert.equal(readAgentSkill('../x-agent'), undefined)

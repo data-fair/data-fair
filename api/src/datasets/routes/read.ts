@@ -394,7 +394,7 @@ const readLines: RequestHandler = async (req, res) => {
     // Buffered fallback (the `_attachment_url`-selected case, which the raw worker path can't rewrite — see
     // the mode-selection gate above): search() already rewrote the URL, so materialize the whole geojson here.
     // esResponse is guaranteed here: manageESError never returns, so a failed search() cannot fall through.
-    const flatten = getFlatten(dataset, true)
+    const flatten = getFlatten(dataset) // arrays joined, see geojson2shp
     const geojson: any = geo.result2geojson(esResponse, flatten)
     observe.reqStep(req, 'result2geojson')
     geojson.bbox = (await esUtils.bboxAgg(dataset, { ...query }, undefined, undefined, esAbortContext)).bbox

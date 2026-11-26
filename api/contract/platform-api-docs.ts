@@ -1,7 +1,7 @@
 // The platform OpenAPI document: every service's document (a fragment) rewritten into its own
 // namespace, then merged into one document per site. Pure: the fragments are fetched and cached
 // elsewhere, this module only checks, rewrites and merges them.
-// Design: docs/superpowers/specs/2026-10-19-platform-api-docs-design.md
+// Design: docs/architecture/platform-api-docs.md
 import type { AgentSkill, Localized } from '@data-fair/openapi-mcp'
 
 export type PlatformServiceId = 'datafair' | 'sd' | 'metrics' | 'events' | 'registry' | 'portals' | 'processings' | 'catalogs'

@@ -102,7 +102,7 @@ jobs:
 
     # no server needed, but some units import #config, whose development config reads .env
     - name: Init .env
-      run: ./node_modules/.bin/df-dev init-env # local bin only: a bare npx would fetch an unrelated "df-dev" from the registry if the dependency were missing
+      run: cp dev/default.env .env
 
     - name: Unit tests
       run: npx playwright test --project=unit
@@ -166,48 +166,31 @@ jobs:
       run: npx playwright install-deps ${{ inputs.browser || 'chromium' }}
 
     - name: Init .env
-      run: ./node_modules/.bin/df-dev init-env # local bin only: a bare npx would fetch an unrelated "df-dev" from the registry if the dependency were missing
+      run: cp dev/default.env .env
 
-    - name: Use localhost as DEV_HOST in CI
-      run: sed -i 's/^DEV_HOST=.*/DEV_HOST=localhost/' .env
-
-    # simple-directory mounts it, with the host and port of .env
-    - name: Render dev users
-      run: node dev/render-users.mjs
-
-    # the zellij panes get .env from df-dev; here every later step does
+    # the dev scripts read .env themselves; here every later step needs it too (comments of default.env filtered out)
     - name: Export .env to the next steps
-      run: cat .env >> "$GITHUB_ENV"
+      run: grep -vE '^\s*(#|$)' .env >> "$GITHUB_ENV" # GITHUB_ENV accepts only NAME=value lines, no comments
 
     # every profile, not only the core services: e2e pages need events, registry, agents and
-    # capture (each optional service has its own profile, see dev/dev.json "optional").
-    # s3-init is a one-shot container: --wait counts it as up while it is still running,
-    # but reports an error if it exits before the last service turns healthy, which is a race
-    # it loses often. Keeping it out of the wait and running it to completion afterwards also
-    # closes the other half of the problem: --wait used to return while the buckets were still
-    # being created, so the tests could start without them.
+    # capture (each optional service has its own compose profile).
+    # dev/deps.sh starts the containers and, once they are healthy, runs the
+    # s3-init one-shot (kept out of the wait: it exits at once, which --wait reports as a failure).
     # mcp reads the platform document from the dev API, which only starts in a later step: it
     # exits at once and fails the wait. No test calls it.
-    # --progress quiet: no per-layer pull lines, a failing container is still reported
     - name: Start services
-      run: docker compose --progress quiet --profile '*' up -d --wait --scale s3-init=0 --scale mcp=0
-
-    - name: Create S3 buckets
-      run: docker compose --progress quiet --profile '*' run --rm s3-init
+      run: npm run dev-deps -- --profile '*' --scale mcp=0
 
     - name: Start mock server
       run: mkdir -p dev/logs && node --experimental-strip-types --disable-warning=ExperimentalWarning dev/mock-server.ts > dev/logs/mock.log 2>&1 &
 
-    # same commands as the api and ui panes of .zellij.kdl, logs in dev/logs for the upload below
+    # same commands as the dev:api and dev:ui scripts, logs in dev/logs for the upload below
     - name: Start dev API
       run: |
-        export NODE_CONFIG=$(./node_modules/.bin/df-dev absent-config)
         cd api && MODE=server_worker NODE_ENV=development EVENTS_LOG_LEVEL=error node index.ts > ../dev/logs/api.log 2>&1 &
 
-    # vite hashes the API's ui-config to link it: same absent-config as the API
     - name: Start dev UI
       run: |
-        export NODE_CONFIG=$(./node_modules/.bin/df-dev absent-config)
         cd ui && NODE_CONFIG_DIR=../api/config/ ../node_modules/.bin/vite --port $DEV_UI_PORT > ../dev/logs/ui.log 2>&1 &
 
     # the e2e-warmup project then pays vite's first-request transforms

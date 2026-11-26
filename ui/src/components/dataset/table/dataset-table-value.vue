@@ -146,7 +146,8 @@ const viewerZone = Intl.DateTimeFormat().resolvedOptions().timeZone
 // viewer's own timezone — only set when those equivalents actually differ (see format-date-logic)
 const dtLabelKeys = { source: 'dtSource', utc: 'dtUtc', local: 'dtLocal' } as const
 const dateTimeTitle = computed(() => {
-  if (property.format !== 'date-time') return ''
+  // an empty cell would otherwise show the current time, dayjs(undefined) being "now"
+  if (property.format !== 'date-time' || !extendedValue.raw) return ''
   const lines = dateTimeBreakdown(localeDayjs.dayjs, extendedValue.raw, viewerZone)
   if (lines.length <= 1) return ''
   return lines.map(line => {

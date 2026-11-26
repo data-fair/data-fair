@@ -11,7 +11,7 @@ test.describe('new dataset stepper', () => {
   })
 
   test('file dataset creation: full stepper flow', { tag: '@smoke' }, async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/new-dataset', 'test_user1')
+    await goToWithAuth('/data-fair/new-dataset', 'test_datafair_user1')
 
     // Step 1: Type selection
     const fileCard = page.locator('.v-card-title', { hasText: 'Fichier' })
@@ -42,10 +42,10 @@ test.describe('new dataset stepper', () => {
   })
 
   test('file title from the source dataset is kept when a file is loaded', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     await ax.post('/api/v1/datasets/meta-sheet', { isMetaOnly: true, title: 'Meta sheet' })
 
-    await goToWithAuth('/data-fair/new-dataset', 'test_user1')
+    await goToWithAuth('/data-fair/new-dataset', 'test_datafair_user1')
     await page.locator('.v-card-title', { hasText: 'Fichier' }).click()
     await page.getByRole('combobox', { name: /comme modèle/ }).click()
     await page.locator('.v-overlay__content .v-list-item', { hasText: 'Meta sheet' }).click()
@@ -59,7 +59,7 @@ test.describe('new dataset stepper', () => {
   })
 
   test('REST dataset creation', { tag: '@smoke' }, async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/new-dataset', 'test_user1')
+    await goToWithAuth('/data-fair/new-dataset', 'test_datafair_user1')
 
     // Select REST type
     const restCard = page.locator('.v-card-title', { hasText: 'Éditable' })
@@ -86,10 +86,10 @@ test.describe('new dataset stepper', () => {
   })
 
   test('REST dataset initialized from a metadata-only dataset copies all its metadata', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     await ax.post('/api/v1/datasets/meta-sheet', { isMetaOnly: true, title: 'Meta sheet', description: 'A description', keywords: ['kw1'] })
 
-    await goToWithAuth('/data-fair/new-dataset', 'test_user1')
+    await goToWithAuth('/data-fair/new-dataset', 'test_datafair_user1')
     await page.locator('.v-card-title', { hasText: 'Éditable' }).click()
 
     const modelInput = page.getByRole('combobox', { name: /comme modèle/ })
@@ -113,7 +113,7 @@ test.describe('new dataset stepper', () => {
   })
 
   test('metaOnly dataset creation', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/new-dataset', 'test_user1')
+    await goToWithAuth('/data-fair/new-dataset', 'test_datafair_user1')
 
     // Select meta only type
     const metaCard = page.locator('.v-card-title', { hasText: 'Métadonnées seules' })
@@ -139,10 +139,10 @@ test.describe('new dataset stepper', () => {
   // TODO: skipped due to Vuetify 4 VAutocomplete render crash in dataset-children-select custom item template
   test.skip('virtual dataset creation', async ({ page, goToWithAuth }) => {
     // Pre-create a child dataset with a unique title
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     const child1 = await sendDataset('datasets/dataset1.csv', ax, {}, { title: 'Virtual Child E2E' })
 
-    await goToWithAuth('/data-fair/new-dataset', 'test_user1')
+    await goToWithAuth('/data-fair/new-dataset', 'test_datafair_user1')
 
     // Select virtual type
     const virtualCard = page.locator('.v-card-title', { hasText: 'Virtuel' })
@@ -182,7 +182,7 @@ test.describe('new dataset stepper', () => {
     // Without this recap the step shows only an owner picker, so someone told
     // "your dataset is configured, just click Create" — by the assistant or by
     // the stepper itself — has nothing on screen to check that against.
-    await goToWithAuth('/data-fair/new-dataset', 'test_user1')
+    await goToWithAuth('/data-fair/new-dataset', 'test_datafair_user1')
 
     const restCard = page.locator('.v-card-title', { hasText: 'Éditable' })
     await expect(restCard).toBeVisible({ timeout: 10000 })
@@ -201,7 +201,7 @@ test.describe('new dataset stepper', () => {
   })
 
   test('step navigation: subtitles and editable steps', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/new-dataset', 'test_user1')
+    await goToWithAuth('/data-fair/new-dataset', 'test_datafair_user1')
 
     // Select file type
     const fileCard = page.locator('.v-card-title', { hasText: 'Fichier' })
@@ -220,7 +220,7 @@ test.describe('new dataset stepper', () => {
   })
 
   test('simple mode hides virtual type', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/new-dataset?simple=true', 'test_user1')
+    await goToWithAuth('/data-fair/new-dataset?simple=true', 'test_datafair_user1')
 
     const fileCard = page.locator('.v-card-title', { hasText: 'Fichier' })
     await expect(fileCard).toBeVisible({ timeout: 10000 })

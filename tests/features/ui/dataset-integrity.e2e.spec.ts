@@ -10,16 +10,16 @@ test.describe('dataset integrity panel', () => {
 
   test.beforeAll(async () => {
     await clean()
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     datasetId = (await sendDataset('datasets/dataset1.csv', ax)).id
-    const superadmin = await axiosAuth('test_superadmin@test.com', undefined, true)
+    const superadmin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
     await superadmin.put(`/api/v1/datasets/${datasetId}/_integrity`, { active: true })
     const check = (await superadmin.post(`/api/v1/datasets/${datasetId}/_integrity/_check`)).data
     expect(check.status).toBe('ok')
   })
 
   test('explains the guarantee, the verdict freshness and each verified part', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_datafair_user1')
     const tab = page.getByRole('tab', { name: 'Intégrité' })
     await tab.waitFor({ state: 'visible', timeout: 15000 })
     await tab.click()
@@ -45,7 +45,7 @@ test.describe('dataset integrity panel', () => {
   // the states below are display state written straight into the dataset doc: the panel's job is
   // to render them, how the checker reaches them is covered by the API suites
   const openPanel = async (page: Page, goToWithAuth: (url: string, user: string) => Promise<void>) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_datafair_user1')
     const tab = page.getByRole('tab', { name: 'Intégrité' })
     await tab.waitFor({ state: 'visible', timeout: 15000 })
     await tab.click()

@@ -55,19 +55,22 @@ const bbox = [103.5, 0.5, 105.0, 1.2]
 
 test.describe('zero-copy shp export geojson-string equivalence', () => {
   test('worker string (slim dataset, JSON.parse(rawBuffer)) equals the old main-thread string (full dataset)', async () => {
-    const { result2geojson } = await import('../../../api/src/datasets/utils/geo-features.ts') as any
+    const { result2geojson, rawEsBuffer2geojson } = await import('../../../api/src/datasets/utils/geo-features.ts') as any
     const { getFlatten } = await import('../../../api/src/datasets/utils/flatten.ts') as any
 
     // OLD main-thread path: full dataset flatten over the search() esResponse, bbox appended last.
-    const oldStr = JSON.stringify({ ...result2geojson(makeEsResponse(), getFlatten(fullDataset, true)), bbox })
+    const oldStr = JSON.stringify({ ...result2geojson(makeEsResponse(), getFlatten(fullDataset)), bbox })
 
     // NEW worker path: serialize to a raw buffer, transfer, JSON.parse, slim dataset flatten, bbox appended last.
     const rawBuffer = Buffer.from(JSON.stringify(makeEsResponse()))
-    const newStr = JSON.stringify({ ...result2geojson(JSON.parse(Buffer.from(rawBuffer).toString()), getFlatten(slimDataset, true)), bbox })
+    const { geojson } = rawEsBuffer2geojson(new Uint8Array(rawBuffer), slimDataset, false)
+    const newStr = JSON.stringify({ ...geojson, bbox })
 
     assert.ok(oldStr.length > 0, 'geojson string should be non-empty')
     assert.equal(newStr, oldStr, 'ogr2ogr input string must be byte-identical (slim vs full dataset flatten)')
     // sanity: bbox is the LAST key (matches read.ts appending geojson.bbox AFTER result2geojson)
+    // shapefile has no list field type: separator columns must reach ogr2ogr joined
+    assert.equal(JSON.parse(newStr).features[0].properties.tags, 'x,y')
     assert.ok(oldStr.endsWith(`"bbox":${JSON.stringify(bbox)}}`), 'bbox must be the trailing key')
   })
 })

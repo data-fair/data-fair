@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { axiosAuth, clean } from '../../../support/axios.ts'
 import { waitForFinalize } from '../../../support/workers.ts'
 
-const ax = await axiosAuth('test_user1@test.com')
+const ax = await axiosAuth('test_datafair_user1@test.com')
 
 // `code` is the typical "code column" configuration: no text analysis, but wildcard enabled so it
 // can be filtered on a group of characters. `full` keeps the default text analysis.

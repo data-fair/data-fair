@@ -5,8 +5,15 @@
     fluid
   >
     <dataset-map
+      v-if="dataset.bbox"
       :height="contentHeight"
       :category="category"
+    />
+    <v-alert
+      v-else
+      type="info"
+      class="ma-4"
+      :text="t('unavailable')"
     />
   </v-container>
 </template>
@@ -15,9 +22,11 @@
 fr:
   datasets: Jeux de données
   map: Carte
+  unavailable: Ce jeu de données n'a pas de données géographiques à afficher sur une carte.
 en:
   datasets: Datasets
   map: Map
+  unavailable: This dataset has no geographic data to show on a map.
 </i18n>
 
 <script setup lang="ts">

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
 import { sendDataset } from '../../../support/workers.ts'
 
-const testUser1 = await axiosAuth('test_user1@test.com')
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
 
 // These tests exercise the `?hint=auto|true|false` query parameter on the dataset search endpoints.
 // They focus on the wiring (param parsing, mode gating, meta.hints attachment); the rule-by-rule logic
