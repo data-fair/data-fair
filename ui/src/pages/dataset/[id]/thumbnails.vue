@@ -4,7 +4,16 @@
     class="pa-0"
     fluid
   >
-    <dataset-thumbnails :height="contentHeight" />
+    <dataset-thumbnails
+      v-if="imageField"
+      :height="contentHeight"
+    />
+    <v-alert
+      v-else
+      type="info"
+      class="ma-4"
+      :text="t('unavailable')"
+    />
   </v-container>
 </template>
 
@@ -12,9 +21,11 @@
 fr:
   datasets: Jeux de données
   thumbnails: Vignettes
+  unavailable: Ce jeu de données n'a pas de colonne d'images.
 en:
   datasets: Datasets
   thumbnails: Thumbnails
+  unavailable: This dataset has no image column.
 </i18n>
 
 <script setup lang="ts">
@@ -30,7 +41,7 @@ const { mainRect } = useLayout()
 const breadcrumbs = useBreadcrumbs()
 
 const store = useDatasetStore()
-const { dataset } = store
+const { dataset, imageField } = store
 
 useDatasetWatch(store, ['info'])
 

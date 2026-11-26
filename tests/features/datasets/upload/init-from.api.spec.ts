@@ -5,9 +5,9 @@ import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
 import { waitForFinalize, sendDataset, waitForDatasetError, setupMockRoute, clearMockRoutes, getRawDataset } from '../../../support/workers.ts'
 
-const testUser1 = await axiosAuth('test_user1@test.com')
-const testUser1Org = await axiosAuth('test_user1@test.com', 'test_org1')
-const testUser5 = await axiosAuth('test_user5@test.com')
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
+const testUser1Org = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
+const testUser5 = await axiosAuth('test_datafair_user5@test.com')
 
 test.describe('Datasets with auto-initialization from another one', () => {
   test.beforeEach(async () => {
@@ -253,7 +253,7 @@ test.describe('Datasets with auto-initialization from another one', () => {
     event = journal.pop()
     assert.equal(event.draft, true)
     assert.equal(event.type, 'validation-error')
-    assert.ok(event.data.startsWith('La structure du fichier contient des ruptures de compatibilité :'))
+    assert.ok(event.data.startsWith('The structure of the file contains breaking changes:'))
     event = journal.pop()
     assert.equal(event.draft, true)
     assert.equal(event.type, 'finalize-end')
@@ -341,7 +341,7 @@ test.describe('Datasets with auto-initialization from another one', () => {
     const journal = (await ax.get(`/api/v1/datasets/${res.data.id}/journal`)).data
     const errorEvent = journal.find((e: any) => e.type === 'error')
     assert.ok(errorEvent)
-    assert.ok(errorEvent.data.includes('permission manquante'))
+    assert.ok(errorEvent.data.includes('missing permission'))
   })
 
   test('Initialize dataset in a department from dataset in orga', async () => {
@@ -357,7 +357,7 @@ test.describe('Datasets with auto-initialization from another one', () => {
       },
       owner: {
         type: 'organization',
-        id: 'test_org1',
+        id: 'test_datafair_org1',
         name: 'Test Org 1',
         department: 'dep1'
       }
@@ -426,7 +426,7 @@ test.describe('Datasets with auto-initialization from another one', () => {
 
   test('Create REST and file datasets from a metadata-only dataset', async () => {
     const ax = testUser1
-    await ax.put('/api/v1/settings/user/test_user1', { datasetsMetadata: { custom: [{ title: 'Foo', key: 'foo' }] } })
+    await ax.put('/api/v1/settings/user/test_datafair_user1', { datasetsMetadata: { custom: [{ title: 'Foo', key: 'foo' }] } })
     const metadata = {
       summary: 'A summary',
       description: 'A description',
@@ -458,7 +458,7 @@ test.describe('Datasets with auto-initialization from another one', () => {
   })
 
   test('Only copy the topics and custom metadata known to the target account', async () => {
-    await testUser1.put('/api/v1/settings/user/test_user1', { datasetsMetadata: { custom: ['foo', 'bar', 'num', 'svc', 'svc2'].map(key => ({ title: key, key })) } })
+    await testUser1.put('/api/v1/settings/user/test_datafair_user1', { datasetsMetadata: { custom: ['foo', 'bar', 'num', 'svc', 'svc2'].map(key => ({ title: key, key })) } })
     const source = (await testUser1.post('/api/v1/datasets', {
       isMetaOnly: true,
       title: 'meta only',
@@ -467,7 +467,7 @@ test.describe('Datasets with auto-initialization from another one', () => {
       customMetadata: { foo: 'foo value', bar: 'bar value', num: 'not a number', svc: 'Voirie', svc2: 'Autre' }
     })).data
     await testUser1.put(`/api/v1/datasets/${source.id}/permissions`, [{ classes: ['read'] }])
-    await testUser5.put('/api/v1/settings/user/test_user5', {
+    await testUser5.put('/api/v1/settings/user/test_datafair_user5', {
       topics: [{ id: 'topic1', title: 'Topic 1' }],
       datasetsMetadata: { custom: [{ title: 'Foo', key: 'foo' }, { title: 'Num', key: 'num', type: 'integer' }, { title: 'Svc', key: 'svc', enum: ['Voirie'] }, { title: 'Svc2', key: 'svc2', enum: ['Voirie'] }] }
     })
@@ -489,7 +489,7 @@ test.describe('Datasets with auto-initialization from another one', () => {
     const res = await ax.post('/api/v1/datasets', { isRest: true, title: 'rest from meta', initFrom: { dataset: metaOnly.id, parts: ['data'] } })
     await waitForDatasetError(ax, res.data.id)
     const journal = (await ax.get(`/api/v1/datasets/${res.data.id}/journal`)).data
-    assert.ok(journal.find((e: any) => e.type === 'error').data.includes('ne contient que des métadonnées'))
+    assert.ok(journal.find((e: any) => e.type === 'error').data.includes('only contains metadata'))
   })
 
   test('Inherit conformsTo from a public reference dataset across accounts', async () => {
@@ -510,7 +510,7 @@ test.describe('Datasets with auto-initialization from another one', () => {
     assert.equal(res.status, 201)
     const inherited = await waitForFinalize(testUser5, res.data.id)
     assert.equal(inherited.owner.type, 'user')
-    assert.equal(inherited.owner.id, 'test_user5')
+    assert.equal(inherited.owner.id, 'test_datafair_user5')
     assert.deepEqual(inherited.conformsTo, {
       title: 'Public Reference Schema',
       version: '1.0',

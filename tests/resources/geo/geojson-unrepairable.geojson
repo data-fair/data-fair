@@ -1,0 +1,16 @@
+{
+   "type": "FeatureCollection",
+   "features": [
+       {
+         "type":"Feature",
+         "geometry":{
+           "type":"Polygon",
+           "coordinates":[[[2.3644737,6.3887899],[2.3644574,6.3887914],[2.3644574,6.3887914],[2.3644737,6.3887899]]]
+          },
+          "properties": {
+              "prop1": "value1",
+              "desc": "A polygon without area (its 3 distinct points are collinear): nothing to repair, Elasticsearch rejects it"
+          }
+        }
+   ]
+}

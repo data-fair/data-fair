@@ -55,7 +55,7 @@ export const waitForFinalize = async (
   } catch (err: any) {
     // ignore some non-blocking errors
     // TODO: these should have a different type, like "warning"
-    if (err.message.includes('le fichier contient une ou plusieurs colonnes') || err.message.includes('% des lignes') || err.message.includes('aucune colonne n\'a pu être associée')) {
+    if (err.message.includes('the file contains one or more empty columns') || err.message.includes('% of the lines') || err.message.includes('no column could be automatically matched')) {
       return await waitForFinalize(ax, datasetId)
     } else {
       throw err

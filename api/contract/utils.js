@@ -1,10 +1,10 @@
 export const qParam = {
   in: 'query',
   name: 'q',
-  description: 'Recherche textuelle',
+  description: 'Full-text search',
   required: false,
   schema: {
-    title: 'Recherche textuelle',
+    title: 'Full-text search',
     type: 'string'
   }
 }
@@ -12,7 +12,7 @@ export const qParam = {
 export const ownerParams = [/* {
   in: 'query',
   name: 'shared',
-  description: 'Voir les ressources partagées par d\'autres comptes',
+  description: 'Show the resources shared by other accounts',
   example: false,
   schema: {
     type: 'boolean',
@@ -22,7 +22,7 @@ export const ownerParams = [/* {
   {
     in: 'query',
     name: 'mine',
-    description: 'Voir uniquement les ressources de mon compte actif',
+    description: 'Only show the resources of my active account',
     required: false,
     schema: {
       type: 'boolean',
@@ -31,10 +31,10 @@ export const ownerParams = [/* {
   }, {
     in: 'query',
     name: 'owner',
-    description: 'Restreindre par propriétaire',
+    description: 'Restrict by owner',
     required: false,
     schema: {
-      title: 'Restreindre par propriétaire',
+      title: 'Restrict by owner',
       type: 'array',
       items: {
         type: 'string',
@@ -51,25 +51,25 @@ export const ownerParams = [/* {
 export const visibilityParams = [{
   in: 'query',
   name: 'visibility',
-  description: 'Filtrer sur la visibilité de la ressource.\n"public" = voir les ressources publiques\n"private" = voir les ressources privées (celles sur lesquelles aucune permission particulière n\'a été appliquée)\n"protected" = voir les ressources protégées (celles sur lesquelles une permission a été donnée à des utilisateurs).',
+  description: 'Filter on the visibility of the resource.\n"public" = show the public resources\n"private" = show the private resources (those on which no particular permission was applied)\n"protected" = show the protected resources (those on which a permission was given to some users).',
   required: false,
   schema: {
-    title: 'Filtrer sur la visibilité de la ressource.',
+    title: 'Filter on the visibility of the resource.',
     type: 'array',
     items: {
       type: 'string',
       oneOf: [
         {
           const: 'public',
-          title: 'Ressources publiques'
+          title: 'Public resources'
         },
         {
           const: 'private',
-          title: 'Ressources privées'
+          title: 'Private resources'
         },
         {
           const: 'protected',
-          title: 'Ressources protégées'
+          title: 'Protected resources'
         }
       ]
     }
@@ -86,10 +86,10 @@ export const visibilityParams = [{
 export const selectParam = (values) => ({
   in: 'query',
   name: 'select',
-  description: 'La liste des colonnes à retourner',
+  description: 'The list of columns to return',
   required: false,
   schema: {
-    title: 'La liste des colonnes à retourner',
+    title: 'The list of columns to return',
     type: 'array',
     items: {
       type: 'string',
@@ -150,10 +150,10 @@ export const booleanParam = (name, title, description = null) => ({
 export const paginationParams = [{
   in: 'query',
   name: 'page',
-  description: 'Numéro de page',
+  description: 'Page number',
   required: false,
   schema: {
-    title: 'Numéro de page',
+    title: 'Page number',
     type: 'integer',
     default: 1,
     minimum: 1
@@ -161,10 +161,10 @@ export const paginationParams = [{
 }, {
   in: 'query',
   name: 'size',
-  description: 'Taille de la page. La somme de la taille et du décalage (page - 1) × taille ne peut pas dépasser 10000.',
+  description: 'Page size. The sum of the size and of the offset (page - 1) × size cannot exceed 10000.',
   required: false,
   schema: {
-    title: 'Taille de la page',
+    title: 'Page size',
     type: 'integer',
     default: 12,
     minimum: 0,

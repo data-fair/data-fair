@@ -7,9 +7,9 @@ import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
 import { waitForFinalize, waitForDatasetError } from '../../../support/workers.ts'
 import FormData from 'form-data'
 
-const testUser1 = await axiosAuth('test_user1@test.com')
-const testSuperadmin = await axiosAuth('test_superadmin@test.com', undefined, true)
-const testUser3 = await axiosAuth('test_user3@test.com')
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
+const testSuperadmin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
+const testUser3 = await axiosAuth('test_datafair_user3@test.com')
 
 const initMaster = async (ax: any, info: any, masterData: any, id = 'master') => {
   if (Array.isArray(masterData)) {
@@ -352,7 +352,7 @@ test.describe('master data - Multi-level extensions, sorting, date-interval/geo-
       }]
     })
     await testUser3.post('/api/v1/datasets/slave/_bulk_lines?drop=true', [{ siret: '82898347800011' }].map(item => ({ _id: item.siret, ...item })))
-    await assert.rejects(waitForFinalize(testUser1, 'slave'), (err: any) => err.message.startsWith('permission manquante'))
+    await assert.rejects(waitForFinalize(testUser1, 'slave'), (err: any) => err.message.startsWith('missing permission'))
   })
 
   test('should support using master-data from other account if visibility is ok', async () => {

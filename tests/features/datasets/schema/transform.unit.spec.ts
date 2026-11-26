@@ -74,4 +74,30 @@ bla bla`
     assert.equal(compile('a ? NO_VALUE() : nb', { type: 'number' })({ a: true, nb: 1 }), null)
     assert.equal(compile('a ? NO_VALUE() : nb', { type: 'string' })({ a: true, nb: 1 }), null)
   })
+
+  test('should allow several locally defined functions in one expression', () => {
+    const num = { key: 'out', type: 'number' }
+    const str = { key: 'out', type: 'string' }
+    // a function defined in the expression stays callable after another one is defined
+    assert.equal(compile('f(x) = x + 1; g(y) = y * 2; f(a)', num)({ a: 1 }), 2)
+    // and can be called, or passed to fold/map, from the body of another local function
+    assert.equal(compile('f(x) = x + 1; g(y) = f(y) * 2; g(a)', num)({ a: 1 }), 4)
+    assert.equal(compile('inc(x) = x + 1; incAll(l) = map(inc, l); JOIN(incAll(SPLIT(a, ",")), ",")', str)({ a: '1,2' }), '2,3')
+
+    // keep the last word of a column when it contains a digit
+    const keepLastNumberedWord = compile(
+      'digit(acc, c) = acc or (c >= "0" and c <= "9"); keep(g) = fold(digit, false, SPLIT(g, "")) ? g : ""; ' +
+      'keep(GET(SPLIT(a, " "), (length SPLIT(a, " ")) - 1))',
+      str
+    )
+    assert.equal(keepLastNumberedWord({ a: 'DUPONT Jean 123456' }), '123456')
+    assert.equal(keepLastNumberedWord({ a: 'DUPONT Jean' }), null)
+    assert.equal(keepLastNumberedWord({ a: 'MARTIN 42' }), '42')
+
+    // the functions defined by an evaluation are not left in the shared parser,
+    // where another evaluation could reach them
+    assert.deepEqual(Object.keys(parser.functions).filter(k => k.startsWith('lambda_')), [])
+    assert.throws(() => compile('lambda_0(1)', num)({}), { message: 'undefined variable: lambda_0' })
+    assert.throws(() => compile('lambda_NaN(1)', num)({}), { message: 'undefined variable: lambda_NaN' })
+  })
 })

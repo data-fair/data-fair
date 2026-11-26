@@ -2,13 +2,13 @@ import mongo from '#mongo'
 import config from '#config'
 import * as datasetUtils from '../../datasets/utils/index.ts'
 import capabilitiesSchema from '../../../contract/capabilities.js'
-import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import type { Account } from '@data-fair/lib-express'
 import type { VirtualDataset } from '#types'
 import { getPseudoSessionState } from '../../misc/utils/users.ts'
 import { filterCan } from '../../misc/utils/permissions.ts'
-import { type FindOptions } from 'mongodb'
-import { type VirtualFilter, type QueryableDescendant } from '../es/operations.ts'
+import type { FindOptions } from 'mongodb'
+import type { VirtualFilter, QueryableDescendant } from '../es/operations.ts'
+import { i18nHttpError, i18nMessage, localized, noRetryError, locales, type I18nParams } from '../../misc/utils/i18n-errors.ts'
 
 // distinguish "the dataset does not exist anymore" from "it exists but is not readable by the
 // account owning the virtual dataset" — and report exactly which child is at fault
@@ -17,16 +17,18 @@ const missingChildrenDetails = async (missingIds: string[]) => {
     .find({ id: { $in: missingIds } }, { projection: { id: 1, title: 1, owner: 1 } })
     .toArray()
   const existingMissingById = new Map(existingMissing.map(c => [c.id, c]))
-  return missingIds.map(id => {
+  // one detail per missing child, joined in every locale to be the parameter of a message
+  return Object.fromEntries(locales.map(locale => [locale, missingIds.map(id => {
     const child = existingMissingById.get(id)
-    if (!child) return `le jeu de données "${id}" n'existe plus`
+    if (!child) return i18nMessage('errors.virtual.childDeleted', { id }, locale)
     const owner = child.owner
-    const ownerLabel = owner.department
-      ? `${owner.type === 'user' ? 'utilisateur' : 'organisation'} "${owner.name}" / département "${owner.departmentName ?? owner.department}"`
-      : `${owner.type === 'user' ? 'utilisateur' : 'organisation'} "${owner.name}"`
-    return `le jeu de données "${child.title ?? id}" (${id}, propriété de ${ownerLabel}) n'est pas accessible en lecture par le compte propriétaire du jeu de données virtuel`
-  })
+    let ownerLabel = i18nMessage(owner.type === 'user' ? 'errors.virtual.ownerUser' : 'errors.virtual.ownerOrganization', { name: owner.name }, locale)
+    if (owner.department) ownerLabel = i18nMessage('errors.virtual.ownerDepartment', { owner: ownerLabel, department: owner.departmentName ?? owner.department }, locale)
+    return i18nMessage('errors.virtual.childNotReadable', { title: child.title ?? id, id, owner: ownerLabel }, locale)
+  }).join(' ; ')])) as { en: string, fr?: string }
 }
+
+const notDefined = localized('errors.virtual.notDefined')
 
 // blacklisted fields are fields that are present in a grandchild but not re-exposed
 // by the child.. it must not be possible to access those fields in the case
@@ -45,7 +47,7 @@ async function childrenSchemas (owner: Account, children: string[], blackListedF
       // fail fast at creation / patch / finalization time with the same detailed report the
       // query path produces, instead of silently preparing an unreconciled schema
       const details = await missingChildrenDetails([childId])
-      throw httpError(400, `[noretry] Le schéma du jeu de données virtuel ne peut pas être établi : ${details.join(' ; ')}.`)
+      throw noRetryError(400, 'errors.virtual.schemaUnavailable', { details })
     }
     if (child.isVirtual && child.virtual) {
       // recurse only to blacklist protected fields at every level — readability is judged level
@@ -86,7 +88,7 @@ const prepareVirtualDataset = async (dataset: VirtualDataset): Promise<{ schema:
   const schemas = await childrenSchemas(dataset.owner, dataset.virtual.children, blackListedFields)
   for (const field of schema) {
     if (blackListedFields.has(field.key)) {
-      throw httpError(400, `[noretry] Le champ "${field.key}" est interdit. Il est présent dans un jeu de données enfant mais est protégé.`)
+      throw noRetryError(400, 'errors.virtual.protectedField', { field: field.key })
     }
     const matchingFields = []
     for (const s of schemas) {
@@ -136,16 +138,13 @@ const prepareVirtualDataset = async (dataset: VirtualDataset): Promise<{ schema:
     const xLabels: Record<string, string> = {}
     for (const f of matchingFields) {
       if (f.type !== field.type) {
-        let message = `[noretry] Le champ "${field.key}" a des types contradictoires (${field.type}, ${f.type}).`
-        if (['number', 'integer'].includes(field.type) && ['number', 'integer'].includes(f.type)) {
-          message += ' Vous pouvez corriger cette incohérence en forçant le traitement des colonnes comme des nombres flottants dans tous les jeux enfants.'
-        }
-        throw httpError(400, message)
+        const numbers = ['number', 'integer'].includes(field.type) && ['number', 'integer'].includes(f.type)
+        throw noRetryError(400, numbers ? 'errors.virtual.conflictingNumberTypes' : 'errors.virtual.conflictingTypes', { field: field.key, value1: field.type, value2: f.type })
       }
-      if (f.separator !== field.separator) throw httpError(400, `[noretry] Le champ "${field.key}" a des séparateurs contradictoires  (${field.separator}, ${f.separator}).`)
+      if (f.separator !== field.separator) throw noRetryError(400, 'errors.virtual.conflictingSeparators', { field: field.key, value1: String(field.separator), value2: String(f.separator) })
       let format = f.format
       if (format === 'uri-reference') format = undefined
-      if (format !== field.format) throw httpError(400, `[noretry] Le champ "${field.key}" a des formats contradictoires (${field.format || 'non défini'}, ${f.format || 'non défini'}).`)
+      if (format !== field.format) throw noRetryError(400, 'errors.virtual.conflictingFormats', { field: field.key, value1: field.format || notDefined, value2: f.format || notDefined })
       if (f['x-refersTo'] !== field['x-refersTo']) {
         if (field.key === '_attachment_url') {
           // children disagree on attachmentsAsImage: degrade to plain attachment links (no image
@@ -154,7 +153,7 @@ const prepareVirtualDataset = async (dataset: VirtualDataset): Promise<{ schema:
           delete field['x-refersTo']
           delete field['x-concept']
         } else {
-          throw httpError(400, `[noretry] Le champ "${field.key}" a des concepts contradictoires (${field['x-refersTo'] || 'non défini'}, ${f['x-refersTo'] || 'non défini'}).`)
+          throw noRetryError(400, 'errors.virtual.conflictingConcepts', { field: field.key, value1: field['x-refersTo'] || notDefined, value2: f['x-refersTo'] || notDefined })
         }
       }
       // default-TRUE capabilities: any child disabling one disables it on the parent
@@ -181,7 +180,7 @@ const prepareVirtualDataset = async (dataset: VirtualDataset): Promise<{ schema:
   const fieldsByConcept: Record<string, any> = {}
   for (const f of schema) {
     if (!f || !f['x-refersTo']) continue
-    if (fieldsByConcept[f['x-refersTo']]) throw httpError(400, `[noretry] Le concept "${f['x-refersTo']}" est référencé par plusieurs champs (${fieldsByConcept[f['x-refersTo']]}, ${f.key}).`)
+    if (fieldsByConcept[f['x-refersTo']]) throw noRetryError(400, 'errors.virtual.conceptReused', { concept: f['x-refersTo'], field1: fieldsByConcept[f['x-refersTo']], field2: f.key })
     fieldsByConcept[f['x-refersTo']] = f.key
   }
 
@@ -209,7 +208,7 @@ export const prepareVirtualDatasetPatch = async (dataset: VirtualDataset): Promi
 // by readDataset with fillDescendants) and inside worker tasks (finalization of a virtual dataset).
 // expose sends the message as response body despite the 501 status being hidden by default,
 // noRetry tells the worker loop not to retry (structured equivalent of the [noretry] message prefix)
-const cannotQueryError = (message: string) => Object.assign(httpError(501, message, { expose: true }), { noRetry: true })
+const cannotQueryError = (key: string, params: I18nParams = {}) => Object.assign(i18nHttpError(501, key, params), { expose: true, noRetry: true })
 
 const recurseDescendants = async (descendants: any[], dataset: Pick<VirtualDataset, 'id' | 'owner' | 'virtual'>, mongoOptions: any, inheritedFilters: VirtualFilter[] = []) => {
   const pseudoSessionState = getPseudoSessionState(dataset.owner, 'virtual-dataset', '_virtual-dataset', 'admin')
@@ -225,11 +224,11 @@ const recurseDescendants = async (descendants: any[], dataset: Pick<VirtualDatas
   if (children.length !== childrenIds.length) {
     const foundIds = new Set(children.map(c => c.id))
     const details = await missingChildrenDetails(childrenIds.filter(id => !foundIds.has(id)))
-    throw cannotQueryError(`Le jeu de données virtuel "${dataset.id}" ne peut pas être requêté : ${details.join(' ; ')}.`)
+    throw cannotQueryError('errors.virtual.cannotQuery', { id: dataset.id, details })
   }
   for (const child of children) {
     if (child.isVirtual && child.virtual?.filterActiveAccount) {
-      throw cannotQueryError(`Le jeu de données virtuel "${dataset.id}" ne peut pas être requêté : il utilise le jeu de données virtuel enfant "${child.id}" qui définit un filtre sur le compte actif, ce qui n'est pas supporté.`)
+      throw cannotQueryError('errors.virtual.activeAccountChild', { id: dataset.id, child: child.id })
     }
     if (child.isVirtual) {
       const childFilters = (child.virtual?.filters ?? []).filter((f: any) => f.values?.length)
@@ -254,7 +253,7 @@ const resolveDescendants = async (dataset: Pick<VirtualDataset, 'id' | 'owner' |
   const descendants: any[] = []
   await recurseDescendants(descendants, dataset, mongoOptions)
   if (descendants.length === 0 && throwEmpty) {
-    throw cannotQueryError('Le jeu de données virtuel ne peut pas être requêté, il n\'utilise aucun jeu de données requêtable.')
+    throw cannotQueryError('errors.virtual.noQueryableChild')
   }
   return descendants
 }

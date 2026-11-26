@@ -3,12 +3,12 @@
   "type": "module",
   "dependencies": {
     "@data-fair/lib-utils": "^1.8.0",
+    "@koumoul/expr-eval": "^3.0.4",
     "ajv": "^8.17.1",
     "ajv-errors": "^3.0.0",
     "ajv-formats": "^3.0.1",
     "ajv-i18n": "^4.2.0",
     "dayjs": "^1.11.13",
-    "expr-eval-fork": "^3.0.3",
     "md5": "^2.3.0",
     "sanitize-html": "^2.14.0",
     "slugify": "^1.6.6"

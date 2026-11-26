@@ -5,6 +5,7 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import log from '@data-fair/lib-node/log.js'
 import * as esUtils from '../es/index.ts'
 import { queryAdvice } from '../../misc/utils/query-advice.ts'
+import { i18nMessage } from '../../misc/utils/i18n-errors.ts'
 
 const esQueryErrorCounter = new Counter({
   name: 'df_es_query_error',
@@ -13,7 +14,9 @@ const esQueryErrorCounter = new Counter({
 
 // Error from ES backend should be stored in the journal
 export const manageESError = async (req: Request, err: any): Promise<never> => {
-  const { message, status } = esUtils.extractError(err)
+  const { message: enMessage, status, i18n } = esUtils.extractError(err)
+  // the advice appended below is in the language of the request, so is the message
+  const message = i18n ? i18nMessage(i18n.key, i18n.params, req.getLocale()) : enMessage
   if (status === 400) {
     // console.error(`(es-query-${status}) elasticsearch query error ${req.dataset.id}`, req.originalUrl, status, req.headers.referer || req.headers.referrer, message, err.stack)
     esQueryErrorCounter.inc()

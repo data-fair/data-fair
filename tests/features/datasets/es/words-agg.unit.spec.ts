@@ -71,7 +71,7 @@ test.describe('resolveWordsAggField', () => {
     }
     assert.throws(() => resolveWordsAggField(dataset, { field: 'adr' }), (err: any) => {
       assert.equal(err.status, 400)
-      assert.ok(err.message.includes('ré-indexés'))
+      assert.ok(err.message.includes('re-indexed'))
       return true
     })
   })

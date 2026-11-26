@@ -17,6 +17,7 @@ import * as service from './service.ts'
 import { withQuery } from 'ufo'
 import { type Account, type AccountKeys, type SessionState, type SessionStateAuthenticated, reqSession, reqSessionAuthenticated, reqUserAuthenticated } from '@data-fair/lib-express'
 import { emit as workerPing } from '../workers/ping.ts'
+import { i18nHttpError } from '../misc/utils/i18n-errors.ts'
 
 // dataset / linesOwner / _draft accessors live in the config-free req-context.ts (so query-advice.ts and
 // datasets/utils/* can import them without #config / a require cycle); re-exported here as a facade for
@@ -39,7 +40,7 @@ const writeBodyKeyOperations = [
 ] as const
 
 const missingOperation = (operationId: string, operationClass: string) =>
-  httpError(403, `Permission manquante pour l'opération "${operationId}" ou la catégorie "${operationClass}".`)
+  i18nHttpError(403, 'errors.permissions.missingOperationOrClass', { operation: operationId, operationClass })
 
 /**
  * Checks the keys of a write body on an existing dataset that need more than the route's own
@@ -49,7 +50,7 @@ const missingOperation = (operationId: string, operationClass: string) =>
  */
 export const assertWriteBodyPermissions = (dataset: Resource, body: Record<string, any>, sessionState: SessionState, bypassPermissions?: BypassPermissions): ReqOperation | undefined => {
   if (body.masterData && !canDoForOwner({ ...dataset.owner, department: undefined }, 'datasets', 'manageMasterData', sessionState)) {
-    throw httpError(403, 'Permission manquante pour l\'opération.')
+    throw i18nHttpError(403, 'errors.permissions.missingOperation')
   }
   let operation: ReqOperation | undefined
   for (const [key, operationId] of writeBodyKeyOperations) {
@@ -68,7 +69,7 @@ export const assertWriteBodyPermissions = (dataset: Resource, body: Record<strin
  */
 export const assertCreateBodyPermissions = async (owner: AccountKeys, body: Record<string, any>, sessionState: SessionStateAuthenticated) => {
   if (body.masterData && !canDoForOwner({ ...owner, department: undefined }, 'datasets', 'manageMasterData', sessionState)) {
-    throw httpError(403, 'Permission manquante pour l\'opération.')
+    throw i18nHttpError(403, 'errors.permissions.missingOperation')
   }
   for (const [key, operationId] of writeBodyKeyOperations) {
     const operationClass = classByOperation.datasets[operationId]
@@ -115,7 +116,7 @@ export const lockDataset = (_shouldLock: boolean | ((body: any, query: any) => b
       await new Promise(resolve => setTimeout(resolve, config.datasetStateRetries.interval))
     }
   }
-  throw httpError(409, `Une opération bloquante est déjà en cours sur le jeu de données ${datasetId}.`)
+  throw i18nHttpError(409, 'errors.datasets.blockingOperation', { id: datasetId })
 }
 
 interface ReadDatasetOptions {

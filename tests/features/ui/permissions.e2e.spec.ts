@@ -10,7 +10,7 @@ test.describe('permissions editor', () => {
 
   test.beforeAll(async () => {
     await clean()
-    ax = await axiosAuth('test_user1@test.com', 'test_org1')
+    ax = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
     datasetId = dataset.id
     // Snapshot the default permissions assigned at creation so we can restore
@@ -23,9 +23,9 @@ test.describe('permissions editor', () => {
   })
 
   /**
-   * Helper: login (in test_org1 context), navigate to dataset, open Permissions tab.
+   * Helper: login (in test_datafair_org1 context), navigate to dataset, open Permissions tab.
    */
-  async function goToPermissions (page: any, goToWithAuth: any, user = 'test_user1', org = 'test_org1') {
+  async function goToPermissions (page: any, goToWithAuth: any, user = 'test_datafair_user1', org = 'test_datafair_org1') {
     await goToWithAuth(`/data-fair/dataset/${datasetId}`, user, { org })
     await expect(page.locator('#share')).toBeVisible({ timeout: 15000 })
     await page.locator('#share').scrollIntoViewIfNeeded()
@@ -266,7 +266,7 @@ test.describe('permissions editor', () => {
       await page.locator('.v-dialog').getByRole('button', { name: /Valider/ }).click()
       await expect.poll(async () => {
         const perms = (await ax.get(`/api/v1/datasets/${datasetId}/permissions`)).data
-        const orgPerm = perms.find((p: any) => p.type === 'organization' && p.id === 'test_org2')
+        const orgPerm = perms.find((p: any) => p.type === 'organization' && p.id === 'test_datafair_org2')
         return orgPerm?.name === 'Test Org 2' ? orgPerm : undefined
       }, { timeout: 5000 }).toBeTruthy()
     })
@@ -276,7 +276,7 @@ test.describe('permissions editor', () => {
     // partner select and produced a permission with no id, which the API rejects
     // with "Error in permissions format" (400). It must not be listed at all.
     test('a pending partner is not offered in the partner select', async ({ page, goToWithAuth }) => {
-      await page.route('**/simple-directory/api/organizations/test_org1', async (route) => {
+      await page.route('**/simple-directory/api/organizations/test_datafair_org1', async (route) => {
         const response = await route.fetch()
         const org = await response.json()
         org.partners = [
@@ -333,14 +333,14 @@ test.describe('permissions editor', () => {
       await validateBtn.click()
       await expect.poll(async () => {
         const perms = (await ax.get(`/api/v1/datasets/${datasetId}/permissions`)).data
-        return perms.find((p: any) => p.type === 'organization' && p.id === 'test_org1' && (!p.roles || !p.roles.length))
+        return perms.find((p: any) => p.type === 'organization' && p.id === 'test_datafair_org1' && (!p.roles || !p.roles.length))
       }, { timeout: 5000 }).toBeTruthy()
     })
 
     test('delete a permission', async ({ page, goToWithAuth }) => {
       // Add permission via API first
       await ax.put(`/api/v1/datasets/${datasetId}/permissions`, [
-        { type: 'organization', id: 'test_org2', name: 'Test Org 2', operations: [], classes: ['read', 'list'] }
+        { type: 'organization', id: 'test_datafair_org2', name: 'Test Org 2', operations: [], classes: ['read', 'list'] }
       ])
 
       await goToPermissions(page, goToWithAuth)
@@ -355,7 +355,7 @@ test.describe('permissions editor', () => {
       await page.getByRole('button', { name: 'Confirmer', exact: true }).click()
       await expect.poll(async () => {
         const perms = (await ax.get(`/api/v1/datasets/${datasetId}/permissions`)).data
-        return perms.find((p: any) => p.type === 'organization' && p.id === 'test_org2')
+        return perms.find((p: any) => p.type === 'organization' && p.id === 'test_datafair_org2')
       }, { timeout: 5000 }).toBeFalsy()
     })
   })
@@ -366,7 +366,7 @@ test.describe('permissions editor', () => {
     test('auto-enables for non-standard permissions', async ({ page, goToWithAuth }) => {
       // Add a non-standard permission via API
       await ax.put(`/api/v1/datasets/${datasetId}/permissions`, [
-        { type: 'organization', id: 'test_org3', name: 'Test Org 3', operations: [], classes: ['read', 'list'] }
+        { type: 'organization', id: 'test_datafair_org3', name: 'Test Org 3', operations: [], classes: ['read', 'list'] }
       ])
 
       await goToPermissions(page, goToWithAuth)
@@ -386,23 +386,18 @@ test.describe('permissions editor', () => {
     let depAx: Awaited<ReturnType<typeof axiosAuth>>
 
     test.beforeAll(async () => {
-      depAx = await axiosAuth('test_user4@test.com', 'test_org1')
-      depAx.setOrg('test_org1', 'dep1')
+      depAx = await axiosAuth('test_datafair_user4@test.com', 'test_datafair_org1')
+      depAx.setOrg('test_datafair_org1', 'dep1')
       const dataset = await sendDataset('datasets/dataset1.csv', depAx)
       depDatasetId = dataset.id
       expect(dataset.owner.department).toBe('dep1')
     })
 
-    // Same reason as the access-control tests below: the id_token_dep cookie shortcut in
-    // goToWithAuth does not reliably switch the active account on a first login, so use the
-    // personal menu — otherwise the dataset renders the "wrong active account" error page.
+    // the session is opened on the department (simple-directory login with org and dep): switching
+    // from the personal menu reloads the page, sometimes twice, and a navigation started right
+    // after the switch was interrupted by the reload
     async function goToDepPermissions (page: any, goToWithAuth: any) {
-      const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}`
-      await goToWithAuth('/data-fair/', 'test_user4')
-      await page.getByRole('button', { name: /Ouvrez le menu personnel/ }).click()
-      await page.getByRole('listitem').filter({ hasText: 'department 1' }).click()
-      await page.waitForURL(`${baseUrl}/data-fair/`, { timeout: 10000 })
-      await page.goto(`${baseUrl}/data-fair/dataset/${depDatasetId}`)
+      await goToWithAuth(`/data-fair/dataset/${depDatasetId}`, 'test_datafair_user4', { org: 'test_datafair_org1', dep: 'dep1' })
       await expect(page.locator('#share')).toBeVisible({ timeout: 15000 })
       await page.locator('#share').scrollIntoViewIfNeeded()
       await page.getByRole('tab', { name: /Permissions/i }).click()
@@ -459,8 +454,8 @@ test.describe('permissions editor', () => {
 
     // The widened read the labels promise must actually reach a contributor of another department.
     test('a contributor of another department reads the dataset only once shared org-wide', async ({ page, goToWithAuth }) => {
-      const otherDepAx = await axiosAuth('test_user10@test.com', 'test_org1')
-      otherDepAx.setOrg('test_org1', 'dep2')
+      const otherDepAx = await axiosAuth('test_datafair_user10@test.com', 'test_datafair_org1')
+      otherDepAx.setOrg('test_datafair_org1', 'dep2')
       const readStatus = async () => {
         try {
           return (await otherDepAx.get(`/api/v1/datasets/${depDatasetId}`)).status
@@ -486,9 +481,9 @@ test.describe('permissions editor', () => {
           return err.status
         }
       }
-      const rootUserAx = await axiosAuth('test_user8@test.com', 'test_org1')
-      const otherDepAx = await axiosAuth('test_user10@test.com', 'test_org1')
-      otherDepAx.setOrg('test_org1', 'dep2')
+      const rootUserAx = await axiosAuth('test_datafair_user8@test.com', 'test_datafair_org1')
+      const otherDepAx = await axiosAuth('test_datafair_user10@test.com', 'test_datafair_org1')
+      otherDepAx.setOrg('test_datafair_org1', 'dep2')
       // the previous test shared the dataset org-wide
       await depAx.put(`/api/v1/datasets/${depDatasetId}/permissions`, [])
       expect(await readStatus(rootUserAx)()).toBe(403)
@@ -507,16 +502,11 @@ test.describe('permissions editor', () => {
   // ===== Test Group 6: Access Control =====
 
   test.describe('access control', () => {
-    // Uses the UI org-switch (personal-menu click) rather than the cookie shortcut
-    // in goToWithAuth: contributor-role tests have shown intermittent failures in
-    // the full e2e suite when relying on the cookie alone for first-time login.
+    // The sessions are opened on the organization (simple-directory login with org): switching
+    // from the personal menu reloads the page, sometimes twice, and a navigation started right
+    // after the switch was interrupted by the reload.
     test('non-admin cannot see permissions tab', async ({ page, goToWithAuth }) => {
-      const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}`
-      await goToWithAuth('/data-fair/', 'test_user5')
-      await page.getByRole('button', { name: /Ouvrez le menu personnel/ }).click()
-      await page.getByRole('listitem').filter({ hasText: 'Test Org 1' }).click()
-      await page.waitForURL(`${baseUrl}/data-fair/`, { timeout: 10000 })
-      await page.goto(`${baseUrl}/data-fair/dataset/${datasetId}`)
+      await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_datafair_user5', { org: 'test_datafair_org1' })
       await expect(page.locator('#share')).toBeVisible({ timeout: 15000 })
       await expect(page.getByRole('tab', { name: /Permissions/i })).not.toBeVisible()
     })
@@ -526,10 +516,9 @@ test.describe('permissions editor', () => {
     // read-api-key tab (managing the key needs setReadApiKey, admin-only) and
     // must not request /task-progress or /journal (readAdvanced) on load.
     test('basic-read user: no read-api-key tab, no readJournal request', async ({ page, goToWithAuth }) => {
-      const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}`
-      // Share the dataset with the whole org so test_user8 (role "user") can read it.
+      // Share the dataset with the whole org so test_datafair_user8 (role "user") can read it.
       await ax.put(`/api/v1/datasets/${datasetId}/permissions`, [
-        { type: 'organization', id: 'test_org1', name: 'Test Org 1', operations: [], classes: ['list', 'read'] }
+        { type: 'organization', id: 'test_datafair_org1', name: 'Test Org 1', operations: [], classes: ['list', 'read'] }
       ])
 
       const forbiddenRequests: string[] = []
@@ -540,11 +529,7 @@ test.describe('permissions editor', () => {
         }
       })
 
-      await goToWithAuth('/data-fair/', 'test_user8')
-      await page.getByRole('button', { name: /Ouvrez le menu personnel/ }).click()
-      await page.getByRole('listitem').filter({ hasText: 'Test Org 1' }).click()
-      await page.waitForURL(`${baseUrl}/data-fair/`, { timeout: 10000 })
-      await page.goto(`${baseUrl}/data-fair/dataset/${datasetId}`)
+      await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_datafair_user8', { org: 'test_datafair_org1' })
 
       // Share section is visible (publication-sites + integration tabs remain).
       await expect(page.locator('#share')).toBeVisible({ timeout: 15000 })
@@ -570,8 +555,8 @@ test.describe('permissions editor', () => {
     let depAx: Awaited<ReturnType<typeof axiosAuth>>
 
     test.beforeAll(async () => {
-      depAx = await axiosAuth('test_user4@test.com', 'test_org1')
-      depAx.setOrg('test_org1', 'dep1')
+      depAx = await axiosAuth('test_datafair_user4@test.com', 'test_datafair_org1')
+      depAx.setOrg('test_datafair_org1', 'dep1')
       const application = (await depAx.post('/api/v1/applications', { title: 'An application', url: mockAppUrl('monapp1') })).data
       appId = application.id
       expect(application.owner.department).toBe('dep1')
@@ -592,7 +577,7 @@ test.describe('permissions editor', () => {
     })
 
     async function goToAppPermissions (page: any, goToWithAuth: any) {
-      await goToWithAuth(`/data-fair/application/${orgAppId}`, 'test_user1', { org: 'test_org1' })
+      await goToWithAuth(`/data-fair/application/${orgAppId}`, 'test_datafair_user1', { org: 'test_datafair_org1' })
       await expect(page.locator('#share')).toBeVisible({ timeout: 15000 })
       await page.locator('#share').scrollIntoViewIfNeeded()
       await page.getByRole('tab', { name: /Permissions/i }).click()
@@ -635,11 +620,11 @@ test.describe('permissions editor', () => {
       await page.locator('.v-dialog .v-select').filter({ hasText: /Partenaire/ }).click()
       await page.getByRole('option', { name: /Test Org 2/ }).click()
       await page.locator('.v-dialog').getByRole('button', { name: /Valider/ }).click()
-      await expect.poll(async () => (await orgAppPermissions()).find((p: any) => p.type === 'organization' && p.id === 'test_org2'), { timeout: 5000 }).toBeTruthy()
+      await expect.poll(async () => (await orgAppPermissions()).find((p: any) => p.type === 'organization' && p.id === 'test_datafair_org2'), { timeout: 5000 }).toBeTruthy()
     })
 
     test('a pending partner is not offered', async ({ page, goToWithAuth }) => {
-      await page.route('**/simple-directory/api/organizations/test_org1', async (route: any) => {
+      await page.route('**/simple-directory/api/organizations/test_datafair_org1', async (route: any) => {
         const org = await (await route.fetch()).json()
         org.partners = [{ name: 'Partenaire En Attente', contactEmail: 'pending@test.com', partnerId: 'pending-partner' }, ...(org.partners ?? [])]
         await route.fulfill({ json: org })
@@ -661,12 +646,7 @@ test.describe('permissions editor', () => {
     })
 
     test('the department scope and labels hold on an application too', async ({ page, goToWithAuth }) => {
-      const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}`
-      await goToWithAuth('/data-fair/', 'test_user4')
-      await page.getByRole('button', { name: /Ouvrez le menu personnel/ }).click()
-      await page.getByRole('listitem').filter({ hasText: 'department 1' }).click()
-      await page.waitForURL(`${baseUrl}/data-fair/`, { timeout: 10000 })
-      await page.goto(`${baseUrl}/data-fair/application/${appId}`)
+      await goToWithAuth(`/data-fair/application/${appId}`, 'test_datafair_user4', { org: 'test_datafair_org1', dep: 'dep1' })
       await expect(page.locator('#share')).toBeVisible({ timeout: 15000 })
       await page.locator('#share').scrollIntoViewIfNeeded()
       await page.getByRole('tab', { name: /Permissions/i }).click()
@@ -690,7 +670,7 @@ test.describe('permissions editor', () => {
       }, { timeout: 5000 }).toBe('dep1')
 
       // the department level, and a root user reading the application through it
-      const rootUserAx = await axiosAuth('test_user8@test.com', 'test_org1')
+      const rootUserAx = await axiosAuth('test_datafair_user8@test.com', 'test_datafair_org1')
       await visibility.click()
       await page.getByRole('option', { name: /tous les utilisateurs du département/i }).click()
       await expect.poll(async () => {

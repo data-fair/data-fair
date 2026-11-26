@@ -3,9 +3,9 @@ import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
 import { waitForFinalize, sendDataset, waitForDatasetError } from '../../../support/workers.ts'
 
-const testUser1 = await axiosAuth('test_user1@test.com')
-const testUser3 = await axiosAuth('test_user3@test.com')
-const testUser4Org = await axiosAuth('test_user4@test.com', 'test_org1')
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
+const testUser3 = await axiosAuth('test_datafair_user3@test.com')
+const testUser4Org = await axiosAuth('test_datafair_user4@test.com', 'test_datafair_org1')
 
 test.describe('virtual datasets core', () => {
   test.beforeEach(async () => {
@@ -363,7 +363,7 @@ test.describe('virtual datasets core', () => {
     const ax = testUser1
     // the ODS compat API is opt-in per dataset owner (brief's snippet omitted this: without it
     // the compat-ods route 404s with "unknown API" regardless of our filter-threading changes)
-    await ax.put('/api/v1/settings/user/test_user1', { compatODS: true })
+    await ax.put('/api/v1/settings/user/test_datafair_user1', { compatODS: true })
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
     let res = await ax.post('/api/v1/datasets', {
       isVirtual: true,
@@ -490,7 +490,7 @@ test.describe('virtual datasets core', () => {
       title: 'restaccountchild',
       schema: [{ key: 'attr1', type: 'string' }, { key: 'account', type: 'string', 'x-refersTo': 'https://github.com/data-fair/lib/account' }]
     })).data
-    await ax.post('/api/v1/datasets/restaccountchild/_bulk_lines', [{ attr1: 'test1', account: 'user:test_user2' }])
+    await ax.post('/api/v1/datasets/restaccountchild/_bulk_lines', [{ attr1: 'test1', account: 'user:test_datafair_user2' }])
     await waitForFinalize(ax, dataset.id)
 
     const child = (await ax.post('/api/v1/datasets', {
@@ -599,7 +599,7 @@ test.describe('virtual datasets core', () => {
     await waitForDatasetError(ax, virtualDataset.id)
     const journal = (await ax.get('/api/v1/datasets/' + virtualDataset.id + '/journal')).data
     const errorEvent = journal.find((e: any) => e.type === 'error')
-    assert.ok(errorEvent.data.includes('Le champ "some_date" a des formats contradictoires (non défini, date).'))
+    assert.ok(errorEvent.data.includes('The field "some_date" has conflicting formats (not defined, date).'))
     virtualDataset = (await ax.get('/api/v1/datasets/' + virtualDataset.id)).data
     assert.equal(virtualDataset.status, 'error')
     assert.ok(!virtualDataset.errorRetry)
@@ -627,7 +627,7 @@ test.describe('virtual datasets core', () => {
     // the specific permission unlocks creation, and the schema is reconciled with the shared
     // child instead of being silently skipped
     await ax.put('/api/v1/datasets/' + dataset.id + '/permissions', [
-      { classes: ['read'], type: 'user', id: 'test_user3' }
+      { classes: ['read'], type: 'user', id: 'test_datafair_user3' }
     ])
     const res = await testUser3.post('/api/v1/datasets', {
       isVirtual: true,
@@ -682,7 +682,7 @@ test.describe('virtual datasets core', () => {
     const ax = testUser1
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
     await ax.put('/api/v1/datasets/' + dataset.id + '/permissions', [
-      { classes: ['read'], type: 'user', id: 'test_user3' }
+      { classes: ['read'], type: 'user', id: 'test_datafair_user3' }
     ])
 
     const res = await testUser3.post('/api/v1/datasets', {
@@ -710,7 +710,7 @@ test.describe('virtual datasets core', () => {
     })
     const virtualDataset1 = await waitForFinalize(ax, res1.data.id)
     await ax.put('/api/v1/datasets/' + virtualDataset1.id + '/permissions', [
-      { classes: ['read'], type: 'user', id: 'test_user3' }
+      { classes: ['read'], type: 'user', id: 'test_datafair_user3' }
     ])
 
     const res2 = await testUser3.post('/api/v1/datasets', {
@@ -729,7 +729,7 @@ test.describe('virtual datasets core', () => {
     const ax = testUser1
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
     await ax.put('/api/v1/datasets/' + dataset.id + '/permissions', [
-      { classes: ['read'], type: 'organization', id: 'test_org1' }
+      { classes: ['read'], type: 'organization', id: 'test_datafair_org1' }
     ])
 
     const res = await testUser4Org.post('/api/v1/datasets', {

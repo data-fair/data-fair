@@ -3,9 +3,9 @@ import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
 import { waitForFinalize, sendDataset } from '../../../support/workers.ts'
 
-const testUser1 = await axiosAuth('test_user1@test.com')
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
 // _diagnose requires admin mode (superadmin only)
-const adminUser = await axiosAuth('test_superadmin@test.com', undefined, true)
+const adminUser = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
 
 test.describe('search - wide dataset (_search catch-all)', () => {
   test.beforeEach(async () => { await clean() })

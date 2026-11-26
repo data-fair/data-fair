@@ -69,13 +69,13 @@ test.describe('dataset draft mode - file-new', () => {
   test.beforeAll(async () => {
     test.setTimeout(60000)
     await clean()
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     const dataset = await createFileNewDraft(ax)
     datasetId = dataset.id
   })
 
   test('file-new draft page shows expected sections, tabs and controls', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_datafair_user1')
 
     // Draft banner with file-new message
     await expect(page.getByText(/créé en mode brouillon|created in draft mode/)).toBeVisible({ timeout: 15000 })
@@ -107,7 +107,7 @@ test.describe('dataset draft mode - file-new', () => {
 
   // Mutating test last — validates the draft (dataset leaves draft mode)
   test('validate draft publishes the dataset', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_datafair_user1')
     const validateBtn = page.getByRole('button', { name: /Valider le brouillon|Validate the draft/ })
     await expect(validateBtn).toBeVisible({ timeout: 15000 })
     await validateBtn.click()
@@ -160,17 +160,17 @@ test.describe('dataset draft mode - file-new draft in error', () => {
     test.setTimeout(60000)
     await clean()
     await clearMockRoutes()
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     const dataset = await createFileNewDraftInError(ax)
     datasetId = dataset.id
   })
 
   test('draft in error shows the error message and a retry button', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_datafair_user1')
 
     // Draft banner still visible, with the last draft error message
     await expect(page.getByText(/créé en mode brouillon|created in draft mode/)).toBeVisible({ timeout: 15000 })
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     const journal = (await ax.get(`/api/v1/datasets/${datasetId}/journal`)).data
     const errorEvent = journal.find((e: any) => e.type === 'error' && e.draft)
     expect(errorEvent).toBeTruthy()
@@ -188,7 +188,7 @@ test.describe('dataset draft mode - file-new draft in error', () => {
     // heal the mock geocoder before retrying
     await setupMockRoute({ path: '/geocoder/coords', ndjsonEcho: { fields: { lat: 30, lon: 30 } } })
 
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_datafair_user1')
     const retryBtn = page.getByRole('button', { name: /Relancer|Restart/ })
     await expect(retryBtn).toBeVisible({ timeout: 15000 })
     await retryBtn.click()
@@ -206,13 +206,13 @@ test.describe('dataset draft mode - file-updated', () => {
   test.beforeAll(async () => {
     test.setTimeout(90000)
     await clean()
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     const dataset = await createFileUpdatedDraft(ax)
     datasetId = dataset.id
   })
 
   test('file-updated draft page shows expected sections, tabs and controls', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_datafair_user1')
 
     // Draft banner with file-updated message
     await expect(page.getByText(/passé en mode brouillon|switched to draft mode/)).toBeVisible({ timeout: 15000 })
@@ -245,7 +245,7 @@ test.describe('dataset draft mode - file-updated', () => {
 
   // Mutating test last — cancels the draft (dataset reverts to pre-update state)
   test('cancel draft restores dataset to pre-update state', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_datafair_user1')
     const cancelDraftBtn = page.getByRole('button', { name: /Annuler le brouillon|Cancel the draft/ })
     await expect(cancelDraftBtn).toBeVisible({ timeout: 15000 })
     await cancelDraftBtn.click()
@@ -259,13 +259,13 @@ test.describe('dataset draft mode - normal dataset (no draft) regression check',
 
   test.beforeAll(async () => {
     await clean()
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
     datasetId = dataset.id
   })
 
   test('published dataset page shows all sections and tabs without draft banner', async ({ page, goToWithAuth }) => {
-    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_user1')
+    await goToWithAuth(`/data-fair/dataset/${datasetId}`, 'test_datafair_user1')
 
     // All sections visible
     await expect(page.locator('#exploration')).toBeVisible({ timeout: 15000 })

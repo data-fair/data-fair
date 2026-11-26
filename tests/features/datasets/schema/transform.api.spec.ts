@@ -5,7 +5,7 @@ import { waitForFinalize, doAndWaitForFinalize, sendDataset, waitForDatasetError
 import FormData from 'form-data'
 import fs from 'fs-extra'
 
-const testUser1 = await axiosAuth('test_user1@test.com')
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
 
 test.describe('file datasets with transformation rules', () => {
   test.beforeEach(async () => {
@@ -113,7 +113,7 @@ test.describe('file datasets with transformation rules', () => {
     schema[0]['x-transform'] = { type: 'number', expr: '"test"' }
     await ax.patch('/api/v1/datasets/' + dataset.id, { schema })
     await waitForDatasetError(ax, dataset.id)
-    const message = 'échec de l\'évaluation de l\'expression ""test"" : /id doit être de type number (résultat : "test")'
+    const message = 'failed to evaluate the expression ""test"": /id doit être de type number (résultat : "test")'
     const journal = await ax.get('/api/v1/datasets/' + dataset.id + '/journal').then(r => r.data)
     assert.equal(journal[0].type, 'error')
     assert.equal(journal[0].data, message)

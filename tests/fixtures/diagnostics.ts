@@ -1,21 +1,19 @@
 import { test as base, expect } from '@playwright/test'
-import { execFile } from 'node:child_process'
-import { promisify } from 'node:util'
+import { readFile } from 'node:fs/promises'
 import { anonymousAx, apiUrl } from '../support/axios.ts'
-
-const exec = promisify(execFile)
+import { devLogFile } from '../support/dev-logs.ts'
 
 const apiStartedAt = async () => (await anonymousAx.get(`${apiUrl}/api/v1/test-env/started-at`)).data.startedAt as string
 
-// the scrollback of a df-dev pane, or nothing when df-dev is not running (CI keeps its own logs)
-const paneLogs = async (pane: string, lines: number) => {
-  const { stdout } = await exec('./node_modules/.bin/df-dev', ['logs', pane, '-n', String(lines)]).catch(() => ({ stdout: '' }))
-  return stdout
+// the last lines of a dev process log (dev/logs/<name>.log written by `npm run dev`, see devLogFile), or nothing
+const paneLogs = async (pane: 'api' | 'mock', lines: number) => {
+  const content = await readFile(devLogFile(pane), 'utf8').catch(() => '')
+  return content.split('\n').slice(-lines).join('\n')
 }
 
 /**
  * The `test` of every api and e2e spec. On a failure it attaches what tells a regression from an
- * environment problem: the api and mock pane logs, the worker tasks still pending, and whether the
+ * environment problem: the api and mock logs, the worker tasks still pending, and whether the
  * API restarted during the test (nodemon reacting to an edit in the checkout).
  */
 export const test = base.extend<{ diagnostics: void }>({

@@ -2,6 +2,7 @@ import './env.ts'
 import { URL } from 'node:url'
 import { axiosAuth } from '@data-fair/lib-node/axios-auth.js'
 import type { AxiosInstance } from 'axios'
+import { seedSdFixtures } from '../../tests/support/sd-fixtures.ts'
 
 // The harness auto-discovers the dev environment from the repo .env (loaded by
 // ./env.ts): DEV_HOST + NGINX_PORT give the reverse-proxy base URL.
@@ -12,7 +13,7 @@ const proxyBase = process.env.DEV_HOST && process.env.NGINX_PORT
 const baseUrl = process.env.BENCHMARK_URL || `${proxyBase}/data-fair`
 const directoryUrl = process.env.BENCHMARK_DIRECTORY_URL || `${proxyBase}/simple-directory`
 
-const credentials = { email: 'test_superadmin@test.com', password: 'passwd' }
+const credentials = { email: 'test_datafair_superadmin@test.com', password: 'passwd' }
 
 // `axiosAuth` is cookie-based (a simple-directory id_token) with no refresh, so a long
 // seed can outlive the session. `ax` is typed loosely because we touch `.cookieJar`,
@@ -39,6 +40,7 @@ async function authenticate (): Promise<any> {
  */
 export async function init (): Promise<void> {
   console.log(`[setup] connecting to ${baseUrl}`)
+  await seedSdFixtures()
   ax = await authenticate()
 
   const sdOrigin = new URL(directoryUrl).origin

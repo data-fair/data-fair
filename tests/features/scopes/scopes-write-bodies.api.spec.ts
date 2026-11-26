@@ -6,9 +6,9 @@ import { nhiSession } from '../../support/nhi.ts'
 // the keys of a write body that need more than the route's own operation (read API key, master
 // data, publications) are checked the same way on every write route: a write tier token
 // cannot set them through POST/PUT /datasets/:id, dataset creation or an application PUT when
-// PATCH refuses them. Resources are created by an unrestricted admin of test_org1.
+// PATCH refuses them. Resources are created by an unrestricted admin of test_datafair_org1.
 
-const orgAdmin = await axiosAuth('test_user1@test.com', 'test_org1')
+const orgAdmin = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
 
 const status = async (p: Promise<any>) => {
   try {
@@ -77,7 +77,7 @@ test.describe('admin tier keys of the write bodies', () => {
   })
 
   test('applications:write cannot publish through PUT /applications/:id', async () => {
-    await orgAdmin.post('/api/v1/settings/organization/test_org1/publication-sites', site)
+    await orgAdmin.post('/api/v1/settings/organization/test_datafair_org1/publication-sites', site)
     const app = (await orgAdmin.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'Scope app' })).data
     const ax = (await nhiSession('applications:write')).bearerAx
     assert.equal(await status(ax.patch(`/api/v1/applications/${app.id}`, { publicationSites: [siteKey] })), 403)
@@ -89,7 +89,7 @@ test.describe('admin tier keys of the write bodies', () => {
   })
 
   test('applications:admin publishes through PUT /applications/:id', async () => {
-    await orgAdmin.post('/api/v1/settings/organization/test_org1/publication-sites', site)
+    await orgAdmin.post('/api/v1/settings/organization/test_datafair_org1/publication-sites', site)
     const app = (await orgAdmin.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'Scope app' })).data
     const ax = (await nhiSession('applications:admin')).bearerAx
     assert.equal(await status(ax.put(`/api/v1/applications/${app.id}`, { url: app.url, title: app.title, publicationSites: [siteKey] })), 200)
@@ -106,8 +106,8 @@ test.describe('application creation applies the publication checks', () => {
   const countCreated = async () => (await orgAdmin.get('/api/v1/applications', { params: { select: 'title' } })).data.results.filter((a: any) => a.title === 'Created app').length
 
   test('applications:write cannot create an application with publications', async () => {
-    await orgAdmin.post('/api/v1/settings/organization/test_org1/publication-sites', site)
-    await orgAdmin.post('/api/v1/settings/organization/test_org1/publication-sites', stagingSite)
+    await orgAdmin.post('/api/v1/settings/organization/test_datafair_org1/publication-sites', site)
+    await orgAdmin.post('/api/v1/settings/organization/test_datafair_org1/publication-sites', stagingSite)
     const ax = (await nhiSession('applications:write')).bearerAx
     assert.equal(await status(ax.post('/api/v1/applications', { ...base(), publicationSites: [siteKey] })), 403)
     assert.equal(await status(ax.put('/api/v1/applications/scope-created', { ...base(), publicationSites: [siteKey] })), 403)
@@ -119,15 +119,15 @@ test.describe('application creation applies the publication checks', () => {
   })
 
   test('applications:admin creates an application on a publication site', async () => {
-    await orgAdmin.post('/api/v1/settings/organization/test_org1/publication-sites', site)
+    await orgAdmin.post('/api/v1/settings/organization/test_datafair_org1/publication-sites', site)
     const ax = (await nhiSession('applications:admin')).bearerAx
     assert.equal(await status(ax.post('/api/v1/applications', { ...base(), publicationSites: [siteKey] })), 201)
     assert.equal(await status(ax.put('/api/v1/applications/scope-created', { ...base(), publicationSites: [siteKey] })), 201)
   })
 
   test('a contrib cannot create an application on a publication site, an admin can', async () => {
-    await orgAdmin.post('/api/v1/settings/organization/test_org1/publication-sites', site)
-    const contrib = await axiosAuth('test_user5@test.com', 'test_org1')
+    await orgAdmin.post('/api/v1/settings/organization/test_datafair_org1/publication-sites', site)
+    const contrib = await axiosAuth('test_datafair_user5@test.com', 'test_datafair_org1')
     assert.equal(await status(contrib.post('/api/v1/applications', { ...base(), publicationSites: [siteKey] })), 403)
     assert.equal(await status(contrib.put('/api/v1/applications/contrib-created', { ...base(), publicationSites: [siteKey] })), 403)
     assert.equal(await countCreated(), 0)

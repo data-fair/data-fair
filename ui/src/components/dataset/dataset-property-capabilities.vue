@@ -82,7 +82,7 @@ import { mdiClose, mdiTune } from '@mdi/js'
 import Vjsf, { type Options as VjsfOptions } from '@koumoul/vjsf'
 import capabilitiesSchema from '~/../../api/contract/capabilities.js'
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 const props = defineProps<{
   property: SchemaProperty
@@ -124,7 +124,9 @@ const schema = computed(() => {
 
 const vjsfOptions = computed<VjsfOptions>(() => ({
   readOnly: !props.editable,
-  density: 'compact'
+  density: 'compact',
+  locale: locale.value,
+  xI18n: true
 }))
 
 watch(dialog, (show) => {

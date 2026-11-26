@@ -22,7 +22,7 @@ export const wkt = ({ rawBuffer }: { rawBuffer: Uint8Array }) => rawEsBuffer2wkt
 
 export default async (params: Params) => {
   if (config.ogr2ogr.skip) {
-    throw httpError(400, '[noretry] Les fichiers de type shapefile ne sont pas supportés sur ce service.')
+    throw httpError(400, '[noretry] Shapefile files are not supported on this service.')
   }
 
   // Zero-copy raw-buffer path (mirror of geojson2pbf's rawBuffer branch): the main thread transferred the
@@ -32,7 +32,8 @@ export default async (params: Params) => {
   // thus the shapefile) is unchanged.
   let geojsonStr: string
   if (params.rawBuffer) {
-    const { geojson } = rawEsBuffer2geojson(params.rawBuffer, params.dataset)
+    // shapefile has no list field type (GDAL >= 3.13 aborts on it): join multi-valued columns with their separator
+    const { geojson } = rawEsBuffer2geojson(params.rawBuffer, params.dataset, false)
     geojson.bbox = params.bbox // appended LAST — matches the old main-thread key order (type/total/features/bbox)
     geojsonStr = JSON.stringify(geojson)
   } else {

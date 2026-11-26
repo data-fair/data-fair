@@ -4,7 +4,7 @@ import moment from 'moment'
 import slug from 'slugify'
 import { nanoid } from 'nanoid'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import { type AccountKeys, type SessionState, type SessionStateAuthenticated } from '@data-fair/lib-express'
+import type { AccountKeys, SessionState, SessionStateAuthenticated } from '@data-fair/lib-express'
 import * as fragmentsService from '../fragments/service.ts'
 import { partOfListFilter } from '../fragments/operations.ts'
 import log from '@data-fair/lib-node/log.js'
@@ -200,11 +200,11 @@ export const createApplication = async (ctx: ApplicationWriteContext, applicatio
 
   if (application.initFrom) {
     const parentApplication = await mongo.applications.findOne({ id: application.initFrom.application })
-    if (!parentApplication) throw new Error('[noretry] application d\'initialisation inconnue ' + application.initFrom.application)
+    if (!parentApplication) throw new Error('[noretry] unknown initialization application ' + application.initFrom.application)
     // mongo findOne returns WithId<Application>, not Resource — cast bridges the gap
     const parentApplicationPermissions = permissions.list('applications', parentApplication as any, ctx.sessionState)
     if (!parentApplicationPermissions.includes('readDescription')) {
-      throw new Error(`[noretry] permission manquante sur l'application d'initialisation "${parentApplication.slug}" (${parentApplication.id})`)
+      throw new Error(`[noretry] missing permission on the initialization application "${parentApplication.slug}" (${parentApplication.id})`)
     }
     if (parentApplication.url !== application.url) throw httpError(400, 'application.url and initFrom application do not match')
     application.configuration = parentApplication.configuration
@@ -293,8 +293,7 @@ export const replaceApplication = async (ctx: ApplicationWriteContext, existingA
     log.info(`updated application ${newApplication.slug} (${newApplication.id})`, { code: 'df.applications.update', ...resourceLogFields('applications', newApplication) })
     const sessionState = ctx.sessionState
     await notifications.send({
-      title: 'Application entièrement modifiée',
-      body: `${newApplication.title} (${newApplication.slug})`,
+      ...notifications.eventTexts('applications.updated', { title: newApplication.title, full: `${newApplication.title} (${newApplication.slug})` }),
       topic: {
         key: `data-fair:application-updated:${newApplication.id}`
       },
@@ -346,8 +345,7 @@ export const patchApplication = async (ctx: ApplicationWriteContext, application
 
   const sessionState = ctx.sessionState
   await notifications.send({
-    title: 'Propriétés modifiées sur une application',
-    body: `${application.title} (${application.slug}), ${Object.keys(patch)?.join(', ')}`,
+    ...notifications.eventTexts('applications.patched-properties', { title: application.title, full: `${application.title} (${application.slug})` }, { keys: Object.keys(patch).join(', ') }),
     topic: {
       key: `data-fair:application-patched-properties:${application.id}`
     },
@@ -402,8 +400,10 @@ export const changeApplicationOwner = async (ctx: ApplicationWriteContext, appli
   log.info(eventLogMessage, { code: 'df.applications.changeOwnerTo', ...resourceLogFields('applications', application), ...ownerLogFields(newOwner) })
 
   const event = {
-    title: 'Changement de propriétaire d\'une application',
-    body: `${application.title} (${application.slug}), ${arrowStr}`,
+    ...notifications.eventTexts('applications.change-owner', { title: application.title, full: `${application.title} (${application.slug})` }, {
+      from: `${application.owner.name} (${application.owner.type}:${application.owner.id})`,
+      to: `${patch.owner.name} (${patch.owner.type}:${patch.owner.id})`
+    }),
     topic: {
       key: `data-fair:application-change-owner:${application.id}`
     },
@@ -438,8 +438,7 @@ export const deleteApplication = async (ctx: ApplicationWriteContext, applicatio
 
   const sessionState = ctx.sessionState
   await notifications.send({
-    title: "Suppression d'une application",
-    body: `${application.title} (${application.slug})`,
+    ...notifications.eventTexts('applications.delete', { title: application.title, full: `${application.title} (${application.slug})` }),
     topic: {
       key: `data-fair:application-delete:${application.id}`
     },
@@ -558,8 +557,7 @@ export const writeApplicationKeys = async (ctx: ApplicationWriteContext, applica
 
   const sessionState = ctx.sessionState
   await notifications.send({
-    title: "Définition d'une clé de protection d'application",
-    body: `${application.title} (${application.slug})`,
+    ...notifications.eventTexts('applications.write-keys', { title: application.title, full: `${application.title} (${application.slug})` }),
     topic: {
       key: `data-fair:application-write-keys:${application.id}`
     },

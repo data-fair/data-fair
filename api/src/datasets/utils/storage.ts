@@ -13,6 +13,7 @@ import type { Account, AccountKeys } from '@data-fair/lib-express'
 import type { Dataset, VirtualDataset } from '#types'
 import { isVirtualDataset, isRestDataset, type DatasetInternal } from '#types/dataset/index.ts'
 import filesStorage from '#files-storage'
+import { i18nHttpError } from '../../misc/utils/i18n-errors.ts'
 
 const debugLimits = debug('limits')
 
@@ -23,11 +24,11 @@ export const checkStorage = async (locale: string, owner: Account, overwriteData
 
   if (config.defaultLimits.datasetStorage !== -1 && config.defaultLimits.datasetStorage < estimatedContentSize) {
     debugLimits('datasetStorage/checkStorage', debugInfo)
-    throw httpError(413, 'Vous avez atteint la limite d\'espace disque pour ce jeu de données.')
+    throw i18nHttpError(413, 'errors.datasets.datasetStorageLimit')
   }
   if (config.defaultLimits.datasetIndexed !== -1 && config.defaultLimits.datasetIndexed < estimatedContentSize) {
     debugLimits('datasetIndexed/checkStorage', debugInfo)
-    throw httpError(413, 'Vous dépassez le volume autorisé pour ce jeu de données.')
+    throw i18nHttpError(413, 'errors.datasets.datasetIndexedLimit')
   }
   const remaining = await limits.remaining(owner)
   debugInfo.remaining = { ...remaining }
@@ -244,11 +245,11 @@ export const updateTotalStorage = async (owner: AccountKeys, checkRemaining = fa
     const remaining = await limits.remaining(owner)
     if (remaining.storage === 0) {
       debugLimits('exceedLimitStorage/updateTotalStorage', { owner, remaining })
-      throw httpError(429, 'Vous avez atteint la limite de votre espace disque.')
+      throw i18nHttpError(429, 'errors.exceedLimitStorage')
     }
     if (remaining.indexed === 0) {
       debugLimits('exceedLimitIndexed/updateTotalStorage', { owner, remaining })
-      throw httpError(429, 'Vous avez atteint la limite de volume de jeux de données.')
+      throw i18nHttpError(429, 'errors.exceedLimitIndexed')
     }
     // No check for nb_datasets => Already checked at creation time
   }

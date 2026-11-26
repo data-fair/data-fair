@@ -5,7 +5,7 @@ import Excel from 'exceljs'
 import { axiosAuth, clean, checkPendingTasks, waitForWorkerIdle } from '../../../support/axios.ts'
 import { waitForFinalize, sendDataset, clearDatasetCache } from '../../../support/workers.ts'
 
-const testUser1Org = await axiosAuth('test_user1@test.com', 'test_org1')
+const testUser1Org = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
 
 test.describe('compatibility layer for ods api', () => {
   test.beforeEach(async () => {
@@ -19,7 +19,7 @@ test.describe('compatibility layer for ods api', () => {
   test('exposes records and exports api on 2 urls', async () => {
     const ax = testUser1Org
 
-    await ax.put('/api/v1/settings/organization/test_org1', { compatODS: true })
+    await ax.put('/api/v1/settings/organization/test_datafair_org1', { compatODS: true })
 
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
 
@@ -300,7 +300,7 @@ bidule;1;22.2
   test('should manage some other record list cases', async () => {
     const ax = testUser1Org
 
-    await ax.put('/api/v1/settings/organization/test_org1', { compatODS: true })
+    await ax.put('/api/v1/settings/organization/test_datafair_org1', { compatODS: true })
 
     const dataset = await sendDataset('datasets/dataset2.csv', ax)
 
@@ -323,7 +323,7 @@ bidule;1;22.2
   test('rejects malformed paging and alias params with a 400', async () => {
     const ax = testUser1Org
 
-    await ax.put('/api/v1/settings/organization/test_org1', { compatODS: true })
+    await ax.put('/api/v1/settings/organization/test_datafair_org1', { compatODS: true })
 
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
     const is400 = (err: any) => err.status === 400
@@ -342,7 +342,7 @@ bidule;1;22.2
   test('should manage multi-values', async () => {
     const ax = testUser1Org
 
-    await ax.put('/api/v1/settings/organization/test_org1', { compatODS: true })
+    await ax.put('/api/v1/settings/organization/test_datafair_org1', { compatODS: true })
 
     const dataset = await ax.post('/api/v1/datasets', {
       isRest: true,
@@ -371,7 +371,7 @@ val 1;val 1, val 2
 
   test('should manage date times', async () => {
     const ax = testUser1Org
-    await ax.put('/api/v1/settings/organization/test_org1', { compatODS: true })
+    await ax.put('/api/v1/settings/organization/test_datafair_org1', { compatODS: true })
 
     const dataset = await ax.post('/api/v1/datasets', {
       isRest: true,
@@ -448,7 +448,7 @@ val 1;val 1, val 2
 
   test('should manage corner cases of parquet export', async () => {
     const ax = testUser1Org
-    await ax.put('/api/v1/settings/organization/test_org1', { compatODS: true })
+    await ax.put('/api/v1/settings/organization/test_datafair_org1', { compatODS: true })
 
     const dataset = await ax.post('/api/v1/datasets', {
       isRest: true,
@@ -497,7 +497,7 @@ val 1;val 1, val 2
 
   test('manage case-sensitive sort', async () => {
     const ax = testUser1Org
-    await ax.put('/api/v1/settings/organization/test_org1', { compatODS: true })
+    await ax.put('/api/v1/settings/organization/test_datafair_org1', { compatODS: true })
 
     let res = await ax.post('/api/v1/datasets/rest-insensitive', {
       isRest: true,
@@ -527,17 +527,17 @@ val 1;val 1, val 2
 
   test('is activated at the organization level only, departments included', async () => {
     const ax = testUser1Org
-    const testUser4Dep1 = await axiosAuth('test_user4@test.com', 'test_org1')
-    testUser4Dep1.setOrg('test_org1', 'dep1')
+    const testUser4Dep1 = await axiosAuth('test_datafair_user4@test.com', 'test_datafair_org1')
+    testUser4Dep1.setOrg('test_datafair_org1', 'dep1')
 
     // a department settings document exists alongside the organization one, and cannot carry the flag
-    await ax.put('/api/v1/settings/organization/test_org1:dep1', { apiKeys: [] })
+    await ax.put('/api/v1/settings/organization/test_datafair_org1:dep1', { apiKeys: [] })
     await assert.rejects(
-      ax.patch('/api/v1/settings/organization/test_org1:dep1', { compatODS: true }),
+      ax.patch('/api/v1/settings/organization/test_datafair_org1:dep1', { compatODS: true }),
       (err: any) => err.status === 400
     )
 
-    await ax.put('/api/v1/settings/organization/test_org1', { compatODS: true })
+    await ax.put('/api/v1/settings/organization/test_datafair_org1', { compatODS: true })
 
     // a dataset owned by a department of that organization is served by the compat api
     const dataset = await sendDataset('datasets/dataset1.csv', testUser4Dep1)
@@ -551,7 +551,7 @@ val 1;val 1, val 2
   test('manages geo data', async () => {
     const ax = testUser1Org
 
-    await ax.put('/api/v1/settings/organization/test_org1', { compatODS: true })
+    await ax.put('/api/v1/settings/organization/test_datafair_org1', { compatODS: true })
 
     const dataset = await sendDataset('geo/geojson-example.geojson', ax)
 

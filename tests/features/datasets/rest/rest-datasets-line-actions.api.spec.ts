@@ -5,10 +5,10 @@ import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
 import { waitForFinalize, lsAttachments } from '../../../support/workers.ts'
 
-const testUser1 = await axiosAuth('test_user1@test.com')
-const testUser2 = await axiosAuth('test_user2@test.com')
-const testUser1Org = await axiosAuth('test_user1@test.com', 'test_org1')
-const testUser3 = await axiosAuth('test_user3@test.com')
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
+const testUser2 = await axiosAuth('test_datafair_user2@test.com')
+const testUser1Org = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
+const testUser3 = await axiosAuth('test_datafair_user3@test.com')
 
 test.describe('REST datasets - single line _action', () => {
   test.beforeEach(async () => {
@@ -142,7 +142,7 @@ test.describe('REST datasets - single line _action', () => {
 
     // user2 may only create lines
     await ax.put('/api/v1/datasets/restaction5/permissions', [
-      { type: 'user', id: 'test_user2', operations: ['createLine', 'readLine'] }
+      { type: 'user', id: 'test_datafair_user2', operations: ['createLine', 'readLine'] }
     ])
 
     // without updateLine the default createOrUpdate only creates: 201, not the upsert's 200
@@ -161,7 +161,7 @@ test.describe('REST datasets - single line _action', () => {
 
     // granting deleteLine unlocks _action delete
     await ax.put('/api/v1/datasets/restaction5/permissions', [
-      { type: 'user', id: 'test_user2', operations: ['createLine', 'readLine', 'deleteLine'] }
+      { type: 'user', id: 'test_datafair_user2', operations: ['createLine', 'readLine', 'deleteLine'] }
     ])
     res = await testUser2.post('/api/v1/datasets/restaction5/lines', { _action: 'delete', _id: 'line1' })
     assert.equal(res.status, 204)
@@ -178,7 +178,7 @@ test.describe('REST datasets - single line _action', () => {
     await ax.post('/api/v1/datasets/restaction6/lines', { _id: 'line1', attr1: 'test1' })
     await waitForFinalize(ax, 'restaction6')
     await ax.put('/api/v1/datasets/restaction6/permissions', [
-      { type: 'user', id: 'test_user2', operations: ['postLine', 'readLine'] }
+      { type: 'user', id: 'test_datafair_user2', operations: ['postLine', 'readLine'] }
     ])
 
     // the default createOrUpdate is a real upsert: 200 on an existing line
@@ -207,23 +207,23 @@ test.describe('REST datasets - single line _action', () => {
     })
     const dataset = res.data
     await ax.put(`/api/v1/datasets/${dataset.id}/permissions`, [
-      { type: 'user', id: 'test_user3', classes: ['manageOwnLines'], operations: ['readSafeSchema'] }
+      { type: 'user', id: 'test_datafair_user3', classes: ['manageOwnLines'], operations: ['readSafeSchema'] }
     ])
 
-    await testUser3.post(`/api/v1/datasets/${dataset.id}/own/user:test_user3/lines`, { _id: 'ownline1', attr1: 'test1' })
+    await testUser3.post(`/api/v1/datasets/${dataset.id}/own/user:test_datafair_user3/lines`, { _id: 'ownline1', attr1: 'test1' })
     await waitForFinalize(ax, dataset.id)
 
     // patch own line through POST + _action
-    res = await testUser3.post(`/api/v1/datasets/${dataset.id}/own/user:test_user3/lines`, { _action: 'patch', _id: 'ownline1', attr1: 'test2' })
+    res = await testUser3.post(`/api/v1/datasets/${dataset.id}/own/user:test_datafair_user3/lines`, { _action: 'patch', _id: 'ownline1', attr1: 'test2' })
     assert.equal(res.status, 200)
     assert.equal(res.data.attr1, 'test2')
     await waitForFinalize(ax, dataset.id)
 
     // delete own line through POST + _action
-    res = await testUser3.post(`/api/v1/datasets/${dataset.id}/own/user:test_user3/lines`, { _action: 'delete', _id: 'ownline1' })
+    res = await testUser3.post(`/api/v1/datasets/${dataset.id}/own/user:test_datafair_user3/lines`, { _action: 'delete', _id: 'ownline1' })
     assert.equal(res.status, 204)
     await waitForFinalize(ax, dataset.id)
-    await assert.rejects(testUser3.get(`/api/v1/datasets/${dataset.id}/own/user:test_user3/lines/ownline1`), (err: any) => err.status === 404)
+    await assert.rejects(testUser3.get(`/api/v1/datasets/${dataset.id}/own/user:test_datafair_user3/lines/ownline1`), (err: any) => err.status === 404)
   })
 
   test('multipart _action patch keeps the existing attachment', async () => {

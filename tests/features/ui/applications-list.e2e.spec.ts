@@ -6,7 +6,7 @@ test.describe('applications list page', () => {
 
   test.beforeAll(async () => {
     await clean()
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     const baseApps = await ax.get('/api/v1/base-applications', { params: { size: 1 } })
     if (!baseApps.data.results?.length) return
     const baseApp = baseApps.data.results[0]
@@ -19,7 +19,7 @@ test.describe('applications list page', () => {
 
   test('initial page state: cards, count, controls and contributor action all visible', async ({ page, goToWithAuth }) => {
     test.skip(!applicationId, 'No base application available')
-    await goToWithAuth('/data-fair/applications', 'test_user1')
+    await goToWithAuth('/data-fair/applications', 'test_datafair_user1')
 
     // Application cards rendered
     await expect(page.locator('.v-card').first()).toBeVisible({ timeout: 10000 })
@@ -37,7 +37,7 @@ test.describe('applications list page', () => {
 
   test('search filters results (q param appears in URL)', async ({ page, goToWithAuth }) => {
     test.skip(!applicationId, 'No base application available')
-    await goToWithAuth('/data-fair/applications', 'test_user1')
+    await goToWithAuth('/data-fair/applications', 'test_datafair_user1')
     const searchField = page.getByRole('textbox', { name: 'Rechercher' })
     await expect(searchField).toBeVisible({ timeout: 10000 })
 
@@ -49,7 +49,7 @@ test.describe('applications list page', () => {
   })
 
   test('search with no match shows empty state', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/applications', 'test_user1')
+    await goToWithAuth('/data-fair/applications', 'test_datafair_user1')
     const searchField = page.getByRole('textbox', { name: 'Rechercher' })
     await expect(searchField).toBeVisible({ timeout: 10000 })
 
@@ -62,7 +62,7 @@ test.describe('applications list page', () => {
   })
 
   test('sort changes URL param', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/applications', 'test_user1')
+    await goToWithAuth('/data-fair/applications', 'test_datafair_user1')
     const sortSelect = page.locator('.v-select').filter({ hasText: 'Trier par' })
     await expect(sortSelect).toBeVisible({ timeout: 10000 })
 
@@ -88,13 +88,13 @@ test.describe('applications list page', () => {
   })
 
   test('"Nouvelle application" button navigates to new-application page', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/applications', 'test_user1')
+    await goToWithAuth('/data-fair/applications', 'test_datafair_user1')
     await page.getByRole('link', { name: /nouvelle application/i }).first().click()
     await page.waitForURL(/new-application/, { timeout: 10000 })
   })
 
   test('empty state shown when no applications match search', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/applications?q=__nothing__', 'test_user1')
+    await goToWithAuth('/data-fair/applications?q=__nothing__', 'test_datafair_user1')
     await expect(page.getByText(/Aucun résultat ne correspond/)).toBeVisible({ timeout: 10000 })
   })
 })
@@ -102,7 +102,7 @@ test.describe('applications list page', () => {
 test.describe('base-application facet display', () => {
   test.beforeAll(async () => {
     await clean()
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     // Create 2 applications from mock app so the base-application facet appears
     await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'App One' })
     await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'App Two' })
@@ -113,7 +113,7 @@ test.describe('base-application facet display', () => {
   })
 
   test('base-application facet shows app names, not [object Object]', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/applications', 'test_user1')
+    await goToWithAuth('/data-fair/applications', 'test_datafair_user1')
     await expect(page.locator('.v-card').first()).toBeVisible({ timeout: 10000 })
 
     const navRight = page.locator('#navigation-right-local')
@@ -135,9 +135,9 @@ test.describe('base-application facet display', () => {
 test.describe('application topics facet display', () => {
   test.beforeAll(async () => {
     await clean()
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     // Create topics
-    const settingsRes = await ax.put('/api/v1/settings/user/test_user1', {
+    const settingsRes = await ax.put('/api/v1/settings/user/test_datafair_user1', {
       topics: [{ title: 'Environnement' }]
     })
     const topics = settingsRes.data.topics
@@ -151,7 +151,7 @@ test.describe('application topics facet display', () => {
   })
 
   test('topics facet displays topic titles, not [object Object]', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/applications', 'test_user1')
+    await goToWithAuth('/data-fair/applications', 'test_datafair_user1')
     await expect(page.locator('.v-card').first()).toBeVisible({ timeout: 10000 })
 
     const navRight = page.locator('#navigation-right-local')

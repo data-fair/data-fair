@@ -3,8 +3,8 @@ import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks, config } from '../../../support/axios.ts'
 import { waitForFinalize } from '../../../support/workers.ts'
 
-const testUser1 = await axiosAuth('test_user1@test.com')
-const testUser3 = await axiosAuth('test_user3@test.com')
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
+const testUser3 = await axiosAuth('test_datafair_user3@test.com')
 
 test.describe('Schema maxCardinality filter', () => {
   test.beforeEach(async () => {
@@ -96,7 +96,7 @@ test.describe('Schema maxCardinality filter', () => {
     await testUser1.post('/api/v1/datasets/rest-card-perm/_bulk_lines', [{ email: 'secret@test.com', city: 'A' }])
     await waitForFinalize(testUser1, 'rest-card-perm')
     await testUser1.put('/api/v1/datasets/rest-card-perm/permissions', [
-      { type: 'user', id: 'test_user3', operations: ['readDescription', 'readSchema'] }
+      { type: 'user', id: 'test_datafair_user3', operations: ['readDescription', 'readSchema'] }
     ])
     // maxCardinality=0 keeps a column iff no line matches: a line-existence oracle
     await assert.rejects(

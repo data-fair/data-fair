@@ -16,8 +16,8 @@ export default {
       layout: { comp: 'color-picker' }
     },
     icon: {
-      title: 'Icône',
-      description: 'Il est possible de consulter plus facilement la liste des icones disponibles sur <a href="https://materialdesignicons.com" target="_blank">ce site</a>.',
+      title: 'Icon',
+      description: 'The list of available icons can be browsed on <a href="https://materialdesignicons.com" target="_blank">this website</a>.',
       type: 'object',
       layout: {
         getItems: {

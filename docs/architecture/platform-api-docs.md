@@ -1,6 +1,6 @@
 # Platform OpenAPI document
 
-`GET /data-fair/api/v1/platform/api-docs.json` serves one OpenAPI 3.1 document describing every service of the site: data-fair, simple-directory and, when configured, metrics, events, the registry, the portals manager and catalogs. It is public, identical for every caller of a site (no session is read) and marked `allowAnyScope`, so a scoped token reads it too. Design: `docs/superpowers/specs/2026-10-19-platform-api-docs-design.md`.
+`GET /data-fair/api/v1/platform/api-docs.json` serves one OpenAPI 3.1 document describing every service of the site: data-fair, simple-directory and, when configured, metrics, events, the registry, the portals manager and catalogs. It is public, identical for every caller of a site (no session is read) and marked `allowAnyScope`, so a scoped token reads it too.
 
 Code: `api/contract/platform-api-docs.ts` (pure: check, rewrite and merge), `api/src/platform-api-docs/service.ts` (fetching, caching, per-site memoization), the route in `api/src/misc/routers/root.ts`, `api/contract/scopes-security.ts` and `api/contract/x-agent.ts` (what data-fair contributes).
 
@@ -84,4 +84,4 @@ The agent surface is pinned by `tests/features/agent-tools/api-docs-agent-surfac
 - **Annotation values are not validated at merge time.** Only the keys are (openapi-mcp is not a runtime dependency). A kept key with a bad value fails openapi-mcp on that operation: the whole tool set under `lint: 'error'`, only that operation under `lint: 'warn'`; a property-level `x-agent` in a shared component schema fails the document at any level. A consumer that must survive a misbehaving service loads with `lint: 'warn'`.
 - **Secondary sites.** data-fair's mount path comes from the main `publicUrl` pathname, while secondary sites always serve data-fair under `/data-fair`. The two agree unless the main `publicUrl` is not mounted at `/data-fair`.
 - **Metrics fetch untested in dev.** The URL `privateMetricsUrl + '/api/api-docs.json'` is not exercised: `privateMetricsUrl` is unset in the dev stack.
-- **No catalog tool set.** Without profiles `datasets:read` covers both `list_datasets` (portal catalog) and `list_account_datasets`; a catalog-only MCP is a tool selection on the mcp side.
+- **No catalog tool set.** Without profiles `datasets:read` covers both `list_datasets` (portal catalog) and `list_account_datasets`. The split is a tool selection on the mcp side: its datasets server serves `list_datasets`, its platform server (the back-office, whose tools answer the same on any site of the account) leaves it out, and lists what a portal publishes with `list_account_datasets` filtered on `publicationSites`.

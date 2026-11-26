@@ -53,7 +53,7 @@ export default {
     },
     image: {
       type: 'string',
-      description: 'URL d\'une image, illustration du jeu de données'
+      description: 'URL of an image illustrating the application'
     },
     applicationName: {
       type: 'string',
@@ -127,7 +127,7 @@ export default {
     },
     topics: {
       type: 'array',
-      title: 'Liste de thématiques',
+      title: 'Topics list',
       layout: { itemTitle: 'item.title' },
       items: {
         $ref: 'https://github.com/data-fair/data-fair/topic'
@@ -159,7 +159,7 @@ export default {
         properties: {
           title: {
             type: 'string',
-            title: 'Titre',
+            title: 'Attachment title',
             layout: { props: { outlined: true, dense: true } }
           },
           name: {

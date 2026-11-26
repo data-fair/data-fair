@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { axios, axiosAuth, clean, checkPendingTasks, mockAppUrl } from '../../support/axios.ts'
 
 const anonymous = axios()
-const testUser1 = await axiosAuth('test_user1@test.com')
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
 
 test.describe('Activity', () => {
   test.beforeEach(async () => { await clean() })

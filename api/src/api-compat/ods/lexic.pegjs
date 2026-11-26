@@ -1,4 +1,5 @@
 {{
+import { invalidGeometryError } from './errors.ts'
 const LBRACE='{';
 const RBRACE='}';
 }}
@@ -38,7 +39,7 @@ GeometryLiteral
       try {
         return JSON.parse(str)
       } catch (err) {
-        throw httpError(400, `Impossible de parser la géométrie ${str}, erreur: ${err.message}`)
+        throw invalidGeometryError(str, err)
       }
     } else {
       return str

@@ -10,6 +10,15 @@ import {
   waitForLinesDrained, putShadowVersion, putDeleteMarker, integrityTestStore
 } from '../../support/integrity.ts'
 import * as ops from '../../../api/src/integrity/operations.ts'
+import { sdTestEnvUrl } from '../../support/sd-fixtures.ts'
+
+// another sub-space than this suite's: the integrity passes run for test_datafair_ leave it alone
+const otherPrefix = 'test_datafairtrail_'
+const otherWorld = {
+  prefix: otherPrefix,
+  users: [{ id: `${otherPrefix}user`, firstName: 'Other', lastName: 'User', email: `${otherPrefix}user@test.com`, password: { clear: 'passwd' } }],
+  organizations: []
+}
 
 test.beforeAll(async () => { await ensureIntegrityBucket() })
 test.beforeEach(async () => { await clean() })
@@ -20,7 +29,7 @@ const latestRevisionKey = async (prefix: string): Promise<string> => {
 }
 
 test('a healthy trail reports trail.status ok alongside the data verdict', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
   await waitForFlagCleared(dataset.id)
@@ -33,7 +42,7 @@ test('a healthy trail reports trail.status ok alongside the data verdict', async
 })
 
 test('a shadowed revision is a confirmed version-divergence anomaly', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
   await waitForFlagCleared(dataset.id)
@@ -57,7 +66,7 @@ test('a shadowed revision is a confirmed version-divergence anomaly', async () =
 })
 
 test('a marker-hidden line anchor resurfaces: data verdict stays ok, trail says altered', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const res = await admin.post('/api/v1/datasets', {
     isRest: true, title: `trail lines ${Date.now()}`, schema: [{ key: 'attr1', type: 'string' }]
   })
@@ -94,7 +103,7 @@ test('a marker-hidden line anchor resurfaces: data verdict stays ok, trail says 
 // ---------------------------------------------------------------------------------------------
 
 test('a shadowed `.who` sibling is a confirmed trail anomaly while it lives, without affecting the data verdict', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
   await waitForFlagCleared(dataset.id)
@@ -114,7 +123,7 @@ test('a shadowed `.who` sibling is a confirmed trail anomaly while it lives, wit
 })
 
 test('a delete-marker hiding a `.who` sibling is a confirmed trail anomaly while it lives', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
   await waitForFlagCleared(dataset.id)
@@ -131,7 +140,7 @@ test('a delete-marker hiding a `.who` sibling is a confirmed trail anomaly while
 })
 
 test('a fully purged, lapsed `.who` sibling leaves a clean trail verdict and a kept anchor', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
   await waitForFlagCleared(dataset.id)
@@ -148,7 +157,7 @@ test('a fully purged, lapsed `.who` sibling leaves a clean trail verdict and a k
   await integrityTestStore.writeWho(whoKey1, { date: new Date().toISOString(), user: { id: 'someone' } }, new Date(Date.now() + 2000))
   await new Promise(resolve => setTimeout(resolve, 3500)) // let the `.who` lock genuinely lapse
 
-  await anonymousAx.post(`${apiUrl}/api/v1/test-env/integrity-purge/run`,
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/integrity-purge/run?prefix=test_datafair_`,
     { prefix, ignoreAge: true, skewMarginMs: 0, ignoreWatermark: true })
   const remaining = await listIntegrityKeys(prefix)
   expect(remaining).toContain(key1) // the anchor survives (protection carve-out, and its own lock is long anyway)
@@ -164,7 +173,7 @@ test('a fully purged, lapsed `.who` sibling leaves a clean trail verdict and a k
 // ---------------------------------------------------------------------------------------------
 
 test('disable ends the trail with a terminal disable revision', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
   await waitForFlagCleared(dataset.id)
@@ -181,7 +190,7 @@ test('disable ends the trail with a terminal disable revision', async () => {
 })
 
 test('deleting an enrolled dataset ends the trail with a terminal delete revision', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
   await waitForFlagCleared(dataset.id)
@@ -193,7 +202,7 @@ test('deleting an enrolled dataset ends the trail with a terminal delete revisio
 })
 
 test('the scope audit flags an out-of-band integrity.active flip (alarm-kill)', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
   await waitForFlagCleared(dataset.id)
@@ -202,7 +211,7 @@ test('the scope audit flags an out-of-band integrity.active flip (alarm-kill)', 
   // and purge carve-out would silently stand down
   await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.active': false })
 
-  const audit = (await anonymousAx.post(`${apiUrl}/api/v1/test-env/integrity-audit/run`)).data
+  const audit = (await anonymousAx.post(`${apiUrl}/api/v1/test-env/integrity-audit/run?prefix=test_datafair_`)).data
   const incoherent = audit.incoherent.find((s: any) => s.datasetId === dataset.id)
   expect(incoherent).toBeTruthy()
 
@@ -210,12 +219,46 @@ test('the scope audit flags an out-of-band integrity.active flip (alarm-kill)', 
   await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.active': true })
   await anonymousAx.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: false })
-  const audit2 = (await anonymousAx.post(`${apiUrl}/api/v1/test-env/integrity-audit/run`)).data
+  const audit2 = (await anonymousAx.post(`${apiUrl}/api/v1/test-env/integrity-audit/run?prefix=test_datafair_`)).data
   expect(audit2.incoherent.find((s: any) => s.datasetId === dataset.id)).toBeFalsy()
 })
 
+test('the passes run on demand act only on the owners of the given test prefix', async () => {
+  for (const pass of ['purge', 'stale', 'audit', 'storage']) {
+    await expect(anonymousAx.post(`${apiUrl}/api/v1/test-env/integrity-${pass}/run`)).rejects.toMatchObject({ status: 400 })
+  }
+  await expect(anonymousAx.post(`${apiUrl}/api/v1/test-env/integrity-purge/run?prefix=test_datafair_`, { prefix: `data-fair/user-${otherPrefix}user/x/` }))
+    .rejects.toMatchObject({ status: 400 })
+
+  // a dataset of another sub-space, left unchecked for 8 days, then disarmed out of band
+  await anonymousAx.post(`${sdTestEnvUrl()}/seed`, otherWorld)
+  try {
+    const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
+    const other = await axiosAuth(`${otherPrefix}user@test.com`)
+    const dataset = await sendDataset('datasets/dataset1.csv', other)
+    await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
+    await waitForFlagCleared(dataset.id)
+    const eightDaysAgo = new Date(Date.now() - 8 * 24 * 3600 * 1000).toISOString()
+    await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.lastDefinitiveCheck': eightDaysAgo })
+
+    const stale = (await anonymousAx.post(`${apiUrl}/api/v1/test-env/integrity-stale/run?prefix=test_datafair_`)).data
+    expect(stale.alerted).not.toContain(dataset.id)
+    const otherStale = (await anonymousAx.post(`${apiUrl}/api/v1/test-env/integrity-stale/run?prefix=${otherPrefix}`)).data
+    expect(otherStale.alerted).toContain(dataset.id)
+
+    await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.active': false })
+    const audit = (await anonymousAx.post(`${apiUrl}/api/v1/test-env/integrity-audit/run?prefix=test_datafair_`)).data
+    expect(audit.incoherent.find((s: any) => s.datasetId === dataset.id)).toBeFalsy()
+    const otherAudit = (await anonymousAx.post(`${apiUrl}/api/v1/test-env/integrity-audit/run?prefix=${otherPrefix}`)).data
+    expect(otherAudit.incoherent.find((s: any) => s.datasetId === dataset.id)).toBeTruthy()
+  } finally {
+    await anonymousAx.delete(sdTestEnvUrl(), { params: { prefix: otherPrefix } })
+    await anonymousAx.delete(`${apiUrl}/api/v1/test-env`, { params: { prefix: otherPrefix } })
+  }
+})
+
 test('crash residue (terminal latest on an active dataset) self-heals through the check', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
   await waitForFlagCleared(dataset.id)
@@ -246,7 +289,7 @@ test('crash residue (terminal latest on an active dataset) self-heals through th
 // ---------------------------------------------------------------------------------------------
 
 test('breach alert dedup lives in integrity.alerts and clears on recovery', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
   await waitForFlagCleared(dataset.id)
@@ -270,7 +313,7 @@ test('breach alert dedup lives in integrity.alerts and clears on recovery', asyn
 })
 
 test('a dataset stuck without a definitive verdict fires integrity-check-stale', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
   await waitForFlagCleared(dataset.id)
@@ -282,10 +325,10 @@ test('a dataset stuck without a definitive verdict fires integrity-check-stale',
   const eightDaysAgo = new Date(Date.now() - 8 * 24 * 3600 * 1000).toISOString()
   await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset.id}`, { 'integrity.lastDefinitiveCheck': eightDaysAgo })
 
-  const run1 = (await anonymousAx.post(`${apiUrl}/api/v1/test-env/integrity-stale/run`)).data
+  const run1 = (await anonymousAx.post(`${apiUrl}/api/v1/test-env/integrity-stale/run?prefix=test_datafair_`)).data
   expect(run1.alerted).toContain(dataset.id)
   // dedup: a second run within the realert window stays silent
-  const run2 = (await anonymousAx.post(`${apiUrl}/api/v1/test-env/integrity-stale/run`)).data
+  const run2 = (await anonymousAx.post(`${apiUrl}/api/v1/test-env/integrity-stale/run?prefix=test_datafair_`)).data
   expect(run2.alerted).not.toContain(dataset.id)
 
   // a definitive verdict resets the clock and clears the alert
@@ -301,7 +344,7 @@ test('a dataset stuck without a definitive verdict fires integrity-check-stale',
 // ---------------------------------------------------------------------------------------------
 
 test('ack silences reviewed anomalies via a locked ackTrail revision; new tampering escapes it', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
   await waitForFlagCleared(dataset.id)
@@ -351,7 +394,7 @@ const restLinesDataset = async (admin: any) => {
 }
 
 test('_fix converges past a forged high-_i anchor (denial-of-remediation wedge)', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await restLinesDataset(admin)
 
   // step 1 — the attacker launders a forged write: content + inflated _i + stamp + hint, which
@@ -382,7 +425,7 @@ test('_fix converges past a forged high-_i anchor (denial-of-remediation wedge)'
 })
 
 test('the relay refuses an _i that overflows the key padding (trail ordering stays sound)', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await restLinesDataset(admin)
   const before = (await listIntegrityKeys(`${revisionsPrefix(dataset)}lines/`)).length
 

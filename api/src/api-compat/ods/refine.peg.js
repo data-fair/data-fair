@@ -5,11 +5,14 @@
 
 
 
+import { invalidGeometryError } from './errors.ts'
+
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import { requiredCapability } from '../../datasets/es/operations.ts'
 import dayjs from 'dayjs'
 import timezone from 'dayjs/plugin/timezone.js'
 import utc from 'dayjs/plugin/utc.js'
+import { unknownFieldError } from '../../datasets/utils/field-errors.ts'
 
 const LBRACE='{';
 const RBRACE='}';
@@ -346,7 +349,7 @@ function peg$parse(input, options) {
    };
   var peg$f1 = function(key, value) {
     const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+    if (!prop) throw unknownFieldError('filter', key)
     if (prop.type === 'string' && prop.format === 'date-time' && value.format) {
       const date = dayjs.tz(value.value, value.format, options.timezone ?? 'UTC')
       const startDate = date.toISOString()
@@ -398,7 +401,7 @@ function peg$parse(input, options) {
       try {
         return JSON.parse(str)
       } catch (err) {
-        throw httpError(400, `Impossible de parser la géométrie ${str}, erreur: ${err.message}`)
+        throw invalidGeometryError(str, err)
       }
     } else {
       return str

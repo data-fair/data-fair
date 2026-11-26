@@ -100,22 +100,22 @@ class ValidateStream extends Writable {
   // downloadable from the journal event
   errorsSummary () {
     if (!this.nbErrors) return null
-    return `${Math.round(100 * (this.nbErrors / this.i))}% des lignes ont une erreur de validation (${this.nbErrors} ligne${this.nbErrors > 1 ? 's' : ''}).`
+    return `${Math.round(100 * (this.nbErrors / this.i))}% of the lines have a validation error (${this.nbErrors} line${this.nbErrors > 1 ? 's' : ''}).`
   }
 }
 
 export default async function (dataset: DatasetInternal) {
   const debug = debugLib(`worker:process-file:${dataset.id}`)
 
-  if (dataset.isVirtual) throw new Error('Un jeu de données virtuel ne devrait pas passer par l\'étape validation.')
-  if (dataset.isRest) throw new Error('Un jeu de données éditable ne devrait pas passer par l\'étape validation.')
+  if (dataset.isVirtual) throw new Error('A virtual dataset should not go through the validation step.')
+  if (dataset.isRest) throw new Error('An editable dataset should not go through the validation step.')
 
   const patch: Partial<DatasetInternal> = {}
   // status default — overwritten when extensions run successfully
   patch.status = dataset.status === 'validation-updated' ? 'finalized' : 'validated'
 
   const cancelDraft = async () => {
-    await journals.log('datasets', dataset, { type: 'draft-cancelled', data: 'annulation automatique' } as any)
+    await journals.log('datasets', dataset, { type: 'draft-cancelled', data: 'automatic cancellation' } as any)
     await datasetsService.cancelDraft(dataset)
     await datasetsService.applyPatch({ ...dataset, draftReason: null }, { draft: null })
   }
@@ -135,7 +135,7 @@ export default async function (dataset: DatasetInternal) {
       const datasetDraft = datasetUtils.mergeDraft({ ...datasetFull })
       const breakingChanges = schemaUtils.getSchemaBreakingChanges(datasetFull.schema ?? [], datasetDraft.schema, false, true)
       if (breakingChanges.length) {
-        const validationError = 'La structure du fichier contient des ruptures de compatibilité : ' + breakingChanges.map(b => b.summary).join(', ')
+        const validationError = 'The structure of the file contains breaking changes: ' + breakingChanges.map(b => b.summary).join(', ')
         await journals.log('datasets', dataset, { type: 'validation-error', data: validationError } as any)
 
         if (dataset.draftReason.validationMode === 'compatible') {
@@ -211,11 +211,11 @@ export default async function (dataset: DatasetInternal) {
   if (writer.errorCount > 0) {
     const summaryParts: string[] = []
     if (nbValidationErrors > 0) {
-      const validationSummary = validationStream?.errorsSummary() ?? `${nbValidationErrors} ligne${nbValidationErrors > 1 ? 's' : ''} en erreur de validation`
+      const validationSummary = validationStream?.errorsSummary() ?? `${nbValidationErrors} line${nbValidationErrors > 1 ? 's' : ''} with a validation error`
       summaryParts.push(validationSummary)
     }
     if (blockingExtensionErrors > 0) {
-      summaryParts.push(`${blockingExtensionErrors} ligne${blockingExtensionErrors > 1 ? 's' : ''} en échec d'enrichissement obligatoire`)
+      summaryParts.push(`${blockingExtensionErrors} line${blockingExtensionErrors > 1 ? 's' : ''} failing a mandatory extension`)
     }
     const summary = summaryParts.join('\n')
 
@@ -235,7 +235,7 @@ export default async function (dataset: DatasetInternal) {
       delete patch.validateDraft
       await journals.log('datasets', dataset, {
         type: 'draft-cancelled',
-        data: `annulation automatique : ${summary}`,
+        data: `automatic cancellation: ${summary}`,
         hasDiagnosticFile: true,
         diagnosticErrorCount: fileResult.count,
         diagnosticCapped: fileResult.capped,
@@ -284,7 +284,7 @@ export default async function (dataset: DatasetInternal) {
   }
 
   if (patch.validateDraft) {
-    await journals.log('datasets', dataset, { type: 'draft-validated', data: 'validation automatique' } as any)
+    await journals.log('datasets', dataset, { type: 'draft-validated', data: 'automatic validation' } as any)
     await sendResourceEvent('datasets', dataset, 'data-fair-worker', 'validated', {
       localizedParams: { fr: { cause: 'validation automatique' }, en: { cause: 'automatic validation' } }
     })

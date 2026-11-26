@@ -9,7 +9,9 @@ if (!browser) throw new Error(`unknown TEST_BROWSER ${process.env.TEST_BROWSER},
 
 export default defineConfig({
   testDir: './tests',
-  // api and e2e tests share the dev env state (one clean() wipes every test owner): one worker
+  // seeds the test accounts in simple-directory, before the spec files (that log in at import) are loaded
+  globalSetup: './tests/global-setup.ts',
+  // api and e2e tests share the dev env state (one clean() wipes the whole test sub-space): one worker
   workers: 1,
   fullyParallel: false,
   forbidOnly: ci,

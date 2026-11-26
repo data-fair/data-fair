@@ -4,7 +4,16 @@
     class="pa-0"
     fluid
   >
-    <dataset-search-files :height="contentHeight" />
+    <dataset-search-files
+      v-if="digitalDocumentField"
+      :height="contentHeight"
+    />
+    <v-alert
+      v-else
+      type="info"
+      class="ma-4"
+      :text="t('unavailable')"
+    />
   </v-container>
 </template>
 
@@ -12,9 +21,11 @@
 fr:
   datasets: Jeux de données
   files: Fichiers
+  unavailable: Ce jeu de données n'a pas de colonne de documents numériques.
 en:
   datasets: Datasets
   files: Files
+  unavailable: This dataset has no digital document column.
 </i18n>
 
 <script setup lang="ts">
@@ -30,7 +41,7 @@ const { mainRect } = useLayout()
 const breadcrumbs = useBreadcrumbs()
 
 const store = useDatasetStore()
-const { dataset } = store
+const { dataset, digitalDocumentField } = store
 
 useDatasetWatch(store, ['info'])
 

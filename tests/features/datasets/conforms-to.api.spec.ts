@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
 import { waitForFinalize } from '../../support/workers.ts'
 
-const u1 = await axiosAuth('test_user1@test.com')
+const u1 = await axiosAuth('test_datafair_user1@test.com')
 
 test.describe('dataset conformsTo metadata', () => {
   test.beforeEach(async () => { await clean() })
@@ -68,8 +68,8 @@ test.describe('dataset conformsTo metadata', () => {
     // One dataset without conformsTo — must NOT appear
     await u1.post('/api/v1/datasets/conforms-empty', { isMetaOnly: true, title: 'empty' })
 
-    // axiosAuth('test_user1@test.com') creates datasets owned by { type: 'user', id: 'test_user1' }
-    const res = await u1.get('/api/v1/datasets?size=0&facets=conformsTo&owner=user:test_user1')
+    // axiosAuth('test_datafair_user1@test.com') creates datasets owned by { type: 'user', id: 'test_datafair_user1' }
+    const res = await u1.get('/api/v1/datasets?size=0&facets=conformsTo&owner=user:test_datafair_user1')
     const triples = (res.data.facets?.conformsTo ?? []).map((f: any) => f.value)
     assert.equal(triples.length, 2)
     const titles = triples.map((t: any) => t.title).sort()
@@ -78,14 +78,14 @@ test.describe('dataset conformsTo metadata', () => {
 
   test('conformsTo facet does not leak triples from another user', async () => {
     // user2 seeds a private schema reference
-    const u2 = await axiosAuth('test_user2@test.com')
+    const u2 = await axiosAuth('test_datafair_user2@test.com')
     await u2.post('/api/v1/datasets/conforms-u2', { isMetaOnly: true, title: 'u2 dataset' })
     await u2.patch('/api/v1/datasets/conforms-u2', {
       conformsTo: { title: 'Private Schema', version: '1.0', url: 'https://example.com/private.json' }
     })
 
     // user1 querying their own org must not see user2's triple
-    const res = await u1.get('/api/v1/datasets?size=0&facets=conformsTo&owner=user:test_user1')
+    const res = await u1.get('/api/v1/datasets?size=0&facets=conformsTo&owner=user:test_datafair_user1')
     const titles = (res.data.facets?.conformsTo ?? []).map((f: any) => f.value.title)
     assert.ok(!titles.includes('Private Schema'))
   })

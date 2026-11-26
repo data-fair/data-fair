@@ -14,7 +14,7 @@ test.describe('dataset extensions: refresh one extension', () => {
   test.beforeAll(async () => {
     test.setTimeout(60000)
     await clean()
-    const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+    const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
 
     await ax.put(`/api/v1/datasets/${masterId}`, {
       isRest: true,
@@ -53,9 +53,9 @@ test.describe('dataset extensions: refresh one extension', () => {
 
   test('keeps the other extension and its columns', async ({ page, goToWithAuth }) => {
     test.setTimeout(60000)
-    const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+    const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
 
-    await goToWithAuth(`/data-fair/dataset/${slaveId}`, 'test_superadmin')
+    await goToWithAuth(`/data-fair/dataset/${slaveId}`, 'test_datafair_superadmin')
     const structure = page.locator('#structure')
     await expect(structure).toBeVisible({ timeout: 15000 })
     await structure.getByRole('tab', { name: /Enrichissements|Extensions/ }).click()

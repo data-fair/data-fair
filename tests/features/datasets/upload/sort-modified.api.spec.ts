@@ -9,7 +9,7 @@ import { waitForFinalize } from '../../../support/workers.ts'
 // Use a hyphen-free alphabet for the unique tag.
 const nanoid = customAlphabet('0123456789abcdefghijklmnopqrstuvwxyz', 12)
 
-const testUser1 = await axiosAuth('test_user1@test.com')
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
 
 test.describe('Unified _modified sort', () => {
   test.beforeEach(async () => {

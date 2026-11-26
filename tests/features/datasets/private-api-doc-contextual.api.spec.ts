@@ -2,9 +2,9 @@ import { test } from '../../fixtures/diagnostics.ts'
 import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
 
-const owner = await axiosAuth('test_user1@test.com')      // owns datasets in personal account
-const contrib = await axiosAuth('test_user5@test.com')
-const admin = await axiosAuth('test_superadmin@test.com', undefined, true) // admin mode bypasses the filter
+const owner = await axiosAuth('test_datafair_user1@test.com')      // owns datasets in personal account
+const contrib = await axiosAuth('test_datafair_user5@test.com')
+const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true) // admin mode bypasses the filter
 
 const pathsOf = async (ax: any, id: string, query = '') => {
   const doc = (await ax.get(`/api/v1/datasets/${id}/private-api-docs.json${query}`)).data
@@ -25,7 +25,7 @@ test.describe('private-api-docs contextual to permissions', () => {
   test('contrib without bulkLines does not see _bulk_lines, but sees createLine', async () => {
     const { data: ds } = await owner.post('/api/v1/datasets', { isRest: true, title: 'ctx-doc-1' })
     await owner.put(`/api/v1/datasets/${ds.id}/permissions`, [
-      { type: 'user', id: 'test_user5', classes: ['list', 'read', 'readAdvanced'], operations: ['createLine', 'updateLine', 'writeData', 'writeDescription'] }
+      { type: 'user', id: 'test_datafair_user5', classes: ['list', 'read', 'readAdvanced'], operations: ['createLine', 'updateLine', 'writeData', 'writeDescription'] }
     ])
     const paths = await pathsOf(contrib, ds.id)
     assert.ok(!paths.includes('/_bulk_lines'), 'bulk_lines must be filtered out')
@@ -36,7 +36,7 @@ test.describe('private-api-docs contextual to permissions', () => {
     const { data: ds } = await owner.post('/api/v1/datasets', { isRest: true, title: 'ctx-doc-post-line' })
     for (const operation of ['createLine', 'postLine']) {
       await owner.put(`/api/v1/datasets/${ds.id}/permissions`, [
-        { type: 'user', id: 'test_user5', classes: ['list', 'read', 'readAdvanced'], operations: [operation] }
+        { type: 'user', id: 'test_datafair_user5', classes: ['list', 'read', 'readAdvanced'], operations: [operation] }
       ])
       const doc = (await contrib.get(`/api/v1/datasets/${ds.id}/private-api-docs.json`)).data
       assert.equal(doc.paths['/lines']?.post?.operationId, 'postLine', operation)
@@ -46,7 +46,7 @@ test.describe('private-api-docs contextual to permissions', () => {
   test('contrib with the write class sees _bulk_lines', async () => {
     const { data: ds } = await owner.post('/api/v1/datasets', { isRest: true, title: 'ctx-doc-2' })
     await owner.put(`/api/v1/datasets/${ds.id}/permissions`, [
-      { type: 'user', id: 'test_user5', classes: ['list', 'read', 'readAdvanced', 'write'] }
+      { type: 'user', id: 'test_datafair_user5', classes: ['list', 'read', 'readAdvanced', 'write'] }
     ])
     const paths = await pathsOf(contrib, ds.id)
     assert.ok(paths.includes('/_bulk_lines'), 'bulk_lines must be present with the write class')
@@ -55,7 +55,7 @@ test.describe('private-api-docs contextual to permissions', () => {
   test('admin mode bypasses the filter and lists every operation', async () => {
     const { data: ds } = await owner.post('/api/v1/datasets', { isRest: true, title: 'ctx-doc-admin' })
     await owner.put(`/api/v1/datasets/${ds.id}/permissions`, [
-      { type: 'user', id: 'test_user5', classes: ['list', 'read', 'readAdvanced'], operations: ['createLine'] }
+      { type: 'user', id: 'test_datafair_user5', classes: ['list', 'read', 'readAdvanced'], operations: ['createLine'] }
     ])
     const filtered = await pathsOf(contrib, ds.id)
     assert.ok(!filtered.includes('/_bulk_lines'), 'bulk_lines must be filtered out for a limited contrib')
@@ -66,7 +66,7 @@ test.describe('private-api-docs contextual to permissions', () => {
   test('public api-docs.json is unchanged (not filtered)', async () => {
     const { data: ds } = await owner.post('/api/v1/datasets', { isRest: true, title: 'ctx-doc-5' })
     await owner.put(`/api/v1/datasets/${ds.id}/permissions`, [
-      { type: 'user', id: 'test_user5', classes: ['list', 'read'] }
+      { type: 'user', id: 'test_datafair_user5', classes: ['list', 'read'] }
     ])
     const doc = (await contrib.get(`/api/v1/datasets/${ds.id}/api-docs.json`)).data
     assert.equal(doc.openapi, '3.1.0')
@@ -77,7 +77,7 @@ test.describe('private-api-docs contextual to permissions', () => {
   test('the getting started guide only cites operations the caller may call', async () => {
     const { data: ds } = await owner.post('/api/v1/datasets', { isRest: true, title: 'ctx-doc-guide', schema: [{ key: 'ville', type: 'string' }] })
     await owner.put(`/api/v1/datasets/${ds.id}/permissions`, [
-      { type: 'user', id: 'test_user5', classes: ['list'], operations: ['readDescription', 'readSchema', 'getValuesAgg', 'readPrivateApiDoc'] }
+      { type: 'user', id: 'test_datafair_user5', classes: ['list'], operations: ['readDescription', 'readSchema', 'getValuesAgg', 'readPrivateApiDoc'] }
     ])
 
     const ownerGuide = await guideOf(owner, ds.id)
@@ -94,7 +94,7 @@ test.describe('private-api-docs contextual to permissions', () => {
   test('the guide is dropped when almost everything is filtered out', async () => {
     const { data: ds } = await owner.post('/api/v1/datasets', { isRest: true, title: 'ctx-doc-guide-empty', schema: [{ key: 'ville', type: 'string' }] })
     await owner.put(`/api/v1/datasets/${ds.id}/permissions`, [
-      { type: 'user', id: 'test_user5', classes: [], operations: ['readDescription', 'readPrivateApiDoc'] }
+      { type: 'user', id: 'test_datafair_user5', classes: [], operations: ['readDescription', 'readPrivateApiDoc'] }
     ])
     assert.equal(await guideOf(contrib, ds.id), '', 'a single bullet orients nobody')
   })

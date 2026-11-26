@@ -3,8 +3,7 @@
 Static scan of the API hot paths (GET `/lines`, REST write/indexing, shared middlewares, the
 `@data-fair/lib-*` deps as used on hot paths). This is the catalog the **T-ids** used in
 `results/BASELINE.md`, `results/EXPERIMENTS.md` and `README.md` refer to. Measured outcomes and the
-evidence behind each verdict live in `results/EXPERIMENTS.md`; correctness side-findings (C1–C5)
-are tracked in `../docs/plans/2026-06-12-bugs-found-during-perf-scan.md`.
+evidence behind each verdict live in `results/EXPERIMENTS.md`.
 
 The headline of the scan: the remaining big levers are *not* in the ES query — they are in per-hit
 result preparation, the auth layer, and the write/indexing pipeline.

@@ -21,19 +21,19 @@ const callTool = (page: any, name: string, args: Record<string, unknown> = {}) =
 test.describe('creation wizard agent tools', () => {
   test.beforeEach(async () => {
     await clean()
-    const ax = await axiosAuth('test_user1@test.com')
-    await ax.patch('/api/v1/settings/user/test_user1', { agentChat: true })
+    const ax = await axiosAuth('test_datafair_user1@test.com')
+    await ax.patch('/api/v1/settings/user/test_datafair_user1', { agentChat: true })
   })
 
   test('init_from_dataset creates the new dataset with the source columns', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     const { data: source } = await ax.post('/api/v1/datasets', {
       isRest: true,
       title: 'Registre 2026',
       schema: [{ key: 'association', type: 'string', title: 'Association' }, { key: 'montant', type: 'number', title: 'Montant' }]
     })
 
-    await goToWithAuth('/data-fair/new-dataset', 'test_user1')
+    await goToWithAuth('/data-fair/new-dataset', 'test_datafair_user1')
     await expect(page.locator('.v-card-title', { hasText: 'Éditable' })).toBeVisible({ timeout: 15000 })
 
     expect(await callTool(page, 'select_dataset_type', { type: 'rest' })).toContain('init_from_dataset')
@@ -57,7 +57,7 @@ test.describe('creation wizard agent tools', () => {
   })
 
   test('init_from_dataset refuses a dataset it cannot read', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/new-dataset', 'test_user1')
+    await goToWithAuth('/data-fair/new-dataset', 'test_datafair_user1')
     await expect(page.locator('.v-card-title', { hasText: 'Éditable' })).toBeVisible({ timeout: 15000 })
     await callTool(page, 'select_dataset_type', { type: 'rest' })
     expect(await callTool(page, 'init_from_dataset', { datasetId: 'nope' })).toContain('list_datasets')
