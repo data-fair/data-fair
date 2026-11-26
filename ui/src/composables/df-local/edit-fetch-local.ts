@@ -12,6 +12,8 @@ type UseEditFetchOptions = UseFetchOptions & {
   patch?: boolean
   saveOptions?: AsyncActionOptions
   fetchAfterSave?: boolean
+  // a refetch of the same document keeps the keys edited since the last server state instead of erasing them
+  keepLocalEdits?: boolean
 }
 
 type OptionalUrl = string | null | undefined
@@ -41,8 +43,7 @@ export function useEditFetch<T extends Record<string, any>> (url: OptionalUrl | 
     serverData.value = clone(fetch.data.value)
     const sameDocument = loadedUrl === fetch.fullUrl.value
     loadedUrl = fetch.fullUrl.value
-    // a refetch of the same document landing while the user types keeps the keys edited since the last server state
-    if (sameDocument && fresh && local && server) {
+    if (options.keepLocalEdits && sameDocument && fresh && local && server) {
       for (const key of Object.keys(local)) if (!equal(local[key], server[key])) fresh[key] = local[key]
       for (const key of Object.keys(server)) if (!(key in local)) delete fresh[key]
     }

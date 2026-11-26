@@ -252,7 +252,7 @@ test.describe('dataset activable metadata fields', () => {
       if (isEditRefetch(route.request().url())) await released
       await route.continue()
     })
-    const refetch = page.waitForRequest(r => r.method() === 'GET' && isEditRefetch(r.url()))
+    const refetch = page.waitForRequest(r => r.method() === 'GET' && isEditRefetch(r.url()), { timeout: 15000 })
     await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { a: 'x' })
     await refetch
 
