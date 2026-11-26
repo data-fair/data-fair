@@ -99,14 +99,31 @@ export default (publicUrl, publicationSite, info) => {
       },
       '/dcat': {
         get: {
-          summary: 'Lister les jeux de données (DCAT)',
-          description: 'Récupérer la liste des jeux de données au format DCAT (JSON-LD).',
+          summary: 'Lister les jeux de données (DCAT-US)',
+          description: 'Récupérer la liste des jeux de données au format DCAT (JSON-LD), profil américain DCAT-US 1.1. Pour un moissonnage par un portail européen (data.gouv.fr, data.europa.eu), préférez /dcat-ap.',
           operationId: 'getDcat',
           responses: {
             200: {
               description: 'Liste des jeux de données au format DCAT (JSON-LD)',
               content: {
                 'application/json': {
+                  schema: { type: 'object' }
+                }
+              }
+            }
+          }
+        }
+      },
+      '/dcat-ap': {
+        get: {
+          summary: 'Lister les jeux de données (DCAT-AP)',
+          description: 'Récupérer le catalogue des jeux de données au format DCAT-AP 3 (profil européen, JSON-LD), moissonnable par data.gouv.fr et data.europa.eu.',
+          operationId: 'getDcatAp',
+          responses: {
+            200: {
+              description: 'Catalogue des jeux de données au format DCAT-AP (JSON-LD)',
+              content: {
+                'application/ld+json': {
                   schema: { type: 'object' }
                 }
               }

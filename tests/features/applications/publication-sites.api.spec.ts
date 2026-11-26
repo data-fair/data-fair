@@ -125,6 +125,13 @@ test.describe('publication sites', () => {
     const dcatValidation = await validateDcat(dcatCatalog)
     assert.ok(dcatValidation.valid, `DCAT validation failed: ${JSON.stringify(dcatValidation.errors)}`)
 
+    const dcatApCatalog = (await ax.get(`${publicUrl2}/api/v1/catalog/dcat-ap`)).data
+    assert.equal(dcatApCatalog['@type'], 'dcat:Catalog')
+    assert.equal(dcatApCatalog['dcat:dataset'].length, 1)
+    assert.equal(dcatApCatalog['dcat:dataset'][0]['dct:identifier'], dataset.id)
+    // the REST dataset is served by its API distribution
+    assert.equal(dcatApCatalog['dcat:dataset'][0]['dcat:distribution'][0]['dcat:accessURL']['@id'], `${publicUrl2}/api/v1/datasets/${dataset.slug}/lines`)
+
     // Test multi-domain image support
     const imageFullUrl = config.publicUrl + '/uploads/test-image.png'
     await ax.patch(`/api/v1/datasets/${dataset.id}`, { image: imageFullUrl })

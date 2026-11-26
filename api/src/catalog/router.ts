@@ -8,8 +8,8 @@ import * as apiKeyUtils from '../misc/utils/api-key.ts'
 import * as cacheHeaders from '../misc/utils/cache-headers.ts'
 import { setReqResourceType } from '../misc/utils/req-context.ts'
 import { reqPublicationSite, reqMainPublicationSite, setReqPublicationSite } from '../misc/utils/publication-sites.ts'
-import { buildDcatCatalog } from './operations.ts'
-import { findCatalogDatasets, getCatalogApiDocs } from './service.ts'
+import { buildDcatCatalog, buildDcatApCatalog } from './operations.ts'
+import { findCatalogDatasets, getCatalogApiDocs, getOwnerInfo } from './service.ts'
 import { reqPublicBaseUrl } from '../misc/utils/public-base-url.ts'
 
 const apiKeyMiddlewareRead = apiKeyUtils.middleware(['datasets', 'datasets-read'])
@@ -54,4 +54,11 @@ router.get('/dcat', async (req, res) => {
   const datasets = await findCatalogDatasets(publicationSite, reqSession(req))
   res.type('application/ld+json')
   res.json(buildDcatCatalog(datasets, publicationSite, reqPublicBaseUrl(req)))
+})
+
+router.get('/dcat-ap', async (req, res) => {
+  const publicationSite = reqPublicationSite(req)
+  const [datasets, ownerInfo] = await Promise.all([findCatalogDatasets(publicationSite, reqSession(req)), getOwnerInfo(publicationSite)])
+  res.type('application/ld+json')
+  res.json(buildDcatApCatalog(datasets, publicationSite, reqPublicBaseUrl(req), ownerInfo, req.getLocale()))
 })
