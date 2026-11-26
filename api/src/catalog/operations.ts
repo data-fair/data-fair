@@ -1,110 +1,5 @@
-import mimeTypes from 'mime-types'
-import dcatContext from '../misc/utils/dcat/context.ts'
-
-// output-only refinements of the shared DCAT-US context (also used to read harvested catalogs):
-// real date-time datatypes and IRIs instead of plain strings, the JSON shape stays the same
-const dcatUsOutputContext = {
-  ...dcatContext,
-  issued: { '@id': 'dct:issued', '@type': 'http://www.w3.org/2001/XMLSchema#dateTime' },
-  modified: { '@id': 'dct:modified', '@type': 'http://www.w3.org/2001/XMLSchema#dateTime' },
-  landingPage: { '@id': 'dcat:landingPage', '@type': '@id' },
-  license: { '@id': 'dct:license', '@type': '@id' },
-  accrualPeriodicity: { '@id': 'dct:accrualPeriodicity', '@type': '@id' },
-  hasEmail: { '@id': 'vcard:hasEmail', '@type': '@id' }
-}
-
-// build a DCAT-US catalog document from the datasets of a publication site, cf docs/architecture/dcat-catalog.md
-export const buildDcatCatalog = (datasets: any[], publicationSite: any, publicBaseUrl: string, ownerInfo: any = {}) => {
-  const dcatDatasets = []
-
-  const datasetUrlTemplate = publicationSite.datasetUrlTemplate || publicationSite.url + '/datasets/{id}'
-  const contact = ownerInfo.contact
-  const contactPoint = contact?.email
-    ? { '@type': 'vcard:Contact', fn: contact.name || publicationSite.owner?.name || contact.email, hasEmail: 'mailto:' + contact.email }
-    : undefined
-
-  for (const dataset of datasets) {
-    const datasetUrl = datasetUrlTemplate.replace('{slug}', dataset.slug).replace('{id}', dataset.id)
-    const datasetApiUrl = `${publicBaseUrl}/api/v1/datasets/${dataset.slug || dataset.id}`
-    const datasetDCAT: any = {
-      '@id': datasetUrl,
-      '@type': 'Dataset',
-      identifier: dataset.slug || dataset.id,
-      landingPage: datasetUrl,
-      title: dataset.title,
-      description: dataset.description || dataset.summary,
-      issued: dataset.createdAt,
-      modified: dataset.dataUpdatedAt || dataset.updatedAt
-    }
-    if (dataset.keywords?.length) datasetDCAT.keyword = dataset.keywords
-    if (dataset.topics?.length) datasetDCAT.theme = [...new Set(dataset.topics.map((t: any) => t.title).filter(Boolean))]
-    if (dataset.license?.href) datasetDCAT.license = dataset.license.href
-    if (dataset.owner?.name) {
-      datasetDCAT.publisher = { '@type': 'org:Organization', name: dataset.owner.departmentName ? `${dataset.owner.name} - ${dataset.owner.departmentName}` : dataset.owner.name }
-    }
-    if (contactPoint) datasetDCAT.contactPoint = contactPoint
-    if (dataset.spatial) datasetDCAT.spatial = dataset.spatial
-    else if (dataset.bbox?.length === 4) datasetDCAT.spatial = dataset.bbox.join(',')
-    if (dataset.temporal && dataset.temporal.start) {
-      if (dataset.temporal.end) {
-        datasetDCAT.temporal = `${dataset.temporal.start}/${dataset.temporal.end}`
-      } else {
-        datasetDCAT.temporal = `${dataset.temporal.start}/${dataset.temporal.start}`
-      }
-    }
-    if (dataset.frequency) datasetDCAT.accrualPeriodicity = 'http://purl.org/cld/freq/' + dataset.frequency
-
-    const distributions = []
-    const fileDistribution = (file: any, suffix: string) => {
-      const url = `${datasetApiUrl}/${suffix}`
-      const ext = file.name.split('.').pop()
-      return {
-        '@id': url,
-        '@type': 'Distribution',
-        identifier: `${dataset.slug || dataset.id}/${suffix}`,
-        title: `Fichier ${ext}`,
-        description: `Téléchargez le fichier complet au format ${ext}.`,
-        downloadURL: url,
-        mediaType: file.mimetype,
-        format: mimeTypes.extension(file.mimetype) || undefined,
-        byteSize: file.size
-      }
-    }
-    if (dataset.file && dataset.originalFile) {
-      distributions.push(fileDistribution(dataset.originalFile, 'raw'))
-      if (dataset.file.mimetype !== dataset.originalFile.mimetype) distributions.push(fileDistribution(dataset.file, 'convert'))
-    }
-    if (!dataset.isMetaOnly) {
-      // DCAT-US convention for an API: format "API" and its documentation in describedBy
-      distributions.push({
-        '@id': `${datasetApiUrl}/lines`,
-        '@type': 'Distribution',
-        identifier: `${dataset.slug || dataset.id}/lines`,
-        title: 'API',
-        description: 'Consultez, filtrez et exportez les données grâce à l\'API.',
-        accessURL: `${datasetApiUrl}/lines`,
-        format: 'API',
-        mediaType: 'application/json',
-        describedBy: `${datasetApiUrl}/api-docs.json`,
-        describedByType: 'application/vnd.oai.openapi+json'
-      })
-    }
-
-    if (distributions.length) datasetDCAT.distribution = distributions
-    dcatDatasets.push(datasetDCAT)
-  }
-
-  return {
-    '@context': dcatUsOutputContext,
-    '@type': 'Catalog',
-    conformsTo: 'https://project-open-data.cio.gov/v1.1/schema',
-    describedBy: 'https://project-open-data.cio.gov/v1.1/schema/catalog.json',
-    dataset: dcatDatasets
-  }
-}
-
-// DCAT-AP 3 (European profile, the one data.gouv.fr and data.europa.eu harvest), serialized as JSON-LD
-// with prefixed property names, cf docs/architecture/dcat-catalog.md
+// DCAT-AP 3 catalog of a publication site (the European profile harvested by data.gouv.fr and data.europa.eu),
+// serialized as JSON-LD with prefixed property names, cf docs/architecture/dcat-catalog.md
 const dcatApContext = {
   dcat: 'http://www.w3.org/ns/dcat#',
   dct: 'http://purl.org/dc/terms/',
@@ -164,7 +59,7 @@ const iri = (url: string, type?: string) => type ? { '@id': url, '@type': type }
 const dateLiteral = (value: string) => ({ '@value': value, '@type': /^\d{4}-\d{2}-\d{2}$/.test(value) ? 'xsd:date' : 'xsd:dateTime' })
 const fileExtension = (name: string) => name.split('.').pop()?.toLowerCase() ?? ''
 
-export const buildDcatApCatalog = (datasets: any[], publicationSite: any, publicBaseUrl: string, ownerInfo: any = {}, locale = 'fr') => {
+export const buildDcatCatalog = (datasets: any[], publicationSite: any, publicBaseUrl: string, ownerInfo: any = {}, locale = 'fr') => {
   const texts = locale === 'en' ? dcatApTexts.en : dcatApTexts.fr
   const datasetUrlTemplate = publicationSite.datasetUrlTemplate || publicationSite.url + '/datasets/{id}'
   const siteTitle = publicationSite.title || publicationSite.owner?.name || publicationSite.url
@@ -291,7 +186,7 @@ export const buildDcatApCatalog = (datasets: any[], publicationSite: any, public
 
   return {
     '@context': dcatApContext,
-    '@id': `${publicBaseUrl}/api/v1/catalog/dcat-ap`,
+    '@id': `${publicBaseUrl}/api/v1/catalog/dcat`,
     '@type': 'dcat:Catalog',
     'dct:title': siteTitle,
     'dct:description': texts.catalogDescription(siteTitle),

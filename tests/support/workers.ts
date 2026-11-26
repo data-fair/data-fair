@@ -338,14 +338,6 @@ export const wsEmit = async (channel: string, data: any): Promise<void> => {
 }
 
 /**
- * Validate DCAT JSON.
- */
-export const validateDcat = async (body: any): Promise<{ valid: boolean, errors?: any[] }> => {
-  const res = await anonymousAx.post(`${apiUrl}/api/v1/test-env/validate-dcat`, body)
-  return res.data
-}
-
-/**
  * Set an environment variable in the main server process and worker threads.
  * Pass undefined as value to unset.
  */

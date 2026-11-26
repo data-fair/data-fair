@@ -99,26 +99,9 @@ export default (publicUrl, publicationSite, info) => {
       },
       '/dcat': {
         get: {
-          summary: 'Catalogue DCAT-US',
-          description: 'Récupérer le catalogue des jeux de données publiés sur ce portail au format DCAT (JSON-LD), profil américain [DCAT-US 1.1](https://resources.data.gov/resources/dcat-us/). Chaque jeu de données porte ses fichiers téléchargeables et, s\'il contient des données, une distribution API (format `API`) dont la documentation OpenAPI est donnée par `describedBy`. Pour un moissonnage par un portail européen (data.gouv.fr, data.europa.eu), préférez `/dcat-ap`.',
-          operationId: 'getDcat',
-          responses: {
-            200: {
-              description: 'Catalogue des jeux de données au format DCAT-US (JSON-LD)',
-              content: {
-                'application/ld+json': {
-                  schema: { type: 'object' }
-                }
-              }
-            }
-          }
-        }
-      },
-      '/dcat-ap': {
-        get: {
           summary: 'Catalogue DCAT-AP',
           description: 'Récupérer le catalogue des jeux de données publiés sur ce portail au format [DCAT-AP 3](https://semiceu.github.io/DCAT-AP/releases/3.0.0/) (profil européen, JSON-LD), à utiliser comme URL de moissonnage DCAT sur data.gouv.fr ou data.europa.eu. Chaque jeu de données porte ses fichiers téléchargeables, ses pièces jointes publiées sur les catalogues et, s\'il contient des données, une distribution API reliée à un `dcat:DataService` dont `dcat:endpointDescription` pointe vers la documentation OpenAPI du jeu. Les textes générés (titres et descriptions des distributions) suivent la langue de la requête (français par défaut, anglais).',
-          operationId: 'getDcatAp',
+          operationId: 'getDcat',
           responses: {
             200: {
               description: 'Catalogue des jeux de données au format DCAT-AP (JSON-LD)',

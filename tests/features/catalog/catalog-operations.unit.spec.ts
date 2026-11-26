@@ -1,8 +1,7 @@
 import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import jsonld from 'jsonld'
-import { buildDcatCatalog, buildDcatApCatalog } from '../../../api/src/catalog/operations.ts'
-import dcatUsValidate from '../../../api/src/misc/utils/dcat/validate.ts'
+import { buildDcatCatalog } from '../../../api/src/catalog/operations.ts'
 
 const publicationSite = { type: 'data-fair-portals', id: 'portal1', url: 'https://portal.test' }
 
@@ -14,120 +13,6 @@ const xsd = 'http://www.w3.org/2001/XMLSchema#'
 const expand = async (doc: any) => (await jsonld.expand(JSON.parse(JSON.stringify(doc))))[0] as any
 
 test.describe('buildDcatCatalog', () => {
-  test('wraps datasets in a DCAT Catalog envelope', () => {
-    const result = buildDcatCatalog([], publicationSite, 'https://df.test')
-    assert.equal(result['@type'], 'Catalog')
-    assert.equal(result.conformsTo, 'https://project-open-data.cio.gov/v1.1/schema')
-    assert.deepEqual(result.dataset, [])
-  })
-
-  test('builds a Dataset entry using the publication site datasetUrlTemplate when present', () => {
-    const result = buildDcatCatalog(
-      [{ id: 'd1', slug: 'my-data', title: 'My data', createdAt: '2026-01-01' }],
-      { ...publicationSite, datasetUrlTemplate: 'https://portal.test/jeux/{slug}' },
-      'https://df.test'
-    )
-    const ds = result.dataset[0]
-    assert.equal(ds['@id'], 'https://portal.test/jeux/my-data')
-    assert.equal(ds.identifier, 'my-data')
-    assert.equal(ds.title, 'My data')
-  })
-
-  test('emits raw and convert distributions when the file mimetype differs from the original', () => {
-    const result = buildDcatCatalog(
-      [{
-        id: 'd1',
-        title: 'With file',
-        file: { name: 'data.csv', mimetype: 'text/csv', size: 10 },
-        originalFile: { name: 'data.xlsx', mimetype: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', size: 20 }
-      }],
-      publicationSite,
-      'https://df.test'
-    )
-    const distribution = result.dataset[0].distribution
-    assert.equal(distribution.length, 3)
-    assert.equal(distribution[0].downloadURL, 'https://df.test/api/v1/datasets/d1/raw')
-    assert.equal(distribution[0].byteSize, 20)
-    assert.equal(distribution[1].downloadURL, 'https://df.test/api/v1/datasets/d1/convert')
-    assert.equal(distribution[2].format, 'API')
-  })
-
-  test('sets modified from each dataset own dataUpdatedAt (falling back to its updatedAt)', () => {
-    const result = buildDcatCatalog(
-      [
-        { id: 'd1', title: 'A', dataUpdatedAt: '2026-01-01', updatedAt: '2026-02-01' },
-        { id: 'd2', title: 'B', updatedAt: '2026-03-01' }
-      ],
-      publicationSite,
-      'https://df.test'
-    )
-    assert.equal(result.dataset[0].modified, '2026-01-01')
-    assert.equal(result.dataset[1].modified, '2026-03-01')
-  })
-
-  test('emits a single distribution when file and original share the same mimetype', () => {
-    const result = buildDcatCatalog(
-      [{
-        id: 'd1',
-        title: 'Same mimetype',
-        file: { name: 'data.csv', mimetype: 'text/csv', size: 10 },
-        originalFile: { name: 'data.csv', mimetype: 'text/csv', size: 10 }
-      }],
-      publicationSite,
-      'https://df.test'
-    )
-    assert.equal(result.dataset[0].distribution.length, 2)
-  })
-
-  test('outputs a valid DCAT-US document with publisher, contact point, themes and an API distribution', async () => {
-    const result = buildDcatCatalog([{
-      id: 'd1',
-      slug: 'my-data',
-      title: 'My data',
-      description: 'Full description',
-      summary: 'Short',
-      createdAt: '2026-01-01T10:00:00.000Z',
-      dataUpdatedAt: '2026-02-01T10:00:00.000Z',
-      keywords: ['energy'],
-      topics: [{ id: 't1', title: 'Environment' }],
-      license: { href: 'https://www.etalab.gouv.fr/licence-ouverte-open-licence' },
-      frequency: 'annual',
-      bbox: [-5, 41, 9, 51],
-      owner: { type: 'organization', id: 'o1', name: 'My org', departmentName: 'Dep' },
-      isRest: true
-    }], { ...publicationSite, owner: { type: 'organization', id: 'o1', name: 'My org' } }, 'https://df.test', { contact: { email: 'contact@org.test' } })
-    assert.ok(dcatUsValidate(result), JSON.stringify(dcatUsValidate.errors))
-    const ds = result.dataset[0]
-    assert.equal(ds.description, 'Full description')
-    assert.deepEqual(ds.publisher, { '@type': 'org:Organization', name: 'My org - Dep' })
-    assert.deepEqual(ds.contactPoint, { '@type': 'vcard:Contact', fn: 'My org', hasEmail: 'mailto:contact@org.test' })
-    assert.deepEqual(ds.theme, ['Environment'])
-    assert.equal(ds.spatial, '-5,41,9,51')
-    assert.equal(ds.distribution[0].describedBy, 'https://df.test/api/v1/datasets/my-data/api-docs.json')
-
-    // same JSON shape, but real IRIs and date-time datatypes once read as RDF
-    const expanded = await expand(result)
-    const eds = expanded[dcat + 'dataset'][0]
-    assert.deepEqual(eds[dct + 'issued'][0], { '@value': '2026-01-01T10:00:00.000Z', '@type': xsd + 'dateTime' })
-    assert.equal(eds[dcat + 'landingPage'][0]['@id'], 'https://portal.test/datasets/d1')
-    assert.equal(eds[dct + 'license'][0]['@id'], 'https://www.etalab.gouv.fr/licence-ouverte-open-licence')
-    assert.equal(eds[dct + 'accrualPeriodicity'][0]['@id'], 'http://purl.org/cld/freq/annual')
-    assert.equal(eds[dcat + 'contactPoint'][0]['http://www.w3.org/2006/vcard/ns#hasEmail'][0]['@id'], 'mailto:contact@org.test')
-  })
-
-  test('reads the file size as dcat:byteSize', async () => {
-    const result = buildDcatCatalog([{
-      id: 'd1',
-      title: 'With file',
-      file: { name: 'data.csv', mimetype: 'text/csv', size: 10 },
-      originalFile: { name: 'data.csv', mimetype: 'text/csv', size: 10 }
-    }], publicationSite, 'https://df.test')
-    const distribution = (await expand(result))[dcat + 'dataset'][0][dcat + 'distribution'][0]
-    assert.equal(distribution[dcat + 'byteSize'][0]['@value'], 10)
-  })
-})
-
-test.describe('buildDcatApCatalog', () => {
   const site = { ...publicationSite, title: 'My portal', owner: { type: 'organization', id: 'o1', name: 'My org' } }
   const fileDataset = {
     id: 'd1',
@@ -151,10 +36,10 @@ test.describe('buildDcatApCatalog', () => {
   }
 
   test('describes the catalog with its mandatory DCAT-AP properties', async () => {
-    const result = buildDcatApCatalog([fileDataset], site, 'https://df.test', { contact: { email: 'contact@org.test' } })
+    const result = buildDcatCatalog([fileDataset], site, 'https://df.test', { contact: { email: 'contact@org.test' } })
     const catalog = await expand(result)
     assert.deepEqual(catalog['@type'], [dcat + 'Catalog'])
-    assert.equal(catalog['@id'], 'https://df.test/api/v1/catalog/dcat-ap')
+    assert.equal(catalog['@id'], 'https://df.test/api/v1/catalog/dcat')
     assert.equal(catalog[dct + 'title'][0]['@value'], 'My portal')
     assert.ok(catalog[dct + 'description'][0]['@value'])
     assert.equal(catalog[dct + 'publisher'][0]['http://xmlns.com/foaf/0.1/name'][0]['@value'], 'My org')
@@ -163,7 +48,7 @@ test.describe('buildDcatApCatalog', () => {
   })
 
   test('maps the dataset metadata to DCAT-AP terms, IRIs and typed literals', async () => {
-    const result = buildDcatApCatalog([fileDataset], site, 'https://df.test', { contact: { name: 'Team', email: 'contact@org.test' } })
+    const result = buildDcatCatalog([fileDataset], site, 'https://df.test', { contact: { name: 'Team', email: 'contact@org.test' } })
     const ds = (await expand(result))[dcat + 'dataset'][0]
     assert.equal(ds['@id'], 'https://portal.test/datasets/d1')
     assert.equal(ds[dct + 'identifier'][0]['@value'], 'd1')
@@ -183,7 +68,7 @@ test.describe('buildDcatApCatalog', () => {
   })
 
   test('gives every distribution an accessURL, IRI formats and a byteSize', async () => {
-    const ds = (await expand(buildDcatApCatalog([fileDataset], site, 'https://df.test')))[dcat + 'dataset'][0]
+    const ds = (await expand(buildDcatCatalog([fileDataset], site, 'https://df.test')))[dcat + 'dataset'][0]
     const [raw, convert, api] = ds[dcat + 'distribution']
     assert.equal(ds[dcat + 'distribution'].length, 3)
     for (const distribution of [raw, convert, api]) assert.ok(distribution[dcat + 'accessURL'][0]['@id'])
@@ -197,7 +82,7 @@ test.describe('buildDcatApCatalog', () => {
   })
 
   test('gives REST datasets an API distribution and meta-only datasets none', () => {
-    const result = buildDcatApCatalog([
+    const result = buildDcatCatalog([
       { id: 'rest1', title: 'Rest', isRest: true, owner: site.owner },
       { id: 'meta1', title: 'Meta', isMetaOnly: true, owner: site.owner }
     ], site, 'https://df.test')
@@ -207,7 +92,7 @@ test.describe('buildDcatApCatalog', () => {
   })
 
   test('adds the attachments flagged for catalog publications as distributions', () => {
-    const result = buildDcatApCatalog([{
+    const result = buildDcatCatalog([{
       id: 'm1',
       title: 'Meta',
       isMetaOnly: true,
@@ -226,8 +111,19 @@ test.describe('buildDcatApCatalog', () => {
     assert.equal(distributions[1]['dcat:downloadURL'], undefined)
   })
 
+  test('uses the datasetUrlTemplate and each dataset own modification date', () => {
+    const result = buildDcatCatalog([
+      { id: 'd1', slug: 'my-data', title: 'A', dataUpdatedAt: '2026-01-01', updatedAt: '2026-02-01' },
+      { id: 'd2', slug: 'other', title: 'B', updatedAt: '2026-03-01' }
+    ], { ...site, datasetUrlTemplate: 'https://portal.test/jeux/{slug}' }, 'https://df.test')
+    assert.equal(result['dcat:dataset'][0]['@id'], 'https://portal.test/jeux/my-data')
+    assert.equal(result['dcat:dataset'][0]['dct:modified']?.['@value'], '2026-01-01')
+    assert.equal(result['dcat:dataset'][1]['dct:modified']?.['@value'], '2026-03-01')
+    assert.equal(result['dct:modified']?.['@value'], '2026-03-01')
+  })
+
   test('falls back on the summary then the title for the mandatory description', () => {
-    const result = buildDcatApCatalog([{ id: 'd1', title: 'T', summary: 'S' }, { id: 'd2', title: 'T2' }], site, 'https://df.test')
+    const result = buildDcatCatalog([{ id: 'd1', title: 'T', summary: 'S' }, { id: 'd2', title: 'T2' }], site, 'https://df.test')
     assert.equal(result['dcat:dataset'][0]['dct:description'], 'S')
     assert.equal(result['dcat:dataset'][1]['dct:description'], 'T2')
   })

@@ -1,28 +1,26 @@
-# DCAT catalog exports
+# DCAT catalog export
 
-A publication site exposes its datasets as a DCAT catalog, for harvesting by other portals. Two
-profiles are served, on two routes of the site catalog API (`/data-fair/api/v1/catalog/...` on the
-portal domain):
-
-| Route | Profile | Audience |
-| --- | --- | --- |
-| `/catalog/dcat-ap` | [DCAT-AP 3](https://semiceu.github.io/DCAT-AP/releases/3.0.0/) (European profile) | data.gouv.fr, data.europa.eu, any European harvester |
-| `/catalog/dcat` | [DCAT-US 1.1](https://resources.data.gov/resources/dcat-us/) (US profile, "data.json") | existing consumers, US-style harvesters |
-
-Both are JSON-LD (`application/ld+json`), built by pure functions in `api/src/catalog/operations.ts`
+A publication site exposes its datasets as a DCAT catalog on `/catalog/dcat` of the site catalog
+API (`/data-fair/api/v1/catalog/dcat` on the portal domain), for harvesting by other portals
+(data.gouv.fr, data.europa.eu, CKAN with ckanext-dcat...). The profile is
+[DCAT-AP 3](https://semiceu.github.io/DCAT-AP/releases/3.0.0/), the European one, serialized as
+JSON-LD (`application/ld+json`). It is built by a pure function in `api/src/catalog/operations.ts`
 from the datasets published on the site (`findCatalogDatasets`, at most 10 000, no pagination).
 
-## Why a route per profile
+## Why DCAT-AP only
 
-A profile is a different document, not a different serialization of the same one: vocabulary,
-mandatory properties and value shapes differ (`dct:temporal` is an `ISO start/end` string in
-DCAT-US, a `dct:PeriodOfTime` node in DCAT-AP). A harvester is configured with one URL, so each
-profile gets a stable URL of its own, as Opendatasoft and CKAN do (`/catalog/exports/dcat`,
-`/catalog/exports/dcat_ap_ch`...). Other serializations of the same profile (Turtle, RDF/XML)
-would fit a `format` query parameter on the same route; JSON-LD is accepted by both data.gouv.fr
-and data.europa.eu, so none is served yet.
+The route served DCAT-US 1.1 (the US "data.json" profile) until 2026-11; it was replaced in place,
+not kept beside DCAT-AP. Our harvesters are European and expect DCAT-AP, and data.gouv.fr already
+read the DCAT-US document as RDF through its JSON-LD context, so a second profile only doubled the
+mapping to maintain. The replacement broke two things for the existing consumers, accepted on
+purpose: the JSON keys (prefixed DCAT-AP terms instead of the DCAT-US ones) and `dct:identifier`
+(the dataset `id` instead of its slug), so a harvest made on the old document recreates its
+datasets once.
 
-## DCAT-AP mapping
+Another serialization of the same profile (Turtle, RDF/XML) would fit a `format` query parameter;
+JSON-LD is accepted by data.gouv.fr and data.europa.eu, so none is served yet.
+
+## Mapping
 
 - **Catalog**: `@id` is the route URL; `dct:title` the site title, `dct:publisher` the site owner,
   `foaf:homepage` the site URL, `dct:modified` the most recent dataset modification.
@@ -49,24 +47,6 @@ that is not the `accessService` of a distribution.
 
 The output conforms to the official DCAT-AP 3.0 SHACL shapes (`dcat-ap-SHACL.ttl` of the SEMIC
 release) under RDFS inference; without inference only `rdfs:Resource` checks on plain URLs fail.
-
-## DCAT-US mapping
-
-The JSON shape follows the DCAT-US 1.1 schema (copied in `api/src/misc/utils/dcat/schema`, also
-used to validate harvested catalogs). The shared JSON-LD context (`misc/utils/dcat/context.ts`)
-also compacts harvested catalogs, so the export refines it locally (`dcatUsOutputContext`):
-`issued` / `modified` typed `xsd:dateTime`, `landingPage`, `license`, `accrualPeriodicity` and
-`hasEmail` read as IRIs. The JSON values stay plain strings.
-
-- `publisher` (`org:Organization`, owner and department), `contactPoint` (`vcard:Contact`, from
-  `settings.info.contact`, only with an email as the schema requires one), `theme` (topic titles),
-  `spatial` (the text, else the bbox as `west,south,east,north`), `temporal` as an ISO interval.
-- `accrualPeriodicity` keeps the Dublin Core frequency IRIs (`http://purl.org/cld/freq/...`)
-  accepted by the schema copy and by data.gouv.fr, instead of the ISO 8601 durations (`R/P1Y`)
-  of the US spec.
-- Distributions: the files with `byteSize`, and an API distribution (`format: "API"`,
-  `accessURL` on `/lines`, the OpenAPI document in `describedBy`).
-- Not emitted: `accessLevel`, `bureauCode`, `programCode` (US federal fields).
 
 ## Known gaps
 
