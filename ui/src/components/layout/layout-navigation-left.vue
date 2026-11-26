@@ -63,7 +63,7 @@
     <template #append>
       <div class="pa-2 text-center">
         <a
-          href="https://data-fair.github.io/4/"
+          href="https://datafair.cloud"
           class="text-label-small"
           style="color: inherit; text-decoration: none; opacity: 0.9;"
         >Powered by Data Fair</a>

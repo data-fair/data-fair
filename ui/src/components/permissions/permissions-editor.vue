@@ -3,7 +3,7 @@
     v-if="!simple && resource.owner?.department"
     id="permissions-deps"
     :text="t('readDepPermissionsDoc')"
-    href="https://data-fair.github.io/3/user-guide-backoffice/department"
+    href="https://docs.koumoul.com/pages-administration/acces-publication#4-permissions-dans-les-departements"
     persistent
   />
 
