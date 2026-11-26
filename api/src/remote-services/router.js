@@ -1,4 +1,3 @@
-import path from 'path'
 import http from 'http'
 import https from 'https'
 import express from 'express'
@@ -24,6 +23,7 @@ import { setReqResource, setReqResourceType } from '../misc/utils/req-context.ts
 import { reqPublicationSite } from '../misc/utils/publication-sites.ts'
 import { reqPublicBaseUrl } from '../misc/utils/public-base-url.ts'
 import { setReqRemoteService, reqRemoteService } from './middlewares.ts'
+import { joinProxyPath } from '../misc/utils/proxy-path.ts'
 
 const debug = debugModule('remote-services')
 const debugMasterData = debugModule('master-data')
@@ -236,7 +236,7 @@ router.use('/:remoteServiceId/proxy/*proxyPath', allowAnyScope, rateLimiting.rem
 
   // preventing POST is a simple way to prevent exposing bulk methods through this public proxy
   if (req.method.toUpperCase() !== 'GET') {
-    return res.status(405).send('Seules les opérations de type GET sont autorisées sur cette exposition de service')
+    return res.status(405).send(req.__('errors.remoteServices.onlyGet'))
   }
 
   // for perf, do not use the middleware readService, we want to read only absolutely necessary info
@@ -246,7 +246,7 @@ router.use('/:remoteServiceId/proxy/*proxyPath', allowAnyScope, rateLimiting.rem
   const remoteService = await mongo.remoteServices
     .findOne({ id: req.params.remoteServiceId, $or: accessFilter }, { projection: { _id: 0, id: 1, server: 1, apiKey: 1 } })
 
-  if (!remoteService) return res.status(404).send('service distant inconnu')
+  if (!remoteService) return res.status(404).send(req.__('errors.remoteServices.unknown'))
 
   const headers = {
     'x-forwarded-url': `${reqPublicBaseUrl(req)}/api/v1/remote-services/${remoteService.id}/proxy/`
@@ -268,8 +268,9 @@ router.use('/:remoteServiceId/proxy/*proxyPath', allowAnyScope, rateLimiting.rem
   const server = /** @type {string} */(remoteService.server)
   const privateServerUrl = applyPrivateMapping(server, config.remoteServicesPrivateMapping)
   const targetUrl = new URL(privateServerUrl ?? server)
-  const extraPath = '/' + path.join(...req.params.proxyPath)
-  targetUrl.pathname = path.join(targetUrl.pathname, extraPath)
+  const targetPath = joinProxyPath(targetUrl.pathname, [req.params.proxyPath].flat())
+  if (targetPath === null) return res.status(400).send('invalid path')
+  targetUrl.pathname = targetPath
   targetUrl.search = incomingUrl.searchParams
 
   const options = {

@@ -5,8 +5,8 @@ import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
 
 const XLSX = Module.createRequire(import.meta.url)('@e965/xlsx')
 
-const testUser1 = await axiosAuth('test_user1@test.com')
-const settingsUrl = '/api/v1/settings/user/test_user1'
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
+const settingsUrl = '/api/v1/settings/user/test_datafair_user1'
 const settingsWith = (custom: any[]) => ({ datasetsMetadata: { custom } })
 const DEFS = [
   { key: 'service', title: 'Service', enum: ['Voirie'] },
@@ -123,7 +123,7 @@ test.describe('typed custom metadata', () => {
     await testUser1.post('/api/v1/datasets', restDataset({ customMetadata: { domaines: ['a', 'b'], service: 'Voirie' } }))
     await testUser1.post('/api/v1/datasets', restDataset({ customMetadata: { domaines: ['a'], contact: { url: 'https://a.fr' } } }))
     await testUser1.post('/api/v1/datasets', restDataset())
-    const res = await testUser1.get('/api/v1/datasets', { params: { size: 0, facets: 'customMetadata', owner: 'user:test_user1' } })
+    const res = await testUser1.get('/api/v1/datasets', { params: { size: 0, facets: 'customMetadata', owner: 'user:test_datafair_user1' } })
     const facet = res.data.facets.customMetadata
     // a dataset with several values counts once for the metadata, once per value
     assert.equal(facet.domaines.count, 2)

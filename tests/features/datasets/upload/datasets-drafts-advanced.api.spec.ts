@@ -5,7 +5,7 @@ import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
 import { sendDataset, waitForFinalize, doAndWaitForFinalize, waitForDatasetError, fileExists, setupMockRoute, clearMockRoutes, getRawDataset, clearDatasetCache } from '../../../support/workers.ts'
 
-const testUser1 = await axiosAuth('test_user1@test.com')
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
 
 // Paths passed to fileExists() are resolved relative to the server's dataDir
 const dataDir = '.'
@@ -239,7 +239,7 @@ other
     const journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
     const errorEvent = journal.find((e: any) => e.type === 'error')
     assert.ok(errorEvent)
-    assert.ok(errorEvent.data.includes('un concept nécessaire'))
+    assert.ok(errorEvent.data.includes('a concept needed'))
   })
 
   test('Auto-validate a draft larger than the 100-line sample with active extensions', async () => {
@@ -294,10 +294,10 @@ other
     assert.equal(res.status, 201)
     const dataset = await waitForFinalize(ax, res.data.id)
 
-    assert.ok(await fileExists(`${dataDir}/user/test_user1/datasets-drafts/${dataset.id}`))
-    assert.ok(!await fileExists(`${dataDir}/user/test_user1/datasets/${dataset.id}`))
+    assert.ok(await fileExists(`${dataDir}/user/test_datafair_user1/datasets-drafts/${dataset.id}`))
+    assert.ok(!await fileExists(`${dataDir}/user/test_datafair_user1/datasets/${dataset.id}`))
     res = await ax.delete('/api/v1/datasets/' + dataset.id)
-    assert.ok(!await fs.pathExists(`${dataDir}/user/test_user1/datasets-drafts/${dataset.id}`))
+    assert.ok(!await fs.pathExists(`${dataDir}/user/test_datafair_user1/datasets-drafts/${dataset.id}`))
     await assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}`), (err: any) => err.status === 404)
   })
 
@@ -337,17 +337,17 @@ other
     form.append('dataset', fs.readFileSync('./tests/resources/datasets/dataset2.csv'), 'dataset2.csv')
     await ax.put(`/api/v1/datasets/${dataset.id}`, form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() }, params: { draft: true } })
     await waitForFinalize(ax, dataset.id)
-    assert.ok(await fileExists(`${dataDir}/user/test_user1/datasets-drafts/${dataset.id}`))
+    assert.ok(await fileExists(`${dataDir}/user/test_datafair_user1/datasets-drafts/${dataset.id}`))
 
     // whichever view the transfer is requested on, published and draft directories both move
-    await ax.put(`/api/v1/datasets/${dataset.id}/owner`, { type: 'organization', id: 'test_org1', name: 'Test Org 1' })
+    await ax.put(`/api/v1/datasets/${dataset.id}/owner`, { type: 'organization', id: 'test_datafair_org1', name: 'Test Org 1' })
     for (const dirName of ['datasets', 'datasets-drafts']) {
-      assert.ok(await fileExists(`${dataDir}/organization/test_org1/${dirName}/${dataset.id}`), dirName)
-      assert.ok(!await fileExists(`${dataDir}/user/test_user1/${dirName}/${dataset.id}`), dirName)
+      assert.ok(await fileExists(`${dataDir}/organization/test_datafair_org1/${dirName}/${dataset.id}`), dirName)
+      assert.ok(!await fileExists(`${dataDir}/user/test_datafair_user1/${dirName}/${dataset.id}`), dirName)
     }
 
     // the draft is still usable under its new owner
-    const testUser1Org = await axiosAuth('test_user1@test.com', 'test_org1')
+    const testUser1Org = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
     assert.equal((await testUser1Org.get(`/api/v1/datasets/${dataset.id}/raw`, { params: { draft: true } })).status, 200)
     await testUser1Org.post(`/api/v1/datasets/${dataset.id}/draft`)
     dataset = await waitForFinalize(testUser1Org, dataset.id)

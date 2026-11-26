@@ -114,6 +114,6 @@ export const sniff = async (sample: any) => {
   const bestCombination = combinations.sort((a, b) => b.score - a.score)[0]
   // debug('combinations', combinations)
   const result = bestCombination.props
-  if (!result.labels || !result.labels.length) throw new Error('[noretry] Échec de l\'analyse du fichier tabulaire, pas de colonne détectée.')
+  if (!result.labels || !result.labels.length) throw new Error('[noretry] Failed to analyze the tabular file, no column detected.')
   return result
 }

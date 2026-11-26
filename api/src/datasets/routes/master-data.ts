@@ -15,7 +15,7 @@ export const registerMasterDataRoutes = (router: Router) => {
   router.get('/:datasetId/master-data/single-searchs/:singleSearchId', readDataset({ fillDescendants: true }), apiKeyMiddlewareRead, rateLimiting.middleware, permissions.middleware('readLines', 'read', 'readDataAPI'), async (req, res) => {
     const dataset = reqDataset(req)
     const singleSearch: any = dataset.masterData && dataset.masterData.singleSearchs && dataset.masterData.singleSearchs.find(ss => ss.id === req.params.singleSearchId)
-    if (!singleSearch) return res.status(404).send(`Recherche unitaire "${req.params.singleSearchId}" inconnue`)
+    if (!singleSearch) return res.status(404).send(req.__('errors.masterData.unknownSingleSearch', { id: String(req.params.singleSearchId) }))
 
     let esResponse: any
     let select = singleSearch.output.key

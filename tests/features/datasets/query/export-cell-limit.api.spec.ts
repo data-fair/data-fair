@@ -8,7 +8,7 @@ const require = createRequire(import.meta.url)
 const XLSX = require('@e965/xlsx')
 
 const MAX = 32767
-const testUser1 = await axiosAuth('test_user1@test.com')
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
 
 test.describe('xlsx export - cell limit', () => {
   test.beforeEach(async () => {

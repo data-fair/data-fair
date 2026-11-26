@@ -22,7 +22,6 @@ docs/superpowers/
 /tmp
 /coverage
 dev/profiles/
-/simulations/tmp/
 /benchmark/results/*.json
 /benchmark/.cache/
 /benchmark/capabilities-defaults/data/
@@ -31,7 +30,4 @@ dev/profiles/
 .playwright-mcp
 /superpowers/**/*.md
 /docs/superpowers/
-/simulations/tmp/
 
-# rendered from users.template.json by dev/render-users.mjs
-/dev/resources/users.json

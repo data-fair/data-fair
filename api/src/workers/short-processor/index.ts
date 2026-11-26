@@ -53,7 +53,7 @@ export const autoUpdate = resourceTask(async function (dataset: Dataset) {
     status: 'imported',
     draftReason: {
       key: 'file-updated' as const,
-      message: 'Nouveau fichier chargé sur un jeu de données existant',
+      message: 'New file uploaded on an existing dataset',
       validationMode: 'always' as const
     }
   }

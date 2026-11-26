@@ -7,7 +7,7 @@ import debugModule from 'debug'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import log from '@data-fair/lib-node/log.js'
 import { resourceLogFields } from '../../misc/utils/log-fields.ts'
-import { session, reqSession, reqSessionAuthenticated } from '@data-fair/lib-express'
+import { reqSession, reqSessionAuthenticated } from '@data-fair/lib-express'
 import config from '#config'
 import mongo from '#mongo'
 import { readDataset, reqDataset, reqDatasetFull, lockDataset, assertWriteBodyPermissions } from '../middlewares.ts'
@@ -25,7 +25,7 @@ import * as notifications from '../../misc/utils/notifications.ts'
 import * as webhooks from '../../misc/utils/webhooks.ts'
 import * as usersUtils from '../../misc/utils/users.ts'
 import i18n from 'i18n'
-import { type Locale } from '../../../i18n/utils.ts'
+import type { Locale } from '../../../i18n/utils.ts'
 import * as limits from '../../limits/service.ts'
 import { syncDataset as syncRemoteService } from '../../remote-services/service.ts'
 import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
@@ -58,7 +58,7 @@ const sendSchema = async (req: Request, res: Response, schema: any, contextualCa
     // keeps a column iff no line does, uniqueValues tells how many lines match at most: that is a
     // read of the lines, not of the schema
     if (filtered && !can('datasets', reqResource(req), 'readLines', reqSession(req), reqBypassPermissions(req))) {
-      throw httpError(403, 'Permission manquante pour l\'opération "readLines", nécessaire pour filtrer le schéma par des filtres sur les données.')
+      throw httpError(403, req.__('errors.permissions.readLinesForSchemaFilter'))
     }
     // contextual cardinality: the schema filters are applied first (without maxCardinality) to
     // bound the number of ES sub-aggregations, then the fields are filtered by their cardinality
@@ -290,8 +290,7 @@ export const registerMetadataRoutes = (router: Router) => {
 
         const draft = !!dataset.draftReason
         await notifications.send({
-          title: `Propriétés modifiées sur un ${draft ? 'brouillon de ' : ''}jeu de données`,
-          body: `${draft ? 'brouillon ' : ''}${dataset.title} (${dataset.slug}), ${Object.keys(patch)?.join(', ')}`,
+          ...notifications.eventTexts(`datasets.${draft ? 'draft-' : ''}patched-properties`, { title: dataset.title, full: `${dataset.title} (${dataset.slug})` }, { keys: Object.keys(patch).join(', ') }),
           topic: {
             key: `data-fair:dataset${draft ? '-draft' : ''}-patched-properties:${dataset.id}`
           },
@@ -310,12 +309,12 @@ export const registerMetadataRoutes = (router: Router) => {
     const dataset: any = reqDataset(req)
     usersUtils.normalizeOwner(req.body)
 
-    if (dataset.partOf) throw httpError(403, 'Un fragment ne peut pas changer de propriétaire, détachez-le d\'abord')
+    if (dataset.partOf) throw httpError(403, req.__('errors.fragments.noOwnerChange'))
 
     // integrity anchors are owner-scoped (data-fair/‹owner.type›-‹owner.id›/…): transferring
     // would orphan the anchor sequence. Deliberate simplification: disable integrity first.
     if (dataset.integrity?.active) {
-      return res.status(400).type('text/plain').send('Le contrôle d\'intégrité doit être désactivé avant un changement de propriétaire')
+      return res.status(400).type('text/plain').send(req.__('errors.datasets.integrityOwnerChange'))
     }
 
     const sessionState = reqSessionAuthenticated(req)
@@ -355,15 +354,7 @@ export const registerMetadataRoutes = (router: Router) => {
     }
 
     log.info(`dataset deleted ${dataset.slug} (${dataset.id})`, { code: 'df.datasets.delete', ...resourceLogFields('datasets', dataset) })
-    const sessionState = await session.req(req)
-    await notifications.send({
-      title: 'Jeu de données supprimé',
-      body: `${dataset.title} (${dataset.slug})`,
-      topic: {
-        key: `data-fair:dataset-delete:${dataset.id}`
-      },
-      sender: dataset.owner
-    }, sessionState)
+    await notifications.sendResourceEvent('datasets', datasetFull, reqSessionAuthenticated(req), 'delete')
 
     await syncRemoteService({ ...datasetFull, masterData: null })
     await updateTotalStorage(datasetFull.owner)

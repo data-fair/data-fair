@@ -17,7 +17,7 @@ test.describe('new application stepper', () => {
   })
 
   test('base app creation: full stepper flow', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/new-application', 'test_user1')
+    await goToWithAuth('/data-fair/new-application', 'test_datafair_user1')
 
     // Step 1: Type selection
     const baseAppCard = page.locator('.v-card-title', { hasText: 'Nouvelle configuration' })
@@ -45,10 +45,10 @@ test.describe('new application stepper', () => {
 
   test('copy creation: full stepper flow', async ({ page, goToWithAuth }) => {
     // Pre-create an application to copy
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     await ax.post('/api/v1/applications', { url: mockAppUrl('monapp1'), title: 'App To Copy E2E' })
 
-    await goToWithAuth('/data-fair/new-application', 'test_user1')
+    await goToWithAuth('/data-fair/new-application', 'test_datafair_user1')
 
     // Step 1: Select copy type
     const copyCard = page.locator('.v-card-title', { hasText: "Copie d'application" })
@@ -78,7 +78,7 @@ test.describe('new application stepper', () => {
   })
 
   test('step navigation: back button returns to step 1', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/new-application', 'test_user1')
+    await goToWithAuth('/data-fair/new-application', 'test_datafair_user1')
 
     // Step 1: Select base app type — advances to step 2 (base app selection)
     const baseAppCard = page.locator('.v-card-title', { hasText: 'Nouvelle configuration' })
@@ -94,7 +94,7 @@ test.describe('new application stepper', () => {
   })
 
   test('custom app message is visible on base app step', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/new-application', 'test_user1')
+    await goToWithAuth('/data-fair/new-application', 'test_datafair_user1')
 
     // Step 1: Select base app type
     const baseAppCard = page.locator('.v-card-title', { hasText: 'Nouvelle configuration' })

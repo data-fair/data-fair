@@ -27,6 +27,7 @@
 <script setup lang="ts">
 import capabilitiesSchema from '../../../../api/contract/capabilities.js'
 import { propertyTypes } from '~/utils/dataset'
+import { schemaText } from '~/utils/schema-i18n'
 import useStore from '~/composables/use-store'
 
 const props = defineProps<{
@@ -34,7 +35,7 @@ const props = defineProps<{
   parentSchema: any[]
 }>()
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 const propTypeTitle = usePropTypeTitle()
 const { vocabulary } = useStore()
 
@@ -111,7 +112,7 @@ const messages = computed(() => {
       if (!childHasCapability && parentHasCapability) {
         messages.warning.push(t('disabledConfig', {
           field: field.title || field['x-originalName'] || field.key,
-          param: capabilitiesProperties[key]?.title ?? key
+          param: schemaText(capabilitiesProperties[key], 'title', locale.value) ?? key
         }))
       }
     }
@@ -119,7 +120,7 @@ const messages = computed(() => {
       if (parentCapabilities[key] === false && childCapabilities[key] !== false) {
         messages.warning.push(t('unusedConfig', {
           field: field.title || field['x-originalName'] || field.key,
-          param: capabilitiesProperties[key]?.title ?? key
+          param: schemaText(capabilitiesProperties[key], 'title', locale.value) ?? key
         }))
       }
     }

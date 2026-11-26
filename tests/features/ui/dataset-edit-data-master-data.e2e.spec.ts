@@ -27,7 +27,7 @@ test.describe('dataset edit-data form: master-data validation + live extension p
   test.beforeAll(async () => {
     test.setTimeout(60000)
     await clean()
-    const ax = await axiosAuth('test_superadmin@test.com', undefined, true)
+    const ax = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
 
     // Master REST dataset: bulkSearch (used by extension) + singleSearch (used by autocomplete).
     await ax.put(`/api/v1/datasets/${masterId}`, {
@@ -101,7 +101,7 @@ test.describe('dataset edit-data form: master-data validation + live extension p
     test.setTimeout(60000)
 
     // ---- Part A: schema editor — validation dialog shows the configured master-data selector ----
-    await goToWithAuth(`/data-fair/dataset/${slaveId}`, 'test_superadmin')
+    await goToWithAuth(`/data-fair/dataset/${slaveId}`, 'test_datafair_superadmin')
     const structure = page.locator('#structure')
     await expect(structure).toBeVisible({ timeout: 15000 })
     await structure.getByRole('tab', { name: /Schéma|Schema/ }).click()
@@ -115,7 +115,7 @@ test.describe('dataset edit-data form: master-data validation + live extension p
     await expect(validationDialog.getByText('Recherche par SIRET').first()).toBeVisible({ timeout: 5000 })
 
     // ---- Part B: edit-data — autocomplete + live extension pre-fill in the add-line form ----
-    await goToWithAuth(`/data-fair/dataset/${slaveId}/edit-data`, 'test_superadmin')
+    await goToWithAuth(`/data-fair/dataset/${slaveId}/edit-data`, 'test_datafair_superadmin')
     const addLineBtn = page.getByTitle('Ajouter une ligne').first()
     await expect(addLineBtn).toBeVisible({ timeout: 15000 })
     await addLineBtn.click()

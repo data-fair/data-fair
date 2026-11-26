@@ -2,11 +2,14 @@ import { httpError } from '@data-fair/lib-utils/http-errors.js'
 import memoize from 'memoizee'
 import { getCsvSerializer } from '../utils/csv-jit.ts'
 import { getFlattenNoCache, isFlattenIdentity } from '../utils/flatten.ts'
-import capabilities from '../../../contract/capabilities.js'
+import { unknownFieldError, missingCapabilityError, fieldAction } from '../utils/field-errors.ts'
+import { i18nHttpError, i18nMessage, type I18nParams } from '../../misc/utils/i18n-errors.ts'
 
 export interface ExtractedError {
   message: string
   status: number
+  // the message is a key of api/i18n/messages (message is its English version), to be translated for a request
+  i18n?: { key: string, params: I18nParams }
 }
 
 /**
@@ -25,8 +28,13 @@ export const hasCapability = (prop: any, capability: string = 'index'): boolean 
 // field silently miss them. See docs/architecture/load-management.md.
 export const KEYWORD_IGNORE_ABOVE = 200
 
-// A property mapped as `{type:keyword, ignore_above:200}` by esProperty — a plain or uri-reference
-// string. Only these are exposed to the ignore_above truncation problem.
+// A string mapped as a keyword with its text sub-fields: every format but the dates
+// (plain, uri-reference, email, uri, time...).
+export const isKeywordString = (prop: any): boolean =>
+  prop?.type === 'string' && prop.format !== 'date' && prop.format !== 'date-time'
+
+// A property mapped as `{type:keyword, ignore_above:200}` by esProperty — a keyword string.
+// Only these are exposed to the ignore_above truncation problem.
 // Fields with `x-capabilities.nativeWildcard: true` are mapped as ES `wildcard` type and have no
 // ignore_above limit, so they are excluded.
 // Geometry-refersTo string fields are mapped as `{type:keyword, index:false}` (no ignore_above), so
@@ -34,7 +42,7 @@ export const KEYWORD_IGNORE_ABOVE = 200
 // nothing rather than 400.
 const GEOMETRY_REFERS_TO = 'https://purl.org/geojson/vocab#geometry'
 export const isLengthLimitedKeyword = (prop: any): boolean =>
-  prop?.type === 'string' && (prop.format === 'uri-reference' || !prop.format) &&
+  isKeywordString(prop) &&
   prop?.['x-capabilities']?.nativeWildcard !== true &&
   prop?.['x-refersTo'] !== GEOMETRY_REFERS_TO
 
@@ -74,7 +82,7 @@ export const resolveExistsFields = (prop: any, flagged: boolean): string[] => {
   const mainField = mainFieldAnswersExists(prop) ? [prop.key] : []
   if (mainField.length && !(isLengthLimitedKeyword(prop) && flagged)) return mainField
   if (hasCapability(prop, 'wildcard')) return [prop.key + '.wildcard']
-  // only plain/uri-reference strings carry the analyzed and case-insensitive sub-fields
+  // only keyword strings carry the analyzed and case-insensitive sub-fields
   if (!isLengthLimitedKeyword(prop)) return mainField
   const fields = [...mainField]
   if (hasCapability(prop, 'textStandard')) fields.push(prop.key + '.text_standard')
@@ -99,7 +107,7 @@ export const resolveRangeOrPrefixField = (prop: any, flagged: boolean): { field:
  */
 export const requiredCapability = (prop: any, filterName: string, capability: string = 'index'): void => {
   if (!hasCapability(prop, capability)) {
-    throw httpError(400, `Impossible d'appliquer un filtre ${filterName} sur le champ ${prop.key}. La fonctionnalité "${capabilities.properties[capability]?.title}" n'est pas activée dans la configuration technique du champ. ${columnOperationsHint(prop)}`)
+    throw missingCapabilityError('filterOperator', prop.key, capability, prop, { operator: filterName })
   }
 }
 
@@ -159,21 +167,15 @@ export const getColumnOperations = (prop: any): { filters: string[], sortable: b
   }
 }
 
-/**
- * A French, agent- and user-friendly sentence describing what a column supports.
- * Appended to capability-rejection errors so the caller can self-correct.
- * NOTE: allocates — call only on error paths.
- */
-export const columnOperationsHint = (prop: any): string => {
-  const ops = getColumnOperations(prop)
-  const filters = ops.filters.length ? ops.filters.join(', ') : 'aucun'
-  return `Opérations disponibles sur ce champ — filtres : ${filters} ; tri : ${ops.sortable ? 'oui' : 'non'} ; groupement : ${ops.groupable ? 'oui' : 'non'}.`
+export const tooLongError: ExtractedError = {
+  message: i18nMessage('errors.query.tooLong', {}, 'en'),
+  status: 504,
+  i18n: { key: 'errors.query.tooLong', params: {} }
 }
 
-export const tooLongError: ExtractedError = {
-  message: 'Cette requête est trop longue, son traitement a été interrompu.',
-  status: 504
-}
+// the http error of an extracted error, translated by the translateErrors middleware when it has a message key
+export const extractedHttpError = ({ message, status, i18n }: ExtractedError) =>
+  i18n ? i18nHttpError(status, i18n.key, i18n.params) : httpError(status, message)
 
 /**
  * Try to produce a somewhat readable error message from a structured error from elasticsearch
@@ -182,22 +184,29 @@ export const extractError = (err: any): ExtractedError => {
   // on a read path (see es/abort.js) the elasticsearch client throws RequestAbortedError when our
   // AbortSignal fires - the only thing that aborts it is the http client going away - and TimeoutError
   // when the per-request client timeout elapses
-  if (err) {
+  if (err == null) return { message: 'Unknown elasticsearch error', status: 500 }
+  if (typeof err === 'object') {
+    // the client also throws RequestAbortedError when it refuses a response above maxResponseSize:
+    // a real failure, not a client that went away
+    if (err.name === 'RequestAbortedError' && /bigger than the maximum allowed/.test(err.message ?? '')) {
+      return { message: 'The search response is too large, request fewer lines or fewer columns.', status: 500 }
+    }
     if (err.name === 'RequestAbortedError' || err.name === 'AbortError') {
       // 499 = "client closed request" (nginx convention) - the http response, if any, won't reach
       // anyone; callers must treat this as a quiet no-op (no error log, no error metric)
-      return { message: 'Requête interrompue (client déconnecté).', status: 499 }
+      return { message: 'Request aborted (client disconnected).', status: 499 }
     }
     if (err.name === 'TimeoutError') return tooLongError
   }
-  const status = err.status ?? err.statusCode ?? 500
+  const status = err.status ?? err.statusCode ?? err.meta?.statusCode ?? 500
   if (typeof err === 'string') return { message: err, status }
+  // an i18n http error thrown by our own code (a query builder...) keeps its message key
+  if (err.i18n) return { message: err.message, status, i18n: err.i18n }
   let errBody = (err.body && err.body.error) || (err.meta && err.meta.body && err.meta.body.error) || err.error
+  // a plain string error body ("no handler found for uri...")
+  if (typeof errBody === 'string') return { message: errBody, status }
   if (!errBody && !!err.reason) errBody = err
-  if (!errBody) {
-    if (err.message) return { message: err.message, status }
-    else return { message: JSON.stringify(err), status }
-  }
+  if (!errBody) return { message: fallbackErrorMessage(err), status }
   const parts: string[] = []
   if (errBody.reason) {
     parts.push(errBody.reason)
@@ -223,8 +232,36 @@ export const extractError = (err: any): ExtractedError => {
   if (parts.includes('Time exceeded')) {
     return tooLongError
   }
+  if (!parts.length) parts.push(errBody.type ?? fallbackErrorMessage(err))
   return { message: parts.join(' - '), status }
 }
+
+// the message of an error without a usable elasticsearch error body - never empty
+const fallbackErrorMessage = (err: any): string => {
+  // 'Response Error' is the client's generic message for a response without error body (empty 413,
+  // proxy page...): its status says more
+  if (err.message && err.message !== 'Response Error') return err.message
+  const statusCode = err.statusCode ?? err.meta?.statusCode
+  if (statusCode) return `elasticsearch responded with status ${statusCode}`
+  const json = JSON.stringify(err)
+  return json && json !== '{}' ? json : 'Unknown elasticsearch error'
+}
+
+/**
+ * The reason of a failed elasticsearch write request (index creation, bulk indexing...).
+ * extractError words a timeout or an abort for the search request of a user ("This request is too
+ * long...", "client disconnected"), which says nothing true about a write: keep the client message.
+ */
+export const writeErrorReason = (err: any): string => {
+  if (err?.name === 'TimeoutError' || err?.name === 'RequestAbortedError') return err.message
+  return extractError(err).message
+}
+
+// The error a failed bulk indexing request ends the indexing task with. It keeps the elasticsearch
+// reason (read-only index after the disk flood-stage watermark, circuit breaker, unreachable
+// node...): the journal is the only place a dataset owner reads it.
+export const bulkIndexingError = (err: any) =>
+  new Error(`Failure while indexing a batch of data: ${writeErrorReason(err)}`, { cause: err })
 
 // The mapping-emission shape esProperty / buildIndexMappings produce, persisted per dataset as
 // `_indexShape` when its index is (re)built. Absent = legacy (uniform polarity).
@@ -267,7 +304,7 @@ const DUMMY_ANALYZERS = { search: '', index: '' }
 // Legacy shape: `analyzers.search` alone is `.text`'s analyzer, as `defaultAnalyzer` was.
 export const esProperty = (prop: any, analyzers: { search: string, index: string }, shape: IndexShape = NEW_INDEX_SHAPE): any => {
   const capabilities = prop['x-capabilities'] || {}
-  const isFullTextString = prop.type === 'string' && (prop.format === 'uri-reference' || !prop.format)
+  const isFullTextString = isKeywordString(prop)
   // Add inner text field to almost everybody so that even dates, numbers, etc can be matched textually as well as exactly.
   // Emission rules for `.text_standard`: dates keep it everywhere (year search); numeric columns lose it
   // under noNumericText (their `q` matching uses the main long/double field); full-text strings lose it
@@ -412,10 +449,10 @@ export const isMetricAggregatable = (prop: any): boolean => {
 export const assertMetricAccepted = (field: any, metric: string): void => {
   const acceptedAggs = acceptedMetricAggsByType[getMetricType(field)]
   if (!acceptedAggs?.includes(metric)) {
-    throw httpError(400, `Impossible de calculer une métrique sur le champ ${field.key}. La métrique "${metric}", n'est pas supportée pour ce type de champ.`)
+    throw i18nHttpError(400, 'errors.fields.metricNotSupported', { action: fieldAction('metric', field.key), metric })
   }
   if (!isMetricAggregatable(field)) {
-    throw httpError(400, `Impossible de calculer une métrique sur le champ ${field.key}. Ce champ ne supporte pas les agrégations de métriques.`)
+    throw i18nHttpError(400, 'errors.fields.noMetricAgg', { action: fieldAction('metric', field.key) })
   }
 }
 
@@ -428,19 +465,19 @@ export const getSimpleMetricsFields = (dataset: any, query: Record<string, any>)
   const globalMetrics: string[] | undefined = query.metrics ? String(query.metrics).split(',') : undefined
   if (globalMetrics) {
     for (const metric of globalMetrics) {
-      if (!acceptedMetricAggs.includes(metric)) throw httpError(400, `La métrique "${metric}" n'existe pas.`)
+      if (!acceptedMetricAggs.includes(metric)) throw i18nHttpError(400, 'errors.aggs.unknownMetric', { metric })
     }
   }
   if (query.fields) {
     const fields: string[] = String(query.fields).split(',')
     for (const key of fields) {
       const field = dataset.schema.find((f: any) => f.key === key)
-      if (!field) throw httpError(400, `Impossible de calculer des métriques sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+      if (!field) throw unknownFieldError('metric', key)
       if (!hasCapability(field, 'values')) {
-        throw httpError(400, `Impossible de calculer une métrique sur le champ ${key}. La fonctionnalité "${capabilities.properties.values.title}" n'est pas activée dans la configuration technique du champ. ${columnOperationsHint(field)}`)
+        throw missingCapabilityError('metric', key, 'values', field)
       }
       if (!isMetricAggregatable(field)) {
-        throw httpError(400, `Impossible de calculer des métriques sur le champ ${key}. Ce champ ne supporte pas les agrégations de métriques.`)
+        throw i18nHttpError(400, 'errors.fields.noMetricAgg', { action: fieldAction('metric', key) })
       }
       if (globalMetrics) {
         for (const metric of globalMetrics) assertMetricAccepted(field, metric)
@@ -696,7 +733,7 @@ export const buildQClauses = (
         should.push({ simple_query_string: { query: `${q}*`, fields: prefixFields, ...sqsOptions } })
       }
       if (qWildcardFields.length) {
-        should.push({ query_string: { query: `*${q}*`, fields: qWildcardFields, ...sqsOptions } })
+        should.push({ query_string: { query: `*${escapeFilter(q)}*`, fields: qWildcardFields, ...sqsOptions } })
       }
     }
     // if the user submitted a multi word query and didn't use quotes
@@ -781,7 +818,7 @@ export const buildQClauses = (
     if (filterFields.length) {
       const readings = andReadings(userWildcards ? q : `${q}*`, filterFields, withLenient)
       if (qWildcardFields.length && !userWildcards) {
-        readings.push({ query_string: { query: `*${q}*`, fields: qWildcardFields, ...sqsOptions } })
+        readings.push({ query_string: { query: `*${escapeFilter(q)}*`, fields: qWildcardFields, ...sqsOptions } })
       }
       return { bool: { must: [scored], filter: [anyReading(readings)] } }
     }
@@ -873,6 +910,13 @@ export const lineBytes = (item: Record<string, any>, spec: LineBytesSpec): numbe
  * Escape special Lucene query characters in a filter value
  * cf https://github.com/joeybaker/lucene-escape-query/blob/master/index.js
  */
+// lucene-query-parser does not accept escaped quotes inside phrases: drop them before parsing a qs.
+// Escape pairs are consumed left to right, so that an escaped backslash before a quote ("a\\")
+// stays an escaped backslash and the quote still closes the phrase, as Elasticsearch reads it
+export const qsForParser = (qs: string): string => {
+  return qs.replace(/\\(["\\])/g, (pair: string, char: string) => char === '"' ? '' : pair)
+}
+
 export const escapeFilter = (val: any): any => {
   if (typeof val !== 'string') return val
   return [].map.call(val, (char: string) => {
@@ -1036,12 +1080,12 @@ export const resolveWordsAggField = (dataset: any, query: Record<string, any>): 
     const shapes = (dataset.descendants ?? []).map((d: QueryableDescendant) => d._indexShape?.wordAggField === true)
     if (shapes.length && shapes.every(Boolean)) return query.field + '.words'
     if (shapes.some(Boolean)) {
-      throw httpError(400, 'Cette agrégation est indisponible tant que les jeux enfants ne sont pas tous ré-indexés dans un format homogène.')
+      throw i18nHttpError(400, 'errors.aggs.mixedShapes')
     }
     return query.analysis === 'standard' ? query.field + '.text_standard' : query.field + '.text'
   }
   if (dataset._indexShape?.wordAggField) {
-    if (query.analysis === 'standard') throw httpError(400, 'Le paramètre analysis=standard n\'est plus disponible sur ce jeu de données, l\'analyse suit la langue de la colonne.')
+    if (query.analysis === 'standard') throw i18nHttpError(400, 'errors.aggs.analysisStandardRetired')
     return query.field + '.words'
   }
   return query.analysis === 'standard' ? query.field + '.text_standard' : query.field + '.text'
@@ -1142,7 +1186,7 @@ export const parseQMode = (raw: string | undefined, dflt: string): QMode => {
   const value = raw ?? dflt
   if (value === 'or' || value === 'simple') return 'simple'
   if (value === 'complete' || value === 'and' || value === 'adapt') return value
-  throw httpError(400, `q_mode invalide "${value}" — valeurs acceptées : simple (ou or), complete, and, adapt`)
+  throw i18nHttpError(400, 'errors.query.invalidQMode', { value })
 }
 
 /**
@@ -1155,9 +1199,9 @@ export const parseQIgnored = (q: string, raw: string): string[] => {
   const qWords = new Set(q.split(/\s+/))
   const words = String(raw).split(',').map(word => word.trim()).filter(Boolean)
   for (const word of words) {
-    if (!qWords.has(word)) throw httpError(400, `Le paramètre q_ignored contient "${word}" qui n'est pas un mot de la recherche q.`)
+    if (!qWords.has(word)) throw i18nHttpError(400, 'errors.query.qIgnoredNotInQ', { word })
   }
-  if (new Set(words).size >= qWords.size) throw httpError(400, 'Le paramètre q_ignored ne peut pas couvrir tous les mots de la recherche q.')
+  if (new Set(words).size >= qWords.size) throw i18nHttpError(400, 'errors.query.qIgnoredAll')
   return words
 }
 

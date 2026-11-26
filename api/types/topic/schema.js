@@ -30,9 +30,9 @@ export default {
       'x-i18n-title': {
         fr: 'Icône'
       },
-      description: "Il est possible de consulter plus facilement la liste des icônes disponibles sur <a href='https://pictogrammers.com/library/mdi/' target='_blank'>ce site </a>.<br>Commencez à taper pour rechercher dans la collection complète d'icônes. Seuls quelques icônes sont chargées initialement pour de meilleures performances.",
+      description: "You can easily browse the list of available icons on <a href='https://pictogrammers.com/library/mdi/' target='_blank'>this website</a>.<br>Start typing to search through the complete collection of icons. Only a few icons are loaded initially for better performance.",
       'x-i18n-description': {
-        en: "You can easily browse the list of available icons on this <a href='https://pictogrammers.com/library/mdi/' target='_blank'>this website</a>.<br>Start typing to search through the complete collection of icons. Only a few icons are loaded initially for better performance.",
+        fr: "Il est possible de consulter plus facilement la liste des icônes disponibles sur <a href='https://pictogrammers.com/library/mdi/' target='_blank'>ce site</a>.<br>Commencez à taper pour rechercher dans la collection complète d'icônes. Seules quelques icônes sont chargées initialement pour de meilleures performances."
       },
       layout: {
         getItems: {

@@ -11,7 +11,7 @@ import { load, type Tool } from '@data-fair/openapi-mcp'
 import { axiosAuth, baseURL, clean, checkPendingTasks } from '../../support/axios.ts'
 import { sendDataset, waitForFinalize, doAndWaitForFinalize, getRawDataset } from '../../support/workers.ts'
 
-const testUser1 = await axiosAuth('test_user1@test.com')
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
 const ctx = { headers: { cookie: testUser1.cookieJar.getCookieStringSync(baseURL) } }
 
 const dataset1 = readFileSync('./tests/resources/datasets/dataset1.csv')
@@ -69,7 +69,7 @@ test.describe('file tools against the API', () => {
     assert.equal(dataset.count, 2)
 
     dataset = await doAndWaitForFinalize(testUser1, id, async () => {
-      const replaced = await tool('replace_dataset_file').execute({ datasetId: id, file: fileUrl('dataset1-more.csv', dataset1More) }, ctx)
+      const replaced = await tool('replace_dataset_file').execute({ datasetId: id, datasetTitle: 'Agent upload', file: fileUrl('dataset1-more.csv', dataset1More) }, ctx)
       assert.ok(!replaced.isError, replaced.text)
     })
     assert.equal(dataset.file.name, 'dataset1-more.csv')
@@ -82,15 +82,28 @@ test.describe('file tools against the API', () => {
 
   test('a replacement that breaks the columns stays a draft for a person to validate', async () => {
     test.setTimeout(60_000)
-    const { id } = await sendDataset('datasets/dataset1.csv', testUser1)
+    const { id, title } = await sendDataset('datasets/dataset1.csv', testUser1)
     await doAndWaitForFinalize(testUser1, id, async () => {
-      const replaced = await tool('replace_dataset_file').execute({ datasetId: id, file: fileUrl('dataset2.csv', dataset2) }, ctx)
+      const replaced = await tool('replace_dataset_file').execute({ datasetId: id, datasetTitle: title, file: fileUrl('dataset2.csv', dataset2) }, ctx)
       assert.ok(!replaced.isError, replaced.text)
     })
     const raw = await getRawDataset(id)
     assert.equal(raw.file.name, 'dataset1.csv', 'the current data stays online')
     assert.equal(raw.count, 2)
     assert.equal(raw.draft.file.name, 'dataset2.csv', 'the new file waits as a draft')
+  })
+
+  test('a write naming a dataset by id is refused unless its title is that dataset\'s', async () => {
+    const { id, title } = await sendDataset('datasets/dataset1.csv', testUser1)
+    const update = tool('update_dataset')
+    assert.deepEqual(update.inputSchema.properties.datasetTitle['x-checked'], { against: 'datasetId', field: '/title' })
+    const refused = await update.execute({ datasetId: id, datasetTitle: 'Another dataset', body: { description: 'changed' } }, ctx)
+    assert.equal(refused.isError, true)
+    assert.match(refused.text, new RegExp(`^"datasetId" \\(${id}\\) is ${JSON.stringify(title)}, not "Another dataset"; nothing was sent\\.`))
+    assert.equal((await testUser1.get(`/api/v1/datasets/${id}`)).data.description ?? '', '')
+    const applied = await update.execute({ datasetId: id, datasetTitle: title, body: { description: 'changed' } }, ctx)
+    assert.ok(!applied.isError, applied.text)
+    assert.equal((await testUser1.get(`/api/v1/datasets/${id}`)).data.description, 'changed')
   })
 
   test('download and export links serve the data to the caller session, and only to it', async () => {
@@ -111,7 +124,8 @@ test.describe('file tools against the API', () => {
 
     const exported = await tool('export_data').execute({ datasetId: id, select: ['id', 'nb'] }, ctx)
     assert.equal(exported.resourceLink!.mimeType, 'text/csv')
-    assert.equal(exported.resourceLink!.name, `${id}-lines.csv`)
+    // openapi-mcp strips leading dashes from link names, and random ids can start with one
+    assert.equal(exported.resourceLink!.name, `${id.replace(/^-+/, '')}-lines.csv`)
     res = await fetch(exported.resourceLink!.uri, { headers: ctx.headers })
     assert.equal(res.status, 200)
     assert.match(res.headers.get('content-type') ?? '', /text\/csv/)

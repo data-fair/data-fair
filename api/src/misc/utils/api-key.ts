@@ -4,10 +4,10 @@ import crypto from 'crypto'
 import config from '#config'
 import mongo from '#mongo'
 import memoize from 'memoizee'
-import { httpError } from '@data-fair/lib-utils/http-errors.js'
-import { type RequestWithResource } from '#types'
+import { i18nHttpError } from './i18n-errors.ts'
+import type { RequestWithResource } from '#types'
 import { type OrganizationMembership, type SessionState, setReqSession, type Account, assertReqInternal } from '@data-fair/lib-express'
-import { type NextFunction, type Response, type Request } from 'express'
+import type { NextFunction, Response, Request } from 'express'
 import { isDepartmentSettings, isUserSettings } from '../../settings/operations.ts'
 import { reqResourceOptional, setReqBypassPermissions, setReqApiKeyRef } from './req-context.ts'
 import dayjs from 'dayjs'
@@ -49,11 +49,11 @@ export const readApiKey = async (rawApiKey: string, scopes: string[], asAccount?
     hash.update(rawApiKey)
     const hashedApiKey = hash.digest('hex')
     const settings = await findApiKeySettings(hashedApiKey)
-    if (!settings) throw httpError(401, 'Cette clé d\'API est inconnue.')
+    if (!settings) throw i18nHttpError(401, 'errors.apiKeys.unknown')
     const apiKey = settings.apiKeys?.[0]
-    if (!apiKey) throw httpError(401, 'Cette clé d\'API est inconnue.')
+    if (!apiKey) throw i18nHttpError(401, 'errors.apiKeys.unknown')
     if (apiKey.expireAt && apiKey.expireAt < dayjs().format('YYYY-MM-DD')) {
-      throw httpError(403, 'Cette clé d\'API est expirée.')
+      throw i18nHttpError(403, 'errors.apiKeys.expired')
     }
     // a super-admin key (adminMode, impersonating an account or not) is only accepted from inside the infrastructure
     if (apiKey.adminMode && req) assertReqInternal(req)
@@ -83,11 +83,11 @@ export const readApiKey = async (rawApiKey: string, scopes: string[], asAccount?
       return sessionState
     }
     if (!apiKey.scopes.some(scope => scopes.includes(scope))) {
-      throw httpError(403, `Cette clé d'API n'a pas la portée nécessaire (attendu=${scopes.join(',')} - reçu=${apiKey.scopes.join(',')}).`)
+      throw i18nHttpError(403, 'errors.apiKeys.missingScope', { expected: scopes.join(','), received: apiKey.scopes.join(',') })
     }
 
     if (apiKey.adminMode && apiKey.asAccount) {
-      if (!asAccount) throw httpError(403, 'Cette clé d\'API requiert de spécifier le compte à incarner')
+      if (!asAccount) throw i18nHttpError(403, 'errors.apiKeys.asAccountRequired')
       let account: Account
       if (typeof asAccount === 'string') {
         account = JSON.parse(asAccount) as Account
@@ -124,7 +124,7 @@ export const readApiKey = async (rawApiKey: string, scopes: string[], asAccount?
         sessionState.accountRole = userOrg.role
       }
     } else {
-      if (asAccount) throw httpError(403, 'Cette clé d\'API ne supporte pas de spécifier le compte à incarner')
+      if (asAccount) throw i18nHttpError(403, 'errors.apiKeys.asAccountUnsupported')
       if (isUserSettings(settings)) {
         sessionState.user = {
           id: settings.id,

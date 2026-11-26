@@ -6,8 +6,8 @@ import { axios, axiosAuth, clean, checkPendingTasks, mockAppUrl } from '../../su
 import { setupMockRoute, clearMockRoutes } from '../../support/workers.ts'
 
 const anonymous = axios()
-const testSuperadmin = await axiosAuth('test_superadmin@test.com', undefined, true)
-const testUser3 = await axiosAuth('test_user3@test.com')
+const testSuperadmin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
+const testUser3 = await axiosAuth('test_datafair_user3@test.com')
 
 const geocoderApi = JSON.parse(readFileSync(path.resolve('./tests/resources/geocoder-api.json'), 'utf8'))
 
@@ -31,7 +31,8 @@ test.describe('remote-services', () => {
   test('Post a minimal external API, read it, update it and delete it', async () => {
     const ax = testSuperadmin
     geocoderApi.info['x-api-id'] = 'geocoder2'
-    let res = await ax.post('/api/v1/remote-services', { apiDoc: geocoderApi, apiKey: { in: 'header', name: 'x-apiKey' }, public: true })
+    // under the suite's prefix, so that the cleanup removes it if the test stops halfway
+    let res = await ax.post('/api/v1/remote-services', { id: 'test_datafair_geocoder2', apiDoc: geocoderApi, apiKey: { in: 'header', name: 'x-apiKey' }, public: true })
     assert.equal(res.status, 201)
     const eaId = res.data.id
     res = await ax.get('/api/v1/remote-services')

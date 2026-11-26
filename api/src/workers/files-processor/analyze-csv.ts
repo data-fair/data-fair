@@ -19,14 +19,14 @@ export default async function (dataset: FileDataset) {
 
   debug('extract file sample')
   const fileSample = await filesStorage.fileSample(datasetUtils.filePath(dataset))
-  if (!fileSample) throw httpError(400, '[noretry] Aucun contenu n\'a pu être lu dans le fichier tabulaire (fichier vide,...)')
+  if (!fileSample) throw httpError(400, '[noretry] No content could be read from the tabular file (empty file,...)')
   let decodedSample
   try {
     decodedSample = (dataset.file.encoding === 'UTF-8' || !dataset.file.encoding)
       ? fileSample.toString()
       : iconv.decode(fileSample, dataset.file.encoding)
   } catch (err) {
-    throw httpError(400, `[noretry] Échec de décodage du fichier selon l'encodage détecté ${dataset.file.encoding}`)
+    throw httpError(400, `[noretry] Failed to decode the file with the detected encoding ${dataset.file.encoding}`)
   }
   decodedSample = outOfCharacter.replace(decodedSample)
 
@@ -43,7 +43,7 @@ export default async function (dataset: FileDataset) {
 
   const keys = new Set<string>([])
   for (const field of dataset.file.schema) {
-    if (keys.has(field.key)) throw httpError(400, `[noretry] Échec de l'analyse du fichier tabulaire, il contient plusieurs fois la colonne "${field.key}".`)
+    if (keys.has(field.key)) throw httpError(400, `[noretry] Failed to analyze the tabular file, it contains the column "${field.key}" several times.`)
     keys.add(field.key)
   }
 
@@ -70,7 +70,7 @@ export default async function (dataset: FileDataset) {
       Object.assign(fileField, fieldsSniffer.sniff([...sampleValues[field]], attachments, existingField))
     } else {
       if (sampleValues[field].size) {
-        throw httpError(400, `[noretry] Champ ${field} présent dans la donnée mais absent de l'analyse initiale du fichier`)
+        throw httpError(400, `[noretry] Field ${field} is present in the data but missing from the initial analysis of the file`)
       }
     }
   }
@@ -84,12 +84,12 @@ export default async function (dataset: FileDataset) {
     // designate the column before re-uploading (re-uploading first would just drop them again).
     await journals.log('datasets', dataset, {
       type: 'error',
-      data: `Des pièces jointes ont été chargées mais aucune colonne n'a pu être associée automatiquement aux fichiers ; elles n'ont donc pas été conservées. Attribuez le concept « Document Numérique Attaché » à la colonne contenant les chemins vers les pièces jointes, puis rechargez les pièces jointes. Exemples de fichiers attendus : ${attachments.slice(0, 3).join(', ')}.`
+      data: `Attachments were uploaded but no column could be automatically matched to the files, so they were not kept. Assign the "Attachment" concept to the column containing the paths to the attachments, then upload the attachments again. Examples of expected files: ${attachments.slice(0, 3).join(', ')}.`
     } as Event)
   }
   const emptyCols = dataset.file.schema.filter(p => p.type === 'empty')
   if (emptyCols.length) {
-    const errorMessage = `le fichier contient une ou plusieurs colonnes vides qui seront ignorées : ${emptyCols.map(c => c['x-originalName'] || c.key).join(', ')}`
+    const errorMessage = `the file contains one or more empty columns that will be ignored: ${emptyCols.map(c => c['x-originalName'] || c.key).join(', ')}`
     await journals.log('datasets', dataset, {
       type: 'error',
       data: errorMessage

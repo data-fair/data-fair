@@ -4,9 +4,9 @@ import FormData from 'form-data'
 import { axiosAuth, anonymousAx, clean, checkPendingTasks, config } from '../../support/axios.ts'
 import { sendDataset, waitForFinalize } from '../../support/workers.ts'
 
-const testUser1Org = await axiosAuth('test_user1@test.com', 'test_org1')   // admin of test_org1
-const testUser5Org = await axiosAuth('test_user5@test.com', 'test_org1')   // contrib of test_org1
-const testUser3 = await axiosAuth('test_user3@test.com')                   // external to test_org1
+const testUser1Org = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')   // admin of test_datafair_org1
+const testUser5Org = await axiosAuth('test_datafair_user5@test.com', 'test_datafair_org1')   // contrib of test_datafair_org1
+const testUser3 = await axiosAuth('test_datafair_user3@test.com')                   // external to test_datafair_org1
 
 const createVirtual = async (ax = testUser1Org, body: any = {}) => {
   const res = await ax.post('/api/v1/datasets', { isVirtual: true, title: 'a virtual dataset', ...body })
@@ -110,7 +110,7 @@ test.describe('dataset fragments', () => {
     // personal session can read it, otherwise the refusal is the 404 of an unreadable parent
     const parentPermissions = (await testUser1Org.get(`/api/v1/datasets/${virtual.id}/permissions`)).data
     await testUser1Org.put(`/api/v1/datasets/${virtual.id}/permissions`, [...parentPermissions, { classes: ['list', 'read'] }])
-    const testUser1 = await axiosAuth('test_user1@test.com')
+    const testUser1 = await axiosAuth('test_datafair_user1@test.com')
     await assert.rejects(testUser1.post('/api/v1/datasets', { isRest: true, title: 'f', partOf: { type: 'dataset', id: virtual.id } }), { status: 400 })
     // parent is itself a fragment
     const fragment = (await testUser1Org.post('/api/v1/datasets', { isVirtual: true, title: 'f', partOf: { type: 'dataset', id: virtual.id } })).data
@@ -140,7 +140,7 @@ test.describe('dataset fragments', () => {
     await testUser1Org.patch(`/api/v1/datasets/${virtual.id}`, { virtual: { children: [fragment.id] }, schema: [{ key: 'id' }] })
     await waitForFinalize(testUser1Org, virtual.id)
     const parentPermissions = (await testUser1Org.get(`/api/v1/datasets/${virtual.id}/permissions`)).data
-    await testUser1Org.put(`/api/v1/datasets/${virtual.id}/permissions`, [...parentPermissions, { type: 'user', id: 'test_user3', name: 'Test User3', classes: ['list', 'read'] }])
+    await testUser1Org.put(`/api/v1/datasets/${virtual.id}/permissions`, [...parentPermissions, { type: 'user', id: 'test_datafair_user3', name: 'Test User3', classes: ['list', 'read'] }])
     const lines = (await testUser3.get(`/api/v1/datasets/${virtual.id}/lines`)).data
     assert.ok(lines.total > 0)
     await assert.rejects(testUser3.get(`/api/v1/datasets/${fragment.id}`), { status: 403 })
@@ -151,10 +151,10 @@ test.describe('dataset fragments', () => {
     const virtual = await createVirtual()
     const fragment = await sendDataset('datasets/dataset1.csv', testUser1Org, {}, { partOf: { type: 'dataset', id: virtual.id } })
     const parentPermissions = (await testUser1Org.get(`/api/v1/datasets/${virtual.id}/permissions`)).data
-    await testUser1Org.put(`/api/v1/datasets/${virtual.id}/permissions`, [...parentPermissions, { type: 'user', id: 'test_user3', name: 'Test User3', classes: ['write'] }])
+    await testUser1Org.put(`/api/v1/datasets/${virtual.id}/permissions`, [...parentPermissions, { type: 'user', id: 'test_datafair_user3', name: 'Test User3', classes: ['write'] }])
     const res = await testUser3.get(`/api/v1/datasets/${fragment.id}`)
     assert.ok(res.data.userPermissions.includes('readLines'))
-    await testUser3.patch(`/api/v1/datasets/${fragment.id}`, { title: 'renamed by test_user3' })
+    await testUser3.patch(`/api/v1/datasets/${fragment.id}`, { title: 'renamed by test_datafair_user3' })
   })
 
   test('a public meta-only dataset makes its fragments publicly readable, without listing them', async () => {
@@ -171,7 +171,7 @@ test.describe('dataset fragments', () => {
     assert.deepEqual((await anonymousAx.get('/api/v1/datasets', { params: { partOf: `dataset:${metaOnly.id}` } })).data.results.map((d: any) => d.id), [fragment.id])
 
     // only whole classes pass: a detailed read entry on the meta-only gives nothing on the fragment
-    await testUser1Org.put(`/api/v1/datasets/${metaOnly.id}/permissions`, [...parentPermissions, { type: 'user', id: 'test_user3', name: 'Test User3', operations: ['readDescription'] }])
+    await testUser1Org.put(`/api/v1/datasets/${metaOnly.id}/permissions`, [...parentPermissions, { type: 'user', id: 'test_datafair_user3', name: 'Test User3', operations: ['readDescription'] }])
     await assert.rejects(anonymousAx.get(`/api/v1/datasets/${fragment.id}`), { status: 403 })
     await assert.rejects(testUser3.get(`/api/v1/datasets/${fragment.id}`), { status: 403 })
   })
@@ -191,32 +191,32 @@ test.describe('dataset fragments', () => {
     // a fragment cannot be published nor have its ACL / owner changed
     await assert.rejects(testUser1Org.patch(`/api/v1/datasets/${plain.id}`, { publicationSites: [] }), { status: 400 })
     await assert.rejects(testUser1Org.put(`/api/v1/datasets/${plain.id}/permissions`, []), { status: 403 })
-    await assert.rejects(testUser1Org.put(`/api/v1/datasets/${plain.id}/owner`, { type: 'user', id: 'test_user1', name: 'Test User1' }), { status: 403 })
+    await assert.rejects(testUser1Org.put(`/api/v1/datasets/${plain.id}/owner`, { type: 'user', id: 'test_datafair_user1', name: 'Test User1' }), { status: 403 })
     // detach keeps the ACL as it is and re-opens ACL edition
     res = await testUser1Org.patch(`/api/v1/datasets/${plain.id}`, { partOf: null })
     assert.equal(res.data.partOf, undefined)
     permissions = (await testUser1Org.get(`/api/v1/datasets/${plain.id}/permissions`)).data
     assert.deepEqual(permissions[0].classes, ['list', 'read', 'readAdvanced', 'write'])
     await testUser1Org.put(`/api/v1/datasets/${plain.id}/permissions`, [])
-    await testUser1Org.put(`/api/v1/datasets/${virtual.id}/owner`, { type: 'user', id: 'test_user1', name: 'Test User1' })
+    await testUser1Org.put(`/api/v1/datasets/${virtual.id}/owner`, { type: 'user', id: 'test_datafair_user1', name: 'Test User1' })
   })
 
   test('changing the owner of a virtual dataset moves its fragments too', async () => {
     const virtual = await createVirtual()
     const fragment = await sendDataset('datasets/dataset1.csv', testUser1Org, {}, { partOf: { type: 'dataset', id: virtual.id } })
-    const newOwner = { type: 'user', id: 'test_user1', name: 'Test User1' }
+    const newOwner = { type: 'user', id: 'test_datafair_user1', name: 'Test User1' }
 
     // the quota is checked for the whole family: the parent alone would fit, not with its fragment
-    await testUser1Org.post('/api/v1/limits/user/test_user1', { nb_datasets: { limit: 1, consumption: 0 }, lastUpdate: new Date().toISOString() }, { params: { key: config.secretKeys.limits } })
+    await testUser1Org.post('/api/v1/limits/user/test_datafair_user1', { nb_datasets: { limit: 1, consumption: 0 }, lastUpdate: new Date().toISOString() }, { params: { key: config.secretKeys.limits } })
     await assert.rejects(testUser1Org.put(`/api/v1/datasets/${virtual.id}/owner`, newOwner), { status: 429 })
     assert.equal((await testUser1Org.get(`/api/v1/datasets/${fragment.id}`)).data.owner.type, 'organization')
-    await testUser1Org.post('/api/v1/limits/user/test_user1', { nb_datasets: { limit: 10, consumption: 0 }, lastUpdate: new Date().toISOString() }, { params: { key: config.secretKeys.limits } })
+    await testUser1Org.post('/api/v1/limits/user/test_datafair_user1', { nb_datasets: { limit: 10, consumption: 0 }, lastUpdate: new Date().toISOString() }, { params: { key: config.secretKeys.limits } })
 
     await testUser1Org.put(`/api/v1/datasets/${virtual.id}/owner`, newOwner)
-    const testUser1 = await axiosAuth('test_user1@test.com')
+    const testUser1 = await axiosAuth('test_datafair_user1@test.com')
     const moved = (await testUser1.get(`/api/v1/datasets/${fragment.id}`)).data
     assert.equal(moved.owner.type, 'user')
-    assert.equal(moved.owner.id, 'test_user1')
+    assert.equal(moved.owner.id, 'test_datafair_user1')
     assert.deepEqual(moved.partOf, { type: 'dataset', id: virtual.id })
     // the ACL is still derived from the parent's, which a user-owned resource resets to nothing
     assert.deepEqual((await testUser1.get(`/api/v1/datasets/${virtual.id}/permissions`)).data, [])

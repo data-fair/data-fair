@@ -5,6 +5,7 @@ import { requiredCapability } from '../../datasets/es/operations.ts'
 import dayjs from 'dayjs'
 import timezone from 'dayjs/plugin/timezone.js'
 import utc from 'dayjs/plugin/utc.js'
+import { unknownFieldError } from '../../datasets/utils/field-errors.ts'
 
 dayjs.extend(timezone)
 dayjs.extend(utc)
@@ -27,7 +28,7 @@ Refine
 RefineExpression
   = key:FieldName _ ":" _ value:RefineValue {
     const prop = options.dataset.schema.find(p => p.key === key)
-    if (!prop) throw httpError(400, `Impossible d'appliquer un filtre sur le champ ${key}, il n'existe pas dans le jeu de données.`)
+    if (!prop) throw unknownFieldError('filter', key)
     if (prop.type === 'string' && prop.format === 'date-time' && value.format) {
       const date = dayjs.tz(value.value, value.format, options.timezone ?? 'UTC')
       const startDate = date.toISOString()

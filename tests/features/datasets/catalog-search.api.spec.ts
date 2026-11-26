@@ -5,7 +5,7 @@ import FormData from 'form-data'
 import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
 import { sendDataset, waitForFinalize } from '../../support/workers.ts'
 
-const u1 = await axiosAuth('test_user1@test.com')
+const u1 = await axiosAuth('test_datafair_user1@test.com')
 
 const metaOnly = async (id: string, body: Record<string, any>) => {
   await u1.post('/api/v1/datasets/' + id, { isMetaOnly: true, title: id, ...body })
@@ -139,7 +139,7 @@ test.describe('catalog search', () => {
   })
 
   test('column labels are indexed, column values are not', async () => {
-    const u1Org = await axiosAuth('test_user1@test.com', 'test_org1')
+    const u1Org = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
     // collapsable.csv's `roles` column has exactly 2 distinct values ("admin;contrib" and "admin")
     // across its 10 rows, low enough cardinality for finalize to stamp an enum on it. "contrib"
     // appears only inside that enum value: no column title/description/dataset title contains it.

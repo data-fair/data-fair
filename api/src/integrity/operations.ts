@@ -28,6 +28,13 @@ export const parseOwnerPrefix = (ownerPrefix: string): { type: 'user' | 'organiz
   return { type, id: segment.slice(sep + 1) }
 }
 
+// Whether an owner prefix (`data-fair/<type>-<id>/`) belongs to the owners whose id starts with
+// `ownerIdPrefix`; every owner does when it is undefined (the daily passes, bucket-wide).
+export const ownerPrefixInScope = (ownerPrefix: string, ownerIdPrefix?: string): boolean => {
+  if (ownerIdPrefix === undefined) return true
+  return !!parseOwnerPrefix(ownerPrefix)?.id.startsWith(ownerIdPrefix)
+}
+
 export const revisionKey = (owner: { type: string, id: string }, datasetId: string, i: number): string =>
   `${revisionPrefix(owner, datasetId)}${padIndex(i)}`
 

@@ -3,8 +3,8 @@ import assert from 'node:assert/strict'
 import { axios, axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
 import { clearPublicationSitesCache } from '../../support/workers.ts'
 
-const u1 = await axiosAuth('test_user1@test.com')
-const u1Org = await axiosAuth('test_user1@test.com', 'test_org1')
+const u1 = await axiosAuth('test_datafair_user1@test.com')
+const u1Org = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
 const publicUrl2 = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT2}/data-fair`
 
 const metaOnly = async (id: string, body: Record<string, any> = {}) => {
@@ -78,10 +78,10 @@ test.describe('catalog search behaviour', () => {
   // the "match nothing" filter — zero results for a dataset right there in the list.
   test('a foreign-owned master-data dataset stays findable from a publication site', async () => {
     const portal = { type: 'data-fair-portals', id: 'portal1', url: `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT2}` }
-    await u1Org.post('/api/v1/settings/organization/test_org1/publication-sites', portal)
+    await u1Org.post('/api/v1/settings/organization/test_datafair_org1/publication-sites', portal)
     await clearPublicationSitesCache()
 
-    // owned by test_user1's personal account, NOT by test_org1 which owns the publication site
+    // owned by test_datafair_user1's personal account, NOT by test_datafair_org1 which owns the publication site
     await u1.post('/api/v1/datasets/sb-master-zz', {
       isMetaOnly: true,
       title: 'Referentiel zzcadastre',

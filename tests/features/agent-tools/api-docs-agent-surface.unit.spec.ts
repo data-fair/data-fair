@@ -306,9 +306,26 @@ test.describe('agent surface of the root document', () => {
     assert.deepEqual(create.inputSchema.required, ['file'])
     assert.ok(create.inputSchema.properties.file['x-mcp-file'])
     const replace = tool('datafair_replace_dataset_file')
-    assert.deepEqual(Object.keys(replace.inputSchema.properties), ['datasetId', 'file'])
-    assert.deepEqual(replace.inputSchema.required, ['datasetId', 'file'])
+    assert.deepEqual(Object.keys(replace.inputSchema.properties), ['datasetId', 'file', 'datasetTitle'])
+    assert.deepEqual(replace.inputSchema.required, ['datasetId', 'file', 'datasetTitle'])
     assert.equal(replace.annotations.destructiveHint, true)
+  })
+
+  test('every write naming a dataset or an application by id carries its checked title, no read does', async () => {
+    const toolSet = await load(await platformDoc(), { fetch: skillFetch, files: FILES, lint: 'error' })
+    const checked = Object.fromEntries(toolSet.tools.flatMap(t => Object.entries<any>(t.inputSchema.properties)
+      .filter(([, property]) => property['x-checked'])
+      .map(([name, property]) => [t.name, `${name} ← ${property['x-checked'].against} ${property['x-checked'].field}`])))
+    assert.deepEqual(checked, {
+      datafair_replace_dataset_file: 'datasetTitle ← datasetId /title',
+      datafair_update_dataset: 'datasetTitle ← datasetId /title',
+      datafair_publish_dataset: 'datasetTitle ← datasetId /title',
+      datafair_delete_dataset: 'datasetTitle ← datasetId /title',
+      datafair_set_dataset_permissions: 'datasetTitle ← datasetId /title',
+      datafair_update_application: 'applicationTitle ← applicationId /title',
+      datafair_publish_application: 'applicationTitle ← applicationId /title',
+      datafair_delete_application: 'applicationTitle ← applicationId /title'
+    })
   })
 
   test('the download and export tools return a link without calling the API', async () => {

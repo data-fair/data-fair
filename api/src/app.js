@@ -301,7 +301,8 @@ export const run = async () => {
   if (config.mode.includes('server')) {
     const errorHandler = (await import('@data-fair/lib-express/error-handler.js')).default
 
-    // Error management
+    // Error management, an i18n error gets the message of the request's language
+    app.use((await import('./misc/utils/i18n-errors.ts')).translateErrors)
     app.use(errorHandler)
 
     const permissions = await import('./misc/utils/permissions.ts')
@@ -327,8 +328,9 @@ export const run = async () => {
           return true
         }
         const [type, id, subject] = channel.split('/')
+        if (type !== 'datasets' && type !== 'applications') throw httpError(404, `Unknown resource ${type}/${id}.`)
         const resource = await db.collection(type).findOne({ id })
-        if (!resource) throw httpError(404, `Ressource ${type}/${id} inconnue.`)
+        if (!resource) throw httpError(404, `Unknown resource ${type}/${id}.`)
         // TODO: readApiKey is called without the request here, so the "only from inside the infrastructure"
         // check of adminMode api keys (assertReqInternal) is skipped for websocket subscriptions.
         // lib-express wsServer should pass the upgrade request to this callback so it can be applied.

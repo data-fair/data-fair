@@ -1014,9 +1014,12 @@ const onCardsFocusout = (event: FocusEvent) => {
 // new results (a sort, a filter from a field's menu) move the focused card, or remove it
 watch(rowResults, async () => {
   if (displayMode.value !== 'list') return
+  // read before the cards render again: only Chromium fires focusout when the focused card is
+  // removed, Firefox and Safari silently leave the focus on the body
+  const hadFocus = !!cardsList.value?.contains(document.activeElement)
   await nextTick()
   if (syncCardField(document.activeElement)) return
-  if (cardsLostFocus && document.activeElement === document.body) {
+  if ((hadFocus || cardsLostFocus) && document.activeElement === document.body) {
     cardsList.value?.querySelector<HTMLElement>('[data-card][tabindex="0"]')?.focus()
   }
 })

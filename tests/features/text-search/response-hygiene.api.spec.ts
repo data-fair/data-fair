@@ -2,7 +2,7 @@ import { test } from '../../fixtures/diagnostics.ts'
 import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks, mockAppUrl } from '../../support/axios.ts'
 
-const u1 = await axiosAuth('test_user1@test.com')
+const u1 = await axiosAuth('test_datafair_user1@test.com')
 const INDEX_FIELDS = ['_terms', '_pos', '_len', '_searchIndex', '_needsSearchIndex']
 // `_score` is not stored: the relevance pipeline computes it with $addFields BEFORE $project, so an
 // exclusion projection that does not name it ships a raw BM25 float on every relevance-sorted row.

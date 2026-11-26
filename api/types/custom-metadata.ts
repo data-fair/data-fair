@@ -13,8 +13,6 @@ const typeOf = (definition: CustomMetadataDefinition) => definition.type ?? 'str
 const isList = (definition: CustomMetadataDefinition) => typeOf(definition) === 'string' && !!definition.enum?.length
 const isMultiple = (definition: CustomMetadataDefinition) => typeOf(definition) === 'string' && !!definition.multiple
 
-const expected = { string: 'texte attendu', integer: 'nombre entier attendu', number: 'nombre attendu', date: 'date attendue (AAAA-MM-JJ)', link: 'adresse web attendue (http:// ou https://)' }
-
 const itemSchema = (definition: CustomMetadataDefinition): Record<string, any> => {
   switch (typeOf(definition)) {
     case 'integer': return { type: 'integer' }
@@ -24,9 +22,53 @@ const itemSchema = (definition: CustomMetadataDefinition): Record<string, any> =
       type: 'object',
       required: ['url'],
       additionalProperties: false,
-      properties: { url: { type: 'string', pattern: '^https?://\\S+$', errorMessage: expected.link }, title: { type: 'string' } }
+      properties: {
+        url: {
+          type: 'string',
+          pattern: '^https?://\\S+$',
+          errorMessage: 'web address expected (http:// or https://)',
+          'x-i18n-errorMessage': { fr: 'adresse web attendue (http:// ou https://)' }
+        },
+        title: { type: 'string' }
+      }
     }
     default: return isList(definition) ? { type: 'string', enum: definition.enum } : { type: 'string' }
+  }
+}
+
+// the error message of a metadata, English with its French translation
+const errorMessages = (definition: CustomMetadataDefinition): Record<string, any> => {
+  switch (typeOf(definition)) {
+    case 'integer': return {
+      errorMessage: 'integer expected',
+      'x-i18n-errorMessage': { fr: 'nombre entier attendu' }
+    }
+    case 'number': return {
+      errorMessage: 'number expected',
+      'x-i18n-errorMessage': { fr: 'nombre attendu' }
+    }
+    case 'date': return {
+      errorMessage: 'date expected (YYYY-MM-DD)',
+      'x-i18n-errorMessage': { fr: 'date attendue (AAAA-MM-JJ)' }
+    }
+    // object form: json-layout adds its own per-property required messages to it
+    case 'link': return {
+      errorMessage: {
+        type: 'web address expected (http:// or https://)',
+        required: { url: 'web address expected (http:// or https://)' },
+        additionalProperties: 'web address expected (http:// or https://)'
+      },
+      'x-i18n-errorMessage': {
+        fr: {
+          type: 'adresse web attendue (http:// ou https://)',
+          required: { url: 'adresse web attendue (http:// ou https://)' },
+          additionalProperties: 'adresse web attendue (http:// ou https://)'
+        }
+      }
+    }
+    default: return isList(definition)
+      ? { errorMessage: 'value not in the list', 'x-i18n-errorMessage': { fr: 'valeur absente de la liste' } }
+      : { errorMessage: 'text expected', 'x-i18n-errorMessage': { fr: 'texte attendu' } }
   }
 }
 
@@ -38,10 +80,7 @@ export const customMetadataSchema = (definitions: CustomMetadataDefinition[]) =>
     title: definition.title,
     ...(definition.description && { description: definition.description }),
     ...(isMultiple(definition) ? { type: 'array', items: itemSchema(definition) } : itemSchema(definition)),
-    // object form: json-layout adds its own per-property required messages to it
-    errorMessage: typeOf(definition) === 'link'
-      ? { type: expected.link, required: { url: expected.link }, additionalProperties: expected.link }
-      : isList(definition) ? 'valeur absente de la liste' : expected[typeOf(definition)]
+    ...errorMessages(definition)
   }]))
 } as Record<string, any>)
 

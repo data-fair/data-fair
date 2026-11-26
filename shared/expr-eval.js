@@ -1,5 +1,5 @@
 // @ts-nocheck
-import { Parser } from 'expr-eval-fork'
+import { Parser } from '@koumoul/expr-eval'
 import md5 from 'md5'
 import dayjs from 'dayjs'
 import customParseFormat from 'dayjs/plugin/customParseFormat.js'
@@ -220,7 +220,9 @@ export default (defaultTimezone) => {
 
   /** @param {any} arg @param {any} key @param {any} def */
   parser.functions.GET = function (arg, key, def) {
-    if (typeof arg !== 'object') return arg
+    if (arg === null || typeof arg !== 'object') return arg
+    // own properties only, inherited members (constructor, __proto__...) are not data
+    if (!Object.hasOwn(arg, key)) return def
     return arg[key] ?? def
   }
 

@@ -21,9 +21,11 @@ export const integrityStorageCollection = () => mongo.db.collection<IntegritySto
 
 export type MeasureResult = { owners: number, size: number }
 
-export const measureIntegrityStorage = async (store: IntegrityStore): Promise<MeasureResult> => {
+// `ownerIdPrefix` limits the measure to the owners whose id starts with it (a test sub-space).
+export const measureIntegrityStorage = async (store: IntegrityStore, opts?: { ownerIdPrefix?: string }): Promise<MeasureResult> => {
   const result: MeasureResult = { owners: 0, size: 0 }
-  const ownerPrefixes = await store.listSubPrefixes(ops.SERVICE_PREFIX)
+  const ownerPrefixes = (await store.listSubPrefixes(ops.SERVICE_PREFIX))
+    .filter(ownerPrefix => ops.ownerPrefixInScope(ownerPrefix, opts?.ownerIdPrefix))
   for (const ownerPrefix of ownerPrefixes) {
     const owner = ops.parseOwnerPrefix(ownerPrefix)
     if (!owner) continue
@@ -47,7 +49,8 @@ export const measureIntegrityStorage = async (store: IntegrityStore): Promise<Me
     }
   }
   // owners fully reclaimed from the store: drop their figure and release the metered bytes
-  const stale = await integrityStorageCollection().find({ _id: { $nin: ownerPrefixes } }).toArray()
+  const stale = (await integrityStorageCollection().find({ _id: { $nin: ownerPrefixes } }).toArray())
+    .filter(doc => ops.ownerPrefixInScope(doc._id, opts?.ownerIdPrefix))
   for (const doc of stale) {
     await integrityStorageCollection().deleteOne({ _id: doc._id })
     try {

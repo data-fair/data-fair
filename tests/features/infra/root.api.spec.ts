@@ -7,10 +7,10 @@ import { getRawDataset, sendDataset, wsEmit } from '../../support/workers.ts'
 import { WsClient } from '@data-fair/lib-node/ws-client.js'
 
 const anonymous = axios()
-const testSuperadmin = await axiosAuth('test_superadmin@test.com', undefined, true)
-const testUser1 = await axiosAuth('test_user1@test.com')
-const testSuperadminPersonal = await axiosAuth('test_superadmin@test.com')
-const testUser10 = await axiosAuth('test_user10@test.com')
+const testSuperadmin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
+const testSuperadminPersonal = await axiosAuth('test_datafair_superadmin@test.com')
+const testUser10 = await axiosAuth('test_datafair_user10@test.com')
 
 const geocoderApi = JSON.parse(fs.readFileSync(path.join(import.meta.dirname, '../../../tests/resources/geocoder-api.json'), 'utf8'))
 
@@ -114,17 +114,17 @@ test.describe('root', () => {
     assert.equal(dataset.owner.name, 'Test User10')
 
     // check that the user directory exists via test-env endpoint
-    let fileExistsRes = await anonymousAx.get(`${apiUrl}/api/v1/test-env/file-exists`, { params: { path: 'user/test_user10' } })
+    let fileExistsRes = await anonymousAx.get(`${apiUrl}/api/v1/test-env/file-exists`, { params: { path: 'user/test_datafair_user10' } })
     assert.ok(fileExistsRes.data.exists)
 
-    const res = await ax.delete(`${apiUrl}/api/v1/identities/user/test_user10`, { headers: { 'x-secret-key': config.secretKeys.identities } })
+    const res = await ax.delete(`${apiUrl}/api/v1/identities/user/test_datafair_user10`, { headers: { 'x-secret-key': config.secretKeys.identities } })
     assert.equal(res.status, 200)
     await assert.rejects(
       ax.get(`/api/v1/datasets/${dataset.id}`),
       { status: 404 }
     )
 
-    fileExistsRes = await anonymousAx.get(`${apiUrl}/api/v1/test-env/file-exists`, { params: { path: 'user/test_user10' } })
+    fileExistsRes = await anonymousAx.get(`${apiUrl}/api/v1/test-env/file-exists`, { params: { path: 'user/test_datafair_user10' } })
     assert.ok(!fileExistsRes.data.exists)
   })
 

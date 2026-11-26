@@ -6,28 +6,28 @@ export default {
     type: {
       type: 'string',
       enum: ['user', 'organization'],
-      description: 'Indique si le propriétaire est un utilisateur ou une organisation.'
+      description: 'Whether the owner is a user or an organization.'
     },
     id: {
       type: 'string',
-      description: 'Identifiant unique de l\'utilisateur ou de l\'organisation.'
+      description: 'Unique identifier of the user or organization.'
     },
     name: {
       type: 'string',
-      description: 'Nom affiché de l\'utilisateur ou de l\'organisation.'
+      description: 'Display name of the user or organization.'
     },
     role: {
       type: 'string',
       deprecated: true,
-      description: 'DÉPRÉCIÉ - Si cette propriété est renseignée et que le propriétaire est une organisation, restreint la propriété aux utilisateurs de cette organisation ayant ce rôle ou le rôle administrateur.'
+      description: 'DEPRECATED - If set and the owner is an organization, restricts the ownership to the users of this organization having this role or the admin role.'
     },
     department: {
       type: 'string',
-      description: 'Si cette propriété est renseignée et que le propriétaire est une organisation, restreint la propriété aux utilisateurs de cette organisation appartenant à ce département.'
+      description: 'If set and the owner is an organization, restricts the ownership to the users of this organization belonging to this department.'
     },
     departmentName: {
       type: 'string',
-      description: 'Nom affiché du département.'
+      description: 'Display name of the department.'
     }
   }
 }

@@ -2,14 +2,14 @@ import { test } from '../../../fixtures/diagnostics.ts'
 import assert from 'node:assert/strict'
 import { axios, axiosAuth, clean, checkPendingTasks, config, mockUrl } from '../../../support/axios.ts'
 import { waitForFinalize, sendDataset, setupMockRoute, clearMockRoutes, getRawDataset, doAndWaitForFinalize } from '../../../support/workers.ts'
-import { collectNotifs, expectNotif, expectNoNotif } from '../../../support/notifications.ts'
+import { collectNotifs, expectNotif, expectNotifPair, expectNoNotif } from '../../../support/notifications.ts'
 import fs from 'fs-extra'
 import FormData from 'form-data'
 
 const anonymous = axios()
-const testUser1 = await axiosAuth('test_user1@test.com')
-const testUser1Org = await axiosAuth('test_user1@test.com', 'test_org1')
-const testUser5Org = await axiosAuth('test_user5@test.com', 'test_org1')
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
+const testUser1Org = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
+const testUser5Org = await axiosAuth('test_datafair_user5@test.com', 'test_datafair_org1')
 
 test.describe('datasets - features', () => {
   test.beforeEach(async () => {
@@ -151,7 +151,7 @@ test.describe('datasets - features', () => {
     assert.ok(thumbnail1.startsWith(`${config.publicUrl}/api/v1/datasets/${dataset.id}/thumbnail/`))
 
     const portal = { type: 'data-fair-portals', id: 'portal1', url: `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT2}` }
-    await ax.post('/api/v1/settings/organization/test_org1/publication-sites', portal)
+    await ax.post('/api/v1/settings/organization/test_datafair_org1/publication-sites', portal)
 
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { thumbnail: true, draft: true }, headers: { host: `${process.env.DEV_HOST}:${process.env.NGINX_PORT2}` } })
     assert.equal(thumbnail1.replace(process.env.DEV_HOST + ':' + process.env.NGINX_PORT, `${process.env.DEV_HOST}:${process.env.NGINX_PORT2}`), res.data.results[0]._thumbnail)
@@ -298,9 +298,9 @@ test.describe('datasets - features', () => {
     assert.equal(captured[0].visibility, 'private')
 
     // a recipient is passed to the events service as the subscribed recipient (its schema knows no "recipient")
-    await ax.post(`/api/v1/datasets/${dataset.id}/user-notification`, { topic: 'topic1', title: 'Title', recipient: { id: 'test_user5', name: 'Test User5' } })
+    await ax.post(`/api/v1/datasets/${dataset.id}/user-notification`, { topic: 'topic1', title: 'Title', recipient: { id: 'test_datafair_user5', name: 'Test User5' } })
     const [withRecipient] = (await notifs.waitFor(2)).slice(1)
-    assert.deepEqual(withRecipient.subscribedRecipient, { id: 'test_user5', name: 'Test User5' })
+    assert.deepEqual(withRecipient.subscribedRecipient, { id: 'test_datafair_user5', name: 'Test User5' })
     assert.equal(withRecipient.recipient, undefined)
 
     // title and body can be localized, the events service picks the subscription's locale
@@ -312,13 +312,13 @@ test.describe('datasets - features', () => {
 
     await assert.rejects(testUser5Org.post(`/api/v1/datasets/${dataset.id}/user-notification`, { topic: 'topic1', title: 'Title' }), (err: any) => err.status === 403)
     await ax.put(`/api/v1/datasets/${dataset.id}/permissions`, [
-      { type: 'user', id: 'test_user5', operations: ['sendUserNotification'] }
+      { type: 'user', id: 'test_datafair_user5', operations: ['sendUserNotification'] }
     ])
     await testUser5Org.post(`/api/v1/datasets/${dataset.id}/user-notification`, { topic: 'topic1', title: 'Title' })
     await assert.rejects(testUser5Org.post(`/api/v1/datasets/${dataset.id}/user-notification`, { topic: 'topic1', title: 'Title', visibility: 'public' }), (err: any) => err.status === 403)
 
     await ax.put(`/api/v1/datasets/${dataset.id}/permissions`, [
-      { type: 'user', id: 'test_user5', operations: ['sendUserNotification', 'sendUserNotificationPublic'] }
+      { type: 'user', id: 'test_datafair_user5', operations: ['sendUserNotification', 'sendUserNotificationPublic'] }
     ])
     await testUser5Org.post(`/api/v1/datasets/${dataset.id}/user-notification`, { topic: 'topic1', title: 'Title' })
     await testUser5Org.post(`/api/v1/datasets/${dataset.id}/user-notification`, { topic: 'topic1', title: 'Title', visibility: 'public' })
@@ -390,7 +390,7 @@ test.describe('datasets - features', () => {
     assert.equal(dataset.owner.type, 'user')
 
     const notifs = await collectNotifs()
-    await ax.put(`/api/v1/datasets/${dataset.id}/owner`, { type: 'organization', id: 'test_org1', name: 'Test Org 1' })
+    await ax.put(`/api/v1/datasets/${dataset.id}/owner`, { type: 'organization', id: 'test_datafair_org1', name: 'Test Org 1' })
     // change-owner deliberately emits twice on the same topic (once per sender — old vs new owner)
     // so both parties get notified through their respective subscriptions, see datasets/router.js:350-351
     const captured = await notifs.waitFor(2, { keyPrefix: `data-fair:dataset-change-owner:${dataset.id}` })
@@ -400,7 +400,7 @@ test.describe('datasets - features', () => {
     assert.ok(matching.some(n => n.sender.type === 'organization'), 'expected one notif sent by the new owner (organization)')
   })
 
-  test('emits delete notif on DELETE', async () => {
+  test('emits delete notif on DELETE, on id and slug, private for a private dataset', async () => {
     const ax = testUser1
     const dataset = (await ax.post('/api/v1/datasets', {
       isRest: true,
@@ -410,8 +410,27 @@ test.describe('datasets - features', () => {
 
     const notifs = await collectNotifs()
     await ax.delete(`/api/v1/datasets/${dataset.id}`)
+    const captured = await notifs.waitFor(2, { keyPrefix: 'data-fair:dataset-delete:' })
+
+    const { id, slug } = expectNotifPair(captured, 'data-fair:dataset-delete', dataset)
+    assert.equal(id.visibility, 'private')
+    assert.equal(slug.visibility, 'private')
+    assert.equal(id.title.fr, 'Jeu de données delete notif supprimé')
+  })
+
+  test('emits a public delete notif for a public dataset', async () => {
+    const ax = testUser1
+    const dataset = (await ax.post('/api/v1/datasets', {
+      isRest: true,
+      title: 'public delete notif',
+      schema: [{ key: 'str', type: 'string' }]
+    })).data
+    await ax.put(`/api/v1/datasets/${dataset.id}/permissions`, [{ classes: ['list', 'read'] }])
+
+    const notifs = await collectNotifs()
+    await ax.delete(`/api/v1/datasets/${dataset.id}`)
     const captured = await notifs.waitFor(1, { keyPrefix: `data-fair:dataset-delete:${dataset.id}` })
 
-    expectNotif(captured, `data-fair:dataset-delete:${dataset.id}`)
+    assert.equal(expectNotif(captured, `data-fair:dataset-delete:${dataset.id}`).visibility, 'public')
   })
 })

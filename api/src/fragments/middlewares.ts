@@ -3,7 +3,7 @@
 // (fragments/operations.ts), so it can be applied from a route chain AND from inside a handler
 // whose body is only assembled there (the multipart-capable dataset POST/PUT-as-update route).
 import type { RequestHandler } from 'express'
-import { httpError } from '@data-fair/lib-utils/http-errors.js'
+import { i18nHttpError } from '../misc/utils/i18n-errors.ts'
 import { reqResourceOptional } from '../misc/utils/req-context.ts'
 import { fragmentWriteBodyError } from './operations.ts'
 
@@ -20,7 +20,7 @@ export const assertFragmentWriteBody = (
   allowPartOfChange: boolean
 ) => {
   const error = fragmentWriteBodyError(body, resource, { allowPartOfChange })
-  if (error) throw httpError(400, error)
+  if (error) throw i18nHttpError(400, error.key, error.params)
 }
 
 /**

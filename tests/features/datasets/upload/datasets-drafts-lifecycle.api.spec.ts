@@ -2,11 +2,11 @@ import { test } from '../../../fixtures/diagnostics.ts'
 import assert from 'node:assert/strict'
 import fs from 'fs-extra'
 import FormData from 'form-data'
-import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
+import { axiosAuth, clean, checkPendingTasks, waitForWorkerIdle } from '../../../support/axios.ts'
 import { waitForFinalize, waitForDatasetError, fileExists, clearMockRoutes, datasetEsIndicesCount, datasetEsAliasName, datasetEsMappingProperties, getRawDataset, waitForJournalEvent } from '../../../support/workers.ts'
 import { collectNotifs, expectNotifPair } from '../../../support/notifications.ts'
 
-const testUser1 = await axiosAuth('test_user1@test.com')
+const testUser1 = await axiosAuth('test_datafair_user1@test.com')
 
 // Paths passed to fileExists() are resolved relative to the server's dataDir
 const dataDir = '.'
@@ -99,14 +99,14 @@ test.describe('datasets in draft mode - lifecycle', () => {
     assert.equal(res.data.results[1].id, 'bidule')
 
     // validate the draft
-    assert.ok(await fileExists(`${dataDir}/user/test_user1/datasets-drafts/${dataset.id}`))
+    assert.ok(await fileExists(`${dataDir}/user/test_datafair_user1/datasets-drafts/${dataset.id}`))
     await ax.post(`/api/v1/datasets/${dataset.id}/draft`)
     dataset = await waitForFinalize(ax, dataset.id)
     assert.equal(dataset.status, 'finalized')
     assert.ok(!dataset.draftReason)
     assert.equal(dataset.count, 2)
     assert.ok(dataset.bbox)
-    assert.ok(!await fileExists(`${dataDir}/user/test_user1/datasets-drafts/${dataset.id}`))
+    assert.ok(!await fileExists(`${dataDir}/user/test_datafair_user1/datasets-drafts/${dataset.id}`))
 
     // querying lines is now possible
     res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`)
@@ -128,9 +128,9 @@ test.describe('datasets in draft mode - lifecycle', () => {
 
     assert.equal(await datasetEsIndicesCount(dataset.id), 1)
 
-    assert.ok(await fileExists(`${dataDir}/user/test_user1/datasets/${dataset.id}`))
+    assert.ok(await fileExists(`${dataDir}/user/test_datafair_user1/datasets/${dataset.id}`))
     res = await ax.delete('/api/v1/datasets/' + dataset.id)
-    assert.ok(!await fileExists(`${dataDir}/user/test_user1/datasets/${dataset.id}`))
+    assert.ok(!await fileExists(`${dataDir}/user/test_datafair_user1/datasets/${dataset.id}`))
   })
 
   test('create a draft when updating the data file', async () => {
@@ -200,7 +200,7 @@ test.describe('datasets in draft mode - lifecycle', () => {
     assert.equal(evt.draft, true)
     const errorEvent = journal.pop()
     assert.equal(errorEvent.type, 'validation-error')
-    assert.ok(errorEvent.data.startsWith('La structure'))
+    assert.ok(errorEvent.data.startsWith('The structure'))
     assert.equal(journal.pop().type, 'finalize-end')
 
     // manual draft validation
@@ -319,7 +319,7 @@ test.describe('datasets in draft mode - lifecycle', () => {
     assert.equal(evt.draft, true)
     const errorEvent = journal.pop()
     assert.equal(errorEvent.type, 'validation-error')
-    assert.ok(errorEvent.data.startsWith('La structure'))
+    assert.ok(errorEvent.data.startsWith('The structure'))
     assert.equal(journal.pop().type, 'finalize-end')
 
     // draft cancellation
@@ -387,6 +387,8 @@ test.describe('datasets in draft mode - lifecycle', () => {
     schema[0].pattern = '^[a-z]+$'
     await ax.patch('/api/v1/datasets/' + dataset.id, { schema })
     await waitForJournalEvent(dataset.id, 'validate-end')
+    // validate-end is logged before the task releases the dataset lock, the upload would get a 409
+    assert.ok(await waitForWorkerIdle(), 'the worker is still busy after the validation')
 
     // upload a new file
     const datasetFd2 = fs.readFileSync('./tests/resources/datasets/dataset1-invalid.csv')
@@ -415,6 +417,8 @@ test.describe('datasets in draft mode - lifecycle', () => {
     schema[0].pattern = '^[a-z]+$'
     await ax.patch('/api/v1/datasets/' + dataset.id, { schema })
     await waitForJournalEvent(dataset.id, 'validate-end')
+    // validate-end is logged before the task releases the dataset lock, the upload would get a 409
+    assert.ok(await waitForWorkerIdle(), 'the worker is still busy after the validation')
 
     // upload a new file
     const datasetFd2 = fs.readFileSync('./tests/resources/datasets/dataset1-invalid.csv')

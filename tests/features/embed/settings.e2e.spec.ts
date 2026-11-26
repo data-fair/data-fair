@@ -7,12 +7,12 @@ test.describe('embed settings pages', () => {
   })
 
   test('displays api-keys settings page', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/embed/settings/user/test_user1/api-keys', 'test_user1')
+    await goToWithAuth('/data-fair/embed/settings/user/test_datafair_user1/api-keys', 'test_datafair_user1')
     await expect(page.getByRole('button', { name: 'Ajouter une clé d\'API' })).toBeVisible({ timeout: 10000 })
   })
 
   test('the api key form grows the page, an iframe sized on its content shows it', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/embed/settings/user/test_user1/api-keys', 'test_user1')
+    await goToWithAuth('/data-fair/embed/settings/user/test_datafair_user1/api-keys', 'test_datafair_user1')
     await page.getByRole('button', { name: 'Ajouter une clé d\'API' }).click()
     const addButton = page.getByRole('button', { name: 'Ajouter', exact: true })
     await expect(addButton).toBeVisible()
@@ -24,8 +24,8 @@ test.describe('embed settings pages', () => {
   })
 
   test('a refused api key is rolled back, the form keeps it to retry', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com')
-    await goToWithAuth('/data-fair/embed/settings/user/test_user1/api-keys', 'test_user1')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
+    await goToWithAuth('/data-fair/embed/settings/user/test_datafair_user1/api-keys', 'test_datafair_user1')
     await page.getByRole('button', { name: 'Ajouter une clé d\'API' }).click()
     await page.getByLabel('Titre', { exact: true }).fill('Refused key')
 
@@ -40,15 +40,15 @@ test.describe('embed settings pages', () => {
     await page.unroute('**/api/v1/settings/**')
     await page.getByRole('button', { name: 'Ajouter', exact: true }).click()
     await expect(page.getByRole('row').filter({ hasText: 'Refused key' })).toBeVisible({ timeout: 5000 })
-    expect((await ax.get('/api/v1/settings/user/test_user1')).data.apiKeys.map((k: any) => k.title)).toEqual(['Refused key'])
+    expect((await ax.get('/api/v1/settings/user/test_datafair_user1')).data.apiKeys.map((k: any) => k.title)).toEqual(['Refused key'])
   })
 
   test('a webhook is saved on explicit save, not while incomplete', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     const patches: string[] = []
     page.on('request', request => { if (request.method() === 'PATCH') patches.push(request.url()) })
 
-    await goToWithAuth('/data-fair/embed/settings/user/test_user1/webhooks', 'test_user1')
+    await goToWithAuth('/data-fair/embed/settings/user/test_datafair_user1/webhooks', 'test_datafair_user1')
     await page.getByRole('button', { name: /Ajouter un webhook/i }).click()
     const titleInput = page.getByLabel('Titre', { exact: true })
     await titleInput.fill('Embed hook')
@@ -63,26 +63,26 @@ test.describe('embed settings pages', () => {
     await page.keyboard.press('Escape')
     expect(patches).toEqual([])
     await page.getByRole('button', { name: 'Enregistrer' }).click()
-    await expect.poll(async () => (await ax.get('/api/v1/settings/user/test_user1')).data.webhooks?.length ?? 0, { timeout: 5000 }).toBe(1)
+    await expect.poll(async () => (await ax.get('/api/v1/settings/user/test_datafair_user1')).data.webhooks?.length ?? 0, { timeout: 5000 }).toBe(1)
   })
 
   test('displays settings with pre-seeded topics', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com')
-    await ax.put('/api/v1/settings/user/test_user1', {
+    const ax = await axiosAuth('test_datafair_user1@test.com')
+    await ax.put('/api/v1/settings/user/test_datafair_user1', {
       topics: [{ id: 'topic1', title: 'Mon thème test' }]
     })
 
-    await goToWithAuth('/data-fair/embed/settings/user/test_user1/topics', 'test_user1')
+    await goToWithAuth('/data-fair/embed/settings/user/test_datafair_user1/topics', 'test_datafair_user1')
     await expect(page.getByLabel('Titre').first()).toHaveValue('Mon thème test', { timeout: 10000 })
   })
 
   test('displays licenses settings page', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com')
-    await ax.put('/api/v1/settings/user/test_user1', {
+    const ax = await axiosAuth('test_datafair_user1@test.com')
+    await ax.put('/api/v1/settings/user/test_datafair_user1', {
       licenses: [{ title: 'Licence Ouverte', href: 'https://example.com' }]
     })
 
-    await goToWithAuth('/data-fair/embed/settings/user/test_user1/licenses', 'test_user1')
+    await goToWithAuth('/data-fair/embed/settings/user/test_datafair_user1/licenses', 'test_datafair_user1')
     await expect(page.getByText('Licence Ouverte')).toBeVisible({ timeout: 10000 })
   })
 })

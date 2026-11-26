@@ -68,7 +68,7 @@
 import { emitAgentEvent } from '@data-fair/lib-vue-agents'
 import useDatasetEdition from '~/components/dataset/table/use-dataset-edition'
 import Vjsf from '@koumoul/vjsf/webmcp'
-import { type Options as VjsfOptions } from '@koumoul/vjsf'
+import type { Options as VjsfOptions } from '@koumoul/vjsf'
 import VjsfMarkdown from '@koumoul/vjsf-markdown'
 import { v2compat } from '@koumoul/vjsf/compat/v2'
 
@@ -88,7 +88,7 @@ const model = defineModel<any>()
 
 const emits = defineEmits<{ onFileUpload: [file: File] }>()
 
-const { t } = useI18n()
+const { t, locale } = useI18n()
 
 const { id, restDataset, jsonSchemaFetch } = useDatasetStore()
 
@@ -154,15 +154,16 @@ const extensionKeys = computed(() => {
   return Object.keys(editSchema.value.properties).filter(key => editSchema.value.properties[key]['x-extension'])
 })
 
-const vjsfOptions: VjsfOptions = {
+const vjsfOptions = computed<VjsfOptions>(() => ({
   titleDepth: 4,
   density: 'comfortable',
-  locale: 'fr',
+  locale: locale.value,
+  xI18n: true,
   fetchBaseURL: $sitePath + '/data-fair/',
   initialValidation: 'always',
   removeAdditional: true,
   plugins: [VjsfMarkdown]
-}
+}))
 
 const simulateExtensionInputStr = computed(() => {
   if (!extension) return

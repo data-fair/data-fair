@@ -5,7 +5,7 @@ import { sendDataset, clearPublicationSitesCache } from '../../support/workers.t
 test.describe('datasets list page', () => {
   test.beforeAll(async () => {
     await clean()
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     // Seed 3 datasets with distinct titles for search/sort testing
     await sendDataset('datasets/dataset1.csv', ax, {}, { title: 'Alpha Dataset' })
     await sendDataset('datasets/dataset2.csv', ax, {}, { title: 'Beta Dataset' })
@@ -17,7 +17,7 @@ test.describe('datasets list page', () => {
   })
 
   test('initial page state: cards, count, controls, facets and contributor action all visible', { tag: '@smoke' }, async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/datasets', 'test_user1')
+    await goToWithAuth('/data-fair/datasets', 'test_datafair_user1')
 
     // Dataset cards rendered
     await expect(page.locator('.v-container .v-card').first()).toBeVisible({ timeout: 10000 })
@@ -42,7 +42,7 @@ test.describe('datasets list page', () => {
   })
 
   test('search filters results (q param appears in URL)', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/datasets', 'test_user1')
+    await goToWithAuth('/data-fair/datasets', 'test_datafair_user1')
     const searchField = page.locator('#navigation-right-local').getByRole('textbox', { name: 'Rechercher' })
     await expect(searchField).toBeVisible({ timeout: 10000 })
 
@@ -54,7 +54,7 @@ test.describe('datasets list page', () => {
   })
 
   test('search with no match shows empty state', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/datasets', 'test_user1')
+    await goToWithAuth('/data-fair/datasets', 'test_datafair_user1')
     const searchField = page.locator('#navigation-right-local').getByRole('textbox', { name: 'Rechercher' })
     await expect(searchField).toBeVisible({ timeout: 10000 })
 
@@ -65,7 +65,7 @@ test.describe('datasets list page', () => {
   })
 
   test('sort changes URL param', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/datasets', 'test_user1')
+    await goToWithAuth('/data-fair/datasets', 'test_datafair_user1')
     const sortSelect = page.locator('#navigation-right-local .v-select').filter({ hasText: 'Trier par' })
     await expect(sortSelect).toBeVisible({ timeout: 10000 })
 
@@ -78,7 +78,7 @@ test.describe('datasets list page', () => {
   })
 
   test('grid/list view toggle works', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/datasets', 'test_user1')
+    await goToWithAuth('/data-fair/datasets', 'test_datafair_user1')
     await expect(page.locator('.v-container .v-card').first()).toBeVisible({ timeout: 10000 })
 
     // Toggle to list view (button is in the right navigation)
@@ -90,18 +90,18 @@ test.describe('datasets list page', () => {
   })
 
   test('"Créer un nouveau jeu de données" action navigates to new-dataset page', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/datasets', 'test_user1')
+    await goToWithAuth('/data-fair/datasets', 'test_datafair_user1')
     await page.locator('#navigation-right-local').getByText('Créer un nouveau jeu de données').click()
     await page.waitForURL(/new-dataset/, { timeout: 10000 })
   })
 
   test('empty state shown when no datasets for search', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/datasets?q=__nothing__', 'test_user1')
+    await goToWithAuth('/data-fair/datasets?q=__nothing__', 'test_datafair_user1')
     await expect(page.getByText(/Aucun résultat ne correspond/)).toBeVisible({ timeout: 10000 })
   })
 
   test('view mode persists across page reload', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/datasets', 'test_user1')
+    await goToWithAuth('/data-fair/datasets', 'test_datafair_user1')
     await expect(page.locator('.v-container .v-card').first()).toBeVisible({ timeout: 10000 })
 
     // Switch to list view
@@ -114,7 +114,7 @@ test.describe('datasets list page', () => {
   })
 
   test('search clear restores all results', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/datasets', 'test_user1')
+    await goToWithAuth('/data-fair/datasets', 'test_datafair_user1')
     await expect(page.locator('.v-container .v-card').first()).toBeVisible({ timeout: 10000 })
 
     const searchField = page.locator('#navigation-right-local').getByRole('textbox', { name: 'Rechercher' })
@@ -131,7 +131,7 @@ test.describe('datasets list page', () => {
   })
 
   test('sort by title orders correctly', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/datasets', 'test_user1')
+    await goToWithAuth('/data-fair/datasets', 'test_datafair_user1')
     await expect(page.locator('.v-container .v-card').first()).toBeVisible({ timeout: 10000 })
 
     // Sort by title A→Z
@@ -146,7 +146,7 @@ test.describe('datasets list page', () => {
   })
 
   test('results count updates after search', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/datasets', 'test_user1')
+    await goToWithAuth('/data-fair/datasets', 'test_datafair_user1')
     // Initially should show all datasets (count is in breadcrumbs)
     await expect(page.getByText('3 jeux de données')).toBeVisible({ timeout: 10000 })
 
@@ -160,12 +160,12 @@ test.describe('datasets list page', () => {
 
   test('empty state without search shows database icon', async ({ page, goToWithAuth }) => {
     // Use a user with no datasets
-    await goToWithAuth('/data-fair/datasets', 'test_alone')
+    await goToWithAuth('/data-fair/datasets', 'test_datafair_alone')
     await expect(page.getByText(/Vous n'avez pas encore créé/)).toBeVisible({ timeout: 10000 })
   })
 
   test('visibility icon is displayed in list view', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/datasets', 'test_user1')
+    await goToWithAuth('/data-fair/datasets', 'test_datafair_user1')
     await expect(page.locator('.v-container .v-card').first()).toBeVisible({ timeout: 10000 })
 
     // Switch to list view
@@ -181,9 +181,9 @@ test.describe('owner facet filtering', () => {
   test.beforeAll(async () => {
     await clean()
     // Create datasets under org (no dept) and org+dept so the owner facet has 2 entries
-    const axOrg = await axiosAuth('test_user1@test.com', 'test_org1')
-    // test_user6 is contrib of test_org1 in dep1, so dataset is owned by organization:test_org1:dep1
-    const axOrgDep = await axiosAuth('test_user6@test.com', 'test_org1')
+    const axOrg = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
+    // test_datafair_user6 is contrib of test_datafair_org1 in dep1, so dataset is owned by organization:test_datafair_org1:dep1
+    const axOrgDep = await axiosAuth('test_datafair_user6@test.com', 'test_datafair_org1')
     await sendDataset('datasets/dataset1.csv', axOrg, {}, { title: 'Org Dataset' })
     await sendDataset('datasets/dataset2.csv', axOrgDep, {}, { title: 'Dept Dataset' })
   })
@@ -192,20 +192,8 @@ test.describe('owner facet filtering', () => {
     await checkPendingTasks()
   })
 
-  /**
-   * Helper: switch to org context via the personal menu
-   */
-  async function switchToOrg (page: any, goToWithAuth: any) {
-    const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}`
-    await goToWithAuth('/data-fair/', 'test_user1')
-    await page.getByRole('button', { name: /Ouvrez le menu personnel/ }).click()
-    await page.getByRole('listitem').filter({ hasText: 'Test Org 1' }).click()
-    await page.waitForURL(`${baseUrl}/data-fair/`, { timeout: 10000 })
-    await page.goto(`${baseUrl}/data-fair/datasets`)
-  }
-
   test('owner facet displays names, not [object Object]', async ({ page, goToWithAuth }) => {
-    await switchToOrg(page, goToWithAuth)
+    await goToWithAuth('/data-fair/datasets', 'test_datafair_user1', { org: 'test_datafair_org1' })
     await expect(page.locator('.v-container .v-card').first()).toBeVisible({ timeout: 10000 })
 
     const navRight = page.locator('#navigation-right-local')
@@ -227,7 +215,7 @@ test.describe('owner facet filtering', () => {
   })
 
   test('selecting owner facet updates URL with correct string format', async ({ page, goToWithAuth }) => {
-    await switchToOrg(page, goToWithAuth)
+    await goToWithAuth('/data-fair/datasets', 'test_datafair_user1', { org: 'test_datafair_org1' })
     await expect(page.locator('.v-container .v-card').first()).toBeVisible({ timeout: 10000 })
 
     const navRight = page.locator('#navigation-right-local')
@@ -260,11 +248,11 @@ test.describe('owner facet filtering', () => {
 test.describe('publication sites facet', () => {
   test.beforeAll(async () => {
     await clean()
-    const axOrg = await axiosAuth('test_user1@test.com', 'test_org1')
+    const axOrg = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
 
     // Create a publication site
     const portal = { type: 'data-fair-portals', id: 'portal1', url: 'http://portal.com', title: 'Test Portal' }
-    await axOrg.post('/api/v1/settings/organization/test_org1/publication-sites', portal)
+    await axOrg.post('/api/v1/settings/organization/test_datafair_org1/publication-sites', portal)
     await clearPublicationSitesCache()
 
     // Create a dataset published on the site
@@ -281,13 +269,7 @@ test.describe('publication sites facet', () => {
   })
 
   test('publication sites facet shows portal names without null or IDs', async ({ page, goToWithAuth }) => {
-    // Switch to org context and go to datasets page
-    const baseUrl = `http://${process.env.DEV_HOST}:${process.env.NGINX_PORT}`
-    await goToWithAuth('/data-fair/', 'test_user1')
-    await page.getByRole('button', { name: /Ouvrez le menu personnel/ }).click()
-    await page.getByRole('listitem').filter({ hasText: 'Test Org 1' }).click()
-    await page.waitForURL(`${baseUrl}/data-fair/`, { timeout: 10000 })
-    await page.goto(`${baseUrl}/data-fair/datasets`)
+    await goToWithAuth('/data-fair/datasets', 'test_datafair_user1', { org: 'test_datafair_org1' })
 
     await expect(page.locator('.v-container .v-card').first()).toBeVisible({ timeout: 10000 })
 
@@ -314,9 +296,9 @@ test.describe('publication sites facet', () => {
 test.describe('topics facet display', () => {
   test.beforeAll(async () => {
     await clean()
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     // Create topics in user settings
-    const settingsRes = await ax.put('/api/v1/settings/user/test_user1', {
+    const settingsRes = await ax.put('/api/v1/settings/user/test_datafair_user1', {
       topics: [{ title: 'Environnement' }, { title: 'Transport' }]
     })
     const topics = settingsRes.data.topics
@@ -333,7 +315,7 @@ test.describe('topics facet display', () => {
   })
 
   test('topics facet displays topic titles, not [object Object]', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/datasets', 'test_user1')
+    await goToWithAuth('/data-fair/datasets', 'test_datafair_user1')
     await expect(page.locator('.v-container .v-card').first()).toBeVisible({ timeout: 10000 })
 
     const navRight = page.locator('#navigation-right-local')
@@ -357,7 +339,7 @@ test.describe('topics facet display', () => {
   })
 
   test('selecting a topic facet filters datasets', async ({ page, goToWithAuth }) => {
-    await goToWithAuth('/data-fair/datasets', 'test_user1')
+    await goToWithAuth('/data-fair/datasets', 'test_datafair_user1')
     await expect(page.getByText('2 jeux de données')).toBeVisible({ timeout: 10000 })
 
     const navRight = page.locator('#navigation-right-local')

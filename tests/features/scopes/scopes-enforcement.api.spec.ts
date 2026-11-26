@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import type { AxiosInstance } from 'axios'
 import { nhiSession } from '../../support/nhi.ts'
 
-// data-fair is scope-aware: a scoped session (the test NHI, admin of test_org1) passes the family
+// data-fair is scope-aware: a scoped session (the test NHI, admin of test_datafair_org1) passes the family
 // gates of the scopes it holds, reaches the routes the UIs call on load whatever its scopes, and
 // is refused everywhere else (deny by default).
 
@@ -29,9 +29,9 @@ for (const transport of ['cookie', 'bearer'] as const) {
     })
 
     test('reaches the routes the UIs call on load', async () => {
-      assert.equal(await status(ax.get('/api/v1/limits/organization/test_org1')), 200)
-      assert.equal(await status(ax.get('/api/v1/settings/organization/test_org1/agent-chat')), 200)
-      assert.equal(await status(ax.get('/api/v1/settings/organization/test_org1/licenses')), 200)
+      assert.equal(await status(ax.get('/api/v1/limits/organization/test_datafair_org1')), 200)
+      assert.equal(await status(ax.get('/api/v1/settings/organization/test_datafair_org1/agent-chat')), 200)
+      assert.equal(await status(ax.get('/api/v1/settings/organization/test_datafair_org1/licenses')), 200)
       assert.equal(await status(ax.get('/api/v1/vocabulary')), 200)
       assert.equal(await status(ax.get('/api/v1/api-docs.json')), 200)
       assert.equal(await status(ax.get('/api/v1/base-applications')), 200)
@@ -43,8 +43,8 @@ for (const transport of ['cookie', 'bearer'] as const) {
     test('is refused outside its scopes and on unmarked routes', async () => {
       assert.equal(await status(ax.get('/api/v1/applications')), 403)
       assert.equal(await status(ax.get('/api/v1/stats')), 403)
-      assert.equal(await status(ax.put('/api/v1/settings/organization/test_org1', {})), 403)
-      assert.equal(await status(ax.get('/api/v1/settings/organization/test_org1')), 403)
+      assert.equal(await status(ax.put('/api/v1/settings/organization/test_datafair_org1', {})), 403)
+      assert.equal(await status(ax.get('/api/v1/settings/organization/test_datafair_org1')), 403)
       assert.equal(await status(ax.get('/api/v1/admin/info')), 403)
       assert.equal(await status(ax.get('/api/v1/activity')), 403)
     })
@@ -75,16 +75,16 @@ test.describe('the admin tier and the unrestricted session', () => {
     assert.equal(await status(read.get('/api/v1/applications')), 200)
     assert.equal(await status(read.post('/api/v1/datasets', { isRest: true, title: 'all-read' })), 403)
     assert.equal(await status(read.get('/api/v1/datasets', { params: { asVisitor: 'anonymous' } })), 403)
-    assert.equal(await status(read.get('/api/v1/settings/organization/test_org1')), 403)
+    assert.equal(await status(read.get('/api/v1/settings/organization/test_datafair_org1')), 403)
     const admin = (await nhiSession('all:admin')).cookieAx
     assert.equal(await status(admin.get('/api/v1/datasets', { params: { asVisitor: 'anonymous' } })), 200)
-    assert.equal(await status(admin.get('/api/v1/settings/organization/test_org1')), 403)
+    assert.equal(await status(admin.get('/api/v1/settings/organization/test_datafair_org1')), 403)
   })
 
   test('an unrestricted session is unaffected', async () => {
     const { cookieAx } = await nhiSession()
     assert.equal(await status(cookieAx.get('/api/v1/applications')), 200)
-    assert.equal(await status(cookieAx.get('/api/v1/settings/organization/test_org1')), 200)
+    assert.equal(await status(cookieAx.get('/api/v1/settings/organization/test_datafair_org1')), 200)
     assert.equal(await status(cookieAx.get('/api/v1/datasets', { params: { asVisitor: 'anonymous' } })), 200)
   })
 })

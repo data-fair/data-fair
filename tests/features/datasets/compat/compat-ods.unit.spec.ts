@@ -109,6 +109,10 @@ test.describe('ODS compatibility parsers unit tests', () => {
       whereParser.parse('id like \'koumo*\'', { dataset: { schema: [{ key: 'id' }] }, searchFields: ['id.text'], wildcardFields: ['id.wildcard'] }),
       { simple_query_string: { query: 'koumo*', fields: ['id', 'id.text', 'id.wildcard'] } }
     )
+    assert.throws(
+      () => whereParser.parse('other like \'koumo*\'', { dataset: { schema: [{ key: 'id' }] }, searchFields: [], wildcardFields: [] }),
+      /other/
+    )
     assert.deepEqual(
       whereParser.parse('id: "koumoul"', { dataset: { schema: [{ key: 'id' }] } }),
       { term: { id: 'koumoul' } }
@@ -295,7 +299,7 @@ test.describe('ODS compatibility parsers unit tests', () => {
 
     assert.throws(
       () => selectParser.parse('testko', { dataset: { schema: [{ key: 'test1' }] } }),
-      { message: 'Impossible de sélectionner le champ testko, il n\'existe pas dans le jeu de données.' }
+      { message: 'Cannot select field testko: it does not exist in the dataset.' }
     )
 
     assert.deepEqual(
@@ -338,7 +342,7 @@ test.describe('ODS compatibility parsers unit tests', () => {
 
     assert.throws(
       () => orderByParser.parse('testko', { dataset: { schema: [{ key: 'test1' }] }, simpleAliases: {} }),
-      { message: 'Impossible de trier sur le champ testko, il n\'existe pas dans le jeu de données.' }
+      { message: 'Cannot sort on field testko: it does not exist in the dataset.' }
     )
 
     assert.deepEqual(
@@ -398,7 +402,7 @@ test.describe('ODS compatibility parsers unit tests', () => {
 
     assert.throws(
       () => groupByParser.parse('testko', { sort: [], aggs: {}, dataset: { schema: [{ key: 'test1' }] } }),
-      { message: 'Impossible de grouper par le champ testko, il n\'existe pas dans le jeu de données.' }
+      { message: 'Cannot group on field testko: it does not exist in the dataset.' }
     )
 
     assert.deepEqual(

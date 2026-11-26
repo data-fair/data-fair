@@ -5,10 +5,10 @@ import * as extensionsUtils from '../utils/extensions.ts'
 import { stripTransientLineFlags } from '../utils/line-flags.ts'
 import { nanoid } from 'nanoid'
 import debugLib from 'debug'
-import es from '#es'
+import es, { attachmentPipelineId } from '#es'
 import log from '@data-fair/lib-node/log.js'
 import type { Dataset } from '#types'
-import { lineBytes, lineBytesSpec, type LineBytesSpec } from './operations.ts'
+import { bulkIndexingError, lineBytes, lineBytesSpec, type LineBytesSpec } from './operations.ts'
 
 const debug = debugLib('index-stream')
 
@@ -137,7 +137,7 @@ class IndexStream extends Transform {
           return new Promise(resolve => setTimeout(resolve, 30000)).finally(() => {
             return es.client.indices.refresh({ index: this.options.indexName }).catch(err => {
               log.warn('failed to refresh an elasticsearch index', { code: 'es-refresh-index', err })
-              throw new Error('Échec pendant le rafraichissement de la donnée après indexation.')
+              throw new Error('Failure while refreshing the data after indexing.')
             })
           })
         })
@@ -155,7 +155,7 @@ class IndexStream extends Transform {
     }
     try {
       // Use the ingest plugin to parse attached files
-      if (this.options.attachments) bulkOpts.pipeline = 'attachment'
+      if (this.options.attachments) bulkOpts.pipeline = attachmentPipelineId
       const res: any = await es.client.bulk(bulkOpts)
       debug('Bulk sent OK')
       const rejected = new Set<number>()
@@ -195,7 +195,7 @@ class IndexStream extends Transform {
       this.bulkChars = 0
     } catch (err) {
       log.warn('elasticsearch bulk indexing failed', { code: 'es-bulk-index', err })
-      throw new Error('Échec pendant l\'indexation d\'un paquet de données.')
+      throw bulkIndexingError(err)
     }
   }
 
@@ -203,16 +203,16 @@ class IndexStream extends Transform {
     if (!this.nbErroredItems) return null
     const leftOutErrors = this.nbErroredItems - 3
     // plain newlines only: the journal UI renders messages with `white-space: pre-line`
-    let msg = `${Math.round(100 * (this.nbErroredItems / this.i))}% des lignes sont en erreur.\n`
+    let msg = `${Math.round(100 * (this.nbErroredItems / this.i))}% of the lines have an error.\n`
     msg += this.erroredItems.map((item: any) => {
       let itemMsg = ' - '
-      if (item._i !== undefined) itemMsg += `Ligne ${item._i}: `
+      if (item._i !== undefined) itemMsg += `Line ${item._i}: `
       if (item.customMessage) itemMsg += item.customMessage
       else if (item.error.caused_by) itemMsg += item.error.caused_by.reason
       else itemMsg += item.error.reason
       return truncateMiddle(itemMsg, 80, 60, '...')
     }).join('\n')
-    if (leftOutErrors > 0) msg += `\n${leftOutErrors} autres erreurs...`
+    if (leftOutErrors > 0) msg += `\n${leftOutErrors} other errors...`
     // blocking if more than 50% lines are broken in a way
     if (this.nbErroredItems > this.i / 2) throw new Error('[noretry] ' + msg)
     return msg

@@ -6,7 +6,7 @@ import pump from '../../misc/utils/pipe.ts'
 import * as es from '../../datasets/es/index.ts'
 import esClient from '#es'
 import { initDatasetIndex, switchAlias } from '../../datasets/es/manage-indices.ts'
-import { NEW_INDEX_SHAPE } from '../../datasets/es/operations.ts'
+import { NEW_INDEX_SHAPE, writeErrorReason } from '../../datasets/es/operations.ts'
 import getIndexStream from '../../datasets/es/index-stream.ts'
 import * as datasetUtils from '../../datasets/utils/index.ts'
 import { updateStorage } from '../../datasets/utils/storage.ts'
@@ -21,7 +21,7 @@ import debugModule from 'debug'
 import log from '@data-fair/lib-node/log.js'
 import mongo from '#mongo'
 import type { DatasetInternal, Event } from '#types'
-import { isRestDataset, type Unicite } from '#types/dataset/index.ts'
+import { isRestDataset, type UniqueConstraint } from '#types/dataset/index.ts'
 import filesStorage from '#files-storage'
 import config from '#config'
 import { DiagnosticWriter, DIAGNOSTIC_FILE_CAP } from '../../datasets/utils/diagnostic-file.ts'
@@ -44,7 +44,7 @@ export default async function (dataset: DatasetInternal) {
     throw httpError(400, '[noretry] This is a test 400 error')
   }
 
-  if (dataset.isVirtual) throw new Error('Un jeu de données virtuel ne devrait pas passer par l\'étape indexation.')
+  if (dataset.isVirtual) throw new Error('A virtual dataset should not go through the indexing step.')
 
   const partialUpdate = dataset._partialRestStatus === 'updated' || dataset._partialRestStatus === 'extended'
 
@@ -83,8 +83,7 @@ export default async function (dataset: DatasetInternal) {
       indexName = await initDatasetIndex(dataset)
     } catch (err) {
       log.warn('failed to initialize an elasticsearch index', { code: 'es-init-index', err })
-      const { message } = es.extractError(err)
-      throw new Error(message)
+      throw new Error(writeErrorReason(err), { cause: err })
     }
     debug(`Initialize new dataset index ${indexName}`)
   }
@@ -138,7 +137,7 @@ export default async function (dataset: DatasetInternal) {
     // temp index before promoting it. File datasets only (REST enforce via a
     // MongoDB unique index). Real stored columns are guaranteed by config-time
     // checkConstraints.
-    const uniqueConstraints = (dataset.constraints ?? []).filter((c): c is Unicite => c.type === 'unique')
+    const uniqueConstraints = (dataset.constraints ?? []).filter((c): c is UniqueConstraint => c.type === 'unique')
     // Only pay the DiagnosticWriter cost (S3 pathExists + Mongo updateOne in discard())
     // for datasets that have or plausibly had a constraint. `dataset.constraints` stays
     // truthy (an empty array) when a constraint is dropped: preparePatch normalizes the
@@ -174,7 +173,7 @@ export default async function (dataset: DatasetInternal) {
       }
       if (unicityErrorCount > 0) {
         const fileResult = await writer.finalize()
-        const summary = `${unicityErrorCount} ligne${unicityErrorCount > 1 ? 's' : ''} en double sur une contrainte d'unicité`
+        const summary = `${unicityErrorCount} duplicate line${unicityErrorCount > 1 ? 's' : ''} on a unicity constraint`
         const diagnosticEventData = {
           hasDiagnosticFile: true,
           diagnosticErrorCount: fileResult.count,
@@ -194,7 +193,7 @@ export default async function (dataset: DatasetInternal) {
           }
           await journals.log('datasets', dataset, {
             type: 'draft-cancelled',
-            data: `annulation automatique : ${summary}`,
+            data: `automatic cancellation: ${summary}`,
             ...diagnosticEventData
           } as Event)
           await datasetsService.cancelDraft(dataset)

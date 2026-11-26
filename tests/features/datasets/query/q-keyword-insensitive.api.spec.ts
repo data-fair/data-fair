@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { axiosAuth, clean } from '../../../support/axios.ts'
 import { waitForFinalize } from '../../../support/workers.ts'
 
-const ax = await axiosAuth('test_user1@test.com')
+const ax = await axiosAuth('test_datafair_user1@test.com')
 
 // `code` has no analyzed inner field (text + textStandard disabled) so `q` can only match it
 // through a keyword view; `strict` additionally drops the insensitive capability.

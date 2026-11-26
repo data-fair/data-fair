@@ -16,8 +16,10 @@ test.describe('embed dataset map page with category param', () => {
     await clean()
   })
 
-  test('shows a legend and toggles filters from it', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com')
+  test('shows a legend and toggles filters from it', async ({ page, goToWithAuth, browserName }) => {
+    // expected to fail: no WebGL2 in the headless Firefox of the CI runner, see docs/architecture/testing.md
+    test.fail(browserName === 'firefox' && !!process.env.CI, 'no WebGL2 in Firefox on the CI runner')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     const dataset = await sendDataset('datasets/Antennes du CD22.csv', ax, undefined, geoBody)
 
     // the dev stack has no tileserver, so the basemap style 404s and MapLibre never
@@ -27,7 +29,7 @@ test.describe('embed dataset map page with category param', () => {
       json: { version: 8, sources: {}, layers: [{ id: 'poi_label', type: 'background', paint: { 'background-color': '#eeeeee' } }] }
     }))
 
-    await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/map?category=ville`, 'test_user1')
+    await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/map?category=ville`, 'test_datafair_user1')
 
     // legend overlay: field title + one entry per value
     const legend = page.locator('.dataset-map-legend')
@@ -68,10 +70,10 @@ test.describe('embed dataset map page with category param', () => {
   })
 
   test('degrades gracefully on an ineligible category field', async ({ page, goToWithAuth }) => {
-    const ax = await axiosAuth('test_user1@test.com')
+    const ax = await axiosAuth('test_datafair_user1@test.com')
     const dataset = await sendDataset('datasets/Antennes du CD22.csv', ax, undefined, geoBody)
 
-    await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/map?category=nope`, 'test_user1')
+    await goToWithAuth(`/data-fair/embed/dataset/${dataset.id}/map?category=nope`, 'test_datafair_user1')
 
     await expect(page.getByText('La colonne "nope" ne permet pas de catégoriser la carte')).toBeVisible({ timeout: 10000 })
     await expect(page.locator('.dataset-map-legend')).toHaveCount(0)

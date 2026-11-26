@@ -2,8 +2,8 @@ import { test } from '../../fixtures/diagnostics.ts'
 import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks, mockAppUrl } from '../../support/axios.ts'
 
-const u1 = await axiosAuth('test_user1@test.com')
-const u1Org = await axiosAuth('test_user1@test.com', 'test_org1')
+const u1 = await axiosAuth('test_datafair_user1@test.com')
+const u1Org = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
 
 test.describe('trim free-text metadata on write', () => {
   test.beforeEach(async () => { await clean() })
@@ -29,8 +29,8 @@ test.describe('trim free-text metadata on write', () => {
   })
 
   test('settings write', async () => {
-    await u1Org.put('/api/v1/settings/organization/test_org1', { topics: [{ id: 'topic1', title: ' Topic 1 ' }] })
-    const res = await u1Org.get('/api/v1/settings/organization/test_org1')
+    await u1Org.put('/api/v1/settings/organization/test_datafair_org1', { topics: [{ id: 'topic1', title: ' Topic 1 ' }] })
+    const res = await u1Org.get('/api/v1/settings/organization/test_datafair_org1')
     assert.deepEqual(res.data.topics, [{ id: 'topic1', title: 'Topic 1' }])
   })
 })

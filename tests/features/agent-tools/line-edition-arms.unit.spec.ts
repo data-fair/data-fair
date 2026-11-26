@@ -1,6 +1,6 @@
 /**
  * The dev-only line edition arms of the experiment comparing two ways an autonomous agent writes
- * dataset lines (docs/superpowers/specs/2026-10-28-line-edition-arms-design.md): plain JSON tools
+ * dataset lines: plain JSON tools
  * (arm json) or json-layout editor groups (arm editor). Switched off, the platform document is the
  * one served today, without a single line tool.
  */
@@ -102,16 +102,18 @@ test.describe('line edition arms', () => {
     (await arms()).setLineEditionArm('editor')
     const toolSet = await load(await platformDoc(), { lint: 'error', fetch: (async () => new Response('not found', { status: 404 })) as typeof fetch })
     const names = toolSet.tools.map(t => t.name)
-    const create = names.filter(n => n.startsWith('datafair_create_line_'))
-    const edit = names.filter(n => n.startsWith('datafair_edit_line_'))
-    for (const group of [create, edit]) {
-      assert.ok(group.some(n => n.endsWith('_getFieldSuggestions')), group.join(', '))
-      assert.ok(group.some(n => n.endsWith('_saveForm')), group.join(', '))
+    // openapi-mcp 0.14: one group of form tools for the platform, the operation chosen by its `form` argument
+    for (const verb of ['getFieldSuggestions', 'saveForm']) {
+      const tool = toolSet.tools.find(t => t.name === `form_${verb}`)
+      assert.ok(tool, names.join(', '))
+      assert.deepEqual([...tool.inputSchema.properties.form.enum].sort(), ['datafair_create_line', 'datafair_edit_line'])
     }
     for (const name of ['read_line', 'delete_line']) assert.ok(names.includes(`datafair_${name}`), name)
     for (const name of ['write_line', 'patch_line', 'bulk_lines']) assert.ok(!names.includes(`datafair_${name}`), name)
-    // the dataset is named by the API's path parameter: the editor bridge does not rename it
-    const saveForm = toolSet.tools.find(t => t.name.startsWith('datafair_edit_line_') && t.name.endsWith('_saveForm'))!
-    assert.deepEqual(saveForm.inputSchema.required?.slice(0, 2), ['id', 'lineId'])
+    // the dataset is named by the API's path parameter: the editor bridge does not rename it; lineId
+    // is only the edit form's, so not required by the group
+    const saveForm = toolSet.tools.find(t => t.name === 'form_saveForm')!
+    assert.ok(saveForm.inputSchema.required?.includes('id'), JSON.stringify(saveForm.inputSchema.required))
+    assert.ok(saveForm.inputSchema.properties.lineId)
   })
 })

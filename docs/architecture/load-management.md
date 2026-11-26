@@ -323,7 +323,7 @@ same `queryAdvice(req)` query-shape hint (see §4) to the message before it is r
 
 ### `keyword ignore_above:200` truncation and per-request filter routing
 
-String columns (plain string or `uri-reference` format) are mapped as `{type:keyword, ignore_above:200}` (constant `KEYWORD_IGNORE_ABOVE = 200`, `api/src/datasets/es/operations.ts`). Elasticsearch silently **drops values longer than 200 characters from the keyword index and its `doc_values`** — the value is kept in `_source` but invisible to term/exists/range/sort and terms-aggregations on the main keyword field. Full-text sub-fields (`.text`, `.text_standard`) and the `q=` catch-all (`_search`) are unaffected. Fields mapped as ES `wildcard` type (e.g. `_attachment_url`, which carries `x-capabilities.nativeWildcard: true`) have no such limit and are excluded from the detection and routing logic by `isLengthLimitedKeyword`.
+String columns of any format but `date` / `date-time` (plain, `uri-reference`, `email`, `uri`…) are mapped as `{type:keyword, ignore_above:200}` (constant `KEYWORD_IGNORE_ABOVE = 200`, `api/src/datasets/es/operations.ts`). Elasticsearch silently **drops values longer than 200 characters from the keyword index and its `doc_values`** — the value is kept in `_source` but invisible to term/exists/range/sort and terms-aggregations on the main keyword field. Full-text sub-fields (`.text`, `.text_standard`) and the `q=` catch-all (`_search`) are unaffected. Fields mapped as ES `wildcard` type (e.g. `_attachment_url`, which carries `x-capabilities.nativeWildcard: true`) have no such limit and are excluded from the detection and routing logic by `isLengthLimitedKeyword`.
 
 **Detection at finalize time.** During finalization, `datasetInfos` (`manage-indices.ts`) runs a `_ignored` metadata-field terms aggregation (size 200) against the live index. `computeIgnoredKeywordFields` (`diagnose-warnings.ts`) maps the raw ignored field names (`key` and `key.keyword_insensitive`) back to schema columns that satisfy `isLengthLimitedKeyword`. The result is persisted as `dataset._esIgnoredKeywordFields: string[]` (an internal field stripped from public API output alongside `_esCopyToSearch`, in `api/src/datasets/utils/index.ts`). The flag refreshes on every finalize; for REST datasets a long value written between two finalizes is not flagged until the next finalize run.
 
@@ -408,8 +408,7 @@ Items marked **measured** carry benchmark-harness evidence (`benchmark/`, raw re
   *direction* is consistent across four runs — a 5M-row seed would sharpen the figures.) *Proposed
   bound:* cap `track_total_hits` (`10000`) for scoring `q` requests — `hits.total.relation` becomes
   `"gte"`, which the UI already handles via `count=estimate`. A behaviour change, so it warrants its
-  own spec. **IMPLEMENTED (2026-07-30)** as the *approximate-count mode* (plan:
-  `docs/superpowers/plans/2026-07-30-approx-count-ranked-search.md`; full measurement trail:
+  own spec. **IMPLEMENTED (2026-07-30)** as the *approximate-count mode* (full measurement trail:
   `benchmark/INVESTIGATIONS.md` §11–12, incl. an ES 7.17 validation and a 3.3M-row real-corpus run
   where the cap measured −52…−93 % on ES 7.17 and −87…−97 % on ES 8.19 with the top hits identical
   in every case): `prepareQuery` caps `track_total_hits` to `approxCount.cap` on page-1 ranked `q`

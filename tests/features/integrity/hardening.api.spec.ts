@@ -38,7 +38,7 @@ const datasetLock = async (ax: any, datasetId: string) =>
   (await ax.get(`/api/v1/datasets/${datasetId}/_diagnose`)).data.locks?.[0]
 
 test('enable against an unreachable store fails loudly, leaves no anchor, and RELEASES the lock', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
 
   await withUnreachableStore(admin, async () => {
@@ -63,7 +63,7 @@ test('enable against an unreachable store fails loudly, leaves no anchor, and RE
 })
 
 test('a check against an unreachable store reports unknown and releases the lock', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
   await waitForFlagCleared(dataset.id)
@@ -79,7 +79,7 @@ test('a check against an unreachable store reports unknown and releases the lock
 })
 
 test('admin actions answer 409 while the per-dataset worker lock is held', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
   await waitForFlagCleared(dataset.id)
@@ -100,7 +100,7 @@ test('admin actions answer 409 while the per-dataset worker lock is held', async
 })
 
 test('orphaned per-line stamps are drained via the checker net, never a false breach', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const res = await admin.post('/api/v1/datasets', {
     isRest: true,
     title: `integrity hardening ${Date.now()}`,
@@ -133,13 +133,13 @@ test('orphaned per-line stamps are drained via the checker net, never a false br
 })
 
 test('historized storage is metered into the owner consumption, deleted-dataset tail included', async () => {
-  const admin = await axiosAuth('test_superadmin@test.com', undefined, true)
+  const admin = await axiosAuth('test_datafair_superadmin@test.com', undefined, true)
   const dataset = await sendDataset('datasets/dataset1.csv', admin)
   const owner = dataset.owner
   await admin.put(`/api/v1/datasets/${dataset.id}/_integrity`, { active: true })
   await waitForFlagCleared(dataset.id)
 
-  const measured = (await anonymousAx.post(`${apiUrl}/api/v1/test-env/integrity-storage/run`)).data
+  const measured = (await anonymousAx.post(`${apiUrl}/api/v1/test-env/integrity-storage/run?prefix=test_datafair_`)).data
   expect(measured.owners).toBeGreaterThanOrEqual(1)
   const size = await ownerIntegritySize(owner)
   expect(size).toBeGreaterThan(0)
@@ -151,7 +151,7 @@ test('historized storage is metered into the owner consumption, deleted-dataset 
   // deletion: the anchors age out at retention, but until then the bytes are genuinely held —
   // they must keep counting even though the dataset no longer appears in the datasets aggregation
   await admin.delete(`/api/v1/datasets/${dataset.id}`)
-  await anonymousAx.post(`${apiUrl}/api/v1/test-env/integrity-storage/run`)
+  await anonymousAx.post(`${apiUrl}/api/v1/test-env/integrity-storage/run?prefix=test_datafair_`)
   const tailSize = await ownerIntegritySize(owner)
   expect(tailSize).toBeGreaterThan(0)
   const limitsAfter = (await admin.get(`/api/v1/limits/${owner.type}/${owner.id}`)).data

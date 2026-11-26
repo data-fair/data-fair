@@ -130,7 +130,7 @@ export const registerFilesRoutes = (router: Router) => {
           }
           // we do not throw this error, we don't want to count it as an internal error
           log.warn('failed to fetch linked attachment', { code: 'linked-attachment-fetch', url: attachmentTarget.targetUrl, err })
-          return res.status(502).send('Échec de téléchargement du fichier : ' + message)
+          return res.status(502).send(req.__('errors.files.attachmentDownloadFailed', { message: String(message) }))
         }
       }
     }
@@ -164,14 +164,14 @@ export const registerFilesRoutes = (router: Router) => {
       )
       return
     }
-    if (!dataset.originalFile) return res.status(404).send('Ce jeu de données ne contient pas de fichier de données')
+    if (!dataset.originalFile) return res.status(404).send(req.__('errors.files.noDataFile'))
     await downloadFileFromStorage(datasetUtils.originalFilePath(dataset), req, res)
   })
 
   // Download the dataset in various formats
   router.get('/:datasetId/convert', readDataset({ noCache: true }), apiKeyMiddlewareRead, rateLimiting.middleware, permissions.middleware('downloadOriginalData', 'read', 'readDataFiles'), cacheHeaders.noCache, async (req, res, next) => {
     const dataset = reqDataset(req)
-    if (!dataset.file) return res.status(404).send('Ce jeu de données ne contient pas de fichier de données')
+    if (!dataset.file) return res.status(404).send(req.__('errors.files.noDataFile'))
     await downloadFileFromStorage(datasetUtils.filePath(dataset), req, res)
   })
 
@@ -179,7 +179,7 @@ export const registerFilesRoutes = (router: Router) => {
   // TODO use ES scroll functionality instead of file read + extensions
   router.get('/:datasetId/full', readDataset({ noCache: true }), apiKeyMiddlewareRead, rateLimiting.middleware, permissions.middleware('downloadFullData', 'read', 'readDataFiles'), cacheHeaders.noCache, async (req, res, next) => {
     const dataset = reqDataset(req)
-    if (!dataset.file) return res.status(404).send('Ce jeu de données ne contient pas de fichier de données')
+    if (!dataset.file) return res.status(404).send(req.__('errors.files.noDataFile'))
     if (await filesStorage.fileExists(datasetUtils.fullFilePath(dataset))) {
       await downloadFileFromStorage(datasetUtils.fullFilePath(dataset), req, res)
     } else {
@@ -193,7 +193,7 @@ export const registerFilesRoutes = (router: Router) => {
     const dataset = reqDataset(req)
     const filePath = validationDiagnosticFilePath(dataset)
     if (!await filesStorage.fileExists(filePath)) {
-      return res.status(404).type('text/plain').send('Aucun fichier de diagnostic disponible')
+      return res.status(404).type('text/plain').send(req.__('errors.files.noDiagnostic'))
     }
     res.setHeader('content-disposition', contentDisposition(`${dataset.slug}-validation-diagnostic.csv`))
     res.setHeader('Content-Type', 'text/csv; charset=utf-8')
@@ -207,7 +207,7 @@ export const registerFilesRoutes = (router: Router) => {
     const dataset = reqDataset(req)
     const filePath = cancelledDraftDiagnosticFilePath(dataset)
     if (!await filesStorage.fileExists(filePath)) {
-      return res.status(404).type('text/plain').send('Aucun fichier de diagnostic disponible')
+      return res.status(404).type('text/plain').send(req.__('errors.files.noDiagnostic'))
     }
     res.setHeader('content-disposition', contentDisposition(`${dataset.slug}-cancelled-draft-diagnostic.csv`))
     res.setHeader('Content-Type', 'text/csv; charset=utf-8')

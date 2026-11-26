@@ -10,18 +10,25 @@
             "type": "string",
             "description": "French keywords for full-text search (simple terms, not sentences). Examples: \"élus\", \"DPE\", \"entreprises\""
           },
+          "publicationSites": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Keep only the datasets published on these portals: their keys from datafair_list_publication_sites, e.g. [\"data-fair-portals:abc123\"]."
+          },
           "page": {
             "type": "integer",
             "default": 1,
             "minimum": 1,
-            "description": "Numéro de page"
+            "description": "Page number"
           },
           "size": {
             "type": "integer",
             "default": 10,
             "minimum": 0,
             "maximum": 50,
-            "description": "Taille de la page. La somme de la taille et du décalage (page - 1) × taille ne peut pas dépasser 10000."
+            "description": "Page size. The sum of the size and of the offset (page - 1) × size cannot exceed 10000."
           },
           "response_format": {
             "type": "string",
@@ -100,15 +107,7 @@
           "title": {
             "type": "string",
             "title": "Title",
-            "x-i18n-title": {
-              "fr": "Titre"
-            },
-            "description": "Short title of the dataset",
-            "layout": {
-              "props": {
-                "variant": "outlined"
-              }
-            }
+            "description": "Short title of the dataset"
           }
         },
         "additionalProperties": false,
@@ -156,7 +155,7 @@
     },
     {
       "name": "datafair_list_datasets",
-      "description": "List the datasets published on the portal you are called from, with optional text search. Returns id, title, row count, and last update. Only available from a portal, not from the back-office.",
+      "description": "List the datasets published on the portal you are called from, with optional text search. Returns id, title, row count, and last update.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -168,14 +167,14 @@
             "type": "integer",
             "default": 1,
             "minimum": 1,
-            "description": "Numéro de page"
+            "description": "Page number"
           },
           "size": {
             "type": "integer",
             "default": 10,
             "minimum": 0,
             "maximum": 50,
-            "description": "Taille de la page. La somme de la taille et du décalage (page - 1) × taille ne peut pas dépasser 10000."
+            "description": "Page size. The sum of the size and of the offset (page - 1) × size cannot exceed 10000."
           },
           "response_format": {
             "type": "string",
@@ -245,7 +244,7 @@
         "properties": {
           "datasetId": {
             "type": "string",
-            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
+            "description": "The \"id\" of a datafair_list_account_datasets result, not its title or slug."
           },
           "response_format": {
             "type": "string",
@@ -318,7 +317,7 @@
         "properties": {
           "datasetId": {
             "type": "string",
-            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
+            "description": "The \"id\" of a datafair_list_account_datasets result, not its title or slug."
           },
           "file": {
             "type": "string",
@@ -327,12 +326,21 @@
             "x-mcp-file": {
               "maxSize": 104857600
             }
+          },
+          "datasetTitle": {
+            "type": "string",
+            "description": "The dataset's current title, checked before the call (refused if it differs): it tells whoever reads the call what it acts on.",
+            "x-checked": {
+              "against": "datasetId",
+              "field": "/title"
+            }
           }
         },
         "additionalProperties": false,
         "required": [
           "datasetId",
-          "file"
+          "file",
+          "datasetTitle"
         ]
       },
       "annotations": {
@@ -381,12 +389,21 @@
         "properties": {
           "datasetId": {
             "type": "string",
-            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
+            "description": "The \"id\" of a datafair_list_account_datasets result, not its title or slug."
+          },
+          "datasetTitle": {
+            "type": "string",
+            "description": "The dataset's current title, checked before the call (refused if it differs): it tells whoever reads the call what it acts on.",
+            "x-checked": {
+              "against": "datasetId",
+              "field": "/title"
+            }
           }
         },
         "additionalProperties": false,
         "required": [
-          "datasetId"
+          "datasetId",
+          "datasetTitle"
         ]
       },
       "annotations": {
@@ -420,23 +437,32 @@
     },
     {
       "name": "datafair_update_dataset",
-      "description": "Update the metadata or configuration of a dataset: title, description, keywords, license, topics, schema… Send only the fields to change. Array and object fields (topics, keywords, attachments, schema, configuration…) replace the current value entirely: read it first with datafair_describe_dataset and send the complete new value. Publishing on portals, publications to remote catalogs, the read API key, master-data exposure and attaching to a parent (partOf) are done with datafair_publish_dataset.",
+      "description": "Update the metadata or configuration of a dataset: title, description, keywords, license, topics, schema… Send only the fields to change. Array and object fields (keywords, topics, attachments, schema…) replace the current value entirely: read it first with datafair_describe_dataset and send the complete new value. Publishing on portals, publications to remote catalogs, the read API key, master-data exposure and attaching to a parent (partOf) are done with datafair_publish_dataset.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "datasetId": {
             "type": "string",
-            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
+            "description": "The \"id\" of a datafair_list_account_datasets result, not its title or slug."
           },
           "body": {
             "type": "object",
-            "description": "The request body. Properties (`?` marks optional):\n\nslug?: string | null — Identifier of the dataset, usually a slug for URL readability (unique inside the…\ntitle?: string — Short title of the dataset\nsummary?: string | null — Short description of the dataset\ndescription?: string | null — Detailed description of the dataset\nimage?: string | null — URL of an image used as thumbnail\nspatial?: string | null — Geographic coverage\ntemporal?: object | null — Temporal coverage\nkeywords?: string[] | null — Keywords\nsearchTerms?: string | null — Free text used only by the catalog search, never displayed: synonyms, acronyms w…\nfrequency?: \"\"|\"irregular\"|\"continuous\"|\"daily\"|\"threeTimesAWeek\"|\"semiweekly\"|\"weekly\"|\"threeTimesAMonth\"|… (18 values) | null — Update frequency\ncreator?: string | null — Producer\nmodified?: string | null — Date the data was modified at its source, when it differs from the date it was l…\nattachments?: object[] | null\nprimaryKey?: string[] | null — List of properties of the schema used as unique primary key for each line\nschema?: object[] | null — JSON schema properties of the fields\nprojection?: object | null — The cartographic projection of this dataset. Refers to the list of supported pro…\nconformsTo?: object | null — Reference to an external schema or standard the dataset conforms to.\nlicense?: object | null — License\norigin?: string | null — Address of the page where the original data is published, for example on the pro…\nconstraints?: object | object[] | null — Contraintes de validation à l'échelle du jeu de données, au delà des validations…\nextensions?: object[] | null — Définition des enrichissements appliqués à ce jeu de données\nrequestedPublicationSites?: string[] | null — References to all sites the dataset would be exposed in if validated by an admin…\nattachmentsAsImage?: boolean | null — Set to true to use attached files as illustrations of the line\nvirtual?: object | null — A configuration object dedicated to virtual datasets.\nrest?: object | null — A configuration object dedicated to REST datasets.\ntopics?: object[] | null — Topics\nrelatedDatasets?: object[] | null — Other related datasets (same topic, similar structure, or other criteria) sugges…\nthumbnails?: object | null\nextras?: object | null — An object for extra content from client services of data-fair\ncustomMetadata?: object | null — Values of the custom metadata defined in the owner settings (datasetsMetadata.cu…\nanalysis?: object | null\nnonBlockingValidation?: boolean | null"
+            "description": "The request body. Properties (`?` marks optional):\n\nslug?: string | null — Identifier of the dataset, usually a slug for URL readability (unique inside the…\ntitle?: string — Short title of the dataset\nsummary?: string | null — Short description of the dataset\ndescription?: string | null — Detailed description of the dataset\nimage?: string | null — URL of an image used as thumbnail\nspatial?: string | null — Geographic coverage\ntemporal?: object | null — Temporal coverage\nkeywords?: string[] | null — Keywords\nsearchTerms?: string | null — Free text used only by the catalog search, never displayed: synonyms, acronyms w…\nfrequency?: \"\"|\"irregular\"|\"continuous\"|\"daily\"|\"threeTimesAWeek\"|\"semiweekly\"|\"weekly\"|\"threeTimesAMonth\"|… (18 values) | null — Update frequency\ncreator?: string | null — Producer\nmodified?: string | null — Date the data was modified at its source, when it differs from the date it was l…\nattachments?: object[] | null\nprimaryKey?: string[] | null — List of properties of the schema used as unique primary key for each line\nschema?: object[] | null — JSON schema properties of the fields\nprojection?: object | null — The cartographic projection of this dataset. Refers to the list of supported pro…\nconformsTo?: object | null — Reference to an external schema or standard the dataset conforms to.\nlicense?: object | null — License\norigin?: string | null — Address of the page where the original data is published, for example on the pro…\nconstraints?: object | object[] | null — Validation constraints at the dataset level, beyond the validations of each colu…\nextensions?: object[] | null — Definition of the extensions applied to this dataset\nrequestedPublicationSites?: string[] | null — References to all sites the dataset would be exposed in if validated by an admin…\nattachmentsAsImage?: boolean | null — Set to true to use attached files as illustrations of the line\nvirtual?: object | null — A configuration object dedicated to virtual datasets.\nrest?: object | null — A configuration object dedicated to REST datasets.\ntopics?: object[] | null — Topics\nrelatedDatasets?: object[] | null — Other related datasets (same topic, similar structure, or other criteria) sugges…\nthumbnails?: object | null\nextras?: object | null — An object for extra content from client services of data-fair\ncustomMetadata?: object | null — Values of the custom metadata defined in the owner settings (datasetsMetadata.cu…\nanalysis?: object | null\nnonBlockingValidation?: boolean | null"
+          },
+          "datasetTitle": {
+            "type": "string",
+            "description": "The dataset's current title, checked before the call (refused if it differs): it tells whoever reads the call what it acts on.",
+            "x-checked": {
+              "against": "datasetId",
+              "field": "/title"
+            }
           }
         },
         "additionalProperties": false,
         "required": [
           "datasetId",
-          "body"
+          "body",
+          "datasetTitle"
         ]
       },
       "annotations": {
@@ -485,17 +511,26 @@
         "properties": {
           "datasetId": {
             "type": "string",
-            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
+            "description": "The \"id\" of a datafair_list_account_datasets result, not its title or slug."
           },
           "body": {
             "type": "object",
-            "description": "The request body. Properties (`?` marks optional):\n\npublications?: object[] | null — References to all the catalogs the dataset metadata is published too\npublicationSites?: string[] | null — References to all sites the dataset is exposed in.\nreadApiKey?: object | null\nmasterData?: object | null — Données de référence\npartOf?: object | null — Declares this dataset as a fragment of another resource (a virtual dataset, a me…"
+            "description": "The request body. Properties (`?` marks optional):\n\npublications?: object[] | null — References to all the catalogs the dataset metadata is published too\npublicationSites?: string[] | null — References to all sites the dataset is exposed in.\nreadApiKey?: object | null\nmasterData?: object | null — Master data\npartOf?: object | null — Declares this dataset as a fragment of another resource (a virtual dataset, a me…"
+          },
+          "datasetTitle": {
+            "type": "string",
+            "description": "The dataset's current title, checked before the call (refused if it differs): it tells whoever reads the call what it acts on.",
+            "x-checked": {
+              "against": "datasetId",
+              "field": "/title"
+            }
           }
         },
         "additionalProperties": false,
         "required": [
           "datasetId",
-          "body"
+          "body",
+          "datasetTitle"
         ]
       },
       "annotations": {
@@ -543,18 +578,25 @@
             },
             "description": "Restrict to the applications using these datasets (ids from datafair_list_account_datasets)."
           },
+          "publicationSites": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            },
+            "description": "Keep only the applications published on these portals: their keys from datafair_list_publication_sites, e.g. [\"data-fair-portals:abc123\"]."
+          },
           "page": {
             "type": "integer",
             "default": 1,
             "minimum": 1,
-            "description": "Numéro de page"
+            "description": "Page number"
           },
           "size": {
             "type": "integer",
             "default": 10,
             "minimum": 0,
             "maximum": 50,
-            "description": "Taille de la page. La somme de la taille et du décalage (page - 1) × taille ne peut pas dépasser 10000."
+            "description": "Page size. The sum of the size and of the offset (page - 1) × size cannot exceed 10000."
           },
           "response_format": {
             "type": "string",
@@ -625,7 +667,7 @@
         "properties": {
           "applicationId": {
             "type": "string",
-            "description": "The exact application ID from the \"id\" field in datafair_list_account_applications results."
+            "description": "The \"id\" of a datafair_list_account_applications result."
           },
           "draft": {
             "type": "boolean",
@@ -707,7 +749,7 @@
         "properties": {
           "applicationId": {
             "type": "string",
-            "description": "The exact application ID from the \"id\" field in datafair_list_account_applications results."
+            "description": "The \"id\" of a datafair_list_account_applications result."
           }
         },
         "additionalProperties": false,
@@ -772,12 +814,21 @@
         "properties": {
           "applicationId": {
             "type": "string",
-            "description": "The exact application ID from the \"id\" field in datafair_list_account_applications results."
+            "description": "The \"id\" of a datafair_list_account_applications result."
+          },
+          "applicationTitle": {
+            "type": "string",
+            "description": "The application's current title, checked before the call (refused if it differs): it tells whoever reads the call what it acts on.",
+            "x-checked": {
+              "against": "applicationId",
+              "field": "/title"
+            }
           }
         },
         "additionalProperties": false,
         "required": [
-          "applicationId"
+          "applicationId",
+          "applicationTitle"
         ]
       },
       "annotations": {
@@ -811,13 +862,13 @@
     },
     {
       "name": "datafair_update_application",
-      "description": "Update the metadata or configuration of an application: title, description, topics, configuration… Send only the fields to change. Array and object fields (topics, keywords, attachments, schema, configuration…) replace the current value entirely: read it first with datafair_describe_application and send the complete new value. Publishing on portals, publications to remote catalogs and attaching to a parent (partOf) are done with datafair_publish_application. Do not change configuration.datasets[].applicationKeyPermissions unless explicitly asked: it decides what anyone holding the application key can do on that dataset; send it back as you read it.",
+      "description": "Update the metadata or configuration of an application: title, description, topics, configuration… Send only the fields to change. Array and object fields (topics, attachments, configuration…) replace the current value entirely: read it first with datafair_describe_application and send the complete new value. Publishing on portals, publications to remote catalogs and attaching to a parent (partOf) are done with datafair_publish_application. Do not change configuration.datasets[].applicationKeyPermissions unless explicitly asked: it decides what anyone holding the application key can do on that dataset; send it back as you read it.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "applicationId": {
             "type": "string",
-            "description": "The exact application ID from the \"id\" field in datafair_list_account_applications results."
+            "description": "The \"id\" of a datafair_list_account_applications result."
           },
           "slug": {
             "type": "string",
@@ -854,7 +905,7 @@
             "anyOf": [
               {
                 "type": "string",
-                "description": "URL d'une image, illustration du jeu de données"
+                "description": "URL of an image illustrating the application"
               },
               {
                 "type": "null"
@@ -897,7 +948,7 @@
                         },
                         "applicationKeyPermissions": {
                           "type": "object",
-                          "description": "The permissions that should be applied to users accessing this dataset through a protecte application key of this application",
+                          "description": "The permissions that should be applied to users accessing this dataset through a protected application key of this application",
                           "default": {
                             "classes": [
                               "read"
@@ -964,10 +1015,7 @@
             "anyOf": [
               {
                 "type": "array",
-                "title": "Liste de thématiques",
-                "layout": {
-                  "itemTitle": "item.title"
-                },
+                "title": "Topics list",
                 "items": {
                   "title": "Topic",
                   "x-exports": [
@@ -986,39 +1034,12 @@
                     },
                     "title": {
                       "type": "string",
-                      "title": "Title",
-                      "x-i18n-title": {
-                        "fr": "Titre"
-                      },
-                      "layout": {
-                        "cols": {
-                          "md": 5
-                        }
-                      }
+                      "title": "Title"
                     },
                     "icon": {
                       "type": "object",
                       "title": "Icon",
-                      "x-i18n-title": {
-                        "fr": "Icône"
-                      },
-                      "description": "Il est possible de consulter plus facilement la liste des icônes disponibles sur <a href='https://pictogrammers.com/library/mdi/' target='_blank'>ce site </a>.<br>Commencez à taper pour rechercher dans la collection complète d'icônes. Seuls quelques icônes sont chargées initialement pour de meilleures performances.",
-                      "x-i18n-description": {
-                        "en": "You can easily browse the list of available icons on this <a href='https://pictogrammers.com/library/mdi/' target='_blank'>this website</a>.<br>Start typing to search through the complete collection of icons. Only a few icons are loaded initially for better performance."
-                      },
-                      "layout": {
-                        "getItems": {
-                          "url": "https://koumoul.com/data-fair/api/v1/datasets/icons-mdi-latest/lines?q={q}&select=name,svg,svgPath&size=25",
-                          "itemsResults": "data.results",
-                          "itemTitle": "item.name",
-                          "itemIcon": "item.svg",
-                          "itemKey": "item.name"
-                        },
-                        "cols": {
-                          "md": 5,
-                          "sm": 6
-                        }
-                      },
+                      "description": "You can easily browse the list of available icons on <a href='https://pictogrammers.com/library/mdi/' target='_blank'>this website</a>.<br>Start typing to search through the complete collection of icons. Only a few icons are loaded initially for better performance.",
                       "required": [
                         "name"
                       ],
@@ -1036,17 +1057,7 @@
                     },
                     "color": {
                       "type": "string",
-                      "title": "Color",
-                      "x-i18n-title": {
-                        "fr": "Couleur"
-                      },
-                      "layout": {
-                        "comp": "color-picker",
-                        "cols": {
-                          "md": 2,
-                          "sm": 6
-                        }
-                      }
+                      "title": "Color"
                     }
                   }
                 }
@@ -1091,37 +1102,26 @@
                   "properties": {
                     "title": {
                       "type": "string",
-                      "title": "Titre",
-                      "layout": {
-                        "props": {
-                          "outlined": true,
-                          "dense": true
-                        }
-                      }
+                      "title": "Attachment title"
                     },
                     "name": {
-                      "layout": "none",
                       "type": "string",
                       "description": "Name of the file that was used to create or update this attachment"
                     },
                     "size": {
-                      "layout": "none",
                       "type": "number",
                       "description": "Size of the file on disk"
                     },
                     "mimetype": {
-                      "layout": "none",
                       "type": "string",
                       "description": "Mime type of the file"
                     },
                     "updatedAt": {
-                      "layout": "none",
                       "type": "string",
                       "description": "Date of the last update for this attachment",
                       "format": "date-time"
                     },
                     "url": {
-                      "layout": "none",
                       "readOnly": true,
                       "type": "string",
                       "title": "URL"
@@ -1133,11 +1133,20 @@
                 "type": "null"
               }
             ]
+          },
+          "applicationTitle": {
+            "type": "string",
+            "description": "The application's current title, checked before the call (refused if it differs): it tells whoever reads the call what it acts on.",
+            "x-checked": {
+              "against": "applicationId",
+              "field": "/title"
+            }
           }
         },
         "additionalProperties": false,
         "required": [
-          "applicationId"
+          "applicationId",
+          "applicationTitle"
         ]
       },
       "annotations": {
@@ -1187,7 +1196,7 @@
         "properties": {
           "applicationId": {
             "type": "string",
-            "description": "The exact application ID from the \"id\" field in datafair_list_account_applications results."
+            "description": "The \"id\" of a datafair_list_account_applications result."
           },
           "publications": {
             "anyOf": [
@@ -1207,11 +1216,11 @@
                     },
                     "catalog": {
                       "type": "string",
-                      "description": "L'identifiant du catalogue de destination de cette publication."
+                      "description": "Identifier of the target catalog of this publication."
                     },
                     "status": {
                       "type": "string",
-                      "description": "Statut indiquant clairement si la publication a réussi. Si \"published\", la propriété targetUrl doit être renseignée. Si \"error\", la propriété error doit être renseignée.",
+                      "description": "Status telling whether the publication succeeded. If \"published\", the targetUrl property must be set. If \"error\", the error property must be set.",
                       "enum": [
                         "waiting",
                         "published",
@@ -1221,7 +1230,7 @@
                     },
                     "publishedAt": {
                       "type": "string",
-                      "description": "Date de la dernière mise à jour de cette publication.",
+                      "description": "Date of the last update of this publication.",
                       "format": "date-time"
                     },
                     "error": {
@@ -1232,7 +1241,7 @@
                     },
                     "result": {
                       "type": "object",
-                      "description": "Résultat de la publication. La structure de cet objet est libre et dépend du type de catalogue."
+                      "description": "Result of the publication. The structure of this object is free and depends on the catalog type."
                     }
                   }
                 }
@@ -1283,11 +1292,20 @@
                 "type": "null"
               }
             ]
+          },
+          "applicationTitle": {
+            "type": "string",
+            "description": "The application's current title, checked before the call (refused if it differs): it tells whoever reads the call what it acts on.",
+            "x-checked": {
+              "against": "applicationId",
+              "field": "/title"
+            }
           }
         },
         "additionalProperties": false,
         "required": [
-          "applicationId"
+          "applicationId",
+          "applicationTitle"
         ]
       },
       "annotations": {
@@ -1401,7 +1419,7 @@
         "properties": {
           "datasetId": {
             "type": "string",
-            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
+            "description": "The \"id\" of a datafair_list_account_datasets result, not its title or slug."
           },
           "after": {
             "type": "string",
@@ -1436,22 +1454,13 @@
           },
           "filters": {
             "type": "object",
-            "patternPropertiesLayout": {
-              "messages": {
-                "addItem": "Ajouter un filtre"
-              },
-              "help": "Filtres structurés sur colonne.\n\nLe nom est constitué de la clé de la colonne concaténée avec un suffixe par type de filtre (par exemple `ma_colonne_eq`, `ma_colonne_in`, etc.).\n\nLes types de filtres disponibles peuvent varier par colonne.\n\n  - `_eq` : égal à une valeur\n  - `_neq` : différent d'une valeur\n  - `_in` : appartient à une liste de valeurs (séparées par des virgules)\n  - `_nin` : n'appartient pas à une liste de valeurs (séparées par des virgules)\n  - `_gt` : strictement supérieur à une valeur\n  - `_gte` : supérieur ou égal à une valeur\n  - `_lt` : strictement inférieur à une valeur\n  - `_lte` : inférieur ou égal à une valeur\n  - `_starts` : commence par une série de caractères\n  - `_contains` : contient une série de caractères\n  - `_search` : effectue une recherche textuelle simple\n  - `_exists` : la colonne contient une valeur\n  - `_nexists` : la colonne ne contient pas une valeur\n  "
-            },
             "patternProperties": {
               ".*": {
                 "type": "string",
-                "default": "",
-                "layout": {
-                  "placeholder": "saisissez la valeur du filtre"
-                }
+                "default": ""
               }
             },
-            "description": "Column filters as key-value pairs: column_key + suffix, all values strings. Example: { \"ville_eq\": \"Paris\", \"age_lte\": \"30\", \"nom_search\": \"Jean\" }. Suffixes: _eq, _neq, _in, _nin, _gt, _gte, _lt, _lte, _starts, _exists, _nexists, _search (free-text word search, default choice for text), _contains (only when enabled). If a suffix is rejected the 400 error lists what the column supports — read it and adapt. Never prefix with _c_."
+            "description": "Column filters { \"<column key><suffix>\": \"<value as a string>\" }, e.g. { \"ville_eq\": \"Paris\", \"age_lte\": \"30\", \"nom_search\": \"Jean\" }. Suffixes: _eq _neq _in _nin (comma-separated) _gt _gte _lt _lte _starts _exists _nexists _search (words, the default for text) _contains (when enabled). A rejected suffix answers a 400 listing the column's. Never prefix with _c_."
           },
           "bbox": {
             "type": "string",
@@ -1530,7 +1539,7 @@
         "properties": {
           "datasetId": {
             "type": "string",
-            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
+            "description": "The \"id\" of a datafair_list_account_datasets result, not its title or slug."
           },
           "size": {
             "default": 10000,
@@ -1561,22 +1570,13 @@
           },
           "filters": {
             "type": "object",
-            "patternPropertiesLayout": {
-              "messages": {
-                "addItem": "Ajouter un filtre"
-              },
-              "help": "Filtres structurés sur colonne.\n\nLe nom est constitué de la clé de la colonne concaténée avec un suffixe par type de filtre (par exemple `ma_colonne_eq`, `ma_colonne_in`, etc.).\n\nLes types de filtres disponibles peuvent varier par colonne.\n\n  - `_eq` : égal à une valeur\n  - `_neq` : différent d'une valeur\n  - `_in` : appartient à une liste de valeurs (séparées par des virgules)\n  - `_nin` : n'appartient pas à une liste de valeurs (séparées par des virgules)\n  - `_gt` : strictement supérieur à une valeur\n  - `_gte` : supérieur ou égal à une valeur\n  - `_lt` : strictement inférieur à une valeur\n  - `_lte` : inférieur ou égal à une valeur\n  - `_starts` : commence par une série de caractères\n  - `_contains` : contient une série de caractères\n  - `_search` : effectue une recherche textuelle simple\n  - `_exists` : la colonne contient une valeur\n  - `_nexists` : la colonne ne contient pas une valeur\n  "
-            },
             "patternProperties": {
               ".*": {
                 "type": "string",
-                "default": "",
-                "layout": {
-                  "placeholder": "saisissez la valeur du filtre"
-                }
+                "default": ""
               }
             },
-            "description": "Column filters as key-value pairs: column_key + suffix, all values strings. Example: { \"ville_eq\": \"Paris\", \"age_lte\": \"30\", \"nom_search\": \"Jean\" }. Suffixes: _eq, _neq, _in, _nin, _gt, _gte, _lt, _lte, _starts, _exists, _nexists, _search (free-text word search, default choice for text), _contains (only when enabled). If a suffix is rejected the 400 error lists what the column supports — read it and adapt. Never prefix with _c_."
+            "description": "Column filters { \"<column key><suffix>\": \"<value as a string>\" }, e.g. { \"ville_eq\": \"Paris\", \"age_lte\": \"30\", \"nom_search\": \"Jean\" }. Suffixes: _eq _neq _in _nin (comma-separated) _gt _gte _lt _lte _starts _exists _nexists _search (words, the default for text) _contains (when enabled). A rejected suffix answers a 400 listing the column's. Never prefix with _c_."
           },
           "bbox": {
             "type": "string",
@@ -1655,7 +1655,7 @@
         "properties": {
           "datasetId": {
             "type": "string",
-            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
+            "description": "The \"id\" of a datafair_list_account_datasets result, not its title or slug."
           },
           "fieldKey": {
             "type": "string",
@@ -1691,22 +1691,13 @@
           },
           "filters": {
             "type": "object",
-            "patternPropertiesLayout": {
-              "messages": {
-                "addItem": "Ajouter un filtre"
-              },
-              "help": "Filtres structurés sur colonne.\n\nLe nom est constitué de la clé de la colonne concaténée avec un suffixe par type de filtre (par exemple `ma_colonne_eq`, `ma_colonne_in`, etc.).\n\nLes types de filtres disponibles peuvent varier par colonne.\n\n  - `_eq` : égal à une valeur\n  - `_neq` : différent d'une valeur\n  - `_in` : appartient à une liste de valeurs (séparées par des virgules)\n  - `_nin` : n'appartient pas à une liste de valeurs (séparées par des virgules)\n  - `_gt` : strictement supérieur à une valeur\n  - `_gte` : supérieur ou égal à une valeur\n  - `_lt` : strictement inférieur à une valeur\n  - `_lte` : inférieur ou égal à une valeur\n  - `_starts` : commence par une série de caractères\n  - `_contains` : contient une série de caractères\n  - `_search` : effectue une recherche textuelle simple\n  - `_exists` : la colonne contient une valeur\n  - `_nexists` : la colonne ne contient pas une valeur\n  "
-            },
             "patternProperties": {
               ".*": {
                 "type": "string",
-                "default": "",
-                "layout": {
-                  "placeholder": "saisissez la valeur du filtre"
-                }
+                "default": ""
               }
             },
-            "description": "Column filters as key-value pairs: column_key + suffix, all values strings. Example: { \"ville_eq\": \"Paris\", \"age_lte\": \"30\", \"nom_search\": \"Jean\" }. Suffixes: _eq, _neq, _in, _nin, _gt, _gte, _lt, _lte, _starts, _exists, _nexists, _search (free-text word search, default choice for text), _contains (only when enabled). If a suffix is rejected the 400 error lists what the column supports — read it and adapt. Never prefix with _c_."
+            "description": "Column filters { \"<column key><suffix>\": \"<value as a string>\" }, e.g. { \"ville_eq\": \"Paris\", \"age_lte\": \"30\", \"nom_search\": \"Jean\" }. Suffixes: _eq _neq _in _nin (comma-separated) _gt _gte _lt _lte _starts _exists _nexists _search (words, the default for text) _contains (when enabled). A rejected suffix answers a 400 listing the column's. Never prefix with _c_."
           },
           "bbox": {
             "type": "string",
@@ -1786,7 +1777,7 @@
         "properties": {
           "datasetId": {
             "type": "string",
-            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
+            "description": "The \"id\" of a datafair_list_account_datasets result, not its title or slug."
           },
           "groupByColumns": {
             "type": "array",
@@ -1821,26 +1812,17 @@
           "q": {
             "type": "string",
             "maxLength": 1000,
-            "description": "Colonne de recherche simple. Ce paramètre peut être utilisé pour exposer une fonctionnalité de recherche textuelle riche aux utilisateurs sans risque de créer des erreurs de syntaxe.\n\n  Exemple : `\"open data\" | \"open source\"`\n\n  Pour plus d'information voir la documentation [ElasticSearch](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-simple-query-string-query.html) correspondante."
+            "description": "Full-text search across all columns, restricting the rows. Prefer filters for structured criteria."
           },
           "filters": {
             "type": "object",
-            "patternPropertiesLayout": {
-              "messages": {
-                "addItem": "Ajouter un filtre"
-              },
-              "help": "Filtres structurés sur colonne.\n\nLe nom est constitué de la clé de la colonne concaténée avec un suffixe par type de filtre (par exemple `ma_colonne_eq`, `ma_colonne_in`, etc.).\n\nLes types de filtres disponibles peuvent varier par colonne.\n\n  - `_eq` : égal à une valeur\n  - `_neq` : différent d'une valeur\n  - `_in` : appartient à une liste de valeurs (séparées par des virgules)\n  - `_nin` : n'appartient pas à une liste de valeurs (séparées par des virgules)\n  - `_gt` : strictement supérieur à une valeur\n  - `_gte` : supérieur ou égal à une valeur\n  - `_lt` : strictement inférieur à une valeur\n  - `_lte` : inférieur ou égal à une valeur\n  - `_starts` : commence par une série de caractères\n  - `_contains` : contient une série de caractères\n  - `_search` : effectue une recherche textuelle simple\n  - `_exists` : la colonne contient une valeur\n  - `_nexists` : la colonne ne contient pas une valeur\n  "
-            },
             "patternProperties": {
               ".*": {
                 "type": "string",
-                "default": "",
-                "layout": {
-                  "placeholder": "saisissez la valeur du filtre"
-                }
+                "default": ""
               }
             },
-            "description": "Column filters as key-value pairs: column_key + suffix, all values strings. Example: { \"ville_eq\": \"Paris\", \"age_lte\": \"30\", \"nom_search\": \"Jean\" }. Suffixes: _eq, _neq, _in, _nin, _gt, _gte, _lt, _lte, _starts, _exists, _nexists, _search (free-text word search, default choice for text), _contains (only when enabled). If a suffix is rejected the 400 error lists what the column supports — read it and adapt. Never prefix with _c_."
+            "description": "Column filters { \"<column key><suffix>\": \"<value as a string>\" }, e.g. { \"ville_eq\": \"Paris\", \"age_lte\": \"30\", \"nom_search\": \"Jean\" }. Suffixes: _eq _neq _in _nin (comma-separated) _gt _gte _lt _lte _starts _exists _nexists _search (words, the default for text) _contains (when enabled). A rejected suffix answers a 400 listing the column's. Never prefix with _c_."
           },
           "bbox": {
             "type": "string",
@@ -1920,7 +1902,7 @@
         "properties": {
           "datasetId": {
             "type": "string",
-            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
+            "description": "The \"id\" of a datafair_list_account_datasets result, not its title or slug."
           },
           "metric": {
             "type": "string",
@@ -1948,26 +1930,17 @@
           "q": {
             "type": "string",
             "maxLength": 1000,
-            "description": "Colonne de recherche simple. Ce paramètre peut être utilisé pour exposer une fonctionnalité de recherche textuelle riche aux utilisateurs sans risque de créer des erreurs de syntaxe.\n\n  Exemple : `\"open data\" | \"open source\"`\n\n  Pour plus d'information voir la documentation [ElasticSearch](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-simple-query-string-query.html) correspondante."
+            "description": "Full-text search across all columns, restricting the rows. Prefer filters for structured criteria."
           },
           "filters": {
             "type": "object",
-            "patternPropertiesLayout": {
-              "messages": {
-                "addItem": "Ajouter un filtre"
-              },
-              "help": "Filtres structurés sur colonne.\n\nLe nom est constitué de la clé de la colonne concaténée avec un suffixe par type de filtre (par exemple `ma_colonne_eq`, `ma_colonne_in`, etc.).\n\nLes types de filtres disponibles peuvent varier par colonne.\n\n  - `_eq` : égal à une valeur\n  - `_neq` : différent d'une valeur\n  - `_in` : appartient à une liste de valeurs (séparées par des virgules)\n  - `_nin` : n'appartient pas à une liste de valeurs (séparées par des virgules)\n  - `_gt` : strictement supérieur à une valeur\n  - `_gte` : supérieur ou égal à une valeur\n  - `_lt` : strictement inférieur à une valeur\n  - `_lte` : inférieur ou égal à une valeur\n  - `_starts` : commence par une série de caractères\n  - `_contains` : contient une série de caractères\n  - `_search` : effectue une recherche textuelle simple\n  - `_exists` : la colonne contient une valeur\n  - `_nexists` : la colonne ne contient pas une valeur\n  "
-            },
             "patternProperties": {
               ".*": {
                 "type": "string",
-                "default": "",
-                "layout": {
-                  "placeholder": "saisissez la valeur du filtre"
-                }
+                "default": ""
               }
             },
-            "description": "Column filters as key-value pairs: column_key + suffix, all values strings. Example: { \"ville_eq\": \"Paris\", \"age_lte\": \"30\", \"nom_search\": \"Jean\" }. Suffixes: _eq, _neq, _in, _nin, _gt, _gte, _lt, _lte, _starts, _exists, _nexists, _search (free-text word search, default choice for text), _contains (only when enabled). If a suffix is rejected the 400 error lists what the column supports — read it and adapt. Never prefix with _c_."
+            "description": "Column filters { \"<column key><suffix>\": \"<value as a string>\" }, e.g. { \"ville_eq\": \"Paris\", \"age_lte\": \"30\", \"nom_search\": \"Jean\" }. Suffixes: _eq _neq _in _nin (comma-separated) _gt _gte _lt _lte _starts _exists _nexists _search (words, the default for text) _contains (when enabled). A rejected suffix answers a 400 listing the column's. Never prefix with _c_."
           },
           "bbox": {
             "type": "string",
@@ -2048,7 +2021,7 @@
         "properties": {
           "datasetId": {
             "type": "string",
-            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
+            "description": "The \"id\" of a datafair_list_account_datasets result, not its title or slug."
           }
         },
         "additionalProperties": false,
@@ -2112,7 +2085,7 @@
         "properties": {
           "datasetId": {
             "type": "string",
-            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
+            "description": "The \"id\" of a datafair_list_account_datasets result, not its title or slug."
           }
         },
         "additionalProperties": false,
@@ -2176,7 +2149,7 @@
         "properties": {
           "datasetId": {
             "type": "string",
-            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
+            "description": "The \"id\" of a datafair_list_account_datasets result, not its title or slug."
           }
         },
         "additionalProperties": false,
@@ -2221,16 +2194,10 @@
         "properties": {
           "datasetId": {
             "type": "string",
-            "description": "The exact dataset ID from the \"id\" field in datafair_list_account_datasets (or, on a portal, datafair_list_datasets) results. Do not use the title or slug."
+            "description": "The \"id\" of a datafair_list_account_datasets result, not its title or slug."
           },
           "body": {
-            "$id": "https://github.com/data-fair/data-fair/permissions-resolved",
             "title": "Permissions",
-            "x-exports": [
-              "types",
-              "validate",
-              "resolvedSchema"
-            ],
             "type": "array",
             "items": {
               "title": "Permission",
@@ -2288,72 +2255,22 @@
                   }
                 }
               }
-            },
-            "$defs": {
-              "permission": {
-                "title": "Permission",
-                "type": "object",
-                "description": "Permission to do the operations (identified by their id). If type and id are not set, then the operation is set to public. roles array is used only with type organization",
-                "additionalProperties": false,
-                "properties": {
-                  "type": {
-                    "type": "string",
-                    "enum": [
-                      "user",
-                      "organization"
-                    ],
-                    "description": "If the entity is a user or an organization"
-                  },
-                  "id": {
-                    "type": "string",
-                    "description": "Identifier of the entity"
-                  },
-                  "name": {
-                    "type": "string",
-                    "description": "Name of the entity"
-                  },
-                  "email": {
-                    "type": "string",
-                    "description": "Email of the user"
-                  },
-                  "department": {
-                    "type": "string",
-                    "description": "Identifier of the department or \"*\" for any department (same as empty) or \"-\" for no department"
-                  },
-                  "departmentName": {
-                    "type": "string",
-                    "description": "Name of the department"
-                  },
-                  "roles": {
-                    "type": "array",
-                    "items": {
-                      "type": "string",
-                      "description": "Role name"
-                    }
-                  },
-                  "operations": {
-                    "type": "array",
-                    "items": {
-                      "type": "string",
-                      "description": "API operation that can be used"
-                    }
-                  },
-                  "classes": {
-                    "type": "array",
-                    "items": {
-                      "type": "string",
-                      "description": "API permission classes that can be used"
-                    }
-                  }
-                }
-              }
+            }
+          },
+          "datasetTitle": {
+            "type": "string",
+            "description": "The dataset's current title, checked before the call (refused if it differs): it tells whoever reads the call what it acts on.",
+            "x-checked": {
+              "against": "datasetId",
+              "field": "/title"
             }
           }
         },
         "additionalProperties": false,
         "required": [
           "datasetId",
-          "body"
+          "body",
+          "datasetTitle"
         ]
       },
       "annotations": {
@@ -2389,8 +2306,8 @@
   "skills": [
     {
       "name": "datafair-workflow",
-      "description": "How to explore the data published on a portal: find datasets, read their schema, then search rows, aggregate or compute metrics. Read it before querying data.",
-      "digest": "sha256:6f055f91878e04dc91d54ca38a055944dbf8225c521871605ec2a6c1dbffa548"
+      "description": "How to explore datasets: find them, read their schema, then search rows, aggregate or compute metrics. Read it before querying data.",
+      "digest": "sha256:9383ad730105d54365259b89152826e1c1e05f4ed91be9ec430961e5c79b75cf"
     }
   ],
   "guides": []

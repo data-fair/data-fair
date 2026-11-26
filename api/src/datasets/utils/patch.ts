@@ -3,6 +3,7 @@ import path from 'node:path'
 import equal from 'deep-equal'
 import moment from 'moment'
 import { httpError } from '@data-fair/lib-utils/http-errors.js'
+import { i18nHttpError } from '../../misc/utils/i18n-errors.ts'
 import mime from 'mime-types'
 import config from '#config'
 import * as geo from './geo.ts'
@@ -99,7 +100,7 @@ export const preparePatch = async (app: any, patch: any, dataset: any, sessionSt
     patch._attachmentsTargets = []
     for (const attachment of patch.attachments) {
       if (['file', 'remoteFile'].includes(attachment.type) && attachment.name && !attachment.mimetype) {
-        if (!path.extname(attachment.name)) throw httpError(400, `Le nom de fichier de la pièce jointe ${attachment.name} ne contient pas d'extension.`)
+        if (!path.extname(attachment.name)) throw i18nHttpError(400, 'errors.patch.attachmentNoExtension', { name: attachment.name })
         const mimetype = mime.lookup(attachment.name)
         if (mimetype) attachment.mimetype = mimetype
       }
@@ -110,7 +111,7 @@ export const preparePatch = async (app: any, patch: any, dataset: any, sessionSt
         } else {
           const existingAttachmentTarget = dataset._attachmentsTargets?.find((a: any) => a.name === attachment.name)
           if (!existingAttachmentTarget) {
-            throw httpError(400, `Impossible de créer la pièce jointe ${attachment.name} sans URL cible`)
+            throw i18nHttpError(400, 'errors.patch.attachmentNoTarget', { name: attachment.name })
           }
           const attachmentTarget = { ...existingAttachmentTarget, ...attachment }
           patch._attachmentsTargets.push(attachmentTarget)
@@ -187,12 +188,12 @@ export const preparePatch = async (app: any, patch: any, dataset: any, sessionSt
     const ownershipCol = (key: string) => key === '_owner' || key === '_ownerName'
     const primaryKey = 'primaryKey' in patch ? patch.primaryKey : dataset.primaryKey
     if (primaryKey?.some(ownershipCol)) {
-      throw httpError(400, 'Impossible de désactiver la propriété des lignes tant que les colonnes de propriété font partie de la clé primaire')
+      throw i18nHttpError(400, 'errors.patch.ownershipInPrimaryKey')
     }
     // same for a unique constraint: it would keep referencing columns gone from the schema and make
     // every later schema patch fail in checkConstraints
     if (effectiveConstraints?.some((c: any) => c.properties?.some(ownershipCol))) {
-      throw httpError(400, 'Impossible de désactiver la propriété des lignes tant qu\'une contrainte d\'unicité porte sur les colonnes de propriété')
+      throw i18nHttpError(400, 'errors.patch.ownershipInConstraint')
     }
     removedRestProps.push({ key: '_owner' })
     removedRestProps.push({ key: '_ownerName' })
@@ -213,7 +214,7 @@ export const preparePatch = async (app: any, patch: any, dataset: any, sessionSt
     // be extra sure that primaryKeyMode is preserved
     patch.rest.primaryKeyMode = patch.rest.primaryKeyMode || dataset.rest.primaryKeyMode
     if (patch.rest.primaryKeyMode !== dataset.rest.primaryKeyMode) {
-      throw httpError(400, 'Impossible de changer le mode de clé primaire')
+      throw i18nHttpError(400, 'errors.patch.primaryKeyModeChange')
     }
   }
 

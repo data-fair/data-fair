@@ -2,7 +2,7 @@ import fs from 'fs-extra'
 import { flatten } from 'flat'
 import { Writable, Transform } from 'stream'
 import csv from 'csv-parser'
-import JSONStream from 'JSONStream'
+import { jsonStreamScanner, jsonStreamStringifier } from './json-streams.ts'
 import { stringify as csvStrStream } from 'csv-stringify'
 import tmp from 'tmp-promise'
 import { mimeTypeStream } from './mime-type-stream.ts'
@@ -111,7 +111,7 @@ export const transformFileStreams = (mimeType: string, schema: SchemaProperty[],
               }))
 
             if (unknownKey) {
-              return callback(new Error(`Échec du traitement de la ligne ${(chunk._i + 1).toLocaleString()} du fichier. Le format est probablement invalide.`))
+              return callback(new Error(`Failed to process the line ${(chunk._i + 1).toLocaleString()} of the file. The format is probably invalid.`))
             }
 
             // this should not be necessary, but csv-parser does not return all trailing empty values
@@ -165,7 +165,7 @@ export const transformFileStreams = (mimeType: string, schema: SchemaProperty[],
       }
     }))
   } else if (mimeType === 'application/geo+json') {
-    streams.push(JSONStream.parse('features.*'))
+    streams.push(jsonStreamScanner({ path: ['features'] }))
     // a property escaping to the "id" key (id, ID, _id...) takes precedence over the feature top-level id
     const idKey = fieldsSniffer.escapeKey('id', dataset?.analysis?.escapeKeyAlgorithm)
     const escapedKeys: Record<string, string> = {}
@@ -242,7 +242,7 @@ export const getTransformStream = (schema: SchemaProperty[], fileSchema?: Schema
               const value = typeof item[prop.key] === 'string' ? item[prop.key].trim() : item[prop.key]
               item[prop.key] = compiledExpressions[prop.key]({ value })
             } catch (err) {
-              const message = `[noretry] échec de l'évaluation de l'expression "${prop['x-transform']?.expr}" : ${(err as Error).message}`
+              const message = `[noretry] failed to evaluate the expression "${prop['x-transform']?.expr}": ${(err as Error).message}`
               return callback(new Error(message))
             }
           }
@@ -344,7 +344,7 @@ export const writeExtendedStreams = async (dataset: Dataset, extensions: any[]):
       },
       objectMode: true
     }))
-    transforms.push(JSONStream.stringify(`{
+    transforms.push(jsonStreamStringifier(`{
   "type": "FeatureCollection",
   "features": [
     `, `,
@@ -370,7 +370,12 @@ export const sampleValues = async (dataset: Dataset, ignoreKeys?: string[], onDe
       streams.splice(decodeStreamIndex + 1, 0,
         new Transform({
           transform (chunk, encoding, callback) {
-            onDecodedData(chunk)
+            // a throw aborts the read before the chunk reaches the parsers
+            try {
+              onDecodedData(chunk)
+            } catch (err: any) {
+              return callback(err)
+            }
             callback(null, chunk)
           }
         })
@@ -408,6 +413,6 @@ export const sampleValues = async (dataset: Dataset, ignoreKeys?: string[], onDe
       }
     }
   }))
-  if (currentLine === 0) throw new Error('[noretry] Aucune ligne n\'a pu être lue dans le fichier (fichier vide, encodage incorrect,...)')
+  if (currentLine === 0) throw new Error('[noretry] No line could be read from the file (empty file, wrong encoding,...)')
   return sampleValues
 }

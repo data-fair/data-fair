@@ -1,5 +1,6 @@
 import { settingsSchema } from '#api/types'
 import datasetSchema from '../../../api/types/dataset/schema.js'
+import { schemaText } from './schema-i18n.ts'
 
 const schema = settingsSchema.properties.datasetsMetadata as any
 const properties: Record<string, any> = schema.properties
@@ -26,16 +27,14 @@ export const standardMetadata = Object.entries(properties)
     }
   })
 
-const localized = (prop: any, key: 'title' | 'description', locale: string): string => prop[`x-i18n-${key}`]?.[locale] ?? prop[key]
-
 // the texts of the form in a locale, the native help comes from the dataset schema
 export const localizedMetadata = (locale: string) => Object.fromEntries(standardMetadata.map(({ active, ...m }) => {
   const native = (datasetSchema as any).properties[m.key]
   return [m.key, {
     ...m,
-    title: localized(active, 'title', locale),
-    info: localized(active, 'description', locale),
-    nativeHelp: native?.['x-i18n-description'] && localized(native, 'description', locale)
+    title: schemaText(active, 'title', locale),
+    info: schemaText(active, 'description', locale),
+    nativeHelp: native?.['x-i18n-description'] && schemaText(native, 'description', locale)
   }]
 }))
 // the rows of the list: a metadata without settings yet starts from its default

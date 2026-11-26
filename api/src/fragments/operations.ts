@@ -1,6 +1,7 @@
 // Pure logic of the fragments feature (no I/O): see docs/architecture/fragments.md
 import type { Permission, ResourceType } from '#types'
-import { httpError } from '@data-fair/lib-utils/http-errors.js'
+import type { I18nParams } from '../misc/utils/i18n-errors.ts'
+import { i18nHttpError } from '../misc/utils/i18n-errors.ts'
 import { operationsClasses } from '@data-fair/data-fair-shared/permissions/operations.ts'
 import { isMasterData } from '../../contract/master-data.js'
 
@@ -26,7 +27,7 @@ const parsePartOfParam = (value: string): PartOf => {
   const i = value.indexOf(':')
   const type = i === -1 ? value : value.slice(0, i)
   const id = i === -1 ? '' : value.slice(i + 1)
-  if ((type !== 'dataset' && type !== 'application') || !id) throw httpError(400, 'Le paramètre partOf doit être de la forme "dataset:{id}" ou "application:{id}"')
+  if ((type !== 'dataset' && type !== 'application') || !id) throw i18nHttpError(400, 'errors.fragments.badPartOfParam')
   return { type, id }
 }
 
@@ -104,25 +105,28 @@ export const deriveFragmentPermissions = (parentPermissions: Permission[] | unde
   return derived
 }
 
+/** a refusal: a key of api/i18n/messages and its params, turned into an http error by the caller */
+export type FragmentRefusal = { key: string, params?: I18nParams }
+
 type OwnerLike = { type: string, id: string, department?: string }
 export type FragmentLike = { id?: string, owner: OwnerLike, publicationSites?: string[], requestedPublicationSites?: string[], publications?: any[], masterData?: any }
 export type ParentLike = { id: string, owner: OwnerLike, isVirtual?: boolean, isMetaOnly?: boolean, partOf?: PartOf }
 
 const sameOwner = (a: OwnerLike, b: OwnerLike) => a.type === b.type && a.id === b.id && (a.department ?? undefined) === (b.department ?? undefined)
 
-/** Returns a French refusal message, or null when the resource may become a fragment of the parent (spec §2 invariants). */
-export const validatePartOf = ({ fragmentType, fragment, partOf, parent, nbFragments }: { fragmentType: ResourceType, fragment: FragmentLike, partOf: PartOf, parent: ParentLike, nbFragments: number }): string | null => {
-  if (fragment.id && partOf.id === fragment.id && resourceTypeToPartOfType(fragmentType) === partOf.type) return 'Une ressource ne peut pas être un fragment d\'elle-même'
-  if (parent.partOf) return 'Le parent est lui-même un fragment, un fragment ne peut pas avoir de fragments'
-  if (!sameOwner(parent.owner, fragment.owner)) return 'Un fragment doit avoir le même propriétaire que son parent'
-  if (fragmentType === 'applications' && partOf.type !== 'application') return 'Une application ne peut être un fragment que d\'une application'
-  if (fragmentType === 'datasets' && partOf.type === 'dataset' && !parent.isVirtual && !parent.isMetaOnly) return 'Un jeu de données ne peut être un fragment que d\'un jeu de données virtuel, d\'un jeu de métadonnées seules ou d\'une application'
-  if (nbFragments > 0) return 'Une ressource qui a des fragments ne peut pas devenir un fragment'
-  if (fragment.publicationSites?.length || fragment.requestedPublicationSites?.length) return 'La ressource est publiée sur un portail, retirez la publication avant de la rattacher'
-  if (fragment.publications?.length) return 'La ressource est publiée sur un catalogue, retirez la publication avant de la rattacher'
+/** Returns a refusal, or null when the resource may become a fragment of the parent (spec §2 invariants). */
+export const validatePartOf = ({ fragmentType, fragment, partOf, parent, nbFragments }: { fragmentType: ResourceType, fragment: FragmentLike, partOf: PartOf, parent: ParentLike, nbFragments: number }): FragmentRefusal | null => {
+  if (fragment.id && partOf.id === fragment.id && resourceTypeToPartOfType(fragmentType) === partOf.type) return { key: 'errors.fragments.self' }
+  if (parent.partOf) return { key: 'errors.fragments.parentIsFragment' }
+  if (!sameOwner(parent.owner, fragment.owner)) return { key: 'errors.fragments.sameOwner' }
+  if (fragmentType === 'applications' && partOf.type !== 'application') return { key: 'errors.fragments.applicationParent' }
+  if (fragmentType === 'datasets' && partOf.type === 'dataset' && !parent.isVirtual && !parent.isMetaOnly) return { key: 'errors.fragments.datasetParent' }
+  if (nbFragments > 0) return { key: 'errors.fragments.hasFragments' }
+  if (fragment.publicationSites?.length || fragment.requestedPublicationSites?.length) return { key: 'errors.fragments.publishedOnPortal' }
+  if (fragment.publications?.length) return { key: 'errors.fragments.publishedOnCatalog' }
   // reference data exists to be reused across many contexts, and other datasets' extensions point
   // at it: it cannot also be a fragment that hides from listings and dies with a single parent
-  if (isMasterData(fragment.masterData)) return 'Un jeu de données de référence ne peut pas être rattaché à un parent, retirez la configuration de données de référence avant de le rattacher'
+  if (isMasterData(fragment.masterData)) return { key: 'errors.fragments.masterData' }
   return null
 }
 
@@ -134,7 +138,7 @@ export const fragmentForbiddenPatchKey = (patch: Record<string, any>, isFragment
 
 /**
  * The single decision function behind the fragment write guard mounted on every resource write
- * route (`fragments/middlewares.ts`). Returns a French refusal message, or null.
+ * route (`fragments/middlewares.ts`). Returns a refusal, or null.
  *
  * Two rules, both of which must hold on ANY write route, not just PATCH:
  * - parentage is changed through a dedicated PATCH flow (`applyPartOfChange`, which gates on the
@@ -150,18 +154,18 @@ export const fragmentWriteBodyError = (
   body: Record<string, any> | undefined,
   resource: { partOf?: PartOf } | undefined,
   { allowPartOfChange }: { allowPartOfChange: boolean }
-): string | null => {
+): FragmentRefusal | null => {
   const writeBody = body ?? {}
   if (!allowPartOfChange && 'partOf' in writeBody &&
     JSON.stringify(writeBody.partOf ?? null) !== JSON.stringify(resource?.partOf ?? null)) {
-    return 'partOf ne peut être modifié que par PATCH'
+    return { key: 'errors.fragments.partOfOnlyByPatch' }
   }
   const isFragment = !!resource?.partOf || !!writeBody.partOf
   const forbiddenKey = fragmentForbiddenPatchKey(writeBody, isFragment)
-  if (forbiddenKey) return `Un fragment ne peut pas être publié (propriété ${forbiddenKey})`
+  if (forbiddenKey) return { key: 'errors.fragments.notPublishable', params: { property: forbiddenKey } }
   // presence of the key is not the signal here: clearing masterData on a fragment, or sending back
   // an empty sub-object in a read-then-write round trip, must keep working
-  if (isFragment && isMasterData(writeBody.masterData)) return 'Un fragment ne peut pas être défini comme donnée de référence'
+  if (isFragment && isMasterData(writeBody.masterData)) return { key: 'errors.fragments.notMasterData' }
   return null
 }
 
