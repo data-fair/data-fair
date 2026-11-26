@@ -947,6 +947,8 @@ const structureEditFetch = useEditFetch<any>(`${$apiPath}/datasets/${route.param
 const metadataEditFetch = useEditFetch<any>(`${$apiPath}/datasets/${route.params.id}`, {
   query: { draft: true },
   patch: true,
+  // a store refresh (finalize-end...) refetches while the user may be typing
+  keepLocalEdits: true,
   saveOptions: {
     success: t('saved')
   }
