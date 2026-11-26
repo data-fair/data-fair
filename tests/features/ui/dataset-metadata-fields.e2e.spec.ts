@@ -1,6 +1,6 @@
 import { test, expect } from '../../fixtures/login.ts'
 import { axiosAuth, clean } from '../../support/axios.ts'
-import { sendDataset } from '../../support/workers.ts'
+import { sendDataset, waitForFinalize } from '../../support/workers.ts'
 
 // the fields owners activate from their settings had no coverage at all, which let two vuetify
 // regressions live in master: the date fields not rendering at all, then the temporal range
@@ -232,5 +232,36 @@ test.describe('dataset activable metadata fields', () => {
     } finally {
       await ax.put('/api/v1/settings/user/test_datafair_user1', settings())
     }
+  })
+
+  test('a dataset refresh landing while typing keeps the edits', async ({ page, goToWithAuth }) => {
+    const ax = await axiosAuth('test_datafair_user1@test.com')
+    const dataset = (await ax.post('/api/v1/datasets', { isRest: true, title: 'late refresh', schema: [{ key: 'a', type: 'string' }] })).data
+    await waitForFinalize(ax, dataset.id)
+    await goToWithAuth(`/data-fair/dataset/${dataset.id}`, 'test_datafair_user1')
+    const metadata = page.locator('#metadata')
+    const summary = metadata.getByRole('textbox', { name: /Résumé/ })
+    await expect(summary).toBeVisible({ timeout: 15000 })
+
+    // a finalization refreshes the dataset store, which refetches the edited documents (no html
+    // param, unlike the store): hold that refetch while the user types
+    let release!: () => void
+    const released = new Promise<void>(resolve => { release = resolve })
+    const isEditRefetch = (url: string) => url.includes(`/api/v1/datasets/${dataset.id}?`) && url.includes('draft=true') && !url.includes('html')
+    await page.route(`**/api/v1/datasets/${dataset.id}?*`, async route => {
+      if (isEditRefetch(route.request().url())) await released
+      await route.continue()
+    })
+    const refetch = page.waitForRequest(r => r.method() === 'GET' && isEditRefetch(r.url()))
+    await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { a: 'x' })
+    await refetch
+
+    await summary.pressSequentially('Un résumé')
+    const landed = page.waitForResponse(r => isEditRefetch(r.url()))
+    release()
+    await landed
+    await page.waitForTimeout(500)
+    await expect(summary).toHaveValue('Un résumé')
+    await expect(metadata.getByRole('button', { name: /Enregistrer/ })).toBeVisible()
   })
 })

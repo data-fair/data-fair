@@ -33,10 +33,20 @@ export function useEditFetch<T extends Record<string, any>> (url: OptionalUrl | 
   const serverData = ref<T | null>(null) as Ref<T | null>
   const data = ref<T | null>(null) as Ref<T | null>
 
+  let loadedUrl: string | null | undefined
   watch(fetch.data, () => {
-    // TODO: check for local changes before overwriting ?
+    const fresh = clone(fetch.data.value) as Record<string, any> | null
+    const local = data.value as Record<string, any> | null
+    const server = serverData.value as Record<string, any> | null
     serverData.value = clone(fetch.data.value)
-    data.value = clone(fetch.data.value)
+    const sameDocument = loadedUrl === fetch.fullUrl.value
+    loadedUrl = fetch.fullUrl.value
+    // a refetch of the same document landing while the user types keeps the keys edited since the last server state
+    if (sameDocument && fresh && local && server) {
+      for (const key of Object.keys(local)) if (!equal(local[key], server[key])) fresh[key] = local[key]
+      for (const key of Object.keys(server)) if (!(key in local)) delete fresh[key]
+    }
+    data.value = fresh as T | null
   })
 
   const hasDiff = computed(() => !equal(data.value, serverData.value))
