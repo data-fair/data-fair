@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import fs from 'fs-extra'
 import FormData from 'form-data'
 import moment from 'moment'
-import { axiosAuth, clean, checkPendingTasks } from '../../../support/axios.ts'
+import { axiosAuth, clean, checkPendingTasks, anonymousAx, apiUrl } from '../../../support/axios.ts'
 import { waitForFinalize, restCollectionCount, lsAttachments } from '../../../support/workers.ts'
 
 const testUser1 = await axiosAuth('test_datafair_user1@test.com')
@@ -206,6 +206,32 @@ test.describe('REST datasets - History', () => {
     await assert.rejects(ax.get('/api/v1/datasets/resthisttoggle/lines/id1/revisions', { params: { size: 1 } }), (err: any) => err.status === 400)
     res = await ax.get('/api/v1/datasets/resthisttoggle')
     assert.equal(res.data.storage.revisions, undefined)
+  })
+
+  test('Toggling the history mode waits for the task holding the dataset lock', async () => {
+    const ax = await testUser4
+    const dataset = (await ax.post('/api/v1/datasets/resthistlocked', {
+      isRest: true,
+      title: 'resthistlocked',
+      schema: [{ key: 'attr1', type: 'string' }]
+    })).data
+    await ax.post(`/api/v1/datasets/${dataset.id}/lines`, { _id: 'id1', attr1: 'test1' })
+    await waitForFinalize(ax, dataset.id)
+
+    // simulate a finalization in progress: the worker task holds this lock until its result is written
+    const lockUrl = `${apiUrl}/api/v1/test-env/lock/datasets:${dataset.id}`
+    assert.equal((await anonymousAx.post(lockUrl)).data.ack, true)
+    try {
+      // the dev config waits 1ms for the lock, so the patch is refused rather than overwritten by the task
+      await assert.rejects(ax.patch(`/api/v1/datasets/${dataset.id}`, { rest: { history: true } }), (err: any) => err.status === 409)
+    } finally {
+      await anonymousAx.delete(lockUrl)
+    }
+
+    await ax.patch(`/api/v1/datasets/${dataset.id}`, { rest: { history: true } })
+    await waitForFinalize(ax, dataset.id)
+    const res = await ax.get(`/api/v1/datasets/${dataset.id}`)
+    assert.equal(res.data.storage.revisions.count, 1)
   })
 
   test('Use history mode with attachments', async () => {

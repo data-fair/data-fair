@@ -2,7 +2,7 @@
 // Target 3: per-line locked revisions for editable (REST) datasets — store layout, write-path
 // stamping, relay, enable/gate, check, restore/fix.
 import { test, expect } from '../../fixtures/diagnostics.ts'
-import { axios, axiosAuth, apiUrl, anonymousAx, clean } from '../../support/axios.ts'
+import { axios, axiosAuth, apiUrl, anonymousAx, clean, waitForWorkerIdle } from '../../support/axios.ts'
 import {
   ensureIntegrityBucket, integrityTestStore, waitForLinesDrained, waitForFlagCleared, listIntegrityKeys, revisionsPrefix, putShadowVersion
 } from '../../support/integrity.ts'
@@ -103,9 +103,14 @@ test('history revisions do not expose the _needsHistorizing stamp', async () => 
   await anonymousAx.post(`${apiUrl}/api/v1/test-env/patch-dataset/${dataset2.id}`, { 'integrity.active': true })
   await anonymousAx.delete(`${apiUrl}/api/v1/test-env/dataset-cache`)
   await ax.post(`/api/v1/datasets/${dataset2.id}/lines`, { _id: 'h1', attr1: 'x', attr2: 1 })
+  // the line relay holds the dataset lock too, and a rest patch waits for it
+  await waitForLinesDrained(dataset2.id)
+  await waitForWorkerIdle()
   // enabling history triggers configureHistory's initial fill from the stamped live lines
   await ax.patch(`/api/v1/datasets/${dataset2.id}`, { rest: { history: true } })
+  await waitForFinalize(ax, dataset2.id)
   const revisions2 = (await ax.get(`/api/v1/datasets/${dataset2.id}/lines/h1/revisions`)).data
+  expect(revisions2.results.length).toBe(1)
   for (const rev of revisions2.results) expect(rev._needsHistorizing).toBeUndefined()
 })
 
