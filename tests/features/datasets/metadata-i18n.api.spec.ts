@@ -3,7 +3,7 @@ import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks } from '../../support/axios.ts'
 import { sendDataset } from '../../support/workers.ts'
 
-const u1Org = await axiosAuth('test_user1@test.com', 'test_org1')
+const u1Org = await axiosAuth('test_datafair_user1@test.com', 'test_datafair_org1')
 
 const translatedSchema = (schema: any[]) => schema.filter(p => !p['x-calculated']).map(p => p.key === 'id'
   ? { ...p, title: 'Identifiant', 'x-labels': { koumoul: 'Koumoul SAS' }, 'x-i18n-title': { en: ' Identifier ', de: '' }, 'x-i18n-x-labels': { en: { koumoul: 'Koumoul Ltd', unknown: 'dropped' } } }
@@ -16,10 +16,10 @@ test.describe('multilingual metadata', () => {
   })
 
   test('settings locales are normalized and validated', async () => {
-    await u1Org.patch('/api/v1/settings/organization/test_org1', { metadataI18n: { active: true, defaultLocale: 'fr', locales: ['EN', 'en', 'fr', ' de '] } })
-    const res = await u1Org.get('/api/v1/settings/organization/test_org1/metadata-i18n')
+    await u1Org.patch('/api/v1/settings/organization/test_datafair_org1', { metadataI18n: { active: true, defaultLocale: 'fr', locales: ['EN', 'en', 'fr', ' de '] } })
+    const res = await u1Org.get('/api/v1/settings/organization/test_datafair_org1/metadata-i18n')
     assert.deepEqual(res.data, { active: true, defaultLocale: 'fr', locales: ['fr', 'en', 'de'] })
-    await assert.rejects(u1Org.patch('/api/v1/settings/organization/test_org1', { metadataI18n: { active: true, locales: ['english'] } }), { status: 400 })
+    await assert.rejects(u1Org.patch('/api/v1/settings/organization/test_datafair_org1', { metadataI18n: { active: true, locales: ['english'] } }), { status: 400 })
   })
 
   test('translations are cleaned on write and served with lang', async () => {
@@ -64,13 +64,13 @@ test.describe('multilingual metadata', () => {
     assert.equal(frHtml.attachments[0].description, '<p>Mode <em>emploi</em></p>')
     assert.equal(enHtml.attachments[0].description, '<p>How <em>to</em></p>')
 
-    const list = (await u1Org.get('/api/v1/datasets', { params: { lang: 'en', select: 'title', owner: 'organization:test_org1' } })).data
+    const list = (await u1Org.get('/api/v1/datasets', { params: { lang: 'en', select: 'title', owner: 'organization:test_datafair_org1' } })).data
     assert.equal(list.results[0].title, 'Drinking water')
     assert.ok(!('x-i18n-title' in list.results[0]))
 
     await assert.rejects(u1Org.get('/api/v1/datasets/i18n-1', { params: { lang: 'EN!' } }), { status: 400 })
 
-    const search = (await u1Org.get('/api/v1/datasets', { params: { q: 'drinking', owner: 'organization:test_org1', select: 'id' } })).data
+    const search = (await u1Org.get('/api/v1/datasets', { params: { q: 'drinking', owner: 'organization:test_datafair_org1', select: 'id' } })).data
     assert.deepEqual(search.results.map((r: any) => r.id), ['i18n-1'])
   })
 
