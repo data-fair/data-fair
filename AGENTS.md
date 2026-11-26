@@ -92,6 +92,12 @@ In-depth documentation for complex subsystems lives in `docs/architecture/`:
 - [Dashboard](docs/architecture/dashboard.md) — how the home page composes the services of the stack: the endpoints it reads from processings and portals (a cross-service contract), iframe blocks, what `extraTodoItems` is for. **Read before changing one of those endpoints.**
 - [DCAT catalog export](docs/architecture/dcat-catalog.md) — the DCAT-AP 3 export of a publication site on `/catalog/dcat`: why it replaced DCAT-US in place, the mapping, SHACL conformance, known gaps
 - [Catalog search](docs/architecture/catalog-search.md) — how `q=` ranks datasets and applications: the owned term index, dis_max BM25 scored in the aggregation, the `markStale` contract for bulk writers. **Read before touching `q=`, `find.ts`, or anything writing dataset/application metadata.**
+- [Dataset processing flow](docs/architecture/dataset-processing.md) — the worker pipeline a dataset goes through on creation or update, status by status, for file-based and other datasets
+- [Data integrity & traceability](docs/architecture/integrity.md) — the joint anchor per dataset (revision sequence, SHA-256 hashes, verdict), per-line revisions of editable datasets, full payloads (diff, audit download, restore), trail coherence. Large (about 16k words): read its table of contents, then the section you need. **Read before touching revisions, hashes, the integrity passes or restore.**
+- [Agent rate limiting](docs/architecture/agent-rate-limiting.md) — rate limits for agents and other relaying services reaching data-fair through `mcp`: the problem, what ships today and the target
+- [AI agent integration gaps](docs/architecture/agent-integration-gaps.md) — areas where AI assistance would help but is not implemented yet, complementing [AI Agent Integration](docs/architecture/agent-integration.md)
+- [Catalog exploitability and discoverability](docs/architecture/data-catalog-exploration.md) — (in French) what data-fair implements to make the catalog usable and discoverable, and the perspectives
+- [Text search evaluation](docs/architecture/text-search-evaluation.md) — design discussion and empirical evaluation for a future text-search redesign: the current shape, the options, the evidence, the open questions. Not a description of shipped behaviour
 
 ## Common Development Tasks
 
