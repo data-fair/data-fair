@@ -639,7 +639,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
     },
     externalDocs: {
       description: 'Documentation sur GitHub',
-      url: 'https://data-fair.github.io/master/'
+      url: 'https://data-fair.github.io/'
     }
   }
 

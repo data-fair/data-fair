@@ -7,7 +7,7 @@ portal domain):
 | Route | Profile | Audience |
 | --- | --- | --- |
 | `/catalog/dcat-ap` | [DCAT-AP 3](https://semiceu.github.io/DCAT-AP/releases/3.0.0/) (European profile) | data.gouv.fr, data.europa.eu, any European harvester |
-| `/catalog/dcat` | [DCAT-US 1.1](https://resources.data.gov/resources/dcat-us/) (US profile, "data.json") | kept unchanged for existing consumers |
+| `/catalog/dcat` | [DCAT-US 1.1](https://resources.data.gov/resources/dcat-us/) (US profile, "data.json") | existing consumers, US-style harvesters |
 
 Both are JSON-LD (`application/ld+json`), built by pure functions in `api/src/catalog/operations.ts`
 from the datasets published on the site (`findCatalogDatasets`, at most 10 000, no pagination).
@@ -42,8 +42,31 @@ and data.europa.eu, so none is served yet.
 - IRIs from a controlled vocabulary carry their range class (`dct:LicenseDocument`,
   `dct:Frequency`, `dct:MediaTypeOrExtent`...): the DCAT-AP SHACL shapes check it.
 
+The OpenAPI link of the API distribution lives on its `dcat:DataService`
+(`dcat:endpointDescription`), the DCAT-AP way. data.gouv.fr reads the distribution as an API
+resource but does not show that link: it only creates an "API" entry for a `dcat:DataService`
+that is not the `accessService` of a distribution.
+
 The output conforms to the official DCAT-AP 3.0 SHACL shapes (`dcat-ap-SHACL.ttl` of the SEMIC
 release) under RDFS inference; without inference only `rdfs:Resource` checks on plain URLs fail.
+
+## DCAT-US mapping
+
+The JSON shape follows the DCAT-US 1.1 schema (copied in `api/src/misc/utils/dcat/schema`, also
+used to validate harvested catalogs). The shared JSON-LD context (`misc/utils/dcat/context.ts`)
+also compacts harvested catalogs, so the export refines it locally (`dcatUsOutputContext`):
+`issued` / `modified` typed `xsd:dateTime`, `landingPage`, `license`, `accrualPeriodicity` and
+`hasEmail` read as IRIs. The JSON values stay plain strings.
+
+- `publisher` (`org:Organization`, owner and department), `contactPoint` (`vcard:Contact`, from
+  `settings.info.contact`, only with an email as the schema requires one), `theme` (topic titles),
+  `spatial` (the text, else the bbox as `west,south,east,north`), `temporal` as an ISO interval.
+- `accrualPeriodicity` keeps the Dublin Core frequency IRIs (`http://purl.org/cld/freq/...`)
+  accepted by the schema copy and by data.gouv.fr, instead of the ISO 8601 durations (`R/P1Y`)
+  of the US spec.
+- Distributions: the files with `byteSize`, and an API distribution (`format: "API"`,
+  `accessURL` on `/lines`, the OpenAPI document in `describedBy`).
+- Not emitted: `accessLevel`, `bureauCode`, `programCode` (US federal fields).
 
 ## Known gaps
 
@@ -51,5 +74,3 @@ release) under RDFS inference; without inference only `rdfs:Resource` checks on 
   list (URLs and known alternate URLs), an unknown URL ends as "license not specified".
 - No `dct:language`, no EU data-theme vocabulary for `dcat:theme` (topics are free labels), no
   pagination (`hydra:PartialCollectionView`).
-- The DCAT-US route keeps its historical defects (dates typed `xsd:date` with date-time values,
-  `bytesSize` mapped to a non-existent `dcat:bytesSize`, no distribution for REST datasets).

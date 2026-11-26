@@ -2,8 +2,16 @@ import { test } from '@playwright/test'
 import assert from 'node:assert/strict'
 import jsonld from 'jsonld'
 import { buildDcatCatalog, buildDcatApCatalog } from '../../../api/src/catalog/operations.ts'
+import dcatUsValidate from '../../../api/src/misc/utils/dcat/validate.ts'
 
 const publicationSite = { type: 'data-fair-portals', id: 'portal1', url: 'https://portal.test' }
+
+const dcat = 'http://www.w3.org/ns/dcat#'
+const dct = 'http://purl.org/dc/terms/'
+const xsd = 'http://www.w3.org/2001/XMLSchema#'
+
+// expanded JSON-LD: checks the real RDF terms and datatypes, not only the compacted keys
+const expand = async (doc: any) => (await jsonld.expand(JSON.parse(JSON.stringify(doc))))[0] as any
 
 test.describe('buildDcatCatalog', () => {
   test('wraps datasets in a DCAT Catalog envelope', () => {
@@ -37,9 +45,11 @@ test.describe('buildDcatCatalog', () => {
       'https://df.test'
     )
     const distribution = result.dataset[0].distribution
-    assert.equal(distribution.length, 2)
+    assert.equal(distribution.length, 3)
     assert.equal(distribution[0].downloadURL, 'https://df.test/api/v1/datasets/d1/raw')
+    assert.equal(distribution[0].byteSize, 20)
     assert.equal(distribution[1].downloadURL, 'https://df.test/api/v1/datasets/d1/convert')
+    assert.equal(distribution[2].format, 'API')
   })
 
   test('sets modified from each dataset own dataUpdatedAt (falling back to its updatedAt)', () => {
@@ -66,16 +76,56 @@ test.describe('buildDcatCatalog', () => {
       publicationSite,
       'https://df.test'
     )
-    assert.equal(result.dataset[0].distribution.length, 1)
+    assert.equal(result.dataset[0].distribution.length, 2)
+  })
+
+  test('outputs a valid DCAT-US document with publisher, contact point, themes and an API distribution', async () => {
+    const result = buildDcatCatalog([{
+      id: 'd1',
+      slug: 'my-data',
+      title: 'My data',
+      description: 'Full description',
+      summary: 'Short',
+      createdAt: '2026-01-01T10:00:00.000Z',
+      dataUpdatedAt: '2026-02-01T10:00:00.000Z',
+      keywords: ['energy'],
+      topics: [{ id: 't1', title: 'Environment' }],
+      license: { href: 'https://www.etalab.gouv.fr/licence-ouverte-open-licence' },
+      frequency: 'annual',
+      bbox: [-5, 41, 9, 51],
+      owner: { type: 'organization', id: 'o1', name: 'My org', departmentName: 'Dep' },
+      isRest: true
+    }], { ...publicationSite, owner: { type: 'organization', id: 'o1', name: 'My org' } }, 'https://df.test', { contact: { email: 'contact@org.test' } })
+    assert.ok(dcatUsValidate(result), JSON.stringify(dcatUsValidate.errors))
+    const ds = result.dataset[0]
+    assert.equal(ds.description, 'Full description')
+    assert.deepEqual(ds.publisher, { '@type': 'org:Organization', name: 'My org - Dep' })
+    assert.deepEqual(ds.contactPoint, { '@type': 'vcard:Contact', fn: 'My org', hasEmail: 'mailto:contact@org.test' })
+    assert.deepEqual(ds.theme, ['Environment'])
+    assert.equal(ds.spatial, '-5,41,9,51')
+    assert.equal(ds.distribution[0].describedBy, 'https://df.test/api/v1/datasets/my-data/api-docs.json')
+
+    // same JSON shape, but real IRIs and date-time datatypes once read as RDF
+    const expanded = await expand(result)
+    const eds = expanded[dcat + 'dataset'][0]
+    assert.deepEqual(eds[dct + 'issued'][0], { '@value': '2026-01-01T10:00:00.000Z', '@type': xsd + 'dateTime' })
+    assert.equal(eds[dcat + 'landingPage'][0]['@id'], 'https://portal.test/datasets/d1')
+    assert.equal(eds[dct + 'license'][0]['@id'], 'https://www.etalab.gouv.fr/licence-ouverte-open-licence')
+    assert.equal(eds[dct + 'accrualPeriodicity'][0]['@id'], 'http://purl.org/cld/freq/annual')
+    assert.equal(eds[dcat + 'contactPoint'][0]['http://www.w3.org/2006/vcard/ns#hasEmail'][0]['@id'], 'mailto:contact@org.test')
+  })
+
+  test('reads the file size as dcat:byteSize', async () => {
+    const result = buildDcatCatalog([{
+      id: 'd1',
+      title: 'With file',
+      file: { name: 'data.csv', mimetype: 'text/csv', size: 10 },
+      originalFile: { name: 'data.csv', mimetype: 'text/csv', size: 10 }
+    }], publicationSite, 'https://df.test')
+    const distribution = (await expand(result))[dcat + 'dataset'][0][dcat + 'distribution'][0]
+    assert.equal(distribution[dcat + 'byteSize'][0]['@value'], 10)
   })
 })
-
-const dcat = 'http://www.w3.org/ns/dcat#'
-const dct = 'http://purl.org/dc/terms/'
-const xsd = 'http://www.w3.org/2001/XMLSchema#'
-
-// expanded JSON-LD: checks the real RDF terms and datatypes, not only the compacted keys
-const expand = async (doc: any) => (await jsonld.expand(JSON.parse(JSON.stringify(doc))))[0] as any
 
 test.describe('buildDcatApCatalog', () => {
   const site = { ...publicationSite, title: 'My portal', owner: { type: 'organization', id: 'o1', name: 'My org' } }

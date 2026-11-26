@@ -51,9 +51,9 @@ router.get('/api-docs.json', async (req, res) => {
 
 router.get('/dcat', async (req, res) => {
   const publicationSite = reqPublicationSite(req)
-  const datasets = await findCatalogDatasets(publicationSite, reqSession(req))
+  const [datasets, ownerInfo] = await Promise.all([findCatalogDatasets(publicationSite, reqSession(req)), getOwnerInfo(publicationSite)])
   res.type('application/ld+json')
-  res.json(buildDcatCatalog(datasets, publicationSite, reqPublicBaseUrl(req)))
+  res.json(buildDcatCatalog(datasets, publicationSite, reqPublicBaseUrl(req), ownerInfo))
 })
 
 router.get('/dcat-ap', async (req, res) => {
