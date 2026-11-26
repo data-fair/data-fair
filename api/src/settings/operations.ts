@@ -214,4 +214,10 @@ export const trimSettings = (settings: Partial<Settings>) => {
     trimFields(settings.datasetsMetadata, 'informationsTitle', 'coverageTitle')
   }
   if (settings.info?.contact) trimFields(settings.info.contact, 'name', 'url', 'email')
+  const metadataI18n = (settings as any).metadataI18n
+  if (metadataI18n) {
+    const normalize = (l: unknown) => typeof l === 'string' ? l.trim().toLowerCase() : l
+    metadataI18n.defaultLocale = normalize(metadataI18n.defaultLocale ?? 'fr')
+    if (metadataI18n.locales) metadataI18n.locales = [...new Set(metadataI18n.locales.map(normalize))].filter(l => l && l !== metadataI18n.defaultLocale)
+  }
 }

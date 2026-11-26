@@ -147,20 +147,28 @@ const schemaReadableByEveryLister = (permissions: Permission[] | null | undefine
  * a field's terms are diluted by its length. `undefined` means "unset the field".
  */
 export function computeSearchText (
-  dataset: { schema?: any[] | null, permissions?: Permission[] | null }
+  dataset: { schema?: any[] | null, permissions?: Permission[] | null, [i18nKey: `x-i18n-${string}`]: any }
 ): string | undefined {
-  if (!schemaReadableByEveryLister(dataset.permissions)) return undefined
   const seen = new Set<string>()
   const labels: string[] = []
-  for (const column of dataset.schema ?? []) {
-    if (column['x-calculated']) continue
-    const pieces: string[] = []
-    if (typeof column.title === 'string' && column.title.trim()) pieces.push(column.title.trim().slice(0, SEARCH_TEXT_LIMITS.titleMax))
-    if (typeof column.description === 'string' && column.description.trim()) pieces.push(head(column.description.trim(), SEARCH_TEXT_LIMITS.descriptionHead))
-    const label = pieces.join(' ')
-    if (!label || seen.has(label)) continue
+  const push = (label: string) => {
+    if (!label || seen.has(label)) return
     seen.add(label)
     labels.push(label)
+  }
+  // MOCKUP i18n: the translated catalog texts, searchable in every language (see metadata-i18n.md)
+  for (const k of ['title', 'summary', 'keywords']) {
+    for (const value of Object.values(dataset[`x-i18n-${k}`] ?? {})) push([value].flat().join(' ').slice(0, SEARCH_TEXT_LIMITS.titleMax))
+  }
+  if (schemaReadableByEveryLister(dataset.permissions)) {
+    for (const column of dataset.schema ?? []) {
+      if (column['x-calculated']) continue
+      const pieces: string[] = []
+      if (typeof column.title === 'string' && column.title.trim()) pieces.push(column.title.trim().slice(0, SEARCH_TEXT_LIMITS.titleMax))
+      if (typeof column.description === 'string' && column.description.trim()) pieces.push(head(column.description.trim(), SEARCH_TEXT_LIMITS.descriptionHead))
+      for (const title of Object.values(column['x-i18n-title'] ?? {})) if (typeof title === 'string') pieces.push(title.slice(0, SEARCH_TEXT_LIMITS.titleMax))
+      push(pieces.join(' '))
+    }
   }
   const kept = bounded(labels, SEARCH_TEXT_LIMITS.labelsBytes)
   return kept.length ? kept.join('\n') : undefined

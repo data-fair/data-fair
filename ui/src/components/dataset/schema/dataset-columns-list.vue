@@ -23,11 +23,25 @@
           size="small"
           start
         />
-        {{ element.title || element['x-originalName'] || element.key }}
+        <span
+          v-if="trLocale && element.title && !element['x-i18n-title']?.[trLocale]"
+          class="font-italic text-medium-emphasis"
+          :title="t('notTranslated')"
+        >{{ element.title || element['x-originalName'] || element.key }}</span>
+        <template v-else>
+          {{ (trLocale && element['x-i18n-title']?.[trLocale]) || element.title || element['x-originalName'] || element.key }}
+        </template>
       </v-btn>
     </template>
   </draggable>
 </template>
+
+<i18n lang="yaml">
+fr:
+  notTranslated: Pas encore traduit
+en:
+  notTranslated: Not translated yet
+</i18n>
 
 <script setup lang="ts">
 import { nextTick } from 'vue'
@@ -35,6 +49,12 @@ import draggable from 'vuedraggable'
 import equal from 'fast-deep-equal'
 import type { SchemaProperty } from '#api/types'
 import { propTypeIcon } from '~/utils/dataset'
+import { useMetadataI18n } from '~/composables/dataset/metadata-i18n'
+
+// MOCKUP i18n: the titles in the editing locale, the default one dimmed when not translated yet
+const { t } = useI18n()
+const i18n = useMetadataI18n()
+const trLocale = computed(() => i18n && !i18n.isDefault.value ? i18n.editLocale.value : null)
 
 const props = defineProps<{
   columns: SchemaProperty[]

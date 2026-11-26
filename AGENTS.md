@@ -90,6 +90,7 @@ In-depth documentation for complex subsystems lives in `docs/architecture/`:
 - [Storage accounting](docs/architecture/storage-accounting.md) — the `store_bytes` / `indexed_bytes` metrics: physical vs CSV-equivalent accounting, the per-line `_bytes` field and sum aggregation, and the organic `_esLineBytes` migration. **Read before touching storage computation or quota enforcement.**
 - [OAuth scopes](docs/architecture/scopes.md) — the `scope` claim of NHI sessions: vocabulary and tiers, the three enforcement layers (gate at mount, `list()`/`canDoForOwner()`, websocket channels), any-scope routes, what stays refused, the OpenAPI `oauth2` scheme. **Read before touching `permissions.ts`, `scopes.ts`, router mounts in `app.js` or `canSubscribe`.**
 - [Dashboard](docs/architecture/dashboard.md) — how the home page composes the services of the stack: the endpoints it reads from processings and portals (a cross-service contract), iframe blocks, what `extraTodoItems` is for. **Read before changing one of those endpoints.**
+- [Multilingual metadata](docs/architecture/metadata-i18n.md) — mockup: `x-i18n-*` translations of the datasets metadata, their cleaning on write, the explicit `lang` localized reads and the cross-language search
 - [Catalog search](docs/architecture/catalog-search.md) — how `q=` ranks datasets and applications: the owned term index, dis_max BM25 scored in the aggregation, the `markStale` contract for bulk writers. **Read before touching `q=`, `find.ts`, or anything writing dataset/application metadata.**
 
 ## Common Development Tasks

@@ -13,6 +13,22 @@ test.describe('computeSearchText', () => {
     assert.doesNotMatch(text, /p_chom1564/)
   })
 
+  test('translated catalog texts and column titles', () => {
+    const text = computeSearchText({
+      'x-i18n-title': { en: 'Drinking water' },
+      'x-i18n-keywords': { en: ['water', 'quality'] },
+      schema: [col('code', { title: 'Code', 'x-i18n-title': { en: 'Station code' } })]
+    })
+    assert.equal(text, 'Drinking water\nwater quality\nCode Station code')
+    // the catalog texts stay searchable when the column labels are hidden from some lister
+    const restricted = computeSearchText({
+      'x-i18n-title': { en: 'Drinking water' },
+      schema: [col('code', { title: 'Code' })],
+      permissions: [{ classes: ['list'] }]
+    })
+    assert.equal(restricted, 'Drinking water')
+  })
+
   test('undefined when nothing remains', () => {
     assert.equal(computeSearchText({ schema: [col('a')] }), undefined)
     assert.equal(computeSearchText({}), undefined)

@@ -87,6 +87,7 @@
         :tabs="sections.catalog.tabs"
       >
         <template #actions>
+          <dataset-edit-locale v-if="catalogTab === 'topics' || catalogTab === 'datasetsMetadata'" />
           <confirm-menu
             v-if="catalogEdit.hasDiff.value"
             :btn-props="{ color: 'warning', variant: 'tonal' }"
@@ -110,14 +111,41 @@
         </template>
         <template #windows>
           <v-tabs-window-item value="topics">
+            <div
+              v-if="trLocale"
+              class="pa-4"
+            >
+              <settings-i18n-table
+                :groups="topicsI18nGroups"
+                :locale="trLocale"
+                :default-locale="metadataI18n.config.value!.defaultLocale"
+                @update="updateI18n"
+              />
+            </div>
             <settings-topics
+              v-else
               v-model="settings.topics"
               v-model:valid="topicsValid"
             />
           </v-tabs-window-item>
 
           <v-tabs-window-item value="datasetsMetadata">
+            <div
+              v-if="trLocale"
+              class="pa-4"
+            >
+              <p class="text-body-medium mb-2">
+                {{ t('i18nCustomHelp') }}
+              </p>
+              <settings-i18n-table
+                :groups="customI18nGroups"
+                :locale="trLocale"
+                :default-locale="metadataI18n.config.value!.defaultLocale"
+                @update="updateI18n"
+              />
+            </div>
             <settings-datasets-metadata
+              v-else
               v-model="settings.datasetsMetadata"
               v-model:valid="datasetsMetadataValid"
             />
@@ -296,6 +324,11 @@
                 :roles="accountDetailsFetch.data.value?.roles ?? []"
               />
             </template>
+            <settings-metadata-i18n
+              v-if="!settingsAccount.department"
+              v-model="settings.metadataI18n"
+              class="mb-4"
+            />
             <template v-if="showCompat">
               <h3 class="text-title-medium text-admin">
                 {{ t('compatTitle') }}
@@ -361,6 +394,11 @@ fr:
   docLink: Documentation
   privateVocabWarning: Attention, si vous supprimez un concept référencé dans des jeux de données vous pouvez causer des dysfonctionnements.
   agentChatTitle: Assistant IA
+  i18nTopicTitle: Titre
+  i18nCustomTitle: Libellé
+  i18nCustomDescription: Infobulle
+  i18nCustomValue: Valeur de la liste
+  i18nCustomHelp: "Les valeurs des listes restent stockées dans la langue par défaut sur les jeux de données : seul leur libellé affiché est traduit."
   agentChatToggle: Activer l'assistant IA
   compatTitle: Gestion des compatibilités
   compatSubtitle: Compatibilité des APIs avec d'autres services. Peut être utile en période de transition.
@@ -406,6 +444,11 @@ en:
   docLink: Documentation
   privateVocabWarning: Warning, if you delete a concept referenced in datasets you may cause malfunctions.
   agentChatTitle: AI Assistant
+  i18nTopicTitle: Title
+  i18nCustomTitle: Label
+  i18nCustomDescription: Tooltip
+  i18nCustomValue: List value
+  i18nCustomHelp: "The list values stay stored in the default language on the datasets: only their displayed label is translated."
   agentChatToggle: Enable AI assistant
   compatTitle: Compatibility management
   compatSubtitle: API compatibility with other services. Can be useful during transition periods.
@@ -443,6 +486,7 @@ import { mdiBookOpenVariant, mdiCancel, mdiCertificate, mdiFileDocumentEdit, mdi
 import { useLeaveGuard } from '@data-fair/lib-vue/leave-guard'
 import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import ConfirmMenu from '~/components/confirm-menu.vue'
+import { provideMetadataI18n } from '~/composables/dataset/metadata-i18n'
 import qualitySvg from '~/assets/svg/data-arranging-two-color.svg?raw'
 import securitySvg from '~/assets/svg/security-two-color.svg?raw'
 import uiSvg from '~/assets/svg/user-interface-two-color.svg?raw'
@@ -489,6 +533,40 @@ const settingsEditFetch = useEditFetch<Settings>(
 )
 const settings = settingsEditFetch.data
 
+// MOCKUP i18n: in a locale other than the default one, the catalog tabs edit the translations of their texts
+const metadataI18n = provideMetadataI18n(computed(() => settingsAccount.value.department ? undefined : { type: settingsAccount.value.type, id: settingsAccount.value.id }))
+const trLocale = computed(() => metadataI18n.isDefault.value ? null : metadataI18n.editLocale.value)
+const topicsI18nGroups = computed(() => [{
+  rows: (settings.value?.topics ?? []).map((topic: any) => ({ id: `topic|${topic.id}|x-i18n-title`, field: t('i18nTopicTitle'), source: topic.title, value: topic['x-i18n-title']?.[trLocale.value!] }))
+}])
+const customI18nGroups = computed(() => ((settings.value?.datasetsMetadata as any)?.custom ?? []).map((def: any, i: number) => ({
+  title: def.title,
+  rows: [
+    { id: `custom|${i}|x-i18n-title`, field: t('i18nCustomTitle'), source: def.title, value: def['x-i18n-title']?.[trLocale.value!] },
+    ...(def.description ? [{ id: `custom|${i}|x-i18n-description`, field: t('i18nCustomDescription'), source: def.description, value: def['x-i18n-description']?.[trLocale.value!] }] : []),
+    ...(def.enum ?? []).map((v: string) => ({ id: `custom|${i}|x-i18n-enum|${v}`, field: t('i18nCustomValue'), source: v, value: def['x-i18n-enum']?.[trLocale.value!]?.[v] }))
+  ]
+})))
+const updateI18n = (id: string, value: string) => {
+  const loc = trLocale.value
+  if (!loc || !settings.value) return
+  const [kind, itemRef, k, enumValue] = id.split('|')
+  const s: any = settings.value
+  const list = kind === 'topic' ? s.topics : s.datasetsMetadata.custom
+  const index = kind === 'topic' ? list.findIndex((topic: any) => topic.id === itemRef) : Number(itemRef)
+  const item = { ...list[index] }
+  const all = { ...item[k] }
+  if (enumValue !== undefined) {
+    const labels = { ...all[loc] }
+    if (value) labels[enumValue] = value
+    else delete labels[enumValue]
+    all[loc] = labels
+  } else if (value) all[loc] = value
+  else delete all[loc]
+  item[k] = all
+  list.splice(index, 1, item)
+}
+
 // the settings forms never write the schema defaults (vjsf useDefault: false), only the info section starts empty
 function normalizeSettings (s: any) {
   if (!s) return
@@ -508,7 +586,7 @@ const catalogEdit = settingsEditFetch.createSubEdit(
   { success: t('saved') }
 )
 const portalsEdit = settingsEditFetch.createSubEdit(['publicationSites'], { success: t('saved') })
-const featuresEdit = settingsEditFetch.createSubEdit(['agentChat', 'agentChatAudience', 'compatODS'], { success: t('saved') })
+const featuresEdit = settingsEditFetch.createSubEdit(['agentChat', 'agentChatAudience', 'compatODS', 'metadataI18n'], { success: t('saved') })
 
 const webhooksEdit = settingsEditFetch.createSubEdit(['webhooks'], { success: t('saved') })
 
@@ -570,7 +648,7 @@ const sections = computed(() => {
   if (!$uiConfig.disablePublicationSites) {
     result.publicationSites = { title: t('sections.publicationSites.title') }
   }
-  if (showAgentChat.value || showCompat.value) {
+  if (showAgentChat.value || showCompat.value || !settingsAccount.value.department) {
     result.features = { title: t('sections.features.title') }
   }
   return result

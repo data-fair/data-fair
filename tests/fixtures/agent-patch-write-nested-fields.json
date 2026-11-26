@@ -11,6 +11,8 @@
     "attachments[].type",
     "attachments[].updatedAt",
     "attachments[].url",
+    "attachments[].x-i18n-description",
+    "attachments[].x-i18n-title",
     "conformsTo.title",
     "conformsTo.url",
     "conformsTo.version",
@@ -89,6 +91,9 @@
     "schema[].x-concept.title",
     "schema[].x-display",
     "schema[].x-group",
+    "schema[].x-i18n-description",
+    "schema[].x-i18n-title",
+    "schema[].x-i18n-x-labels",
     "schema[].x-labels",
     "schema[].x-labelsRestricted",
     "schema[].x-master",
@@ -114,6 +119,7 @@
     "topics[].icon.svgPath",
     "topics[].id",
     "topics[].title",
+    "topics[].x-i18n-title",
     "virtual.children",
     "virtual.filterActiveAccount",
     "virtual.filters",
@@ -141,6 +147,7 @@
     "topics[].icon.svg",
     "topics[].icon.svgPath",
     "topics[].id",
-    "topics[].title"
+    "topics[].title",
+    "topics[].x-i18n-title"
   ]
 }

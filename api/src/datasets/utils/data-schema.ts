@@ -329,6 +329,8 @@ const innociousSchemaProps = validationProps.concat(['title', 'description', 'ic
 const removeInnocuous = (p) => {
   const cleanProp = { ...p }
   for (const prop of innociousSchemaProps) delete cleanProp[prop]
+  // translations of the texts above
+  for (const prop of Object.keys(cleanProp)) if (prop.startsWith('x-i18n-')) delete cleanProp[prop]
   return cleanProp
 }
 

@@ -29,7 +29,9 @@
       <v-card-text>
         <v-text-field
           v-model="editTitle"
-          :label="t('title')"
+          :label="trLocale ? `${t('title')} (${trLocale.toUpperCase()})` : t('title')"
+          :placeholder="trLocale ? attachment.title : undefined"
+          :persistent-placeholder="!!trLocale"
           variant="outlined"
           density="compact"
           class="mb-2"
@@ -38,14 +40,15 @@
 
         <markdown-editor
           v-if="type === 'dataset'"
+          :key="trLocale ?? 'default'"
           v-model="editDescription"
-          :label="t('description')"
-          :easy-mde-options="{ minHeight: '60px', maxHeight: '120px' }"
+          :label="trLocale ? `${t('description')} (${trLocale.toUpperCase()})` : t('description')"
+          :easy-mde-options="{ minHeight: '60px', maxHeight: '120px', ...(trLocale && attachment.description && { placeholder: attachment.description }) }"
           hide-details
         />
 
         <v-checkbox
-          v-if="type === 'dataset'"
+          v-if="type === 'dataset' && !trLocale"
           v-model="editIncludeInCatalog"
           :label="t('includeInCatalog')"
           density="compact"
@@ -54,7 +57,7 @@
         />
 
         <v-select
-          v-if="type === 'dataset'"
+          v-if="type === 'dataset' && !trLocale"
           v-model="editType"
           :items="typeItems"
           :label="t('type')"
@@ -64,7 +67,7 @@
           hide-details
         />
 
-        <template v-if="type === 'application' || editType === 'file'">
+        <template v-if="!trLocale && (type === 'application' || editType === 'file')">
           <v-file-input
             v-model="file"
             :label="t('selectFile')"
@@ -93,7 +96,7 @@
         </template>
 
         <v-text-field
-          v-if="type === 'dataset' && editType === 'url'"
+          v-if="type === 'dataset' && editType === 'url' && !trLocale"
           v-model="editUrl"
           :label="t('url')"
           variant="outlined"
@@ -102,7 +105,7 @@
           hide-details
         />
 
-        <template v-if="type === 'dataset' && editType === 'remoteFile'">
+        <template v-if="type === 'dataset' && editType === 'remoteFile' && !trLocale">
           <help-tooltip
             :text="t('fileNameHelp')"
           >
@@ -200,6 +203,7 @@ en:
 <script setup lang="ts">
 import { mdiPencil, mdiPlus } from '@mdi/js'
 import { MarkdownEditor } from '@koumoul/vjsf-markdown'
+import { useMetadataI18n, setI18nText } from '~/composables/dataset/metadata-i18n'
 
 interface AttachmentItem {
   title?: string
@@ -228,6 +232,11 @@ const emit = defineEmits<{
 
 const { t } = useI18n()
 const { sendUiNotif } = useUiNotif()
+
+// MOCKUP i18n: outside the default locale, an existing attachment of a dataset gets the translations of its texts
+const i18n = useMetadataI18n()
+const trLocale = computed(() => props.type === 'dataset' && props.index !== -1 && i18n && !i18n.isDefault.value ? i18n.editLocale.value : null)
+const keptTranslations = () => Object.fromEntries(Object.entries(props.attachment).filter(([k]) => k.startsWith('x-i18n-')))
 
 const showDialog = ref(false)
 const saving = ref(false)
@@ -261,6 +270,10 @@ const onToggle = () => {
   editTargetUrl.value = props.attachment.targetUrl || ''
   editDescription.value = props.attachment.description || ''
   editIncludeInCatalog.value = props.attachment.includeInCatalogPublications ?? false
+  if (trLocale.value) {
+    editTitle.value = (props.attachment as any)['x-i18n-title']?.[trLocale.value] ?? ''
+    editDescription.value = (props.attachment as any)['x-i18n-description']?.[trLocale.value] ?? ''
+  }
   file.value = null
   uploadProgress.value = 0
 }
@@ -287,6 +300,7 @@ const duplicateName = computed(() => {
 })
 
 const isValid = computed(() => {
+  if (trLocale.value) return true
   if (!editTitle.value.trim()) return false
   if (props.type === 'application' || editType.value === 'file') {
     return !!editName.value && !duplicateName.value
@@ -297,6 +311,15 @@ const isValid = computed(() => {
 })
 
 const save = async () => {
+  if (trLocale.value) {
+    const updated: any = { ...props.attachment }
+    const defaultLocale = i18n!.config.value!.defaultLocale
+    setI18nText(updated, 'title', trLocale.value, defaultLocale, editTitle.value.trim())
+    setI18nText(updated, 'description', trLocale.value, defaultLocale, editDescription.value.trim())
+    emit('save', updated)
+    showDialog.value = false
+    return
+  }
   saving.value = true
   try {
     const selectedFile = Array.isArray(file.value) ? file.value[0] : file.value
@@ -355,6 +378,7 @@ const save = async () => {
     if (props.type === 'dataset') {
       updated.description = editDescription.value || undefined
       updated.includeInCatalogPublications = editIncludeInCatalog.value || undefined
+      Object.assign(updated, keptTranslations())
     }
 
     emit('save', updated)

@@ -52,7 +52,26 @@ const fileSchema = {
   }
 }
 
+// MOCKUP i18n: translations of a text metadata, keyed by locale (the base keyword holds the owner's default locale)
+const localeNames = { pattern: '^[a-z]{2,3}$' }
+const i18nTexts = {
+  type: 'object',
+  description: 'Translations keyed by locale',
+  propertyNames: localeNames,
+  additionalProperties: { type: 'string' }
+}
+const i18nProperties = {
+  'x-i18n-title': i18nTexts,
+  'x-i18n-summary': i18nTexts,
+  'x-i18n-description': i18nTexts,
+  'x-i18n-creator': i18nTexts,
+  'x-i18n-spatial': i18nTexts,
+  'x-i18n-keywords': { type: 'object', description: 'Keywords by locale', propertyNames: localeNames, additionalProperties: { type: 'array', items: { type: 'string' } } },
+  'x-i18n-customMetadata': { type: 'object', description: 'Free text custom metadata values by locale, then by key', propertyNames: localeNames, additionalProperties: { type: 'object', additionalProperties: { type: 'string' } } }
+}
+
 const datasetProperties = {
+  ...i18nProperties,
   id: {
     type: 'string',
     description: 'Globally unique identifier of the dataset',
@@ -294,7 +313,9 @@ const datasetProperties = {
           title: 'Include in catalog publications',
           'x-i18n-title': { fr: 'Inclure dans les publications sur catalogue' },
           default: false
-        }
+        },
+        'x-i18n-title': { ...i18nTexts, layout: 'none' },
+        'x-i18n-description': { ...i18nTexts, layout: 'none' }
       },
       oneOf: [{
         title: 'File attachment',
@@ -1211,7 +1232,8 @@ const dataset = {
         keywords: datasetProperties.keywords,
         searchTerms: datasetProperties.searchTerms,
         frequency: datasetProperties.frequency,
-        customMetadata: datasetProperties.customMetadata
+        customMetadata: datasetProperties.customMetadata,
+        ...i18nProperties
       }
     }
   },
@@ -1270,6 +1292,9 @@ const dataset = {
         'x-labelsRestricted': {
           type: 'boolean'
         },
+        'x-i18n-title': i18nTexts,
+        'x-i18n-description': i18nTexts,
+        'x-i18n-x-labels': { type: 'object', description: 'Value labels by locale, then by value', propertyNames: localeNames, additionalProperties: { type: 'object', additionalProperties: { type: 'string' } } },
         readOnly: {
           type: 'boolean'
         },

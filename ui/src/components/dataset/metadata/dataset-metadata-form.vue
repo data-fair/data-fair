@@ -1,8 +1,16 @@
 <template>
   <v-defaults-provider :defaults="{ global: { hideDetails: 'auto' } }">
+    <v-alert
+      v-if="trLocale && !Object.keys(schema.properties).length"
+      type="info"
+      variant="outlined"
+      density="compact"
+      class="ma-2"
+      :text="t('nothingToTranslate')"
+    />
     <vjsf
-      v-if="dataset"
-      :key="schemaVersion"
+      v-else-if="dataset"
+      :key="`${trLocale ?? 'default'}-${schemaVersion}`"
       :model-value="vjsfModel"
       :schema="schema"
       :options="vjsfOptions"
@@ -47,12 +55,14 @@ fr:
   searchTermsPrompt: Aide-moi à trouver des termes de recherche pour ce jeu de données
   url: URL
   linkTitle: Libellé du lien
+  nothingToTranslate: Aucune métadonnée traduisible dans cet onglet. Les champs non traduits (licence, thématiques…) se saisissent dans la langue par défaut.
 en:
   summarizePrompt: Help me write a summary for this dataset
   describePrompt: Help me write a description for this dataset
   searchTermsPrompt: Help me find search terms for this dataset
   url: URL
   linkTitle: Link label
+  nothingToTranslate: No translatable metadata in this tab. The untranslated fields (license, topics…) are entered in the default language.
 </i18n>
 
 <script setup lang="ts">
@@ -65,11 +75,25 @@ import { customMetadataSchema, isCustomMetadataEmpty } from '#api/types'
 import datasetSchema from '~/../../api/types/dataset/schema.js'
 import { schemaText } from '~/utils/schema-i18n'
 import { useShowAgentChat } from '~/composables/agent/use-show-chat'
+import { useMetadataI18n, metadataTextKeys, i18nKey, isCustomText } from '~/composables/dataset/metadata-i18n'
 
 const dataset = defineModel<any>({ required: true })
 // custom metadata are flat "customMetadata.<key>" properties, so they share the 2 columns grid of the fixed ones
 const prefix = 'customMetadata.'
-const flatten = (d: any) => d && { ...d, ...Object.fromEntries(Object.entries(d.customMetadata ?? {}).map(([k, v]) => [prefix + k, v])) }
+// MOCKUP i18n: in a locale other than the default one, the form edits the x-i18n-<key> translations of the texts
+const i18n = useMetadataI18n()
+const trLocale = computed(() => i18n && !i18n.isDefault.value ? i18n.editLocale.value : null)
+const translatable = [...metadataTextKeys, 'keywords'] as readonly string[]
+const customI18nKey = 'x-i18n-customMetadata'
+const flatten = (d: any) => {
+  if (!d) return d
+  const flat = { ...d, ...Object.fromEntries(Object.entries(d.customMetadata ?? {}).map(([k, v]) => [prefix + k, v])) }
+  if (trLocale.value) {
+    for (const k of translatable) flat[k] = d[i18nKey(k)]?.[trLocale.value]
+    for (const k of Object.keys(d.customMetadata ?? {})) flat[prefix + k] = d[customI18nKey]?.[trLocale.value]?.[k]
+  }
+  return flat
+}
 // given back as is, the last emitted value is ignored by vjsf instead of resetting the field being typed in
 let emitted: any
 // vjsf re-emits whatever it would drop (keys outside the schema, empty strings): it only gets the schema fields with a value
@@ -85,7 +109,20 @@ const onUpdate = (value: any) => {
   if (!changed.length) return
   const next = { ...dataset.value, customMetadata: { ...dataset.value.customMetadata } }
   for (const key of changed) {
-    if (!key.startsWith(prefix)) next[key] = value[key] ?? null // null so the patch unsets it
+    if (trLocale.value && translatable.includes(key)) {
+      const translations = { ...next[i18nKey(key)] }
+      if (value[key] == null || value[key] === '' || (Array.isArray(value[key]) && !value[key].length)) delete translations[trLocale.value]
+      else translations[trLocale.value] = value[key]
+      next[i18nKey(key)] = Object.keys(translations).length ? translations : null
+    } else if (trLocale.value && key.startsWith(prefix)) {
+      const all = { ...next[customI18nKey] }
+      const values = { ...all[trLocale.value] }
+      if (value[key]) values[key.slice(prefix.length)] = value[key]
+      else delete values[key.slice(prefix.length)]
+      if (Object.keys(values).length) all[trLocale.value] = values
+      else delete all[trLocale.value]
+      next[customI18nKey] = Object.keys(all).length ? all : null
+    } else if (!key.startsWith(prefix)) next[key] = value[key] ?? null // null so the patch unsets it
     else if (isCustomMetadataEmpty(value[key])) delete next.customMetadata[key.slice(prefix.length)]
     else next.customMetadata[key.slice(prefix.length)] = value[key]
   }
@@ -128,8 +165,13 @@ const facet = (name: string, results = '') => ({
 const mainFields = ['title', 'summary', 'description']
 const showAgentChat = useShowAgentChat()
 // an empty slot would still reserve its room next to the field
-const appendSlot = (name: string) => canWrite.value && showAgentChat.value ? { slots: { append: { name } } } : {}
+const appendSlot = (name: string) => canWrite.value && showAgentChat.value && !trLocale.value ? { slots: { append: { name } } } : {}
 const localized = (prop: any) => schemaText(prop, 'title', locale.value) ?? ''
+// default locale texts, shown as placeholders while translating (primitives, the schema identity follows them)
+const sourceTexts = computed(() => Object.fromEntries([
+  ...translatable.map(k => [k, [dataset.value?.[k] ?? ''].flat().join(', ')]),
+  ...Object.entries(dataset.value?.customMetadata ?? {}).map(([k, v]) => [prefix + k, typeof v === 'string' ? v : ''])
+]))
 
 // titles, help texts and static layout come from the dataset schema, this adds the owner's choices and the page's actions
 const fixedProperties = () => {
@@ -166,7 +208,19 @@ const fixedProperties = () => {
   for (const [key, layout] of Object.entries(fields)) {
     // a fragment is never published: the catalog metadata would describe nothing anyone sees
     if (!layout || !inTab(key) || (isFragment.value && !mainFields.includes(key))) continue
+    if (trLocale.value && !translatable.includes(key)) continue
     const prop = properties[key] = structuredClone((datasetSchema as any).properties[key])
+    if (trLocale.value) {
+      const source = sourceTexts.value[key]
+      const lang = trLocale.value.toUpperCase()
+      prop.title = `${localized(prop)} (${lang})`
+      delete prop['x-i18n-title']
+      // the description source is the markdown editor's placeholder, see vjsfOptions
+      if (source && key !== 'description') layout.props = { ...layout.props, placeholder: source, persistentPlaceholder: true }
+      // the values entered on the other datasets are in the default language, no suggestions here
+      if (key === 'keywords') { delete layout.getItems; layout.props = { ...layout.props, chips: true, closableChips: true } }
+      if (key === 'spatial') { delete layout.getItems; layout.comp = 'text-field' }
+    }
     // the main fields' descriptions only document the API, their labels say enough in the form
     if (mainFields.includes(key)) delete prop.description
     // the owner settings can rename a field and replace its help
@@ -201,11 +255,17 @@ const fixedProperties = () => {
 }
 
 const customProperties = () => {
-  const definitions = (props.datasetsMetadata?.custom ?? []).filter((c: any) => !props.group || customGroup(props.datasetsMetadata, c.key) === props.group)
+  const definitions = (props.datasetsMetadata?.custom ?? []).filter((c: any) => (!props.group || customGroup(props.datasetsMetadata, c.key) === props.group) && (!trLocale.value || isCustomText(c)))
   const properties: Record<string, any> = {}
   for (const [key, prop] of Object.entries<any>(customMetadataSchema(definitions).properties)) {
     const path = `[${JSON.stringify(prefix + key)}]`
     properties[prefix + key] = prop
+    if (trLocale.value) {
+      prop.title = `${prop.title} (${trLocale.value.toUpperCase()})`
+      const source = sourceTexts.value[prefix + key]
+      prop.layout = { cols: { sm: 6 }, ...(source && { props: { placeholder: source, persistentPlaceholder: true } }) }
+      continue
+    }
     if (prop.type === 'object') { // a link, url and label side by side
       prop.properties.url.title = `${prop.title} - ${t('url')}`
       prop.properties.url.layout = { cols: { sm: 6 }, ...accent(path + '?.url') }
@@ -256,6 +316,8 @@ const fetched: Record<string, Promise<any>> = {}
 const fetchOnce = (url: string) => (fetched[url] = fetched[url] ?? $fetch(url))
 // help texts come from owner settings: plain text with its line breaks, like the help-tooltip they replace
 const plainTextHelp = (text: string) => text.replace(/[&<>"']/g, c => `&#${c.charCodeAt(0)};`).replace(/\n/g, '<br>')
+// the only markdown field of the form, a primitive so the options keep their identity while typing
+const descriptionPlaceholder = computed(() => trLocale.value ? sourceTexts.value.description : '')
 const vjsfOptions = computed<VjsfOptions>(() => ({
   density: 'comfortable',
   locale: locale.value,
@@ -270,7 +332,7 @@ const vjsfOptions = computed<VjsfOptions>(() => ({
   },
   markdown: plainTextHelp,
   plugins: [VjsfMarkdown],
-  pluginsOptions: { markdown: { cspNonce: $cspNonce } }
+  pluginsOptions: { markdown: { cspNonce: $cspNonce, ...(descriptionPlaceholder.value && { easyMDEOptions: { placeholder: descriptionPlaceholder.value } }) } }
 }))
 
 const summarizeContext = 'Write a summary for this dataset, following the write-dataset-summary skill. Present it to the user and ask for their approval before applying it. If approved, apply it with set_dataset_metadata (summary field). If the user wants changes, adjust accordingly.'
