@@ -80,6 +80,7 @@ fr:
   upToDate: Rien à traiter, tout est à jour.
   checksFailed: Certaines vérifications n'ont pas abouti.
   datasetsError: Jeu de données en erreur | Jeux de données en erreur
+  datasetsDraftError: Brouillon de jeu de données en erreur | Brouillons de jeux de données en erreur
   processingsError: Traitement en erreur | Traitements en erreur
   storage: Espace de stockage rempli à {n} %
   datasetsPublications: Publication de jeu de données à valider | Publications de jeux de données à valider
@@ -94,6 +95,7 @@ en:
   upToDate: Nothing to do, everything is up to date.
   checksFailed: Some checks could not complete.
   datasetsError: Dataset in error | Datasets in error
+  datasetsDraftError: Draft dataset in error | Draft datasets in error
   processingsError: Processing in error | Processings in error
   storage: Storage space {n} % full
   datasetsPublications: Dataset publication to validate | Dataset publications to validate
@@ -105,7 +107,7 @@ en:
 
 <script setup lang="ts">
 import {
-  mdiClipboardCheckOutline, mdiChevronRight, mdiCheckCircle, mdiAlertCircle, mdiAlertCircleOutline, mdiFileDocumentEdit, mdiShareVariant,
+  mdiClipboardCheckOutline, mdiChevronRight, mdiCheckCircle, mdiAlertCircle, mdiAlertCircleOutline, mdiFileDocumentEdit, mdiFileDocumentAlert, mdiShareVariant,
   mdiImageMultiple, mdiCogTransferOutline, mdiFaceAgent, mdiHarddisk, mdiPageNext, mdiViewDashboardEdit
 } from '@mdi/js'
 import type { RouteLocationRaw } from 'vue-router'
@@ -132,6 +134,8 @@ const sitesFilter = computed(() => publicationSites?.map(p => `${p.type}:${p.id}
 const sum = (counts?: Record<string, number>) => counts && Object.values(counts).reduce((a, b) => a + (typeof b === 'number' ? b : 0), 0)
 
 const datasetsErrorFetch = useFetch<{ count: number }>(() => canContribDep.value ? `${$apiPath}/datasets?size=0&shared=false&status=error` : null)
+// the update of a published dataset fails in its draft: the published version stays "finalized"
+const datasetsDraftErrorFetch = useFetch<{ count: number }>(() => canContribDep.value ? `${$apiPath}/datasets?size=0&shared=false&draftStatus=error` : null)
 // the facet stays per status whatever the filters, "count" only follows them through a shallow copy in the processings router
 // reads of other services: docs/architecture/dashboard.md
 const processingsErrorFetch = useFetch<{ facets: { statuses: Record<string, number> } }>(() => canAdminDep.value && $uiConfig.processingsIntegration ? `${$sitePath}/processings/api/v1/processings?size=0` : null, { notifError: false })
@@ -167,6 +171,7 @@ const storagePercent = computed(() => {
 const lines = computed(() => {
   const builders: (() => Line)[] = [
     () => ({ key: 'datasetsError', count: datasetsErrorFetch.data.value?.count, icon: mdiAlertCircle, color: 'error', to: { path: '/datasets', query: { status: 'error' } } }),
+    () => ({ key: 'datasetsDraftError', count: datasetsDraftErrorFetch.data.value?.count, icon: mdiFileDocumentAlert, color: 'error', to: { path: '/datasets', query: { draftStatus: 'error' } } }),
     () => ({ key: 'processingsError', count: processingsErrorFetch.data.value?.facets?.statuses?.error, icon: mdiCogTransferOutline, color: 'error', to: { path: '/processings', query: { status: 'error' } } }),
     () => ({ key: 'storage', count: storagePercent.value, icon: mdiHarddisk, color: 'warning', to: '/storage' }),
     () => ({ key: 'datasetsPublications', count: datasetsPublicationsFetch.data.value?.count, icon: mdiShareVariant, color: 'warning', to: { path: '/datasets', query: requestedSitesQuery(datasetsPublicationsFetch.data.value) } }),
@@ -205,7 +210,7 @@ const lines = computed(() => {
 const items = computed(() => lines.value.items)
 
 // a failed fetch counts as loaded, so a missing service does not leave the card loading forever
-const fetches = [...sharedFetches, datasetsErrorFetch, processingsErrorFetch, datasetsPublicationsFetch, applicationsPublicationsFetch, reusesPublicationsFetch, pagesPublicationsFetch, datasetsDraftFetch, ...extraItems.map(e => e.fetch)]
+const fetches = [...sharedFetches, datasetsErrorFetch, datasetsDraftErrorFetch, processingsErrorFetch, datasetsPublicationsFetch, applicationsPublicationsFetch, reusesPublicationsFetch, pagesPublicationsFetch, datasetsDraftFetch, ...extraItems.map(e => e.fetch)]
 const loaded = computed(() => fetches.every(f => !f.loading.value))
 const failed = computed(() => lines.value.broken || fetches.some(f => f.error.value))
 </script>

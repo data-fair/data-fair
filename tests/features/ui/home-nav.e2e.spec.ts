@@ -83,14 +83,14 @@ test.describe('home dashboard', () => {
   })
 
   test('to do card never says everything is fine after a failed check', async ({ page, goToWithAuth }) => {
-    await page.route('**/data-fair/api/v1/datasets?*status=error*', route => route.fulfill({ status: 500 }))
+    await page.route('**/data-fair/api/v1/datasets?*&status=error*', route => route.fulfill({ status: 500 }))
     await goToWithAuth('/data-fair/', 'test_datafair_user1')
     await expect(page.getByText('Certaines vérifications n\'ont pas abouti.')).toBeVisible({ timeout: 10000 })
     await expect(page.getByText('Rien à traiter')).not.toBeVisible()
   })
 
   test('to do card says a check failed even when it has lines to show', async ({ page, goToWithAuth }) => {
-    await page.route('**/data-fair/api/v1/datasets?*status=error*', route => route.fulfill({ status: 500 }))
+    await page.route('**/data-fair/api/v1/datasets?*&status=error*', route => route.fulfill({ status: 500 }))
     await page.route('**/data-fair/api/v1/datasets?*draftStatus=finalized*', route => route.fulfill({ json: { count: 2, results: [] } }))
     await goToWithAuth('/data-fair/', 'test_datafair_user1')
     await expect(page.getByRole('link', { name: /brouillon/i })).toBeVisible({ timeout: 10000 })
@@ -98,7 +98,7 @@ test.describe('home dashboard', () => {
   })
 
   test('to do card keeps its other lines when one answer is unexpected', async ({ page, goToWithAuth }) => {
-    await page.route('**/data-fair/api/v1/datasets?*status=error*', route => route.fulfill({ json: { count: 3, results: [] } }))
+    await page.route('**/data-fair/api/v1/datasets?*&status=error*', route => route.fulfill({ json: { count: 3, results: [] } }))
     await page.route('**/data-fair/api/v1/datasets?*draftStatus=finalized*', route => route.fulfill({ json: { count: 'oops' } }))
     await goToWithAuth('/data-fair/', 'test_datafair_user1')
     await expect(page.getByRole('link', { name: /en erreur/i })).toBeVisible({ timeout: 10000 })
@@ -107,9 +107,17 @@ test.describe('home dashboard', () => {
   })
 
   test('to do card lists the datasets in error', async ({ page, goToWithAuth }) => {
-    await page.route('**/data-fair/api/v1/datasets?*status=error*', route => route.fulfill({ json: { count: 3, results: [] } }))
+    await page.route('**/data-fair/api/v1/datasets?*&status=error*', route => route.fulfill({ json: { count: 3, results: [] } }))
     await goToWithAuth('/data-fair/', 'test_datafair_user1')
     await expect(page.getByRole('link', { name: /en erreur/i })).toBeVisible({ timeout: 10000 })
+  })
+
+  test('to do card lists the draft datasets in error', async ({ page, goToWithAuth }) => {
+    await page.route('**/data-fair/api/v1/datasets?*draftStatus=error*', route => route.fulfill({ json: { count: 1, results: [] } }))
+    await goToWithAuth('/data-fair/', 'test_datafair_user1')
+    await expect(page.getByText('1 · Brouillon de jeu de données en erreur')).toBeVisible({ timeout: 10000 })
+    await page.getByRole('link', { name: 'Brouillon de jeu de données en erreur' }).click()
+    await page.waitForURL(/\/datasets\?draftStatus=error/, { timeout: 10000 })
   })
 
   test('read-only role gets a notice instead of the to do card', async ({ page, goToWithAuth }) => {
