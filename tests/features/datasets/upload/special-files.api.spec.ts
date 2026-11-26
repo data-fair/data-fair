@@ -210,6 +210,40 @@ test.describe('Many case of special file datasets', () => {
 `)
   })
 
+  test('Process uploaded parquet dataset with its declared types', async () => {
+    const ax = testUser1
+    let dataset = await sendDataset('datasets/types.parquet', ax)
+    dataset = await waitForFinalize(ax, dataset.id)
+    assert.equal(dataset.status, 'finalized')
+    assert.equal(dataset.file.mimetype, 'text/csv')
+
+    const field = (key: string) => dataset.schema.find((f: any) => f.key === key)
+    // digits-only codes would be sniffed as integers from the csv
+    assert.equal(field('code').type, 'string')
+    assert.equal(field('entier').type, 'integer')
+    // floats with integer values would be sniffed as integers from the csv
+    assert.equal(field('nombre').type, 'number')
+    assert.equal(field('actif').type, 'boolean')
+    assert.equal(field('jour').format, 'date')
+    assert.equal(field('horodatage').format, 'date-time')
+    assert.equal(field('tags').separator, ';')
+    assert.equal(field('objet').type, 'string')
+
+    const lines = (await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { sort: 'entier' } })).data.results
+    assert.equal(lines.length, 3)
+    assert.equal(lines[0].code, '01001')
+    assert.equal(lines[0].nombre, 1)
+    assert.equal(lines[0].actif, true)
+    assert.equal(lines[0].jour, '2024-01-31')
+    assert.equal(lines[0].tags, 'a;b')
+    assert.deepEqual(JSON.parse(lines[0].objet), { x: 1, y: 'un' })
+    assert.equal(lines[1].actif, false)
+    assert.equal(lines[2].nombre, undefined)
+
+    const dataFiles = (await ax.get(`/api/v1/datasets/${dataset.id}/data-files`)).data
+    assert.deepEqual(dataFiles.map((f: any) => f.name), ['types.parquet', 'types.csv'])
+  })
+
   test('Fails when json root is not an array', async () => {
     const form = new FormData()
     form.append('file', JSON.stringify({ col1: 'val1' }), 'example.json')
@@ -238,6 +272,19 @@ test.describe('Many case of special file datasets', () => {
     const journal = (await ax.get(`/api/v1/datasets/${dataset.id}/journal`)).data
     const errorEvent = journal.find((e: any) => e.type === 'error')
     assert.ok(errorEvent.data.includes('Unexpected'))
+  })
+
+  test('Fails without retry when the parquet file is corrupted', async () => {
+    const form = new FormData()
+    form.append('file', 'not a parquet file', 'example.parquet')
+    const ax = testUser1
+    const res = await ax.post('/api/v1/datasets', form, { headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() } })
+    assert.equal(res.status, 201)
+    await waitForDatasetError(ax, res.data.id)
+    const journal = (await ax.get(`/api/v1/datasets/${res.data.id}/journal`)).data
+    const errorEvents = journal.filter((e: any) => e.type === 'error')
+    assert.equal(errorEvents.length, 1)
+    assert.ok(errorEvents[0].data.startsWith('Failed to read the parquet file'))
   })
 
   const checkDateDataset = async (ext: any) => {

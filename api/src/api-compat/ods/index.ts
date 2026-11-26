@@ -284,11 +284,6 @@ const exports = (version: '2.0' | '2.1') => async (req, res, next) => {
   } else if (req.params.format === 'parquet') {
     res.setHeader('content-disposition', contentDisposition(dataset.slug + '.parquet'))
     res.type(('application/vnd.apache.parquet'))
-    // const parquet = await import('@dsnp/parquetjs')
-    // TODO: should we flatten or nest multi-valued values ?
-    // const schema = jsonSchema(dataset.schema, req.publicBaseUrl, false)
-    // const parquetSchema = parquet.ParquetSchema.fromJsonSchema(schema)
-    // transformStreams = [new parquet.ParquetTransformer(parquetSchema)]
     const { ParquetWriterStream } = await import('../../../../parquet-writer/parquet-writer-stream.mts')
     const basicSchema = selectFinalKeys.map((key: string) => {
       const prop = dataset.schema!.find(p => p.key === key)!

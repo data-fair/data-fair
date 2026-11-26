@@ -118,6 +118,10 @@ export const sniff = (values: string[], attachmentsPaths: string[] = [], existin
     if (checkAll(values, hasDateFormat(dateFormat))) return { type: 'string', format: 'date', dateFormat }
   }
   if (checkAll(values, dateSchema)) return { type: 'string', format: 'date' }
+  return sniffText(values)
+}
+
+const sniffText = (values: string[]) => {
   if (checkAll(values, val => val.length <= 200)) {
     // machine codes: analyzed-french matching and insensitive sort are irrelevant
     // (mergeFileSchema translates this into default x-capabilities on NEW fields only)
@@ -125,6 +129,21 @@ export const sniff = (values: string[], attachmentsPaths: string[] = [], existin
     return { type: 'string' }
   }
   return { type: 'string', 'x-display': 'textarea' }
+}
+
+type DeclaredType = { type: string, format?: string, separator?: string }
+
+// Type declared by a typed source file (parquet): it wins over the sniffed one, but a plain
+// string column keeps what sniffing finds among strings (dates, codes, long texts).
+export const sniffDeclared = (values: string[], attachmentsPaths: string[], declared: DeclaredType, dateConfig?: SniffDateConfig): any => {
+  const sniffed = sniff(values, attachmentsPaths, undefined, dateConfig)
+  if (sniffed.type === 'empty') return sniffed
+  const separator = declared.separator ? { separator: declared.separator } : {}
+  if (sniffed.type === declared.type && sniffed.format === declared.format) return { ...sniffed, ...separator }
+  if (declared.type === 'string' && !declared.format) {
+    return { ...(sniffed.type === 'string' ? sniffed : sniffText(values)), ...separator }
+  }
+  return { type: declared.type, ...(declared.format && { format: declared.format }), ...separator }
 }
 
 export const format = (value: any, prop: any, fileProp?: any, ignoreSeparator?: boolean, dateConfig?: FormatDateConfig): any => {

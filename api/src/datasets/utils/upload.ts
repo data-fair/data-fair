@@ -9,7 +9,7 @@ import * as datasetUtils from './index.ts'
 import { tmpDir, fsyncFile } from './files.ts'
 import promisifyMiddleware from '../../misc/utils/promisify-middleware.ts'
 import { reqDatasetOptional, reqDraftOptional } from '../../misc/utils/req-context.ts'
-import { basicTypes, tabularTypes, geographicalTypes, archiveTypes, calendarTypes, jsonTypes } from './types.ts'
+import { basicTypes, tabularTypes, geographicalTypes, archiveTypes, calendarTypes, jsonTypes, parquetTypes } from './types.ts'
 import debugLib from 'debug'
 import filesStorage from '#files-storage'
 import tmp from 'tmp-promise'
@@ -32,6 +32,7 @@ export const fallbackMimeTypes: Record<string, string> = {
   gpkg: 'application/geopackage+sqlite3',
   jsonl: 'application/x-ndjson',
   ndjson: 'application/x-ndjson',
+  parquet: 'application/vnd.apache.parquet',
 }
 const debug = debugLib('files')
 
@@ -95,7 +96,7 @@ const storage = {
   }
 }
 
-export const allowedTypes = new Set([...basicTypes, ...tabularTypes, ...geographicalTypes, ...archiveTypes, ...calendarTypes, ...jsonTypes])
+export const allowedTypes = new Set([...basicTypes, ...tabularTypes, ...geographicalTypes, ...archiveTypes, ...calendarTypes, ...jsonTypes, ...parquetTypes])
 
 const middleware = multer({
   defParamCharset: 'utf8',

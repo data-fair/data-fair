@@ -64,6 +64,7 @@ export const accepted = [
   '.fods',
   '.xlsx',
   '.xls',
+  '.parquet',
   '.dbf',
   '.txt',
   '.dif',
