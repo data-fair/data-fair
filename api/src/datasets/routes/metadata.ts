@@ -186,7 +186,7 @@ export const registerMetadataRoutes = (router: Router) => {
     readDataset({
       acceptedStatuses: (patch, dataset) => {
         // accept different statuses of the dataset depending on the content of the patch
-        if (!dataset.isMetaOnly && (patch.schema || patch.virtual || patch.extensions || patch.publications || patch.projection)) {
+        if (!dataset.isMetaOnly && (patch.schema || patch.virtual || patch.extensions || patch.publications || patch.projection || patch.rest)) {
           return ['finalized', 'error']
         } else {
           return null
@@ -194,8 +194,9 @@ export const registerMetadataRoutes = (router: Router) => {
       }
     }),
     apiKeyMiddlewareWrite, rateLimiting.middleware,
+    // rest changes re-run the pipeline (history back-fill...): without the lock a running task overwrites their status
     lockDataset((patch: any) => {
-      return !!(patch.schema || patch.virtual || patch.extensions || patch.publications || patch.projection)
+      return !!(patch.schema || patch.virtual || patch.extensions || patch.publications || patch.projection || patch.rest)
     }),
     (req: Request, res: Response, next: NextFunction) => {
       if (descriptionHasBreakingChanges(req)) {
