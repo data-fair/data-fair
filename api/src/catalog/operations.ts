@@ -176,7 +176,7 @@ export const buildDcatCatalog = (datasets: any[], publicationSite: any, publicBa
       'dct:issued': dataset.createdAt ? dateLiteral(dataset.createdAt) : undefined,
       'dct:modified': modified ? dateLiteral(modified) : undefined,
       'dcat:keyword': dataset.keywords?.length ? dataset.keywords : undefined,
-      'dcat:theme': dataset.topics?.length ? dataset.topics.map((t: any) => ({ '@type': 'skos:Concept', 'skos:prefLabel': t.title })) : undefined,
+      'dcat:theme': dataset.topics?.length ? dataset.topics.map((t: any) => ({ '@id': `${publicationSite.url}/datasets?topics=${encodeURIComponent(t.id)}`, '@type': 'skos:Concept', 'skos:prefLabel': t.title })) : undefined,
       'dct:license': license,
       'dct:publisher': agent(dataset.owner?.departmentName ? `${dataset.owner.name} - ${dataset.owner.departmentName}` : dataset.owner?.name),
       'dct:creator': agent(dataset.creator),

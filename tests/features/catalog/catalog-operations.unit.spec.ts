@@ -57,6 +57,7 @@ test.describe('buildDcatCatalog', () => {
     assert.deepEqual(ds[dct + 'modified'][0], { '@value': '2026-01-15', '@type': xsd + 'date' })
     assert.equal(ds[dct + 'license'][0]['@id'], 'https://www.etalab.gouv.fr/licence-ouverte-open-licence')
     assert.equal(ds[dct + 'accrualPeriodicity'][0]['@id'], 'http://publications.europa.eu/resource/authority/frequency/ANNUAL')
+    assert.equal(ds[dcat + 'theme'][0]['@id'], 'https://portal.test/datasets?topics=t1')
     assert.equal(ds[dcat + 'theme'][0]['http://www.w3.org/2004/02/skos/core#prefLabel'][0]['@value'], 'Environment')
     assert.equal(ds[dcat + 'keyword'][0]['@value'], 'energy')
     const temporal = ds[dct + 'temporal'][0]

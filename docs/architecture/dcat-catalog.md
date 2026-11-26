@@ -28,7 +28,8 @@ JSON-LD is accepted by data.gouv.fr and data.europa.eu, so none is served yet.
   `dct:identifier` is the dataset `id`, not its slug: data.gouv.fr keys harvested datasets on it,
   and the id survives a slug change. Dates are typed (`xsd:date` or `xsd:dateTime` after their
   shape), `frequency` maps to the EU frequency vocabulary (`continuous` → `UPDATE_CONT`), topics to
-  `dcat:theme` concepts, `spatial` and `bbox` to a `dct:Location` with a WKT `dcat:bbox`, the owner
+  `dcat:theme` concepts (the shapes want an IRI: the portal page filtered on the topic,
+  `<site>/datasets?topics=<id>`), `spatial` and `bbox` to a `dct:Location` with a WKT `dcat:bbox`, the owner
   (with its department) to `dct:publisher`, `creator` to `dct:creator`, the owner contact settings
   (`settings.info.contact`) to `dcat:contactPoint`.
 - **Distributions**: the original file (`/raw`) and the converted file (`/convert`, when its type
