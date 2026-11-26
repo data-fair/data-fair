@@ -1383,7 +1383,7 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
     },
     externalDocs: {
       description: 'Documentation sur GitHub',
-      url: 'https://data-fair.github.io/master/'
+      url: 'https://data-fair.github.io/'
     }
   }
 

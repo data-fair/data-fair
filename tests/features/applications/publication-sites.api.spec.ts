@@ -1,7 +1,7 @@
 import { test } from '../../fixtures/diagnostics.ts'
 import assert from 'node:assert/strict'
 import { axiosAuth, clean, checkPendingTasks, config, mockAppUrl } from '../../support/axios.ts'
-import { clearPublicationSitesCache, validateDcat } from '../../support/workers.ts'
+import { clearPublicationSitesCache } from '../../support/workers.ts'
 import { collectNotifs, expectNotifPair } from '../../support/notifications.ts'
 
 const testUser1 = await axiosAuth('test_datafair_user1@test.com')
@@ -122,8 +122,11 @@ test.describe('publication sites', () => {
     assert.equal(datasetsCatalog.count, 1)
 
     const dcatCatalog = (await ax.get(`${publicUrl2}/api/v1/catalog/dcat`)).data
-    const dcatValidation = await validateDcat(dcatCatalog)
-    assert.ok(dcatValidation.valid, `DCAT validation failed: ${JSON.stringify(dcatValidation.errors)}`)
+    assert.equal(dcatCatalog['@type'], 'dcat:Catalog')
+    assert.equal(dcatCatalog['dcat:dataset'].length, 1)
+    assert.equal(dcatCatalog['dcat:dataset'][0]['dct:identifier'], dataset.id)
+    // the REST dataset is served by its API distribution
+    assert.equal(dcatCatalog['dcat:dataset'][0]['dcat:distribution'][0]['dcat:accessURL']['@id'], `${publicUrl2}/api/v1/datasets/${dataset.slug}/lines`)
 
     // Test multi-domain image support
     const imageFullUrl = config.publicUrl + '/uploads/test-image.png'

@@ -317,7 +317,7 @@
     <df-navigation-right>
       <!-- Documentation link -->
       <v-list-item
-        :href="'https://data-fair.github.io/3/user-guide-backoffice/parameters'"
+        href="https://docs.koumoul.com/pages-administration/metadonnees"
         target="_blank"
         link
       >

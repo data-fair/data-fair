@@ -129,7 +129,7 @@ Deferred on purpose when the owned term index replaced `$text` for `datasets` / 
   - `2d` **catalog DCAT `modified` always undefined** → FIXED (`catalog/operations.ts`). `buildDcatCatalog`
     read `datasets.dataUpdatedAt` off the **array** instead of the `dataset` loop var, so every entry's
     `modified` was undefined. Fixed to `dataset.dataUpdatedAt || dataset.updatedAt`. Failing unit test in
-    `catalog-operations.unit.spec.ts` ("sets modified from each dataset own dataUpdatedAt …").
+    `catalog-operations.unit.spec.ts` ("uses the datasetUrlTemplate and each dataset own modification date").
 - **PR 3 — Settings document-targeting & metadata bugs** (`1`/`2b`) → both fixed, each with a failing
   test first:
   - `1` **`updateDatasetsMetadata` `$unset` broken + condition inverted** → FIXED (`settings/service.ts`).

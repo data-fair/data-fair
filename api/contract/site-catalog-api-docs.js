@@ -18,7 +18,7 @@ export default (publicUrl, publicationSite, info) => {
       description: `Cette documentation est à destination de développeurs souhaitant explorer ou moissonner le catalogue de données de ${hostname}.`,
       version: pJson.version,
       'x-api-id': `${new URL(publicUrl).hostname.replace(/\./g, '-')}-catalog`,
-      termsOfService: config.info.termsOfService,
+      ...(config.info.termsOfService ? { termsOfService: config.info.termsOfService } : {}),
       contact: { ...(info.contact || {}) }
     },
     servers,
@@ -99,14 +99,14 @@ export default (publicUrl, publicationSite, info) => {
       },
       '/dcat': {
         get: {
-          summary: 'Lister les jeux de données (DCAT)',
-          description: 'Récupérer la liste des jeux de données au format DCAT (JSON-LD).',
+          summary: 'Catalogue DCAT-AP',
+          description: 'Récupérer le catalogue des jeux de données publiés sur ce portail au format [DCAT-AP 3](https://semiceu.github.io/DCAT-AP/releases/3.0.0/) (profil européen, JSON-LD), à utiliser comme URL de moissonnage DCAT sur data.gouv.fr ou data.europa.eu. Chaque jeu de données porte ses fichiers téléchargeables, ses pièces jointes publiées sur les catalogues et, s\'il contient des données, une distribution API reliée à un `dcat:DataService` dont `dcat:endpointDescription` pointe vers la documentation OpenAPI du jeu. Les textes générés (titres et descriptions des distributions) suivent la langue de la requête (français par défaut, anglais).',
           operationId: 'getDcat',
           responses: {
             200: {
-              description: 'Liste des jeux de données au format DCAT (JSON-LD)',
+              description: 'Catalogue des jeux de données au format DCAT-AP (JSON-LD)',
               content: {
-                'application/json': {
+                'application/ld+json': {
                   schema: { type: 'object' }
                 }
               }
@@ -117,13 +117,7 @@ export default (publicUrl, publicationSite, info) => {
     },
     externalDocs: {
       description: 'Documentation sur GitHub',
-      url: 'https://data-fair.github.io/master/'
-    },
-    definitions: {
-      API: {
-        type: 'object',
-        description: 'OpenAPI v3 compliant documentation'
-      }
+      url: 'https://data-fair.github.io/'
     }
   }
 }

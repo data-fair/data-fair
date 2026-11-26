@@ -1,76 +1,208 @@
-import mimeTypes from 'mime-types'
-import dcatContext from '../misc/utils/dcat/context.ts'
+// DCAT-AP 3 catalog of a publication site (the European profile harvested by data.gouv.fr and data.europa.eu),
+// serialized as JSON-LD with prefixed property names, cf docs/architecture/dcat-catalog.md
+const dcatApContext = {
+  dcat: 'http://www.w3.org/ns/dcat#',
+  dct: 'http://purl.org/dc/terms/',
+  foaf: 'http://xmlns.com/foaf/0.1/',
+  vcard: 'http://www.w3.org/2006/vcard/ns#',
+  skos: 'http://www.w3.org/2004/02/skos/core#',
+  xsd: 'http://www.w3.org/2001/XMLSchema#',
+  gsp: 'http://www.opengis.net/ont/geosparql#'
+}
 
-// build a DCAT catalog document (mostly useful for harvesting by data.gouv.fr) from the datasets
-// of a publication site. Pure — the unit-test surface for the catalog module.
-// cf https://doc.data.gouv.fr/moissonnage/dcat/
-export const buildDcatCatalog = (datasets: any[], publicationSite: any, publicBaseUrl: string) => {
-  const dcatDatasets = []
+const euFrequency = 'http://publications.europa.eu/resource/authority/frequency/'
+const frequencies: Record<string, string> = {
+  irregular: 'IRREG',
+  continuous: 'UPDATE_CONT',
+  daily: 'DAILY',
+  threeTimesAWeek: 'WEEKLY_3',
+  semiweekly: 'WEEKLY_2',
+  weekly: 'WEEKLY',
+  threeTimesAMonth: 'MONTHLY_3',
+  biweekly: 'BIWEEKLY',
+  semimonthly: 'MONTHLY_2',
+  monthly: 'MONTHLY',
+  bimonthly: 'BIMONTHLY',
+  quarterly: 'QUARTERLY',
+  threeTimesAYear: 'ANNUAL_3',
+  semiannual: 'ANNUAL_2',
+  annual: 'ANNUAL',
+  biennial: 'BIENNIAL',
+  triennial: 'TRIENNIAL'
+}
 
+// file extensions known by the EU file-type vocabulary
+const euFileType = 'http://publications.europa.eu/resource/authority/file-type/'
+const fileTypes: Record<string, string> = {
+  csv: 'CSV', tsv: 'TSV', txt: 'TXT', json: 'JSON', geojson: 'GEOJSON', xml: 'XML', xlsx: 'XLSX', xls: 'XLS', ods: 'ODS', dbf: 'DBF', shp: 'SHP', kml: 'KML', kmz: 'KMZ', gpx: 'GPX', zip: 'ZIP', gz: 'GZIP', parquet: 'PARQUET', pdf: 'PDF'
+}
+
+const dcatApTexts = {
+  fr: {
+    catalogDescription: (title: string) => `Catalogue des jeux de données publiés sur ${title}.`,
+    fileTitle: (ext: string) => `Fichier ${ext}`,
+    fileDescription: (ext: string) => `Téléchargez le fichier complet au format ${ext}.`,
+    apiTitle: 'API',
+    apiDescription: 'Consultez, filtrez et exportez les données grâce à l\'API.'
+  },
+  en: {
+    catalogDescription: (title: string) => `Catalog of the datasets published on ${title}.`,
+    fileTitle: (ext: string) => `${ext} file`,
+    fileDescription: (ext: string) => `Download the complete file in ${ext} format.`,
+    apiTitle: 'API',
+    apiDescription: 'Browse, filter and export the data through the API.'
+  }
+}
+
+// typed IRIs satisfy the range classes of the DCAT-AP SHACL shapes
+const iri = (url: string, type?: string) => type ? { '@id': url, '@type': type } : { '@id': url }
+const dateLiteral = (value: string) => ({ '@value': value, '@type': /^\d{4}-\d{2}-\d{2}$/.test(value) ? 'xsd:date' : 'xsd:dateTime' })
+const fileExtension = (name: string) => name.split('.').pop()?.toLowerCase() ?? ''
+const urlExtension = (url: string) => {
+  try { return fileExtension(new URL(url).pathname) } catch { return '' }
+}
+
+// can: whether the caller may run an operation on a dataset, to leave out the distributions it cannot reach
+export const buildDcatCatalog = (datasets: any[], publicationSite: any, publicBaseUrl: string, ownerInfo: any = {}, locale = 'fr', can: (dataset: any, operationId: string) => boolean = () => true) => {
+  const texts = locale === 'en' ? dcatApTexts.en : dcatApTexts.fr
   const datasetUrlTemplate = publicationSite.datasetUrlTemplate || publicationSite.url + '/datasets/{id}'
+  const siteTitle = publicationSite.title || publicationSite.owner?.name || publicationSite.url
 
+  const contact = ownerInfo.contact
+  const contactPoint = (contact?.email || contact?.url)
+    ? {
+        '@type': ['vcard:Kind', 'vcard:Organization'],
+        'vcard:fn': contact.name || publicationSite.owner?.name,
+        'vcard:hasEmail': contact.email ? iri('mailto:' + contact.email) : undefined,
+        'vcard:hasURL': contact.url ? iri(contact.url) : undefined
+      }
+    : undefined
+
+  const agent = (name?: string) => name ? { '@type': 'foaf:Agent', 'foaf:name': name } : undefined
+
+  let catalogModified: string | undefined
+  const dcatDatasets = []
   for (const dataset of datasets) {
     const datasetUrl = datasetUrlTemplate.replace('{slug}', dataset.slug).replace('{id}', dataset.id)
-    const datasetDCAT: any = {
-      '@id': datasetUrl,
-      '@type': 'Dataset',
-      identifier: dataset.slug || dataset.id,
-      landingPage: datasetUrl,
-      title: dataset.title,
-      description: dataset.summary || dataset.description,
-      issued: dataset.createdAt,
-      modified: dataset.dataUpdatedAt || dataset.updatedAt
-    }
-    if (dataset.keywords?.length) datasetDCAT.keyword = dataset.keywords
-    if (dataset.license?.href) datasetDCAT.license = dataset.license.href
-    if (dataset.temporal && dataset.temporal.start) {
-      if (dataset.temporal.end) {
-        datasetDCAT.temporal = `${dataset.temporal.start}/${dataset.temporal.end}`
-      } else {
-        datasetDCAT.temporal = `${dataset.temporal.start}/${dataset.temporal.start}`
+    const datasetApiUrl = `${publicBaseUrl}/api/v1/datasets/${dataset.slug || dataset.id}`
+    const license = dataset.license?.href ? iri(dataset.license.href, 'dct:LicenseDocument') : undefined
+    const modified = dataset.modified || dataset.dataUpdatedAt || dataset.updatedAt
+    if (modified && (!catalogModified || modified > catalogModified)) catalogModified = modified
+
+    const distributions: any[] = []
+    const fileDistribution = (file: any, url: string, identifier: string, title?: string, description?: string): Record<string, any> => {
+      const ext = file.name ? fileExtension(file.name) : urlExtension(url)
+      const mediaType = file.mimetype?.split(';')[0].trim()
+      return {
+        '@id': url,
+        '@type': 'dcat:Distribution',
+        'dct:identifier': identifier,
+        'dct:title': title || texts.fileTitle(ext),
+        'dct:description': description || (title ? undefined : texts.fileDescription(ext)),
+        'dcat:accessURL': iri(url),
+        'dcat:downloadURL': iri(url),
+        'dcat:mediaType': mediaType ? iri('https://www.iana.org/assignments/media-types/' + mediaType, 'dct:MediaType') : undefined,
+        'dct:format': fileTypes[ext] ? iri(euFileType + fileTypes[ext], 'dct:MediaTypeOrExtent') : undefined,
+        'dcat:byteSize': file.size ? { '@value': file.size, '@type': 'xsd:nonNegativeInteger' } : undefined,
+        'dct:modified': file.updatedAt ? dateLiteral(file.updatedAt) : undefined,
+        'dct:license': license
       }
     }
-    if (dataset.frequency) datasetDCAT.accrualPeriodicity = 'http://purl.org/cld/freq/' + dataset.frequency
-
-    const distributions = []
-    if (dataset.file) {
-      const originalRessourceUrl = `${publicBaseUrl}/api/v1/datasets/${dataset.slug || dataset.id}/raw`
-      distributions.push({
-        '@id': originalRessourceUrl,
-        '@type': 'Distribution',
-        identifier: `${dataset.slug || dataset.id}/raw`,
-        title: `Fichier ${dataset.originalFile.name.split('.').pop()}`,
-        description: `Téléchargez le fichier complet au format ${dataset.originalFile.name.split('.').pop()}.`,
-        downloadURL: originalRessourceUrl,
-        mediaType: dataset.originalFile.mimetype,
-        format: mimeTypes.extension(dataset.originalFile.mimetype) || undefined,
-        bytesSize: dataset.originalFile.size
-      })
+    if (dataset.file && dataset.originalFile && can(dataset, 'downloadOriginalData')) {
+      const original = { ...dataset.originalFile, updatedAt: dataset.dataUpdatedAt }
+      distributions.push(fileDistribution(original, `${datasetApiUrl}/raw`, `${dataset.id}/raw`))
       if (dataset.file.mimetype !== dataset.originalFile.mimetype) {
-        const ressourceUrl = `${publicBaseUrl}/api/v1/datasets/${dataset.slug || dataset.id}/convert`
-        distributions.push({
-          '@id': ressourceUrl,
-          '@type': 'Distribution',
-          identifier: `${dataset.slug || dataset.id}/convert`,
-          title: `Fichier ${dataset.file.name.split('.').pop()}`,
-          description: `Téléchargez le fichier complet au format ${dataset.file.name.split('.').pop()}.`,
-          downloadURL: ressourceUrl,
-          mediaType: dataset.file.mimetype,
-          format: mimeTypes.extension(dataset.file.mimetype) || undefined,
-          bytesSize: dataset.file.size
-        })
+        distributions.push(fileDistribution({ ...dataset.file, updatedAt: dataset.dataUpdatedAt }, `${datasetApiUrl}/convert`, `${dataset.id}/convert`))
+      }
+    }
+    for (const attachment of dataset.attachments ?? []) {
+      if (!attachment.includeInCatalogPublications) continue
+      const isLink = attachment.type === 'url'
+      if (isLink ? !attachment.url : !can(dataset, 'downloadMetadataAttachment')) continue
+      const url = isLink ? attachment.url : `${datasetApiUrl}/metadata-attachments/${encodeURIComponent(attachment.name)}`
+      const distribution = fileDistribution(attachment, url, `${dataset.id}/attachments/${attachment.name ?? attachment.url}`, attachment.title, attachment.description)
+      if (isLink) {
+        // a blank node: the external URL shared by several datasets would merge their distributions,
+        // a link may be a web page, not a download, and the dataset license is not its license
+        delete distribution['@id']
+        delete distribution['dcat:downloadURL']
+        delete distribution['dct:license']
+      }
+      distributions.push(distribution)
+    }
+    // every dataset with data has a queryable API, the only distribution of REST and virtual datasets
+    if (!dataset.isMetaOnly && can(dataset, 'readLines')) {
+      distributions.push({
+        '@id': `${datasetApiUrl}/lines`,
+        '@type': 'dcat:Distribution',
+        'dct:identifier': `${dataset.id}/lines`,
+        'dct:title': texts.apiTitle,
+        'dct:description': texts.apiDescription,
+        'dcat:accessURL': iri(`${datasetApiUrl}/lines`),
+        'dcat:mediaType': iri('https://www.iana.org/assignments/media-types/application/json', 'dct:MediaType'),
+        'dct:format': iri(euFileType + 'JSON', 'dct:MediaTypeOrExtent'),
+        'dct:license': license,
+        'dcat:accessService': {
+          '@id': datasetApiUrl,
+          '@type': 'dcat:DataService',
+          'dct:title': `API - ${dataset.title}`,
+          'dcat:endpointURL': iri(datasetApiUrl),
+          'dcat:endpointDescription': iri(`${datasetApiUrl}/api-docs.json`),
+          'dcat:servesDataset': iri(datasetUrl),
+          'dct:license': license
+        }
+      })
+    }
+
+    let spatial
+    if (dataset.spatial || dataset.bbox?.length === 4) {
+      const [w, s, e, n] = dataset.bbox ?? []
+      spatial = {
+        '@type': 'dct:Location',
+        'skos:prefLabel': dataset.spatial || undefined,
+        'dcat:bbox': dataset.bbox?.length === 4
+          ? { '@value': `POLYGON((${w} ${s}, ${e} ${s}, ${e} ${n}, ${w} ${n}, ${w} ${s}))`, '@type': 'gsp:wktLiteral' }
+          : undefined
       }
     }
 
-    if (distributions.length) datasetDCAT.distribution = distributions
-    dcatDatasets.push(datasetDCAT)
+    dcatDatasets.push({
+      '@id': datasetUrl,
+      '@type': 'dcat:Dataset',
+      'dct:identifier': dataset.id,
+      'dct:title': dataset.title,
+      'dct:description': dataset.description || dataset.summary || dataset.title,
+      'dcat:landingPage': iri(datasetUrl, 'foaf:Document'),
+      'dct:issued': dataset.createdAt ? dateLiteral(dataset.createdAt) : undefined,
+      'dct:modified': modified ? dateLiteral(modified) : undefined,
+      'dcat:keyword': dataset.keywords?.length ? dataset.keywords : undefined,
+      'dcat:theme': dataset.topics?.length ? dataset.topics.map((t: any) => ({ '@id': `${publicationSite.url}/datasets?topics=${encodeURIComponent(t.id)}`, '@type': 'skos:Concept', 'skos:prefLabel': t.title })) : undefined,
+      'dct:license': license,
+      'dct:publisher': agent(dataset.owner?.departmentName ? `${dataset.owner.name} - ${dataset.owner.departmentName}` : dataset.owner?.name),
+      'dct:creator': agent(dataset.creator),
+      'dcat:contactPoint': contactPoint,
+      'dct:accrualPeriodicity': frequencies[dataset.frequency] ? iri(euFrequency + frequencies[dataset.frequency], 'dct:Frequency') : undefined,
+      'dct:temporal': dataset.temporal?.start
+        ? {
+            '@type': 'dct:PeriodOfTime',
+            'dcat:startDate': dateLiteral(dataset.temporal.start),
+            'dcat:endDate': dataset.temporal.end ? dateLiteral(dataset.temporal.end) : undefined
+          }
+        : undefined,
+      'dct:spatial': spatial,
+      'dcat:distribution': distributions.length ? distributions : undefined
+    })
   }
 
   return {
-    '@context': dcatContext,
-    '@type': 'Catalog',
-    conformsTo: 'https://project-open-data.cio.gov/v1.1/schema',
-    describedBy: 'https://project-open-data.cio.gov/v1.1/schema/catalog.json',
-    dataset: dcatDatasets
+    '@context': dcatApContext,
+    '@id': `${publicBaseUrl}/api/v1/catalog/dcat`,
+    '@type': 'dcat:Catalog',
+    'dct:title': siteTitle,
+    'dct:description': texts.catalogDescription(siteTitle),
+    'dct:publisher': agent(publicationSite.owner?.name),
+    'foaf:homepage': iri(publicationSite.url, 'foaf:Document'),
+    'dct:modified': catalogModified ? dateLiteral(catalogModified) : undefined,
+    'dcat:dataset': dcatDatasets
   }
 }

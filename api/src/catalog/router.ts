@@ -5,11 +5,12 @@ import * as datasetUtils from '../datasets/utils/index.ts'
 import mongo from '#mongo'
 import { findDatasets } from '../datasets/service.ts'
 import * as apiKeyUtils from '../misc/utils/api-key.ts'
+import * as permissions from '../misc/utils/permissions.ts'
 import * as cacheHeaders from '../misc/utils/cache-headers.ts'
 import { setReqResourceType } from '../misc/utils/req-context.ts'
 import { reqPublicationSite, reqMainPublicationSite, setReqPublicationSite } from '../misc/utils/publication-sites.ts'
 import { buildDcatCatalog } from './operations.ts'
-import { findCatalogDatasets, getCatalogApiDocs } from './service.ts'
+import { findCatalogDatasets, getCatalogApiDocs, getOwnerInfo } from './service.ts'
 import { reqPublicBaseUrl } from '../misc/utils/public-base-url.ts'
 
 const apiKeyMiddlewareRead = apiKeyUtils.middleware(['datasets', 'datasets-read'])
@@ -51,7 +52,9 @@ router.get('/api-docs.json', async (req, res) => {
 
 router.get('/dcat', async (req, res) => {
   const publicationSite = reqPublicationSite(req)
-  const datasets = await findCatalogDatasets(publicationSite, reqSession(req))
+  const sessionState = reqSession(req)
+  const [datasets, ownerInfo] = await Promise.all([findCatalogDatasets(publicationSite, sessionState), getOwnerInfo(publicationSite)])
   res.type('application/ld+json')
-  res.json(buildDcatCatalog(datasets, publicationSite, reqPublicBaseUrl(req)))
+  const can = (dataset: any, operationId: string) => permissions.can('datasets', dataset, operationId, sessionState)
+  res.json(buildDcatCatalog(datasets, publicationSite, reqPublicBaseUrl(req), ownerInfo, req.getLocale(), can))
 })

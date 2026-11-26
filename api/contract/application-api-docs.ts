@@ -455,7 +455,7 @@ export default (application: Application, info: ApplicationApiDocsInfo, publicUr
     tags: [] as { name: string }[],
     externalDocs: {
       description: 'Documentation sur GitHub',
-      url: 'https://data-fair.github.io/master/'
+      url: 'https://data-fair.github.io/'
     }
   }
 
