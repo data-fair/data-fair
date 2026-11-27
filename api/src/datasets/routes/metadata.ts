@@ -38,6 +38,7 @@ import { fragmentWriteGuard } from '../../fragments/middlewares.ts'
 import { reqBypassPermissions } from '../../misc/utils/req-context.ts'
 import { preparePatch } from '../utils/patch.ts'
 import * as datasetUtils from '../utils/index.ts'
+import * as agentText from '../utils/agent-text.ts'
 import { tableSchema, jsonSchema, getSchemaBreakingChanges, schemasFullyCompatible, filterSchema } from '../utils/data-schema.ts'
 import { filterByContextualCardinality, filterByUniqueValues, createEsRequestOptions, hasDataFilters } from '../es/index.ts'
 import { manageESError } from './_es-error.ts'
@@ -168,7 +169,9 @@ export const registerMetadataRoutes = (router: Router) => {
     const dataset = clone(reqDataset(req))
     const full = can('datasets', dataset, 'readDescription', reqSession(req), permissions.reqBypassPermissions(req))
     const cleaned = clean(req as DfRequest, dataset)
-    res.status(200).send(full ? cleaned : safeDescription(cleaned))
+    const body = full ? cleaned : safeDescription(cleaned)
+    if (agentText.wantsAgentText(req.query)) body.agentText = agentText.describeDatasetText(req, body)
+    res.status(200).send(body)
   })
 
   // fillDescendants is required by prepareQuery when the contextual maxCardinality filter

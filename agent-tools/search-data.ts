@@ -75,7 +75,7 @@ export function buildQuery (params: Params): { path: string, query: Record<strin
 /**
  * @param options.nextPage the line telling how to get the next page, given the next URL. Defaults
  * to this tool's `next` input; a caller whose tool pages otherwise (the MCP tool takes `after`)
- * says so here.
+ * says so here; an empty line leaves the next page out.
  */
 export function formatResult (data: any, params: Params, options?: { nextPage?: (next: string) => string }): { text: string, structuredContent: Record<string, any> } {
   // Naming `_id` in the select is a caller addressing a row rather than browsing
@@ -99,7 +99,9 @@ export function formatResult (data: any, params: Params, options?: { nextPage?: 
     // The cursor only travels back to the model through this text (the harness forwards
     // tool text, not structuredContent). Emit the URL verbatim so the model can pass it as
     // the `next` param instead of fabricating one. See structuredContent.next below.
-    lines.push('', options?.nextPage ? options.nextPage(data.next) : `Next page available — call search_data again with next set to this URL:\n${data.next}`)
+    // an empty line from options.nextPage: the caller's tool cannot reach that page, nothing is said
+    const nextLine = options?.nextPage ? options.nextPage(data.next) : `Next page available — call search_data again with next set to this URL:\n${data.next}`
+    if (nextLine) lines.push('', nextLine)
   }
   if (filterQueryString) {
     lines.push('', `Filter query: ${filterQueryString}`)

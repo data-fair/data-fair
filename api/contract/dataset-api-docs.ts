@@ -23,6 +23,21 @@ type DatasetApiDocsOptions = { merged?: boolean, publicData?: boolean }
 const dataFiles = datasetSchema.properties.storage.properties.dataFiles
 
 /**
+ * The dataset component with `agentText`, which the read (readDescription) adds with agent_text=true:
+ * the describe_dataset tool points its `response.text` at it. Excluded from the agent rendering
+ * of the other operations, where it is never present. A clone: the resolved schema is shared.
+ */
+export const withAgentTextProperty = (schema: any) => {
+  const out = structuredClone(schema)
+  out.properties.agentText = {
+    type: 'string',
+    description: 'Présent avec agent_text=true : la description rédigée pour un assistant IA.',
+    'x-agent': { exclude: true }
+  }
+  return out
+}
+
+/**
  * Synthetic dataset used in `merged` mode (root API doc) so that every conditional route is included
  * regardless of variant-specific flags. The pruning blocks at the bottom of this function are skipped
  * when `merged` is true, so the conflicting flags (`isRest` + `file`, etc.) don't trigger pruning.
@@ -721,7 +736,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
     components: {
       securitySchemes: {},
       schemas: {
-        dataset: datasetSchema
+        dataset: withAgentTextProperty(datasetSchema)
       },
       responses: {
         BadRequest: textPlainResponse('Requête invalide : corps de requête mal formé, paramètres manquants ou contraintes métier non respectées.'),
@@ -742,6 +757,10 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           'x-agent': xAgent.readDescription,
           'x-permissionClass': 'read',
           tags: ['Métadonnées'],
+          parameters: [{
+            ...agentTextParam,
+            description: 'Ajoute à la réponse `agentText`, la description rédigée pour un assistant IA : statut, couverture géographique et temporelle, saisie des lignes, schéma en tableau.'
+          }],
           responses: {
             200: {
               description: 'Les informations du jeu de données.',

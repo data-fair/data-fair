@@ -1,6 +1,6 @@
 /**
  * The agent text of the data queries: with `agent_text=true`, the lines, values_agg and metric_agg
- * routes add `agentText` to their JSON answer, the text an assistant reads. It is rendered by the
+ * routes, and the dataset read, add `agentText` to their JSON answer, the text an assistant reads. It is rendered by the
  * formatters of the page tools (@data-fair/agent-tools-data-fair), so the MCP tools (which point
  * openapi-mcp's `response.text` at it, see api/contract/x-agent.ts) and the page tools give the
  * same text: one implementation per read. This module only maps the API query to the formatters'
@@ -11,14 +11,23 @@ import type { Request } from 'express'
 import * as searchData from '@data-fair/agent-tools-data-fair/search-data.ts'
 import * as aggregateData from '@data-fair/agent-tools-data-fair/aggregate-data.ts'
 import * as calculateMetric from '@data-fair/agent-tools-data-fair/calculate-metric.ts'
+import * as describeDataset from '@data-fair/agent-tools-data-fair/describe-dataset.ts'
+import { buildFilterQueryString } from '@data-fair/agent-tools-data-fair/_utils.ts'
 import { filterSuffixes } from '../es/commons.ts'
 import { setResourceLinks } from '../../misc/utils/find.ts'
 import { reqPublicBaseUrl } from '../../misc/utils/public-base-url.ts'
 import { reqPublicationSite } from '../../misc/utils/publication-sites.ts'
+import { performanceAdviceIntro } from '../../misc/utils/query-advice.ts'
 
 type Query = Record<string, any>
 
 export const wantsAgentText = (query: Query) => query.agent_text === 'true'
+
+/**
+ * The largest lines page rendered as agent text, the MCP search tool's max size: the text keeps
+ * every row of the page in memory, so a larger page answers without `agentText`.
+ */
+export const agentTextMaxSize = 100
 
 const str = (value: any): string | undefined => typeof value === 'string' && value ? value : undefined
 
@@ -67,11 +76,11 @@ const datasetPage = (req: Request, dataset: { id?: string, slug?: string }): str
 }
 
 /**
- * The formatter's text, then the links: the filter query of the links is the one of the text's
- * "Filter query:" line, so the link opens the view the line describes.
+ * The formatter's text, then the links: their filter query is built from the params the formatter
+ * printed its "Filter query:" line from (not read back from the text, where a cell can hold such a
+ * line), so the link opens the view the line describes.
  */
-const withLinks = (req: Request, dataset: any, text: string): string => {
-  const filterQuery = /^Filter query: (.*)$/m.exec(text)?.[1]
+const withLinks = (req: Request, dataset: any, text: string, filterQuery: string | undefined): string => {
   const page = datasetPage(req, dataset)
   const view = (name: string) => `${page}/${name}${filterQuery ? '?' + filterQuery : ''}`
   const lines = [text, '', `Table: ${view('table')}`]
@@ -79,17 +88,45 @@ const withLinks = (req: Request, dataset: any, text: string): string => {
   return lines.join('\n')
 }
 
-/** The MCP tool pages with `after` (the value the next URL carries), it has no `next` input. */
+/**
+ * The MCP tool pages with `after` (the value the next URL carries), it has no `next` input. A next
+ * URL without `after` (page numbers) is a page the tool cannot reach: no line.
+ */
 export const nextPageLine = (next: string): string => {
   const after = new URL(next).searchParams.get('after')
   return after ? `Next page available: call again with after set to this value:\n${after}` : ''
 }
 
-export const searchDataText = (req: Request, dataset: any, body: any) =>
-  withLinks(req, dataset, searchData.formatResult(body, searchDataParams(dataset.id, req.query), { nextPage: nextPageLine }).text)
+/**
+ * The body without the performance advice of meta.hints: it is written for developers and names
+ * parameters the agent tools do not have (count, agg_size, q_fields). The correctness hints stay.
+ */
+const withoutPerformanceAdvice = (body: any) => {
+  const hints = body?.meta?.hints
+  if (!Array.isArray(hints)) return body
+  return { ...body, meta: { ...body.meta, hints: hints.filter((h: string) => !h.startsWith(performanceAdviceIntro)) } }
+}
 
-export const aggregateDataText = (req: Request, dataset: any, body: any) =>
-  withLinks(req, dataset, aggregateData.formatResult(body, aggregateDataParams(dataset.id, req.query)).text)
+export const searchDataText = (req: Request, dataset: any, body: any) => {
+  const params = searchDataParams(dataset.id, req.query)
+  return withLinks(req, dataset, searchData.formatResult(withoutPerformanceAdvice(body), params, { nextPage: nextPageLine }).text, buildFilterQueryString(params))
+}
 
-export const calculateMetricText = (req: Request, dataset: any, body: any) =>
-  withLinks(req, dataset, calculateMetric.formatResult(body, calculateMetricParams(dataset.id, req.query)).text)
+export const aggregateDataText = (req: Request, dataset: any, body: any) => {
+  const params = aggregateDataParams(dataset.id, req.query)
+  // the group sort is not a view's sort: the formatter leaves it out of its line too
+  return withLinks(req, dataset, aggregateData.formatResult(withoutPerformanceAdvice(body), params).text, buildFilterQueryString({ ...params, sort: undefined }))
+}
+
+export const calculateMetricText = (req: Request, dataset: any, body: any) => {
+  const params = calculateMetricParams(dataset.id, req.query)
+  return withLinks(req, dataset, calculateMetric.formatResult(withoutPerformanceAdvice(body), params).text, buildFilterQueryString(params))
+}
+
+/**
+ * The dataset read's text: the describe_dataset formatter on the dataset as the read answers it.
+ * On the back-office (no portal host) the dataset link is the back-office page, which also gives
+ * the editable dataset's /edit-data line; a portal has no data-entry page, so no such line there.
+ */
+export const describeDatasetText = (req: Request, dataset: any): string =>
+  describeDataset.formatResult(dataset, reqPublicationSite(req) ? undefined : { datasetLink: () => datasetPage(req, dataset) }).text

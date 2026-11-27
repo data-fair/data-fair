@@ -488,7 +488,8 @@ const readLines: RequestHandler = async (req, res) => {
     rewriteAttachmentUrl: eligible,
     approxTotal: approxTotalThunk,
     ignoredWords,
-    agentText: agentText.wantsAgentText(query) ? body => agentText.searchDataText(req, dataset, body) : undefined
+    // above agentTextMaxSize the page answers without agentText: the text would keep every row in memory
+    agentText: agentText.wantsAgentText(query) && size <= agentText.agentTextMaxSize ? body => agentText.searchDataText(req, dataset, body) : undefined
   })
 }
 

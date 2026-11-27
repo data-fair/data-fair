@@ -180,25 +180,31 @@ export const operations = {
     name: 'describe_dataset',
     title: { fr: 'Décrire un jeu de données', en: 'Describe a dataset' },
     description: 'Get detailed metadata and column schema for a dataset: title, description, license, topics, row count, geo/temporal coverage and every column with its type, concept and enum values. Call datafair_search_data with size=3 afterwards to see sample rows.',
-    params: { id: datasetId },
+    params: { id: datasetId, agent_text: { exclude: true } },
+    // the text the model reads is the API's agentText (status, geo and time, editing, the schema as a
+    // table); the projected body stays the structuredContent of scripts
+    fixed: { agent_text: 'true' },
     response: {
-      concise: ['id', 'slug', 'title', 'summary', 'description', 'page', 'count', 'keywords', 'origin', 'license', 'topics', 'spatial', 'temporal', 'frequency', 'bbox', 'timePeriod', 'publicationSites', 'schema'],
-      detailed: true
+      concise: ['id', 'slug', 'title', 'summary', 'description', 'page', 'count', 'status', 'keywords', 'origin', 'license', 'topics', 'spatial', 'temporal', 'frequency', 'bbox', 'timePeriod', 'publicationSites', 'schema'],
+      detailed: true,
+      text: '/agentText'
     }
   },
   readLines: [
     {
       name: 'search_data',
       title: { fr: 'Rechercher des lignes de données', en: 'Search data rows' },
-      description: 'Retrieve dataset rows matching filters and/or full-text search. Do NOT use it to compute statistics — use datafair_aggregate_data or datafair_calculate_metric. Paginate with the "after" value returned as next.',
+      description: 'Retrieve dataset rows matching filters and/or full-text search. Do NOT use it to compute statistics — use datafair_aggregate_data or datafair_calculate_metric. Paginate with the "after" value the result gives for its next page.',
       params: {
         ...linesSelection,
+        after: { description: 'Deep pagination: the after value of the previous result\'s next page, given as is.' },
         size: { default: 12, maximum: 100 },
         format: { exclude: true }
       },
       // the text the model reads is the API's agentText (rows, filter query, table/map links); the
-      // projected body stays the structuredContent of scripts
-      fixed: { hint: 'true', agent_text: 'true' },
+      // projected body stays the structuredContent of scripts. No hint=true: the performance advice
+      // names parameters the tool lacks (count, agg_size); the correctness hints come without it
+      fixed: { agent_text: 'true' },
       response: { rows: '/results', hints: '/meta/hints', text: '/agentText' }
     },
     {
@@ -251,7 +257,7 @@ export const operations = {
       hint: { exclude: true },
       ...queryParams
     },
-    fixed: { hint: 'true', size: '0', agent_text: 'true' },
+    fixed: { size: '0', agent_text: 'true' },
     response: { rows: '/aggs', concise: ['value', 'total', 'metric'], hints: '/meta/hints', text: '/agentText' }
   },
   getMetricAgg: {
@@ -366,8 +372,10 @@ export const operations = {
     name: 'describe_application',
     annotations: { openWorldHint: false },
     title: { fr: 'Décrire une application', en: 'Describe an application' },
-    description: 'Get the metadata and configuration of an application: title, description, base application, the datasets its configuration uses, publication status.',
-    params: { id: applicationId }
+    description: 'Get the metadata of an application: title, summary, base application, status, and its links (page, exposedUrl). Its configuration is not part of the result.',
+    params: { id: applicationId },
+    // baseApp keeps its id, url and meta (its title) here: its datasetsFilters are excluded in api-docs.ts
+    response: { concise: ['id', 'slug', 'title', 'summary', 'url', 'page', 'exposedUrl', 'baseApp', 'status'], detailed: true }
   },
   patchApplication: [
     {

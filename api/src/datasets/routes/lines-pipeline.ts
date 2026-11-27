@@ -91,7 +91,7 @@ export interface StreamJsonContext extends NextContext {
   // Only set when adapt actually ignored at least one word. Lands in meta.ignoredWords.
   ignoredWords?: string[]
   // agent_text=true (see utils/agent-text.ts): renders `agentText` from the body's head and rows. The
-  // rows are then kept as objects too: the agent pages are small (the MCP tools cap them at 100).
+  // rows are then kept as objects too: read.ts sets it only up to agentTextMaxSize rows (100, the MCP tool's max).
   agentText?: (body: Record<string, any>) => string
 }
 
