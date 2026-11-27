@@ -253,7 +253,7 @@
               "detailed"
             ],
             "default": "concise",
-            "description": "concise: id, slug, title, summary, description, page, count, keywords, origin, license, topics, spatial, temporal, frequency, bbox, timePeriod, publicationSites, schema. detailed: every field."
+            "description": "concise: id, slug, title, summary, description, page, count, status, keywords, origin, license, topics, spatial, temporal, frequency, bbox, timePeriod, publicationSites, schema. detailed: every field."
           }
         },
         "additionalProperties": false,
@@ -743,13 +743,22 @@
     },
     {
       "name": "datafair_describe_application",
-      "description": "Get the metadata and configuration of an application: title, description, base application, the datasets its configuration uses, publication status.",
+      "description": "Get the metadata of an application: title, summary, base application, status, and its links (page, exposedUrl). Its configuration is not part of the result.",
       "inputSchema": {
         "type": "object",
         "properties": {
           "applicationId": {
             "type": "string",
             "description": "The \"id\" of a datafair_list_account_applications result."
+          },
+          "response_format": {
+            "type": "string",
+            "enum": [
+              "concise",
+              "detailed"
+            ],
+            "default": "concise",
+            "description": "concise: id, slug, title, summary, url, page, exposedUrl, baseApp, status. detailed: every field."
           }
         },
         "additionalProperties": false,
@@ -1413,7 +1422,7 @@
     },
     {
       "name": "datafair_search_data",
-      "description": "Retrieve dataset rows matching filters and/or full-text search. Do NOT use it to compute statistics — use datafair_aggregate_data or datafair_calculate_metric. Paginate with the \"after\" value returned as next.",
+      "description": "Retrieve dataset rows matching filters and/or full-text search. Do NOT use it to compute statistics — use datafair_aggregate_data or datafair_calculate_metric. Paginate with the \"after\" value the result gives for its next page.",
       "inputSchema": {
         "type": "object",
         "properties": {
@@ -1423,7 +1432,7 @@
           },
           "after": {
             "type": "string",
-            "description": "Pagination en profondeur : la valeur à passer est celle du paramètre `after` de l'URL **next** du résultat précédent.\n\n*Automatiquement renseigné par la propriété **next** du résultat de la requête précédente.*"
+            "description": "Deep pagination: the after value of the previous result's next page, given as is."
           },
           "size": {
             "default": 12,
@@ -2307,7 +2316,7 @@
     {
       "name": "datafair-workflow",
       "description": "How to explore datasets: find them, read their schema, then search rows, aggregate or compute metrics. Read it before querying data.",
-      "digest": "sha256:9383ad730105d54365259b89152826e1c1e05f4ed91be9ec430961e5c79b75cf"
+      "digest": "sha256:881d71780a1e16040c4a10bfe994eabdd4ca8727cf7801824cfe29a4d26ecafe"
     }
   ],
   "guides": []

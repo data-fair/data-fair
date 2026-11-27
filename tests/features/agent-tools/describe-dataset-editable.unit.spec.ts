@@ -37,6 +37,14 @@ test.describe('describe_dataset says an editable dataset can be written to', () 
     assert.match(text, /add|edit/i)
   })
 
+  test('editable: link gives the page to the person, without navigation nor page tools', () => {
+    // the API's agent text is read by MCP clients: they cannot navigate and never get the page's tools
+    const { text } = formatResult(rest, { datasetLink: backOffice, editable: 'link' })
+    assert.ok(text.includes('https://example.org/data-fair/dataset/demandes/edit-data (give this link to the person)'), text)
+    assert.ok(!/navigate/i.test(text), text)
+    assert.ok(!/your tools/i.test(text), text)
+  })
+
   test('says nothing of the sort for a file dataset', () => {
     const { text } = formatResult(file, { datasetLink: backOffice })
     assert.ok(!/edit-data/.test(text), text)

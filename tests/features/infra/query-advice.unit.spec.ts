@@ -275,6 +275,7 @@ test.describe('ignoredParamsAdvice', () => {
       fields: 'val',
       mimeType: 'text/csv',
       finalizedAt: '2020-01-01T00:00:00Z',
+      agent_text: 'true',
     }
     assert.equal(ignoredParamsAdvice(fakeReq('/abc/lines', documented, ds)), '')
   })

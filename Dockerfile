@@ -144,6 +144,8 @@ COPY --from=parquet-writer-builder /app/parquet-writer/*.mts parquet-writer/
 COPY --from=parquet-writer-builder /app/parquet-writer/*.node parquet-writer/
 ADD /api api
 ADD /shared shared
+# the API renders the agent text of its data queries with the agent tools' formatters
+ADD /agent-tools agent-tools
 
 ADD package.json README.md LICENSE BUILD.json* ./
 

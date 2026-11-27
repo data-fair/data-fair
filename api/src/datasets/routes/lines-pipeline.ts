@@ -90,6 +90,9 @@ export interface StreamJsonContext extends NextContext {
   // q_mode=adapt transparency (see es/adaptive-q.ts): the words that were ignored in filtering.
   // Only set when adapt actually ignored at least one word. Lands in meta.ignoredWords.
   ignoredWords?: string[]
+  // agent_text=true (see utils/agent-text.ts): renders `agentText` from the body's head and rows. The
+  // rows are then kept as objects too: read.ts sets it only up to agentTextMaxSize rows (100, the MCP tool's max).
+  agentText?: (body: Record<string, any>) => string
 }
 
 // Shared consumption loop for the three formats: bulks → a SYNCHRONOUS per-row serializer (a per-row await
@@ -163,8 +166,11 @@ export async function streamJson (req: any, res: any, source: LinesSource, ctx: 
   // Serialize each row on the fly; keep only the encoded bytes (no transformed-object graph retained).
   const acc = new BodyAccumulator()
   let sep = ''
+  const rows: any[] | undefined = ctx.agentText ? [] : undefined
   const { count, lastHit } = await consumeHits(source, hit => {
-    acc.push(sep + JSON.stringify(esUtils.prepareResultItem(hit, dataset, query, flatten, ctx.publicBaseUrl, resultCtx)))
+    const item = esUtils.prepareResultItem(hit, dataset, query, flatten, ctx.publicBaseUrl, resultCtx)
+    rows?.push(item)
+    acc.push(sep + JSON.stringify(item))
     sep = ','
   }, wktYieldEvery(query))
   const tail = await safeTail(source)
@@ -184,6 +190,7 @@ export async function streamJson (req: any, res: any, source: LinesSource, ctx: 
   const hints = buildQueryHints(req, ctx.esSearchDurationMs)
   if (hints.length) meta.hints = hints
   if (Object.keys(meta).length) head.meta = meta
+  if (ctx.agentText) head.agentText = ctx.agentText({ ...head, results: rows })
 
   const { parts, length, etag } = acc.finish(jsonBodyPrefix(head), jsonBodySuffix)
   sendPreparedParts(req, res.type('json'), parts, length, etag)

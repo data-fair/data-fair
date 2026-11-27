@@ -1,4 +1,4 @@
-import { normalizeSort, cleanRow, cleanRowKeepingId, selectsLineId, toCsv, datasetIdProperty, filterProperties, buildFilterQueryString } from './_utils.js'
+import { normalizeSort, cleanRow, cleanRowKeepingId, selectsLineId, toCsv, datasetIdProperty, filterProperties, buildFilterQueryString } from './_utils.ts'
 
 export const annotations = {
   fr: { title: 'Rechercher des lignes de données' },
@@ -72,7 +72,12 @@ export function buildQuery (params: Params): { path: string, query: Record<strin
   }
 }
 
-export function formatResult (data: any, params: Params): { text: string, structuredContent: Record<string, any> } {
+/**
+ * @param options.nextPage the line telling how to get the next page, given the next URL. Defaults
+ * to this tool's `next` input; a caller whose tool pages otherwise (the MCP tool takes `after`)
+ * says so here; an empty line leaves the next page out.
+ */
+export function formatResult (data: any, params: Params, options?: { nextPage?: (next: string) => string }): { text: string, structuredContent: Record<string, any> } {
   // Naming `_id` in the select is a caller addressing a row rather than browsing
   // it — that is the only way to reach open_edit_line_dialog, which needs one.
   const clean = selectsLineId(params.select) ? cleanRowKeepingId : cleanRow
@@ -80,7 +85,8 @@ export function formatResult (data: any, params: Params): { text: string, struct
   const filterQueryString = buildFilterQueryString(params)
   const totalLabel = data.meta?.totalMarginPct ? `**~${data.total}** rows found (±${data.meta.totalMarginPct}% sampled estimate)` : `**${data.total}** rows found`
   const lines = [
-    `${totalLabel} (showing ${rows.length}, page ${params.page || 1})`,
+    // a page reached through a cursor (next / after) carries no total, and its number is unknown
+    data.total == null ? `Showing ${rows.length} more rows (a following page)` : `${totalLabel} (showing ${rows.length}, page ${params.page || 1})`,
     '',
     toCsv(rows)
   ]
@@ -93,7 +99,9 @@ export function formatResult (data: any, params: Params): { text: string, struct
     // The cursor only travels back to the model through this text (the harness forwards
     // tool text, not structuredContent). Emit the URL verbatim so the model can pass it as
     // the `next` param instead of fabricating one. See structuredContent.next below.
-    lines.push('', `Next page available — call search_data again with next set to this URL:\n${data.next}`)
+    // an empty line from options.nextPage: the caller's tool cannot reach that page, nothing is said
+    const nextLine = options?.nextPage ? options.nextPage(data.next) : `Next page available — call search_data again with next set to this URL:\n${data.next}`
+    if (nextLine) lines.push('', nextLine)
   }
   if (filterQueryString) {
     lines.push('', `Filter query: ${filterQueryString}`)

@@ -25,6 +25,9 @@ const nbLevels = (v: any): number => v ? String(v).split(/[;,]/).filter(Boolean)
 
 const isLinesOrRecords = (path: string): boolean => /\/(lines|records)\/?$/.test(path)
 
+/** The start of the performance advice entry in meta.hints (the agent text leaves it out, see datasets/utils/agent-text.ts). */
+export const performanceAdviceIntro = 'Advice to optimize your queries:'
+
 /**
  * Returns either '' or ' <intro>: <item>; <item>.' — safe to concatenate onto any error
  * message, '' when nothing useful applies.
@@ -55,7 +58,7 @@ export const queryAdvice = (req: Request): string => {
   if ((q.q || q._c_q) && !q.q_fields && hasManyQSearchFields(dataset?.schema, currentIndexShape(dataset ?? {}))) items.push('restrict full-text search to the relevant columns with q_fields=col1,col2 instead of searching every column')
 
   if (items.length === 0) return ''
-  return ' Advice to optimize your queries: ' + items.join('; ') + '.'
+  return ` ${performanceAdviceIntro} ` + items.join('; ') + '.'
 }
 
 // Parameters recognized by the dataset data endpoints (/lines, /*_agg). Mirrors the query
@@ -79,6 +82,8 @@ const RECOGNIZED_PARAMS = new Set([
   'percents', 'precision_threshold', 'interval', 'calendar', 'missing', 'analysis', 'sampling',
   // output formatting / export / misc read params
   'collapse', 'arrays', 'explain', 'fields', 'mimeType', 'finalizedAt',
+  // the agent text of lines, values_agg and metric_agg (datasets/utils/agent-text.ts)
+  'agent_text',
 ])
 
 /**

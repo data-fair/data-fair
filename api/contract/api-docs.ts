@@ -8,6 +8,7 @@ import { resolvedSchema as application } from '../types/application/.type/index.
 import { resolvedSchema as applicationPatchReq } from '../doc/applications/patch-req/.type/index.js'
 import { resolvedSchema as applicationPostReq } from '../doc/applications/post-req/.type/index.js'
 import privateDatasetAPIDocs from './dataset-private-api-docs.ts'
+import { withAgentTextProperty } from './dataset-api-docs.ts'
 import * as utils from './utils.js'
 import { oauth2Scheme, applyOauth2Security, agentSecurity } from './scopes-security.ts'
 import publicationSitesSchema from './publication-sites.js'
@@ -100,10 +101,24 @@ type RootApiDoc = {
  */
 /** The dataset component with the agent hints on the column key and flag; a clone, the resolved schema is shared. */
 const annotateDatasetSchema = (schema: any) => {
-  const out = structuredClone(schema)
+  const out = withAgentTextProperty(schema)
   const column = out?.properties?.schema?.items?.properties
   if (column?.key) column.key['x-agent'] = datasetSchemaKeyHint
   if (column?.['x-calculated']) column['x-calculated']['x-agent'] = datasetSchemaCalculatedHint
+  return out
+}
+
+/**
+ * The application component with the base application reduced, for the agent tools, to what names it
+ * (id, url, meta and its title): its datasetsFilters are kilobytes of configuration-form rules, and
+ * its mongo _id means nothing to an agent.
+ */
+const annotateApplicationSchema = (schema: any) => {
+  const out = structuredClone(schema)
+  for (const key of ['baseApp', 'baseAppDraft']) {
+    const ref = out?.properties?.[key]
+    if (ref) ref.properties = { ...ref.properties, _id: { type: 'string', 'x-agent': { exclude: true } }, datasetsFilters: { type: 'array', 'x-agent': { exclude: true } } }
+  }
   return out
 }
 
@@ -161,7 +176,7 @@ Pour des exemples simples de publication de données vous pouvez consulter la <a
         dataset: annotateDatasetSchema(dataset),
         datasetPatch: datasetPatch.properties.body,
         datasetPost: datasetPostMultipart,
-        application,
+        application: annotateApplicationSchema(application),
         applicationPatch: applicationPatchReq.properties.body,
         applicationPost: applicationPostReq.properties.body,
       },

@@ -1,4 +1,4 @@
-import { formatSchemaTable, isPlatformColumn, cleanRow, toCsv, datasetIdProperty, pick } from './_utils.js'
+import { formatSchemaTable, isPlatformColumn, cleanRow, toCsv, datasetIdProperty, pick } from './_utils.ts'
 
 export const annotations = {
   fr: { title: 'Décrire un jeu de données' },
@@ -180,8 +180,11 @@ export function buildStructuredContent (fetchedData: any, sampleLines?: any[], l
  * `page` field (public/portal page — right for portal & MCP). The back-office integration
  * passes a current-site builder so links don't point at the portal/primary site when the
  * back-office is served on a secondary domain. See list-datasets.formatResult.
+ * @param options.editable the wording of an editable dataset's line (with datasetLink only):
+ * 'page-tools' (default) sends the page assistant to the data-entry page for its line tools;
+ * 'link' gives that page as a link for the person, for a reader without navigation or page tools.
  */
-export function formatResult (fetchedData: any, options?: { includeOwner?: boolean, sampleLines?: any[], datasetLink?: (d: any) => string }): { text: string, structuredContent: Record<string, any> } {
+export function formatResult (fetchedData: any, options?: { includeOwner?: boolean, sampleLines?: any[], datasetLink?: (d: any) => string, editable?: 'page-tools' | 'link' }): { text: string, structuredContent: Record<string, any> } {
   const link = options?.datasetLink ? options.datasetLink(fetchedData) : fetchedData.page
   const structuredContent = buildStructuredContent(fetchedData, options?.sampleLines, link)
 
@@ -226,8 +229,12 @@ export function formatResult (fetchedData: any, options?: { includeOwner?: boole
   // was told none of this, concluded it had no tool for either — the line tools live
   // behind `edit` and only the data-entry page passes it — and sent the person to
   // support. It reasoned correctly from what it was told; this is what it was not told.
+  // `editable: 'link'` (the API's agent text, read by MCP clients that have no navigation nor
+  // page tools): the same page, given as a link for the person, with no promise of tools.
   if (fetchedData.isRest && options?.datasetLink) {
-    meta.push(`- **Editable:** yes. Navigate to the data-entry page, ${link}/edit-data, to get your tools that add and correct its rows; they exist only on that page.`)
+    meta.push(options.editable === 'link'
+      ? `- **Editable:** yes. Its rows are added and corrected on its data-entry page: ${link}/edit-data (give this link to the person).`
+      : `- **Editable:** yes. Navigate to the data-entry page, ${link}/edit-data, to get your tools that add and correct its rows; they exist only on that page.`)
   }
 
   const sections = [...meta]

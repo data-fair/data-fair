@@ -36,6 +36,18 @@ test.describe('agent skills served as markdown files', () => {
     assert.deepEqual([...named].filter(name => !shared.includes(name)), [])
   })
 
+  // the query tools print the table and map links (the API's agent text): a link built from the
+  // tool's inputs is wrong for query, geo, date and select, which the page takes as _c_* and cols
+  test('the workflow file copies the result\'s links and states the format rules', async () => {
+    const { readAgentSkill } = await import('../../../api/contract/agent-skills.ts')
+    const body = readAgentSkill('workflow')!
+    assert.ok(body.includes('`Table:`') && body.includes('`Map:`'), body)
+    assert.ok(/never build/i.test(body), body)
+    assert.ok(!body.includes('/table?'), 'no recipe to assemble a table link')
+    assert.ok(/every figure/i.test(body), body)
+    assert.ok(/compact markdown table/i.test(body), body)
+  })
+
   test('serves only the known skill names', async () => {
     const { readAgentSkill } = await import('../../../api/contract/agent-skills.ts')
     assert.equal(readAgentSkill('../x-agent'), undefined)
