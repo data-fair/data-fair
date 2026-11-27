@@ -62,4 +62,32 @@ test.describe('serializeServicesInfo', () => {
   test('handles an empty list', () => {
     assert.match(serializeServicesInfo([]), /No services/i)
   })
+
+  test('reports the pull requests of a staging build', () => {
+    const out = serializeServicesInfo([
+      {
+        name: 'data-fair/data-fair',
+        loaded: true,
+        version: 'staging',
+        commit: 'fff000',
+        baseCommit: 'abc1234567',
+        pullRequests: [
+          { number: 12, title: 'New table menus', url: 'https://github.com/data-fair/data-fair/pull/12', sha: '111' },
+          { number: 15, title: 'Map legend', url: 'https://github.com/data-fair/data-fair/pull/15', sha: '222' }
+        ],
+        excludedPullRequests: [
+          { number: 14, title: 'Conflicting change', url: 'https://github.com/data-fair/data-fair/pull/14', reason: 'conflict' }
+        ]
+      },
+      { name: 'data-fair/events', loaded: true, version: 'staging', commit: 'eee', baseCommit: 'eee', pullRequests: [], excludedPullRequests: [] },
+      { name: 'data-fair/portals', loaded: true, version: '3.1.0', commit: 'ppp' }
+    ])
+    const [dataFair, events, portals] = out.split('\n').filter(line => line.startsWith('- '))
+    assert.match(dataFair, /base commit: abc1234567/)
+    assert.match(dataFair, /#12 New table menus/)
+    assert.match(dataFair, /#15 Map legend/)
+    assert.match(dataFair, /left out.*#14 Conflicting change \(conflict\)/)
+    assert.match(events, /default branch only/)
+    assert.doesNotMatch(portals, /pull request|default branch/)
+  })
 })

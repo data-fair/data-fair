@@ -1,3 +1,11 @@
+export interface StagingPullRequest {
+  number: number
+  title: string
+  url: string
+  sha?: string
+  reason?: string
+}
+
 export interface ServiceInfo {
   name: string
   loaded?: boolean
@@ -5,6 +13,10 @@ export interface ServiceInfo {
   commit?: string
   date?: string
   version?: string
+  // a staging build (the default branch plus the pull requests labeled "staging") also carries these
+  baseCommit?: string
+  pullRequests?: StagingPullRequest[]
+  excludedPullRequests?: StagingPullRequest[]
 }
 
 /**
@@ -41,6 +53,15 @@ export function serializeServicesInfo (services: ServiceInfo[]): string {
     const parts = [`installed version: ${s.version ?? 'unknown'}`]
     if (s.commit) parts.push(`commit: ${s.commit}`)
     if (s.date) parts.push(`date: ${s.date}`)
+    if (s.pullRequests) {
+      parts.push(`base commit: ${s.baseCommit ?? 'unknown'}`)
+      parts.push(s.pullRequests.length
+        ? 'staging pull requests: ' + s.pullRequests.map(pr => `#${pr.number} ${pr.title} (${pr.url})`).join('; ')
+        : 'default branch only, no pull request')
+      if (s.excludedPullRequests?.length) {
+        parts.push('left out of staging: ' + s.excludedPullRequests.map(pr => `#${pr.number} ${pr.title} (${pr.reason})`).join('; '))
+      }
+    }
     return `- **${s.name}** (GitHub repo: ${s.name}) — ${parts.join(', ')}`
   })
   return ['Data Fair services and their currently installed versions:', '', ...lines].join('\n')
