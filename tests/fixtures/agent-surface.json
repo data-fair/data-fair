@@ -2316,7 +2316,7 @@
     {
       "name": "datafair-workflow",
       "description": "How to explore datasets: find them, read their schema, then search rows, aggregate or compute metrics. Read it before querying data.",
-      "digest": "sha256:1602c6d72350056f1c166f4f06105eb61ba7b37f0a84f2a3a56304a6891545ec"
+      "digest": "sha256:881d71780a1e16040c4a10bfe994eabdd4ca8727cf7801824cfe29a4d26ecafe"
     }
   ],
   "guides": []
