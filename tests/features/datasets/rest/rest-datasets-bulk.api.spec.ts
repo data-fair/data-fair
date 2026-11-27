@@ -5,7 +5,7 @@ import FormData from 'form-data'
 import moment from 'moment'
 import zlib from 'zlib'
 import iconv from 'iconv-lite'
-import { axiosAuth, clean, checkPendingTasks, waitForWorkerIdle } from '../../../support/axios.ts'
+import { axiosAuth, clean, checkPendingTasks, waitForWorkerIdle, anonymousAx, apiUrl } from '../../../support/axios.ts'
 import { waitForFinalize, setConfig } from '../../../support/workers.ts'
 
 const testUser1 = await axiosAuth('test_datafair_user1@test.com')
@@ -520,6 +520,66 @@ patch,test2,test2,test3`, { headers: { 'content-type': 'text/csv' } })
     assert.equal(res.data.total, 2)
     assert.equal(res.data.results[0].attr1, 'test3-2')
     assert.equal(res.data.results[1].attr1, 'test3-1')
+  })
+
+  test('Bulk response reports the processing progress before its summary', async () => {
+    const ax = testUser1
+    await ax.post('/api/v1/datasets/restprogress', { isRest: true, title: 'restprogress', schema: [{ key: 'attr1', type: 'string' }] })
+    const form = new FormData()
+    form.append('actions', Buffer.from('attr1\n' + Array.from({ length: 1000 }, (_, i) => `line${i}`).join('\n')), 'actions.csv')
+    const res = await ax.post('/api/v1/datasets/restprogress/_bulk_lines', form, {
+      headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() },
+      responseType: 'text',
+      transformResponse: [(data: string) => data]
+    })
+    const body: string = res.data
+    const leadingWhitespace = body.match(/^\s*/)?.[0] ?? ''
+    // one "\n" per thousandth of the input read, all of them once the input was entirely read
+    assert.equal(leadingWhitespace.split('\n').length - 1, 1000)
+    assert.equal(JSON.parse(body).nbCreated, 1000)
+  })
+
+  const bigDropBulk = (ax: typeof testUser1, id: string) => {
+    const form = new FormData()
+    form.append('actions', Buffer.from('attr1\n' + Array.from({ length: 12000 }, (_, i) => `b${i}`).join('\n')), 'actions.csv')
+    return ax.post(`/api/v1/datasets/${id}/_bulk_lines`, form, {
+      params: { drop: true, lock: true },
+      headers: { 'Content-Length': form.getLengthSync(), ...form.getHeaders() },
+      // resolves as soon as the headers are received, i.e. once the first batch was applied
+      responseType: 'stream'
+    })
+  }
+
+  test('A locked drop bulk refuses a concurrent one', async () => {
+    const ax = testUser1
+    await ax.post('/api/v1/datasets/restdroplock', { isRest: true, title: 'restdroplock', schema: [{ key: 'attr1', type: 'string' }] })
+    const first = await bigDropBulk(ax, 'restdroplock')
+    await assert.rejects(ax.post('/api/v1/datasets/restdroplock/_bulk_lines', [{ attr1: 'concurrent' }], { params: { drop: true, lock: true } }),
+      (err: any) => err.status === 409)
+    let body = ''
+    for await (const chunk of first.data) body += chunk
+    assert.equal(JSON.parse(body).nbCreated, 12000)
+    await waitForFinalize(ax, 'restdroplock')
+  })
+
+  test('A drop bulk stops when the client goes away', async () => {
+    const ax = testUser1
+    await ax.post('/api/v1/datasets/restdropabort', { isRest: true, title: 'restdropabort', schema: [{ key: 'attr1', type: 'string' }] })
+    await ax.post('/api/v1/datasets/restdropabort/_bulk_lines', [{ attr1: 'kept1' }, { attr1: 'kept2' }])
+    await waitForFinalize(ax, 'restdropabort')
+
+    const res = await bigDropBulk(ax, 'restdropabort')
+    res.data.destroy()
+
+    // the tmp collection disappears either way: dropped on abort, renamed if the bulk ran to its end
+    const deadline = Date.now() + 30000
+    while ((await anonymousAx.get(`${apiUrl}/api/v1/test-env/rest-tmp-collections/restdropabort`)).data.length) {
+      assert.ok(Date.now() < deadline, 'the tmp collection of the aborted drop bulk was never removed')
+      await new Promise(resolve => setTimeout(resolve, 100))
+    }
+    const count = (await anonymousAx.get(`${apiUrl}/api/v1/test-env/rest-collection-count/restdropabort`)).data.count
+    assert.equal(count, 2)
+    await waitForWorkerIdle()
   })
 
   test('Specify a date-time format', async () => {

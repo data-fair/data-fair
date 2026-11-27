@@ -317,6 +317,17 @@ router.get('/rest-collection-count/:datasetId', async (req, res, next) => {
   }
 })
 
+// Names of the temporary collections a drop bulk of a REST dataset is writing into
+router.get('/rest-tmp-collections/:datasetId', async (req, res, next) => {
+  try {
+    const prefix = 'dataset-data-' + req.params.datasetId + '-'
+    const collections = await mongo.db.listCollections({}, { nameOnly: true }).toArray()
+    res.json(collections.map(c => c.name).filter(name => name.startsWith(prefix) && name.endsWith('-tmp-bulk')))
+  } catch (err) {
+    next(err)
+  }
+})
+
 // Find one document in a REST dataset MongoDB collection
 router.get('/rest-collection-find-one/:datasetId', async (req, res, next) => {
   try {

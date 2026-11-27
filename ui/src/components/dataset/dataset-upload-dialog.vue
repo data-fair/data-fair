@@ -113,7 +113,7 @@ en:
 import { mdiPaperclip, mdiZipBox } from '@mdi/js'
 import axios, { type AxiosRequestConfig, type CancelTokenSource } from 'axios'
 import useDatasetStore from '~/composables/dataset/dataset-store'
-import { accepted } from '~/utils/dataset'
+import { accepted, isTextFileName } from '~/utils/dataset'
 import { useUploadLeaveGuard } from '~/composables/use-upload-leave-guard'
 
 const { t, locale } = useI18n()
@@ -134,11 +134,7 @@ const encodingOptions = [
   { title: 'Windows-1252', value: 'Windows-1252' }
 ]
 
-const isTextFile = computed(() => {
-  if (!file.value) return false
-  const name = file.value.name.toLowerCase()
-  return name.endsWith('.csv') || name.endsWith('.tsv') || name.endsWith('.txt')
-})
+const isTextFile = computed(() => !!file.value && isTextFileName(file.value.name))
 
 function onFileChange (val: File | File[]) {
   if (Array.isArray(val)) {

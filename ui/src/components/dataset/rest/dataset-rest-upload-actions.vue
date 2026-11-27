@@ -16,7 +16,7 @@
       border
       :title="t('loadLines')"
     >
-      <v-card-text>
+      <v-card-text :class="{ 'pb-2': !result }">
         <dataset-rest-actions-summary
           v-if="result"
           :summary="result"
@@ -25,72 +25,75 @@
           v-else
           v-model="form"
         >
-          <div
-            class="mt-3 mb-3"
+          <!-- drop swaps the whole collection and is forbidden on the own/{owner} routes (a
+               manageOwnLines holder must not wipe the dataset), so hide it in own-lines mode -->
+          <v-alert
+            v-if="!ownLines"
+            color="warning"
+            class="mb-6"
+            variant="outlined"
           >
-            <!-- drop swaps the whole collection and is forbidden on the own/{owner} routes (a
-                 manageOwnLines holder must not wipe the dataset), so hide it in own-lines mode -->
-            <v-alert
-              v-if="!ownLines"
-              color="warning"
-              class="mb-6"
-              variant="outlined"
-            >
-              <v-checkbox
-                v-model="drop"
-                class="mt-0"
-                :label="t('drop')"
-                hide-details
-                color="warning"
-                base-color="warning"
-              />
-            </v-alert>
-
-            <v-file-input
-              v-model="file"
-              :label="t('selectFile')"
-              variant="outlined"
-              density="compact"
+            <v-checkbox
+              v-model="drop"
+              :label="t('drop')"
               hide-details
-              accept=".csv,.tsv,.geojson,.json,.ndjson,.xlsx,.ods,.fods,.xls,.dbf"
-              :rules="[(file) => !!file || '']"
+              color="warning"
+              base-color="warning"
+            />
+          </v-alert>
+
+          <v-file-input
+            v-model="file"
+            :label="t('selectFile')"
+            variant="outlined"
+            density="compact"
+            hide-details
+            accept=".csv,.tsv,.geojson,.json,.ndjson,.xlsx,.ods,.fods,.xls,.dbf,.zip,.csv.gz,.tsv.gz,.geojson.gz,.json.gz,.ndjson.gz"
+            :rules="[(file) => !!file || '']"
+          >
+            <template
+              v-if="isCSV"
+              #append
             >
-              <template
-                v-if="isCSV"
-                #append
-              >
-                <v-select
-                  v-model="csvSep"
-                  :items="[',', ';']"
-                  density="compact"
-                  variant="outlined"
-                  hide-details
-                  :label="t('separator')"
-                  template
-                  style="margin-top:-2px;"
-                />
-              </template>
-            </v-file-input>
-            <template v-if="dataset?.schema?.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')">
-              <!--<p> {{ t('attachmentsMsg') }} </p>-->
-              <v-file-input
-                v-model="attachmentsFile"
-                :label="t('selectAttachmentsFile')"
-                variant="outlined"
+              <v-select
+                v-model="csvSep"
+                :items="[',', ';']"
                 density="compact"
-                class="my-4"
-                clearable
-                accept=".zip"
+                variant="outlined"
+                hide-details
+                :label="t('separator')"
+                min-width="120"
               />
             </template>
+          </v-file-input>
+          <template v-if="dataset?.schema?.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')">
+            <!--<p> {{ t('attachmentsMsg') }} </p>-->
+            <v-file-input
+              v-model="attachmentsFile"
+              :label="t('selectAttachmentsFile')"
+              variant="outlined"
+              density="compact"
+              class="my-4"
+              clearable
+              accept=".zip"
+            />
+          </template>
+          <template v-if="upload.loading.value">
+            <div class="text-body-small mt-4">
+              {{ processingProgress === undefined ? t('uploading') : (processingProgress < 1000 ? t('processing') : t('finalizing')) }}
+            </div>
             <file-upload-progress
-              v-if="upload.loading.value"
+              v-if="processingProgress === undefined"
               :percent="uploadProgress?.percent"
               :total="uploadProgress?.total"
-              class="my-1"
-              style="max-width: 500px;"
+              class="my-2"
             />
-          </div>
+            <file-upload-progress
+              v-else
+              :percent="processingProgress < 1000 ? processingProgress / 10 : undefined"
+              class="my-2"
+            />
+          </template>
         </v-form>
       </v-card-text>
 
@@ -137,6 +140,9 @@ fr:
   ok: Ok
   separator: Séparateur
   drop: Cochez pour supprimer toutes les lignes existantes avant d'importer les nouvelles
+  uploading: Envoi du fichier
+  processing: Traitement des lignes
+  finalizing: Finalisation
   selectAttachmentsFile: Sélectionnez un fichier zip de pièces jointes
   attachmentsMsg: Optionnellement vous pouvez charger une archive zip contenant des fichiers à utiliser comme pièces à joindre aux lignes du fichier principal. Dans ce cas le fichier principal doit avoir une colonne qui contient les chemins des pièces jointes dans l'archive.
 en:
@@ -148,6 +154,9 @@ en:
   ok: Ok
   separator: Separator
   drop: Check to delete all existing lines before importing new ones
+  uploading: Sending the file
+  processing: Processing the lines
+  finalizing: Finalizing
   selectAttachmentsFile: Select an attachments zip file
   attachmentsMsg: Optionally you can load a zip archive containing files to be used as attachments to the lines of the main dataset file. In this case the main data file must have a column that contains paths of the attachments in the archive.
 </i18n>
@@ -170,17 +179,20 @@ const file = ref<File>()
 const attachmentsFile = ref<File>()
 const result = ref<RestActionsSummary>()
 const uploadProgress = ref<{ percent?: number, total?: number }>()
+// thousandths of the file processed by the server, undefined while the file is being sent
+const processingProgress = ref<number>()
 const csvSep = ref(',')
 const drop = ref(false)
 
 // using file.type is buggy in some browsers
-const isCSV = computed(() => file.value?.name && file.value.name.toLowerCase().endsWith('.csv'))
+const isCSV = computed(() => !!file.value?.name && /\.csv(\.gz)?$/.test(file.value.name.toLowerCase()))
 
 watch(dialog, () => {
   result.value = undefined
   file.value = undefined
   attachmentsFile.value = undefined
   uploadProgress.value = undefined
+  processingProgress.value = undefined
   csvSep.value = ','
   drop.value = false
 })
@@ -190,11 +202,22 @@ let cancelSource: CancelTokenSource
 const upload = useAsyncAction(async () => {
   if (!file.value) return
   cancelSource = axios.CancelToken.source()
+  uploadProgress.value = undefined
+  processingProgress.value = undefined
   const options: AxiosRequestConfig = {
     onUploadProgress: (e) => {
       if (e.lengthComputable) {
         uploadProgress.value = { percent: e.total && ((e.loaded / e.total) * 100), total: e.total }
       }
+      if (e.loaded === e.total) processingProgress.value = processingProgress.value ?? 0
+    },
+    // the server writes whitespace before its JSON summary while it processes the lines, each "\n"
+    // being one thousandth of the file read
+    onDownloadProgress: (e) => {
+      const text: string | undefined = (e.event?.target as XMLHttpRequest | undefined)?.responseText
+      if (text === undefined) return
+      const leadingWhitespace = text.match(/^\s*/)?.[0] ?? ''
+      processingProgress.value = leadingWhitespace.split('\n').length - 1
     },
     cancelToken: cancelSource.token,
     params: { draft: true }
@@ -204,6 +227,9 @@ const upload = useAsyncAction(async () => {
   }
   if (drop.value) {
     options.params.drop = true
+    // a drop swaps the whole collection at its end: hold the dataset lock so that a second one fails
+    // with a 409 instead of overwriting this one
+    options.params.lock = true
   }
   const formData = new FormData()
   formData.append('actions', file.value)

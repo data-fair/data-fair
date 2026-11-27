@@ -2,6 +2,7 @@
   <div class="d-flex align-center">
     <v-progress-linear
       :model-value="percent"
+      :indeterminate="percent === undefined"
       class="flex-grow-1"
       color="primary"
       height="6"
