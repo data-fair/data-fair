@@ -79,8 +79,14 @@ const withLinks = (req: Request, dataset: any, text: string): string => {
   return lines.join('\n')
 }
 
+/** The MCP tool pages with `after` (the value the next URL carries), it has no `next` input. */
+export const nextPageLine = (next: string): string => {
+  const after = new URL(next).searchParams.get('after')
+  return after ? `Next page available: call again with after set to this value:\n${after}` : ''
+}
+
 export const searchDataText = (req: Request, dataset: any, body: any) =>
-  withLinks(req, dataset, searchData.formatResult(body, searchDataParams(dataset.id, req.query)).text)
+  withLinks(req, dataset, searchData.formatResult(body, searchDataParams(dataset.id, req.query), { nextPage: nextPageLine }).text)
 
 export const aggregateDataText = (req: Request, dataset: any, body: any) =>
   withLinks(req, dataset, aggregateData.formatResult(body, aggregateDataParams(dataset.id, req.query)).text)

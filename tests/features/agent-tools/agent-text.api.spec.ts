@@ -42,6 +42,21 @@ test.describe('agent text of the data queries', () => {
     assert.ok(!text.includes('Hint:'), text)
   })
 
+  test('lines: the next page is given as the after value the tool takes', async () => {
+    const ax = testUser1Org
+    const dataset = await sendDataset('datasets/dataset1.csv', ax)
+    const res = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { size: 1, agent_text: 'true' } })
+    const after = new URL(res.data.next).searchParams.get('after')
+    assert.ok(after)
+    const text: string = res.data.agentText
+    assert.ok(text.includes(`call again with after set to this value:\n${after}`), text)
+    assert.ok(!/\bnext\b/.test(text), text)
+    const page2 = await ax.get(`/api/v1/datasets/${dataset.id}/lines`, { params: { size: 1, after, agent_text: 'true' } })
+    assert.equal(page2.data.results.length, 1)
+    assert.notDeepEqual(page2.data.results[0], res.data.results[0])
+    assert.ok(page2.data.agentText.startsWith('Showing 1 more rows'), page2.data.agentText)
+  })
+
   test('lines of a geolocalized dataset: the map link too', async () => {
     const ax = testUser1Org
     const dataset = await sendDataset('datasets/dataset1.csv', ax)
