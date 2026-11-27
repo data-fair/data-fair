@@ -1,0 +1,46 @@
+# the staging branch is rebuilt from scratch at every change: the default branch plus the open pull
+# requests of this repository labeled "staging", then built as the image tag "staging" and deployed
+# on the staging environment, which always follows that tag
+
+name: Staging
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    types: [labeled, unlabeled, synchronize, reopened, closed]
+  workflow_dispatch:
+
+jobs:
+  # shared by the data-fair services; the other repositories call
+  # data-fair/data-fair/.github/workflows/staging-rebuild.yml@master
+  rebuild:
+    uses: ./.github/workflows/staging-rebuild.yml
+    permissions:
+      contents: write
+      pull-requests: write
+
+  # a push made with GITHUB_TOKEN triggers no workflow: the staging branch is built and deployed here
+  build:
+    needs: rebuild
+    if: needs.rebuild.outputs.commit != ''
+    concurrency:
+      group: staging-build
+      cancel-in-progress: true
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/reuse-build.yml
+    with:
+      # the commit of this rebuild, not the branch, which a newer rebuild may have moved already
+      ref: ${{ needs.rebuild.outputs.commit }}
+      tag: staging
+      pull-requests: ${{ needs.rebuild.outputs.pull-requests }}
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Send Keel notification to staging-koumoul.com
+      run: |
+        curl -s --fail --show-error -X POST https://keel.admin.staging-koumoul.com/v1/webhooks/native -u ${{ secrets.KEEL_STAGING_USER }}:${{ secrets.KEEL_STAGING_PASSWORD }} -d '{"name": "ghcr.io/${{ github.repository }}", "tag": "staging"}'

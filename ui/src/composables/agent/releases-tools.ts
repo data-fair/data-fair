@@ -19,7 +19,7 @@ export function useAgentServicesInfoTool (locale: Ref<string>, services: Ref<Ser
 
   useAgentTool({
     name: 'list_services_versions',
-    description: 'List the Data Fair platform services running on this instance with their currently installed version, git commit and build date. Each service `name` is also its GitHub repository slug ("owner/repo", e.g. "data-fair/data-fair") and can be passed directly to explore_github. Use this first to know which version is deployed before comparing with available releases.',
+    description: 'List the Data Fair platform services running on this instance with their currently installed version, git commit and build date. Each service `name` is also its GitHub repository slug ("owner/repo", e.g. "data-fair/data-fair") and can be passed directly to explore_github. Use this first to know which version is deployed before comparing with available releases. On a staging environment a service reports version "staging": the default branch at its base commit plus the pull requests merged on top of it (and those left out because of a conflict).',
     annotations: { title: t('listServicesVersions'), readOnlyHint: true },
     inputSchema: { type: 'object' as const, properties: {} },
     execute: async () => serializeServicesInfo(services.value)

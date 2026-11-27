@@ -58,6 +58,49 @@
           >
         </a>
       </p>
+      <div
+        v-if="service.loaded && service.pullRequests"
+        class="text-body-medium mt-2"
+      >
+        <p>
+          {{ t('stagingBase') }}
+          <a
+            :href="`https://github.com/${service.name}/commit/${service.baseCommit}`"
+            target="_blank"
+          ><code>{{ service.baseCommit?.slice(0, 7) }}</code></a>
+        </p>
+        <p v-if="!service.pullRequests.length && !service.excludedPullRequests?.length">
+          {{ t('stagingDefaultOnly') }}
+        </p>
+        <ul
+          v-if="service.pullRequests.length"
+          class="ml-6"
+        >
+          <li
+            v-for="pr of service.pullRequests"
+            :key="pr.number"
+          >
+            <a
+              :href="pr.url"
+              target="_blank"
+            >#{{ pr.number }}</a> {{ pr.title }}
+          </li>
+        </ul>
+        <v-alert
+          v-for="pr of service.excludedPullRequests ?? []"
+          :key="pr.number"
+          type="warning"
+          density="compact"
+          variant="tonal"
+          class="mt-2"
+        >
+          {{ t(pr.reason === 'workflow-files' ? 'stagingLeftOutWorkflow' : 'stagingLeftOut') }}
+          <a
+            :href="pr.url"
+            target="_blank"
+          >#{{ pr.number }}</a> {{ pr.title }}
+        </v-alert>
+      </div>
     </div>
   </v-container>
 </template>
@@ -67,6 +110,10 @@
     info: Informations sur les services
     installed: installé
     available: disponible
+    stagingBase: "Branche par défaut au commit :"
+    stagingDefaultOnly: Branche par défaut seule, aucune pull request en recette.
+    stagingLeftOut: "Exclue de la recette (conflit, à rebaser) :"
+    stagingLeftOutWorkflow: "Exclue de la recette (modifie les workflows GitHub, à valider une fois fusionnée) :"
     summarizeReleasesBtn: Résumer les mises à jour
     summarizeReleasesPrompt: Fais un résumé des dernières mises à jour des services avec un focus sur les versions disponibles et non encore déployées.
     services:
@@ -84,6 +131,10 @@
     info: Services information
     installed: installed
     available: available
+    stagingBase: "Default branch at commit:"
+    stagingDefaultOnly: Default branch only, no pull request on staging.
+    stagingLeftOut: "Left out of staging (conflict, needs a rebase):"
+    stagingLeftOutWorkflow: "Left out of staging (changes GitHub workflows, to validate once merged):"
     summarizeReleasesBtn: Summarize updates
     summarizeReleasesPrompt: Summarize the latest service updates with a focus on versions that are available but not yet deployed.
     services:
@@ -104,6 +155,7 @@ import { DfAgentChatAction } from '@data-fair/lib-vuetify-agents'
 import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 import { useShowAgentChat } from '~/composables/agent/use-show-chat'
 import { useAgentServicesInfoTool, useAgentGithubTool } from '~/composables/agent/releases-tools'
+import type { ServiceInfo } from '~/composables/agent/releases-tools-logic'
 
 const { t, locale } = useI18n()
 const breadcrumbs = useBreadcrumbs()
@@ -111,7 +163,7 @@ breadcrumbs.receive({ breadcrumbs: [{ text: t('info') }] })
 
 // TODO: make this list dynamic when we contractualize the secondary services
 // replace extra_nav_items and other parameters by simple activation params
-type Service = { name: string, infoUrl: string, loaded?: boolean, error?: string, commit?: string, date?: string, version?: string }
+type Service = ServiceInfo & { infoUrl: string }
 const services = ref<Service[]>([
   { name: 'data-fair/data-fair', infoUrl: '/data-fair/api/v1/admin/info' },
   { name: 'data-fair/simple-directory', infoUrl: '/simple-directory/api/admin/info' }

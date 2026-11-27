@@ -342,7 +342,7 @@ The capability → operation mapping is a single source of truth: `FILTER_CAPABI
 |---|---|
 | **Trigger** | Action button on the `/admin/info` page |
 | **Action ID** | `summarize-releases` |
-| **Pattern** | **Tool-chaining**: agent calls `list_services_versions` for installed versions, then `explore_github` (`/repos/{name}/releases`, falling back to `/tags`) per service, compares semver, and summarizes available-but-not-deployed versions. |
+| **Pattern** | **Tool-chaining**: agent calls `list_services_versions` for installed versions, then `explore_github` (`/repos/{name}/releases`, falling back to `/tags`) per service, compares semver, and summarizes available-but-not-deployed versions. On a staging build (version `staging`, built by `.github/workflows/staging.yml`), `list_services_versions` also reports the base commit and the pull requests merged on top of the default branch, or left out. |
 | **Tools** | `list_services_versions`, `explore_github` |
 | **Source** | `ui/src/composables/agent/releases-tools.ts`, `ui/src/pages/admin/info.vue` |
 
