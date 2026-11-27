@@ -1,0 +1,139 @@
+# Rebuild of the staging branch, shared by the data-fair services: their staging.yml call it
+# (data-fair/data-fair/.github/workflows/staging-rebuild.yml@master; data-fair itself calls its local copy, so
+# that a pull request changing it tests its own version). It runs in the caller's repository and context.
+#
+# The staging branch is rebuilt from scratch: the default branch plus the open pull requests of the
+# repository labeled "staging", merged oldest first, then force-pushed. A pull request that does not merge
+# cleanly ("conflict"), or that changes workflow files ("workflow-files", which the workflow's token may
+# not push), is left out and told so in a comment. The caller builds the returned commit and deploys it.
+
+name: Staging rebuild
+
+on:
+  workflow_call:
+    outputs:
+      commit:
+        description: The commit pushed to the staging branch, empty when nothing was rebuilt
+        value: ${{ jobs.rebuild.outputs.commit }}
+      pull-requests:
+        description: 'JSON {baseCommit, pullRequests: [{number, title, url, sha}], excludedPullRequests: [{number, title, url, reason}]}'
+        value: ${{ jobs.rebuild.outputs.pull-requests }}
+
+jobs:
+  rebuild:
+    # pull requests of the repository only (a fork's code is never merged into staging), and only the
+    # events that change what staging contains
+    if: >-
+      github.event_name != 'pull_request' || (
+        github.event.pull_request.head.repo.full_name == github.repository && (
+          (contains(fromJSON('["labeled", "unlabeled"]'), github.event.action) && github.event.label.name == 'staging') ||
+          (contains(fromJSON('["synchronize", "reopened", "closed"]'), github.event.action) && contains(github.event.pull_request.labels.*.name, 'staging'))
+        )
+      )
+    # a rebuild starts from scratch: only the latest one matters. The concurrency is set on the job, not
+    # the workflow, so that a run skipped by the condition above (another label) cancels nothing
+    concurrency:
+      group: staging-rebuild
+      cancel-in-progress: true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      pull-requests: ${{ steps.rebuild.outputs.pull-requests }}
+      commit: ${{ steps.rebuild.outputs.commit }}
+    steps:
+    - name: Checkout the default branch
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.repository.default_branch }}
+        fetch-depth: 0
+
+    - name: Merge the labeled pull requests
+      id: rebuild
+      env:
+        GH_TOKEN: ${{ github.token }}
+        REPO: ${{ github.repository }}
+      run: |
+        set -euo pipefail
+        git config user.name 'github-actions[bot]'
+        git config user.email '41898282+github-actions[bot]@users.noreply.github.com'
+
+        base=$(git rev-parse HEAD)
+        included='[]'
+        excluded='[]'
+        prs=$(gh pr list -R "$REPO" --label staging --state open --limit 100 \
+          --json number,title,url,headRefOid,isCrossRepository \
+          --jq '[.[] | select(.isCrossRepository | not)] | sort_by(.number) | .[] | @base64')
+
+        for pr in $prs; do
+          field() { echo "$pr" | base64 -d | jq -r ".$1"; }
+          number=$(field number)
+          title=$(field title)
+          url=$(field url)
+          sha=$(field headRefOid)
+          git fetch --quiet origin "pull/$number/head"
+          if [ -n "$(git diff --name-only "$base...$sha" -- .github/workflows)" ]; then
+            echo "left out #$number $title (changes workflow files)"
+            excluded=$(jq -c --argjson n "$number" --arg t "$title" --arg u "$url" \
+              '. + [{number: $n, title: $t, url: $u, reason: "workflow-files"}]' <<< "$excluded")
+            continue
+          fi
+          if git merge --quiet --no-ff --no-edit -m "staging: #$number $title" "$sha" >/dev/null 2>&1; then
+            echo "merged #$number $title"
+            included=$(jq -c --argjson n "$number" --arg t "$title" --arg u "$url" --arg s "$sha" \
+              '. + [{number: $n, title: $t, url: $u, sha: $s}]' <<< "$included")
+          else
+            git merge --abort
+            echo "left out #$number $title (conflict)"
+            excluded=$(jq -c --argjson n "$number" --arg t "$title" --arg u "$url" \
+              '. + [{number: $n, title: $t, url: $u, reason: "conflict"}]' <<< "$excluded")
+          fi
+        done
+
+        jq -n -c --arg base "$base" --argjson included "$included" --argjson excluded "$excluded" \
+          '{baseCommit: $base, pullRequests: $included, excludedPullRequests: $excluded}' > "$RUNNER_TEMP/staging.json"
+        cat "$RUNNER_TEMP/staging.json"
+        echo "pull-requests=$(cat "$RUNNER_TEMP/staging.json")" >> "$GITHUB_OUTPUT"
+        echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+    - name: Push the staging branch
+      run: git push --force origin HEAD:staging
+
+    # one comment per pull request, found by its marker and edited in place: a pull request left out gets
+    # it, one that is back in gets it updated, one that never was left out gets nothing
+    - name: Tell the pull requests left out
+      env:
+        GH_TOKEN: ${{ github.token }}
+        REPO: ${{ github.repository }}
+        RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+      run: |
+        set -euo pipefail
+        marker='<!-- staging-rebuild -->'
+        input="$RUNNER_TEMP/staging.json"
+
+        upsert() {
+          local number="$1" body="$2" only_update="$3" id
+          id=$(gh api "repos/$REPO/issues/$number/comments" --paginate \
+            --jq "[.[] | select(.body | startswith(\"$marker\"))] | first | .id // empty")
+          if [ -n "$id" ]; then
+            gh api -X PATCH "repos/$REPO/issues/comments/$id" -f body="$body" > /dev/null
+          elif [ "$only_update" = false ]; then
+            gh api -X POST "repos/$REPO/issues/$number/comments" -f body="$body" > /dev/null
+          fi
+        }
+
+        for excluded in $(jq -r '.excludedPullRequests[] | "\(.number):\(.reason)"' "$input"); do
+          number="${excluded%%:*}"
+          case "${excluded#*:}" in
+            workflow-files) why="it changes workflow files, which the staging rebuild may not push. It can be validated on staging once merged into the default branch." ;;
+            *) why="it does not merge cleanly into the default branch plus the pull requests merged before it. Rebase it on the default branch; the next rebuild will take it." ;;
+          esac
+          upsert "$number" "$marker
+        This pull request is labeled \`staging\` but was **left out of the staging branch** ($RUN_URL): $why" false
+        done
+
+        for number in $(jq -r '.pullRequests[].number' "$input"); do
+          upsert "$number" "$marker
+        This pull request is in the staging branch again ($RUN_URL)." true
+        done

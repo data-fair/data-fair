@@ -12,55 +12,18 @@ on:
   workflow_dispatch:
 
 jobs:
+  # shared by the data-fair services; the other repositories call
+  # data-fair/data-fair/.github/workflows/staging-rebuild.yml@master
   rebuild:
-    # pull requests of this repository only (a fork's code is never merged into staging), and only the
-    # events that change what staging contains
-    if: >-
-      github.event_name != 'pull_request' || (
-        github.event.pull_request.head.repo.full_name == github.repository && (
-          (contains(fromJSON('["labeled", "unlabeled"]'), github.event.action) && github.event.label.name == 'staging') ||
-          (contains(fromJSON('["synchronize", "reopened", "closed"]'), github.event.action) && contains(github.event.pull_request.labels.*.name, 'staging'))
-        )
-      )
-    # a rebuild starts from scratch: only the latest one matters. The concurrency is set on the jobs, not
-    # the workflow, so that a run skipped by the condition above (another label) cancels nothing
-    concurrency:
-      group: staging-rebuild
-      cancel-in-progress: true
-    runs-on: ubuntu-latest
+    uses: ./.github/workflows/staging-rebuild.yml
     permissions:
       contents: write
       pull-requests: write
-    outputs:
-      pull-requests: ${{ steps.rebuild.outputs.pull-requests }}
-      commit: ${{ steps.rebuild.outputs.commit }}
-    steps:
-    - name: Checkout the default branch
-      uses: actions/checkout@v4
-      with:
-        ref: ${{ github.event.repository.default_branch }}
-        fetch-depth: 0
-
-    - name: Merge the labeled pull requests
-      id: rebuild
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: |
-        .github/staging/rebuild.sh ${{ github.repository }} "$RUNNER_TEMP/staging.json"
-        echo "pull-requests=$(cat "$RUNNER_TEMP/staging.json")" >> "$GITHUB_OUTPUT"
-        echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
-
-    - name: Push the staging branch
-      run: git push --force origin HEAD:staging
-
-    - name: Tell the pull requests left out
-      env:
-        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      run: .github/staging/comment.sh ${{ github.repository }} "$RUNNER_TEMP/staging.json" "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
 
   # a push made with GITHUB_TOKEN triggers no workflow: the staging branch is built and deployed here
   build:
     needs: rebuild
+    if: needs.rebuild.outputs.commit != ''
     concurrency:
       group: staging-build
       cancel-in-progress: true
