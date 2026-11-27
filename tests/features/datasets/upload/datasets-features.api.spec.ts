@@ -180,6 +180,33 @@ test.describe('datasets - features', () => {
     assert.ok(!dataset._readApiKey)
   })
 
+  test('A read api key works as soon as it is created or rotated, despite the dataset cache', async () => {
+    const ax = testUser1
+    const dataset = await sendDataset('datasets/dataset1.csv', ax)
+    // production behaviour: dataset reads go through the 30s memoized cache
+    const stale = { headers: { 'x-test-stale-cache': 'true' } }
+    const withKey = (key: string) => ({ headers: { 'x-test-stale-cache': 'true', 'x-apiKey': key } })
+
+    // cache the dataset before it has a key, for both cache entries the UI and the API consumer go through
+    await assert.rejects(ax.get(`/api/v1/datasets/${dataset.id}/read-api-key`, stale), { status: 404 })
+    await ax.get(`/api/v1/datasets/${dataset.id}/lines`, stale)
+
+    await ax.patch(`/api/v1/datasets/${dataset.id}`, { readApiKey: { active: true, interval: 'P1W' } })
+    // the UI reads the key right after the save
+    const firstKey = (await ax.get(`/api/v1/datasets/${dataset.id}/read-api-key`, stale)).data.current
+    assert.ok(firstKey)
+    assert.equal((await anonymous.get(`/api/v1/datasets/${dataset.id}/lines`, withKey(firstKey))).status, 200)
+
+    // a new duration regenerates the key
+    await ax.patch(`/api/v1/datasets/${dataset.id}`, { readApiKey: { active: true, interval: 'P1M' } })
+    const secondKey = (await ax.get(`/api/v1/datasets/${dataset.id}/read-api-key`, stale)).data.current
+    assert.ok(secondKey)
+    assert.notEqual(secondKey, firstKey)
+    assert.equal((await anonymous.get(`/api/v1/datasets/${dataset.id}/lines`, withKey(secondKey))).status, 200)
+
+    await assert.rejects(anonymous.get(`/api/v1/datasets/${dataset.id}/lines`, withKey('wrong')), { status: 401 })
+  })
+
   // this test is skipped because it relies on a shared volume that cannot be mounted during docker build
   test('anitivirus reject upload of infected file in dataset', { tag: '@smoke' }, async () => {
     const ax = testUser1

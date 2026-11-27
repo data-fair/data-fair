@@ -137,7 +137,9 @@ export const readDataset = ({ acceptedStatuses, fillDescendants, alwaysDraft, ac
   const publicationSite = reqPublicationSite(req)
   const mainPublicationSite = reqMainPublicationSite(req)
   // TODO: excluding tests from using memoize cache is not great for test coverage
-  const tolerateStale = !acceptedStatuses && !noCache && process.env.NODE_ENV !== 'development'
+  // a test can opt in to the production cache for one request with the x-test-stale-cache header (development only)
+  const testStaleCache = process.env.NODE_ENV === 'development' && req.get('x-test-stale-cache') === 'true'
+  const tolerateStale = !acceptedStatuses && !noCache && (process.env.NODE_ENV !== 'development' || testStaleCache)
   const useDraft = req.query.draft === 'true' || alwaysDraft
 
   let { dataset, datasetFull } = tolerateStale

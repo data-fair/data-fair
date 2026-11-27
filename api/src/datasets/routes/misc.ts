@@ -168,7 +168,8 @@ export const registerMiscRoutes = (router: Router) => {
     }
   })
 
-  router.get('/:datasetId/read-api-key', readDataset(), permissions.middleware('getReadApiKey', 'read'), async (req, res, next) => {
+  // noCache: the UI reads the key right after the PATCH that creates or rotates it, a 30s stale dataset would return no key or the previous one
+  router.get('/:datasetId/read-api-key', readDataset({ noCache: true }), permissions.middleware('getReadApiKey', 'read'), async (req, res, next) => {
     const dataset: any = reqDataset(req)
     if (!dataset._readApiKey) return res.status(404).send("dataset doesn't have a read API key")
     res.send(dataset._readApiKey)
