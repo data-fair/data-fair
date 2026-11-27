@@ -6,6 +6,7 @@ import truncateMiddle from 'truncate-middle'
 import { MaybeRefOrGetter } from 'vue'
 import { dateTimeInOwnTimeZone } from './format-date-logic'
 import { formatNumber } from './format-number-logic'
+import { accountAvatarUrl } from '~/utils/account-avatar'
 
 export type ExtendedResultValue = {
   raw: number | boolean | string,
@@ -113,13 +114,13 @@ export const useLines = (displayMode: MaybeRefOrGetter<string>, pageSize: MaybeR
             extendedValue.avatar = `${$sdUrl}/api/avatars/user/${raw._updatedBy}/avatar.png`
             extendedValue.avatarTitle = raw._updatedByName
           }
-          if (property.key === '_owner' && raw._owner) {
-            extendedValue.avatar = `${$sdUrl}/api/avatars/${raw._owner.split(':').join('/')}/avatar.png`
-            extendedValue.avatarTitle = raw._ownerName
+          if (property.key === '_owner') {
+            extendedValue.avatar = accountAvatarUrl($sdUrl, raw._owner)
+            if (extendedValue.avatar) extendedValue.avatarTitle = raw._ownerName
           }
           // no readable name exists for this concept, so the identifier stays the visible value
-          if (property['x-refersTo'] === 'https://github.com/data-fair/lib/account' && raw[property.key]) {
-            extendedValue.avatar = `${$sdUrl}/api/avatars/${raw[property.key].split(':').join('/')}/avatar.png`
+          if (property['x-refersTo'] === 'https://github.com/data-fair/lib/account') {
+            extendedValue.avatar = accountAvatarUrl($sdUrl, raw[property.key])
           }
 
           extendedResult.values[property.key] = extendedValue
