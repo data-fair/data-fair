@@ -1,0 +1,83 @@
+# the staging branch is rebuilt from scratch at every change: the default branch plus the open pull
+# requests of this repository labeled "staging", then built as the image tag "staging" and deployed
+# on the staging environment, which always follows that tag
+
+name: Staging
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+    types: [labeled, unlabeled, synchronize, reopened, closed]
+  workflow_dispatch:
+
+jobs:
+  rebuild:
+    # pull requests of this repository only (a fork's code is never merged into staging), and only the
+    # events that change what staging contains
+    if: >-
+      github.event_name != 'pull_request' || (
+        github.event.pull_request.head.repo.full_name == github.repository && (
+          (contains(fromJSON('["labeled", "unlabeled"]'), github.event.action) && github.event.label.name == 'staging') ||
+          (contains(fromJSON('["synchronize", "reopened", "closed"]'), github.event.action) && contains(github.event.pull_request.labels.*.name, 'staging'))
+        )
+      )
+    # a rebuild starts from scratch: only the latest one matters. The concurrency is set on the jobs, not
+    # the workflow, so that a run skipped by the condition above (another label) cancels nothing
+    concurrency:
+      group: staging-rebuild
+      cancel-in-progress: true
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: write
+    outputs:
+      pull-requests: ${{ steps.rebuild.outputs.pull-requests }}
+      commit: ${{ steps.rebuild.outputs.commit }}
+    steps:
+    - name: Checkout the default branch
+      uses: actions/checkout@v4
+      with:
+        ref: ${{ github.event.repository.default_branch }}
+        fetch-depth: 0
+
+    - name: Merge the labeled pull requests
+      id: rebuild
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        .github/staging/rebuild.sh ${{ github.repository }} "$RUNNER_TEMP/staging.json"
+        echo "pull-requests=$(cat "$RUNNER_TEMP/staging.json")" >> "$GITHUB_OUTPUT"
+        echo "commit=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+    - name: Push the staging branch
+      run: git push --force origin HEAD:staging
+
+    - name: Tell the pull requests left out
+      env:
+        GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: .github/staging/comment.sh ${{ github.repository }} "$RUNNER_TEMP/staging.json" "${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}"
+
+  # a push made with GITHUB_TOKEN triggers no workflow: the staging branch is built and deployed here
+  build:
+    needs: rebuild
+    concurrency:
+      group: staging-build
+      cancel-in-progress: true
+    permissions:
+      contents: read
+      packages: write
+    uses: ./.github/workflows/reuse-build.yml
+    with:
+      # the commit of this rebuild, not the branch, which a newer rebuild may have moved already
+      ref: ${{ needs.rebuild.outputs.commit }}
+      tag: staging
+      pull-requests: ${{ needs.rebuild.outputs.pull-requests }}
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Send Keel notification to staging-koumoul.com
+      run: |
+        curl -s --fail --show-error -X POST https://keel.admin.staging-koumoul.com/v1/webhooks/native -u ${{ secrets.KEEL_STAGING_USER }}:${{ secrets.KEEL_STAGING_PASSWORD }} -d '{"name": "ghcr.io/${{ github.repository }}", "tag": "staging"}'

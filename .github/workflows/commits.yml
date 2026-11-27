@@ -6,7 +6,8 @@ name: Build simple commit
 
 on:
   push:
-    branches: ['**']
+    # the staging branch is built by staging.yml
+    branches-ignore: [staging]
     tags-ignore: [ 'v*.*.*' ]
 
 jobs:
