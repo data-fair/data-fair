@@ -94,7 +94,7 @@
           variant="tonal"
           class="mt-2"
         >
-          {{ t('stagingLeftOut') }}
+          {{ t(pr.reason === 'workflow-files' ? 'stagingLeftOutWorkflow' : 'stagingLeftOut') }}
           <a
             :href="pr.url"
             target="_blank"
@@ -113,6 +113,7 @@
     stagingBase: "Branche par défaut au commit :"
     stagingDefaultOnly: Branche par défaut seule, aucune pull request en recette.
     stagingLeftOut: "Exclue de la recette (conflit, à rebaser) :"
+    stagingLeftOutWorkflow: "Exclue de la recette (modifie les workflows GitHub, à valider une fois fusionnée) :"
     summarizeReleasesBtn: Résumer les mises à jour
     summarizeReleasesPrompt: Fais un résumé des dernières mises à jour des services avec un focus sur les versions disponibles et non encore déployées.
     services:
@@ -133,6 +134,7 @@
     stagingBase: "Default branch at commit:"
     stagingDefaultOnly: Default branch only, no pull request on staging.
     stagingLeftOut: "Left out of staging (conflict, needs a rebase):"
+    stagingLeftOutWorkflow: "Left out of staging (changes GitHub workflows, to validate once merged):"
     summarizeReleasesBtn: Summarize updates
     summarizeReleasesPrompt: Summarize the latest service updates with a focus on versions that are available but not yet deployed.
     services:

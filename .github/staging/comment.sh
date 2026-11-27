@@ -23,9 +23,14 @@ upsert() {
   fi
 }
 
-for number in $(jq -r '.excludedPullRequests[].number' "$input"); do
+for excluded in $(jq -r '.excludedPullRequests[] | "\(.number):\(.reason)"' "$input"); do
+  number="${excluded%%:*}"
+  case "${excluded#*:}" in
+    workflow-files) why="it changes workflow files, which the staging rebuild may not push. It can be validated on staging once merged into the default branch." ;;
+    *) why="it does not merge cleanly into the default branch plus the pull requests merged before it. Rebase it on the default branch; the next rebuild will take it." ;;
+  esac
   upsert "$number" "$marker
-This pull request is labeled \`staging\` but was **left out of the staging branch**: it does not merge cleanly into the default branch plus the pull requests merged before it ($run_url). Rebase it on the default branch; the next rebuild will take it." false
+This pull request is labeled \`staging\` but was **left out of the staging branch** ($run_url): $why" false
 done
 
 for number in $(jq -r '.pullRequests[].number' "$input"); do
