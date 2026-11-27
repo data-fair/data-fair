@@ -145,10 +145,14 @@ COPY --from=parquet-writer-builder /app/parquet-writer/*.node parquet-writer/
 ADD /api api
 ADD /shared shared
 
-ADD package.json README.md LICENSE BUILD.json* ./
+ADD package.json LICENSE ./
 
 # npm/npx/corepack/yarn are not needed at runtime and carry their own vulnerable dependencies
 RUN rm -rf /usr/local/lib/node_modules /usr/local/bin/npm /usr/local/bin/npx /usr/local/bin/corepack /opt/yarn-* /usr/local/bin/yarn /usr/local/bin/yarnpkg
+
+# BUILD.json is written by CI for every build (README.md keeps the wildcard from matching nothing):
+# last, so that a build of unchanged code only adds this layer
+ADD README.md BUILD.json* ./
 
 WORKDIR /app/api
 
