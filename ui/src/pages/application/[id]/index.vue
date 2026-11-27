@@ -317,8 +317,20 @@
           :model-value="tab"
           class="pa-4"
         >
-          <v-tabs-window-item value="traceability">
+          <v-tabs-window-item
+            v-if="$uiConfig.eventsIntegration"
+            value="traceability"
+          >
             <event-traceability
+              resource-type="application"
+              :resource-id="application.id"
+            />
+          </v-tabs-window-item>
+          <v-tabs-window-item
+            v-if="$uiConfig.metricsIntegration"
+            value="audience"
+          >
+            <metrics-audience
               resource-type="application"
               :resource-id="application.id"
             />
@@ -551,6 +563,7 @@ fr:
   integration: Intégrer dans un site
   tracking: Suivi
   traceability: Traçabilité
+  audience: Audience
   notifications: Notifications
   webhooks: Webhooks
   upgradeAvailable: "Version {version} disponible"
@@ -603,6 +616,7 @@ en:
   integration: Embed in a website
   tracking: Tracking
   traceability: Traceability
+  audience: Audience
   notifications: Notifications
   webhooks: Webhooks
   upgradeAvailable: "Version {version} available"
@@ -640,7 +654,7 @@ import dfNavigationRight from '@data-fair/lib-vuetify/navigation-right.vue'
 import ConfirmMenu from '~/components/confirm-menu.vue'
 import { useAgentLeaveGuard } from '~/composables/use-agent-leave-guard'
 import { useTheme } from 'vuetify'
-import { mdiAccountSwitch, mdiBell, mdiCancel, mdiClipboardTextClock, mdiCloudKey, mdiCodeTags, mdiDatabase, mdiDelete, mdiImageMultiple, mdiInformation, mdiPaperclip, mdiPresentation, mdiPuzzle, mdiSecurity, mdiSquareEditOutline, mdiWebhook } from '@mdi/js'
+import { mdiAccountSwitch, mdiBell, mdiCancel, mdiChartBar, mdiClipboardTextClock, mdiCloudKey, mdiCodeTags, mdiDatabase, mdiDelete, mdiImageMultiple, mdiInformation, mdiPaperclip, mdiPresentation, mdiPuzzle, mdiSecurity, mdiSquareEditOutline, mdiWebhook } from '@mdi/js'
 import informationsSvg from '~/assets/svg/data-process-two-color.svg?raw'
 import checklistSvg from '~/assets/svg/checklist-two-color.svg?raw'
 import creativeSvg from '~/assets/svg/creative-process-two-color.svg?raw'
@@ -653,6 +667,10 @@ import { useBreadcrumbs } from '~/composables/layout/use-breadcrumbs'
 import { useAgentApplicationMetadataTools } from '~/composables/application/agent-metadata-tools'
 import { useAgentApplicationPageGuidance } from '~/composables/application/agent-page-guidance-tools'
 import { $uiConfig, $apiPath } from '~/context'
+import { usePermissions } from '~/composables/use-permissions'
+
+// the audience is reserved to the admins and contributors of the active account (metrics checks it too)
+const { canContribDep } = usePermissions()
 
 const { t, locale } = useI18n()
 const route = useRoute<'/application/[id]/'>()
@@ -860,15 +878,21 @@ const sections = computedDeepDiff(() => {
     result.share = { title: t('share'), tabs: shareTabs, agentDesc: 'Access control and publication settings for this application.' }
   }
 
+  const activityTabs = []
+  if ($uiConfig.eventsIntegration && can('readJournal')) {
+    activityTabs.push({ key: 'traceability', title: t('traceability'), icon: mdiClipboardTextClock, agentDesc: 'Audit trail of user actions on this application (who did what, when).' })
+  }
+  if ($uiConfig.metricsIntegration && can('readJournal') && canContribDep.value) {
+    activityTabs.push({ key: 'audience', title: t('audience'), icon: mdiChartBar, agentDesc: 'Audience of this application over a period, from the metrics service: openings, API calls sent from its pages and the volume they loaded, their history, the datasets it reads, and the openings by calling site, user category and consumer.' })
+  }
   if ($uiConfig.eventsIntegration) {
-    const activityTabs = []
-    if (can('readJournal')) {
-      activityTabs.push({ key: 'traceability', title: t('traceability'), icon: mdiClipboardTextClock, agentDesc: 'Audit trail of user actions on this application (who did what, when).' })
-    }
     activityTabs.push({ key: 'notifications', title: t('notifications'), icon: mdiBell, agentDesc: 'Subscribe to in-app / email notifications for events on this application.' })
     if (can('setPermissions')) {
       activityTabs.push({ key: 'webhooks', title: t('webhooks'), icon: mdiWebhook, agentDesc: 'Configure webhooks fired on events for this application.' })
     }
+  }
+  // the audience does not depend on the events integration
+  if (activityTabs.length) {
     result.activity = { title: t('tracking'), tabs: activityTabs, agentDesc: 'Activity tracking for this application.' }
   }
 
@@ -878,6 +902,12 @@ const sections = computedDeepDiff(() => {
 
   return result
 })
+
+// v-tabs highlights the first tab when the default one is missing (traceability without the events
+// integration) but leaves the window on the missing one
+watch(() => sections.value.activity?.tabs, (tabs) => {
+  if (tabs?.length && !tabs.some((tab: any) => tab.key === activityTab.value)) activityTab.value = tabs[0].key
+}, { immediate: true })
 
 const tocSections = computed(() => {
   return Object.entries(sections.value).map(([id, s]) => ({

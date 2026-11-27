@@ -128,7 +128,8 @@ export function useNavigationItems (options: { t: ComposerTranslation, locale: R
     if (canContrib.value) {
       monitor.push({ to: '/storage', icon: mdiHarddisk, title: t('storage') })
     }
-    if ($uiConfig.metricsIntegration) {
+    // reserved to the admins and contributors of the account, like the metrics API
+    if (canContribDep.value && $uiConfig.metricsIntegration) {
       monitor.push({ to: '/metrics', icon: mdiChartBar, title: t('metrics'), subtitle: t('metricsSub') })
     }
     if (canAdmin.value && $uiConfig.eventsIntegration) {
