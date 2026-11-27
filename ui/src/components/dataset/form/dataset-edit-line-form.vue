@@ -12,7 +12,7 @@
     :model-value="model._owner"
     :label="t('owner')"
     :hint="t('ownerHint')"
-    :rules="[v => !v || ownerPattern.test(v) || t('ownerHint')]"
+    :rules="[v => !v || isAccountRef(v) || t('ownerHint')]"
     :readonly="roPrimaryKey && restDataset?.primaryKey?.includes('_owner')"
     persistent-hint
     clearable
@@ -71,6 +71,7 @@ import Vjsf from '@koumoul/vjsf/webmcp'
 import type { Options as VjsfOptions } from '@koumoul/vjsf'
 import VjsfMarkdown from '@koumoul/vjsf-markdown'
 import { v2compat } from '@koumoul/vjsf/compat/v2'
+import { accountAvatarUrl, isAccountRef } from '~/utils/account-avatar'
 
 const { readonlyCols, selectedCols, extension, loading, roPrimaryKey, prefixName, dataTitle, owner } = defineProps({
   readonlyCols: { type: Array as PropType<string[] | null>, default: null },
@@ -108,12 +109,7 @@ if (prefixName) {
 }
 
 const showOwner = computed(() => owner && !!restDataset.value?.rest?.lineOwnership)
-const ownerPattern = /^(user|organization):[^:\s]+(:[^:\s]+)?$/
-const ownerAvatar = computed(() => {
-  const owner = model.value?._owner
-  if (!owner || !ownerPattern.test(owner)) return
-  return `${$sdUrl}/api/avatars/${owner.split(':').join('/')}/avatar.png`
-})
+const ownerAvatar = computed(() => accountAvatarUrl($sdUrl, model.value?._owner))
 
 const digitalDocumentField = computed(() => {
   return restDataset.value?.schema.find(f => f['x-refersTo'] === 'http://schema.org/DigitalDocument')
