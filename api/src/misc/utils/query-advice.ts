@@ -79,6 +79,8 @@ const RECOGNIZED_PARAMS = new Set([
   'percents', 'precision_threshold', 'interval', 'calendar', 'missing', 'analysis', 'sampling',
   // output formatting / export / misc read params
   'collapse', 'arrays', 'explain', 'fields', 'mimeType', 'finalizedAt',
+  // the agent text of lines, values_agg and metric_agg (datasets/utils/agent-text.ts)
+  'agent_text',
 ])
 
 /**

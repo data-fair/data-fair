@@ -55,6 +55,7 @@ const linesSelection: Record<string, AgentParamOverride> = {
   collapse: { exclude: true },
   arrays: { exclude: true },
   truncate: { exclude: true },
+  agent_text: { exclude: true },
   sort: { description: 'Array of column keys to sort by, one per element. Prefix a key with - for descending.' },
   select: { description: 'Column keys to include in the response, as an array. Use column keys from datafair_describe_dataset. If omitted, all columns are returned.' },
   ...queryParams
@@ -195,8 +196,10 @@ export const operations = {
         size: { default: 12, maximum: 100 },
         format: { exclude: true }
       },
-      fixed: { hint: 'true' },
-      response: { rows: '/results', hints: '/meta/hints' }
+      // the text the model reads is the API's agentText (rows, filter query, table/map links); the
+      // projected body stays the structuredContent of scripts
+      fixed: { hint: 'true', agent_text: 'true' },
+      response: { rows: '/results', hints: '/meta/hints', text: '/agentText' }
     },
     {
       name: 'export_data',
@@ -248,8 +251,8 @@ export const operations = {
       hint: { exclude: true },
       ...queryParams
     },
-    fixed: { hint: 'true', size: '0' },
-    response: { rows: '/aggs', concise: ['value', 'total', 'metric'], hints: '/meta/hints' }
+    fixed: { hint: 'true', size: '0', agent_text: 'true' },
+    response: { rows: '/aggs', concise: ['value', 'total', 'metric'], hints: '/meta/hints', text: '/agentText' }
   },
   getMetricAgg: {
     name: 'calculate_metric',
@@ -263,7 +266,8 @@ export const operations = {
       q: qFilter,
       ...queryParams
     },
-    response: { rows: '/metric' }
+    fixed: { agent_text: 'true' },
+    response: { rows: '/metric', text: '/agentText' }
   },
   downloadOriginalData: {
     name: 'download_dataset_file',

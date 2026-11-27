@@ -555,6 +555,23 @@ La valeur du paramètre est la dimension passée sous la form largeurxhauteur (3
     }
   }
 
+  const agentTextParam = {
+    in: 'query',
+    name: 'agent_text',
+    description: 'Ajoute à la réponse `agentText`, le résultat rédigé pour un assistant IA : les lignes ou groupes en texte, la ligne "Filter query:" et les liens absolus vers le tableau (et la carte) filtrés du jeu de données.',
+    schema: {
+      title: 'Texte pour un assistant',
+      type: 'string',
+      default: 'false',
+      enum: ['true', 'false']
+    }
+  }
+
+  const agentTextProperty = {
+    type: 'string',
+    description: 'Présent avec agent_text=true : le résultat rédigé pour un assistant IA.'
+  }
+
   const description = `
 Cette documentation interactive à destination des développeurs permet de consommer les ressources du jeu de données "**${ds.title || (ds as any).slug}**".
 
@@ -771,6 +788,7 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
           htmlParam,
           countParam,
           hintParam,
+          agentTextParam,
           ...filterParams,
           {
             in: 'query',
@@ -838,7 +856,8 @@ Pour protéger l'infrastructure de publication de données, les appels sont limi
                       next: {
                         type: 'string',
                         description: 'URL complète pour obtenir la page suivante de la même requête (mêmes filtres, tri et colonnes).'
-                      }
+                      },
+                      agentText: agentTextProperty
                     }
                   }
                 },
@@ -1057,12 +1076,13 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
           },
           ...hitsParams(0, 100, 'values_agg'),
           hintParam,
+          agentTextParam,
           ...filterParams],
           responses: {
             200: {
               description: "Les informations du jeu de données agrégées par valeurs d'une colonne.",
               content: {
-                'application/json': { schema: { type: 'object' } }
+                'application/json': { schema: { type: 'object', properties: { agentText: agentTextProperty } } }
               }
             },
             ...errorResponses
@@ -1111,13 +1131,14 @@ Si la colonne est numérique vous pouvez saisir un nombre qui sera utilisé comm
                 default: '1,5,25,50,75,95,99'
               }
             },
+            agentTextParam,
             ...filterParams
           ],
           responses: {
             200: {
               description: 'Le résultat du calcul.',
               content: {
-                'application/json': { schema: { type: 'object' } }
+                'application/json': { schema: { type: 'object', properties: { agentText: agentTextProperty } } }
               }
             },
             ...errorResponses

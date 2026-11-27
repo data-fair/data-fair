@@ -1,4 +1,4 @@
-import { datasetIdProperty } from './_utils.js'
+import { datasetIdProperty } from './_utils.ts'
 
 export const annotations = {
   fr: { title: 'Obtenir les valeurs distinctes' },

@@ -1,4 +1,4 @@
-import { datasetIdProperty, filterProperties, buildFilterQueryString, unquoteSortKey } from './_utils.js'
+import { datasetIdProperty, filterProperties, buildFilterQueryString, unquoteSortKey } from './_utils.ts'
 
 export const annotations = {
   fr: { title: 'Agréger des données' },
@@ -60,6 +60,8 @@ export const schema = {
 export interface Params {
   datasetId: string
   groupByColumns: string[]
+  /** not an input of the page tool: the API's agent text renders it (the MCP tool takes q) */
+  q?: string
   metric?: { column?: string, type?: string }
   filters?: Record<string, any>
   sort?: string

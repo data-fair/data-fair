@@ -1,4 +1,4 @@
-import { filtersGuide } from './_utils.js'
+import { filtersGuide } from './_utils.ts'
 
 // A page skill (useAgentSkill in @data-fair/lib-vue-agents): listed to the assistant by its
 // description, loaded on demand, followed with the data tools the page registers.

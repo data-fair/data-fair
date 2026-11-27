@@ -1,4 +1,4 @@
-import { datasetIdProperty, filterProperties, buildFilterQueryString } from './_utils.js'
+import { datasetIdProperty, filterProperties, buildFilterQueryString } from './_utils.ts'
 
 export const annotations = {
   fr: { title: 'Calculer une métrique' },
@@ -40,6 +40,8 @@ export interface Params {
   datasetId: string
   fieldKey: string
   metric: string
+  /** not an input of the page tool: the API's agent text renders it (the MCP tool takes q) */
+  q?: string
   percents?: string
   filters?: Record<string, any>
   bbox?: string

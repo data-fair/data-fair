@@ -18,7 +18,8 @@
     "./describe-dataset": "./describe-dataset.js",
     "./geocode-address": "./geocode-address.js",
     "./dataset-data-skill": "./dataset-data-skill.js",
-    ".": "./index.js"
+    ".": "./index.js",
+    "./*.ts": "./*.ts"
   },
   "files": [
     "**/*.js",

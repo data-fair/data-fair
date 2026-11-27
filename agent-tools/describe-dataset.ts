@@ -1,4 +1,4 @@
-import { formatSchemaTable, isPlatformColumn, cleanRow, toCsv, datasetIdProperty, pick } from './_utils.js'
+import { formatSchemaTable, isPlatformColumn, cleanRow, toCsv, datasetIdProperty, pick } from './_utils.ts'
 
 export const annotations = {
   fr: { title: 'Décrire un jeu de données' },

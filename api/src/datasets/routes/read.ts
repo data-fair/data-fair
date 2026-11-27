@@ -32,6 +32,7 @@ import { nextLinkHref, linkHeaderValue } from './lines-body.ts'
 import { getCountMode, parseQMode, DEFAULT_Q_MODE } from '../es/operations.ts'
 import { approxTotal } from '../es/approx-count.ts'
 import { runAdaptivePreflight } from '../es/adaptive-q.ts'
+import * as agentText from '../utils/agent-text.ts'
 
 // Formats that consume a streamed ES source (serialize row-by-row, then send the assembled body). json/csv
 // and geojson qualify: each hit maps independently to output (geojson's bbox is a separate agg). shp still
@@ -486,7 +487,8 @@ const readLines: RequestHandler = async (req, res) => {
     // otherwise it came from search() which already rewrote it
     rewriteAttachmentUrl: eligible,
     approxTotal: approxTotalThunk,
-    ignoredWords
+    ignoredWords,
+    agentText: agentText.wantsAgentText(query) ? body => agentText.searchDataText(req, dataset, body) : undefined
   })
 }
 
@@ -614,6 +616,7 @@ export const registerReadRoutes = (router: Router) => {
     if (explain) result.explain = explain
 
     result = attachQueryHints(req, esValuesAggDurationMs, result)
+    if (agentText.wantsAgentText(query)) result.agentText = agentText.aggregateDataText(req, dataset, result)
     res.status(200).send(result)
   })
 
@@ -673,6 +676,7 @@ export const registerReadRoutes = (router: Router) => {
     }
     // correctness hint only (metric_agg does not time the ES step); perf advice stays off at duration 0
     result = attachQueryHints(req, 0, result)
+    if (agentText.wantsAgentText(req.query)) result.agentText = agentText.calculateMetricText(req, dataset, result)
     res.status(200).send(result)
   })
 

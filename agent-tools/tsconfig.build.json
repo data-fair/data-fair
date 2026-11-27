@@ -4,7 +4,11 @@
     "module": "nodenext",
     "declaration": true,
     "strict": true,
-    "skipLibCheck": true
+    "skipLibCheck": true,
+    // the sources import each other with .ts extensions so the API runs them with node's type
+    // stripping; the published build rewrites them to .js
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true
   },
   "include": ["./*.ts"]
 }
