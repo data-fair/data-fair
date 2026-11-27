@@ -125,6 +125,9 @@ test.describe('agent text of the data queries', () => {
     assert.ok(text.includes('- **Status:** finalized'), text)
     assert.ok(text.includes('- **Geolocalized:**'), text)
     assert.ok(text.includes(`${config.publicUrl}/dataset/${dataset.id}/edit-data`), text)
+    // read by MCP clients, which have no navigation nor page tools
+    assert.ok(!text.includes('Navigate'), text)
+    assert.ok(!text.includes('your tools'), text)
     assert.ok(text.includes(description), 'the description is not cut below 2,000 chars')
     const schemaRows = text.split('\n').filter(l => l.startsWith('| '))
     assert.ok(schemaRows.some(l => l.startsWith('| `nom` |')), text)

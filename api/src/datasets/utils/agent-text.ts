@@ -126,7 +126,9 @@ export const calculateMetricText = (req: Request, dataset: any, body: any) => {
 /**
  * The dataset read's text: the describe_dataset formatter on the dataset as the read answers it.
  * On the back-office (no portal host) the dataset link is the back-office page, which also gives
- * the editable dataset's /edit-data line; a portal has no data-entry page, so no such line there.
+ * the editable dataset's /edit-data line, worded as a link for the person (`editable: 'link'`): the
+ * MCP clients reading this text have no navigation nor page tools. A portal has no data-entry
+ * page, so no such line there.
  */
 export const describeDatasetText = (req: Request, dataset: any): string =>
-  describeDataset.formatResult(dataset, reqPublicationSite(req) ? undefined : { datasetLink: () => datasetPage(req, dataset) }).text
+  describeDataset.formatResult(dataset, reqPublicationSite(req) ? undefined : { datasetLink: () => datasetPage(req, dataset), editable: 'link' }).text
