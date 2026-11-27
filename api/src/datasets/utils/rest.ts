@@ -943,6 +943,9 @@ class TransactionStream extends Writable {
   i: number
   transactions: DatasetLineAction[]
   transactionIds: Set<string>
+  // set when the client went away: the stream stops between two batches, never during one, so a batch
+  // in flight is not racing with the cleanup of a drop's tmp collection
+  aborted = false
   constructor (options: TransactionStreamOptions) {
     super({ objectMode: true })
     this.options = options
@@ -998,6 +1001,7 @@ class TransactionStream extends Writable {
   }
 
   async writePromise (chunk: DatasetLineAction) {
+    if (this.aborted) throw httpError(499, 'client closed the request')
     chunk._action = chunk._action || 'createOrUpdate'
     delete chunk._i
     // the owner has to be applied before the id is derived from the primary key, which may include it
@@ -1035,6 +1039,7 @@ class TransactionStream extends Writable {
   }
 
   _final (cb: (err?: any) => void) {
+    if (this.aborted) return cb(httpError(499, 'client closed the request'))
     // use then syntax cf https://github.com/nodejs/node/issues/39535
     this.applyTransactions().then(() => cb(), cb)
   }
@@ -1444,6 +1449,8 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
     // (e.g. the temp file vanished because of a concurrent request) rejects the
     // pipeline instead of crashing the process with an unhandled 'error' event.
     let getInputStream: () => Readable
+    // size of what getInputStream() reads, for the progress written in the response (see below)
+    let inputSize: number | undefined
     let mimeType, skipDecoding
     const transactionSchema = [...dataset.schema, { key: '_id', type: 'string' }, { key: '_action', type: 'string' }]
     let fileProps = {
@@ -1460,6 +1467,7 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
         const directory = await unzipper.Open.file(req.files.actions[0].path)
         if (directory.files.length !== 1) return res.status(400).type('text/plain').send('only accept zip archive with a single file inside')
         mimeType = mime.lookup(directory.files[0].path)
+        inputSize = directory.files[0].uncompressedSize
         getInputStream = () => directory.files[0].stream()
       } else if (tabularTypes.has(req.files.actions[0].mimetype)) {
         const actionFile = req.files.actions[0]
@@ -1475,11 +1483,14 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
           path: destination
         })
         getInputStream = () => fs.createReadStream(destination)
+        inputSize = (await fs.stat(destination)).size
         mimeType = 'text/csv'
         fileProps = { fieldsDelimiter: ',', escape: '"', quote: '"', newline: '\n' }
       } else {
         const actionsPath = req.files.actions[0].path
         getInputStream = () => fs.createReadStream(actionsPath)
+        // a .gz file is counted compressed, on both sides of the ratio
+        inputSize = (await fs.stat(actionsPath)).size
         // handle .csv.gz file or other .gz files
         if (req.files.actions[0].originalname.endsWith('.gz')) {
           mimeType = mime.lookup(req.files.actions[0].originalname.slice(0, -3))
@@ -1504,6 +1515,7 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
     // these formats are read strictly as is
     const raw = mimeType === 'application/x-ndjson' || mimeType === 'application/json'
     const contentLength = Number(req.get('content-length'))
+    if (skipDecoding && !isNaN(contentLength)) inputSize = contentLength
 
     // mandatory extensions force in-memory processing — reject upfront when the
     // request would have been queued for async indexing (see commitLines below).
@@ -1519,24 +1531,57 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
     const transactionStream = new TransactionStream({ dataset, sessionState: reqSessionAuthenticated(req), linesOwner: reqLinesOwnerOptional(req), validate, summary, tmpDataset, who: whoFromReq(req) })
 
     // we try both to have a HTTP failure if the transactions are clearly badly formatted
-    // and also to start writing in the HTTP response as soon as possible to limit the timeout risks
-    // this is accomplished partly by the keepalive option to async-wrap (see in the datasets router)
+    // and also to start writing in the HTTP response as soon as possible to limit the timeout risks.
+    // The response body is the JSON summary preceded by whitespace (still valid JSON, so API clients
+    // are unaffected): a space keeps the connection alive, and each "\n" before the summary is one
+    // thousandth of the input read, so the UI can show the progress of the processing (1000 = the
+    // input was entirely read, the operation is being finalized).
     let firstBatch = true
+    let bytesRead = 0
+    let progressWritten = 0
+    const writeProgress = (permille: number) => {
+      if (firstBatch || res.destroyed) return
+      permille = Math.min(1000, permille)
+      let chunk = ' '
+      if (permille > progressWritten) {
+        chunk = '\n'.repeat(permille - progressWritten) + chunk
+        progressWritten = permille
+      }
+      res.write(chunk)
+    }
+    const readPermille = () => inputSize ? Math.min(999, Math.floor(bytesRead * 1000 / inputSize)) : 0
     transactionStream.on('batch', () => {
       if (firstBatch) {
         res.writeHead(!summary.nbOk && summary.nbErrors ? 400 : 200, { 'Content-Type': 'application/json' })
         firstBatch = false
-      } else {
-        res.write(' ')
+      }
+      writeProgress(readPermille())
+    })
+    // a batch can be long (and so can the finalization of a drop): keep writing
+    const keepAliveInterval = setInterval(() => writeProgress(progressWritten), 10000)
+
+    // the client went away (cancel button, closed tab…): stop at the end of the current batch instead
+    // of processing a file nobody waits for (and swapping the whole collection in drop mode)
+    const onClose = () => {
+      if (!res.writableFinished) transactionStream.aborted = true
+    }
+    res.on('close', onClose)
+
+    const counter = new Transform({
+      transform (chunk, encoding, cb) {
+        bytesRead += chunk.length
+        cb(null, chunk)
       }
     })
 
     try {
       await pump(
         getInputStream(),
+        counter,
         ...parseStreams,
         transactionStream
       )
+      writeProgress(1000)
       if (drop && tmpDataset) {
         if (summary.nbErrors) {
           summary.cancelled = true
@@ -1576,7 +1621,13 @@ export const bulkLines = async (req: RequestWithRestDataset & { files?: { attach
       if (drop) {
         summary.cancelled = true
         if (tmpDataset) await collection(tmpDataset).drop()
+      } else if (summary.nbOk) {
+        // the batches applied before the failure are in mongo, flagged _needsIndexing: let the worker index them
+        await mongo.datasets.updateOne({ id: dataset.id }, { $set: { _partialRestStatus: 'updated' } })
       }
+    } finally {
+      clearInterval(keepAliveInterval)
+      res.off('close', onClose)
     }
     for (const warning of parseStreams.map(p => p.__warning)) {
       if (warning) {
