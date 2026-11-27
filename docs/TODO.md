@@ -90,6 +90,20 @@ Deferred on purpose when the owned term index replaced `$text` for `datasets` / 
   whose `package.json` still matches the folder name both scripts re-run on every boot. Correct (they are
   idempotent) but it costs a full pass over `datasets` and `applications` each time.
 
+### PR 10 - Per-row attachment check on file datasets `P3 · M`
+Nothing checks that a row's attachment value (the `http://schema.org/DigitalDocument` column, a plain
+`type: string`) names a file of the uploaded archive. Idea: in `ValidateStream`
+(`api/src/workers/batch-processor/process-file.ts`), list the attachments once and write a
+**non-blocking** entry to the diagnostic CSV (`api/src/datasets/utils/diagnostic-file.ts`) for each
+row whose non-empty value is missing from that list, giving a downloadable list of rows pointing to a
+missing file. Data quality only: an unreferenced file in the archive is unreachable, it only costs
+disk and storage quota (no files-to-lines collector, `// TODO` in `batch-processor/index-lines.ts`).
+- `DiagnosticWriter` has only blocking entries (`errorCount > 0` fails the run): it needs a
+  blocking / non-blocking split (a separate warning count).
+- Phase A only runs when `schemaHasValidationRules` (or a date coherence constraint) holds; a
+  DigitalDocument column alone would skip it, so phase A must also run when attachments and such a
+  column exist.
+
 ---
 
 ## Resolved during the series (for the record)

@@ -573,6 +573,8 @@ permission model on the client, it is purely presentational.
   application it also warns that read access now follows the parent's (rule B, §4), so a public
   application embedded in a private dashboard stops being public. Attaching a dataset to an
   application has no UI for now; the API (`PATCH .../partOf`) still accepts any valid parent.
+  Nor does an existing dataset get an attach action towards a meta-only parent: the children of a
+  meta-only are created from its Fragments tab.
 - **Fragments used outside of their parent.** `foreignReferences` (`ui/src/utils/fragments.ts`)
   keeps the users of a fragment that are neither its parent nor one of its siblings. On the
   fragment's own page, `fragment-foreign-references.vue` (in the Informations section) lists them

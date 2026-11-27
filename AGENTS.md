@@ -39,6 +39,12 @@ The dataset table (`ui/src/components/dataset/table/`) is a critical, optimized
 component. When a change touches it, or what it relies on
 (`ui/src/composables/dataset/lines.ts`, the filters composables, `use-headers.ts`):
 
+A back-office need (edition, extension previews…) enters the table as an opt-in prop whose
+default keeps the current render path unchanged, since the same table serves the public embed
+view on low-end machines. In the per-row and per-cell templates, add a `v-if` only when it costs a
+single property read (like `header.synthetic`), and never move inline template code into a child
+component there: each extra component boundary is paid on every rendered cell.
+
 1. Run `npm run benchmark -- ui-table --dataset=<id> --base=master` (plus the account
    options), on a dev dataset with the shape described in `benchmark/README.md`, "UI table
    harness". It takes about 10 minutes, so run it in the background. Put the verdict and

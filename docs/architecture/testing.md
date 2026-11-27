@@ -109,6 +109,18 @@ API restarted during the test (nodemon reacting to an edit in the checkout), an 
 "the API restarted during this test, re-run it: not a regression", printed under the failure.
 - Tests interact with the API via HTTP (no direct DB access from tests)
 - Import utilities from `tests/support/`
+- The agent surface golden (`tests/fixtures/agent-surface.json`, checked by
+  `tests/features/agent-tools/api-docs-agent-surface.unit.spec.ts`) also holds the schemas of
+  `api/types/**/schema.js`: editing a property description there fails the unit project. Run the
+  whole `--project=unit` suite after such an edit, and if only the golden differs, regenerate it with
+  `UPDATE_GOLDEN=1` and check the diff is just that text
+- Dev and tests run with `filesStorage: 'fs'` (`api/config/development.mjs`), so code that reads
+  an uploaded file from the local disk passes every test and fails in production on S3. On a file
+  update, `_handleFile` (`api/src/datasets/utils/upload.ts`) streams the upload straight into the
+  storage backend with no local copy (only a dataset creation goes through a local tmp file): compute
+  what you need while the upload streams (like its `md5Tee`) or read back through `filesStorage`.
+  The specs exercising S3 are in `tests/features/infra/` (`files-storage-s3.api.spec.ts`,
+  `s3-*.spec.ts`) and `tests/features/integrity/`
 
 ## Quality gates
 

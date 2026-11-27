@@ -139,6 +139,10 @@ dataset-related memoize caches between tests.
 - otherwise ⇒ `getDatasetFresh`: calls `memoizedGetDataset`, then runs a **cheap projection query**
   (`{updatedAt, finalizedAt, status, errorStatus, errorRetry}`, plus `draft.updatedAt` in draft
   mode) and, if any changed, re-reads the full dataset. "Validate before trusting the cache."
+  The projection (`datasetFreshnessProjection`, `api/src/datasets/operations.ts`) has no
+  `dataUpdatedAt`: a REST line write moves only that field, so `GET /datasets/:id` keeps serving the
+  memoized document (old `dataUpdatedAt`, old `count`) until the finalize task moves `finalizedAt`.
+  A client reading those fields right after a write waits for `finalizedAt` to move first.
 
 **The `?updatedAt=`/`?finalizedAt=` query-param bypass** (#358, building on #352's unified
 `_modified`): even on the `tolerateStale` path, if the caller passed `?finalizedAt=X` with
@@ -280,6 +284,12 @@ and covered on both sides:
   of** `?finalizedAt=…`. The server never reads that parameter — its whole job is to be a different
   URL, so the browser and proxy hold no entry for it and send no `If-Modified-Since`. That is the
   "serve me fresh data because I just wrote" escape hatch.
+- A `_bulk_lines` is only committed in the request (`indexedAt` in its response) when it holds
+  fewer lines than `ES_MAX_BULK_LINES` (`elasticsearch.maxBulkLines`), has a `Content-Length` of at
+  most `ES_MAX_BULK_CHARS`, carries no attachments and no `?async=true`. Otherwise it only sets
+  `_partialRestStatus: 'updated'` and the worker indexes it seconds later, so a read right after it
+  is stale. A deployment that lowers `ES_MAX_BULK_LINES` (to 2, say) makes every bulk of 2 lines or
+  more asynchronous.
 
 The one gap `commitLines` closes itself: a dataset that still accepts line writes but that the
 finalize task cannot select **at all**. `readWritableDataset` admits `finalized` | `indexed` |

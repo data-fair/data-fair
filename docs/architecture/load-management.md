@@ -83,6 +83,15 @@ based on `reqUser(req)`; specific limit types are passed explicitly elsewhere (a
 captures, remote services). The header `x-ignore-rate-limiting: <SECRET_IGNORE_RATE_LIMITING>`
 bypasses everything (internal callers).
 
+`appCaptures` only applies to the captures that skip the thumbnail cache (`api/src/misc/utils/capture.ts`;
+the capture service itself has no cache and no rate limit). A default thumbnail (no query parameter
+but `updatedAt`) is served from `<dataDir>/captures/<id>.png`, regenerated when older than the
+application's `updatedAt`, and consumes no token (`x-capture-cache-status`: `HIT`, `MISS`, `EXPIRED`,
+or `STALE` / `ERROR` after a failed capture). Any other parameter (size, `app_*`, gif, filename) is a
+`BYPASS`: never cached, one token. A print (PDF) is never cached and takes one token too. So a client
+that adds a parameter to its thumbnail URLs, or the visitors of an embed behind one NAT (application
+keys count as anonymous, by IP), quickly reach the 429.
+
 The wait for bandwidth tokens lives in `api/src/misc/utils/throttle-wait.ts` and deliberately does
 **not** delegate the wait to the bucket (the dropped `limiter` library's `removeTokens` retried by
 awaited recursion, so under a saturated bucket every losing retry added a retained
