@@ -674,7 +674,7 @@ Pour utiliser cette API dans un programme vous aurez besoin d'une clé que vous 
         },
         responses: {
           200: {
-            description: "Le résultat des opérations. Le statut est 400 avec le même corps quand aucune opération n'a réussi et qu'au moins une est en erreur.",
+            description: "Le résultat des opérations. Le statut est 400 avec le même corps quand aucune opération n'a réussi et qu'au moins une est en erreur. Pendant le traitement, la réponse commence par des blancs (toujours du JSON valide) : chaque retour à la ligne avant le résultat vaut un millième des opérations lues, les espaces maintiennent la connexion. Si le client ferme la connexion, le traitement s'arrête à la fin du lot en cours (avec `drop`, les lignes existantes sont conservées).",
             content: {
               'application/json': {
                 schema: {
