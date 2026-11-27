@@ -55,6 +55,9 @@ export const propTypeIcon = (prop: { type: string, format?: string, 'x-display'?
   return propertyTypes.find(p => p.type === prop.type)?.icon
 }
 
+// a text file whose encoding the user can choose, possibly gzipped
+export const isTextFileName = (name: string) => /\.(csv|tsv|txt)(\.gz)?$/.test(name.toLowerCase())
+
 export const accepted = [
   '.csv',
   '.geojson',

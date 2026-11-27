@@ -437,6 +437,7 @@
 </template>
 
 <script setup lang="ts">
+import { isTextFileName } from '~/utils/dataset'
 import { mdiAllInclusive, mdiCancel, mdiCheckAll, mdiChevronDown, mdiChevronUp, mdiCog, mdiContentCopy, mdiFileUpload, mdiInformationVariant, mdiPaperclip, mdiPictureInPictureBottomRightOutline, mdiShape, mdiZipBox } from '@mdi/js'
 import axios, { type CancelTokenSource } from 'axios'
 import { $apiPath } from '~/context'
@@ -585,11 +586,7 @@ const showAdvanced = ref(false)
 const escapeKeyAlgorithm = ref<string | null>(null)
 const fileEncoding = ref<string | null>(null)
 
-const isTextFile = computed(() => {
-  if (!file.value) return false
-  const name = file.value.name.toLowerCase()
-  return name.endsWith('.csv') || name.endsWith('.tsv') || name.endsWith('.txt')
-})
+const isTextFile = computed(() => !!file.value && isTextFileName(file.value.name))
 
 const isSpreadsheet = computed(() => {
   if (!file.value) return false
