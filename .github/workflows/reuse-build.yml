@@ -31,8 +31,8 @@ jobs:
       uses: docker/metadata-action@v5
       with:
         images: ghcr.io/${{ github.repository }}
-        # a build of another ref than the triggering one (staging) describes the checked out commit
-        context: ${{ inputs.ref != '' && 'git' || 'workflow' }}
+        # the workflow context, not git: the git context fails on a commit checked out detached (a staging
+        # build). The image's revision label names the triggering commit there; BUILD.json has the built one
         tags: |
           type=raw,value=${{ inputs.tag }},enable=${{ inputs.tag != '' }}
           type=ref,event=branch,enable=${{ inputs.tag == '' }}
